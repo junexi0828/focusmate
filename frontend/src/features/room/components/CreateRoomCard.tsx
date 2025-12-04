@@ -27,25 +27,35 @@ export function CreateRoomCard({ onCreateRoom }: CreateRoomCardProps) {
   const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (roomName.trim().length < 3) {
+    const trimmedName = roomName.trim();
+
+    if (trimmedName.length < 3) {
       setError("방 이름은 최소 3자 이상이어야 합니다");
       return;
     }
 
-    if (roomName.trim().length > 50) {
+    if (trimmedName.length > 50) {
       setError("방 이름은 최대 50자까지 가능합니다");
       return;
     }
 
+    // Validate room name pattern: 영문, 숫자, 하이픈, 언더스코어만 허용
+    const roomNamePattern = /^[a-zA-Z0-9_-]+$/;
+    if (!roomNamePattern.test(trimmedName)) {
+      setError("방 이름은 영문, 숫자, 하이픈(-), 언더스코어(_)만 사용할 수 있습니다");
+      return;
+    }
+
     setIsCreating(true);
-    setTimeout(() => {
-      onCreateRoom(roomName.trim(), focusTime, breakTime);
+    try {
+      await onCreateRoom(trimmedName, focusTime, breakTime);
+    } finally {
       setIsCreating(false);
-    }, 500);
+    }
   };
 
   return (

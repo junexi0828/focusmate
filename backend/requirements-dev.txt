@@ -1,0 +1,41 @@
+# Focus Mate Backend - Development Dependencies
+
+-r requirements.txt
+
+# ============================================================================
+# Testing
+# ============================================================================
+pytest==8.3.4                       # Test framework
+pytest-asyncio==0.25.2              # Async test support
+pytest-cov==6.0.0                   # Coverage reporting
+pytest-mock==3.14.0                 # Mocking utilities
+pytest-xdist==3.6.1                 # Parallel test execution
+faker==34.0.0                       # Test data generation
+factory-boy==3.3.1                  # Test fixtures
+
+# ============================================================================
+# Type Checking & Linting
+# ============================================================================
+mypy==1.14.0                        # Static type checker (strict mode)
+ruff==0.8.5                         # Fast linter & formatter
+sqlalchemy[mypy]==2.0.36            # SQLAlchemy stubs
+
+# ============================================================================
+# Code Quality
+# ============================================================================
+radon==6.0.1                        # Complexity analysis
+bandit==1.8.0                       # Security linting
+coverage[toml]==7.6.10              # Coverage tools
+
+# ============================================================================
+# Development Tools
+# ============================================================================
+ipython==8.31.0                     # Enhanced REPL
+ipdb==0.13.13                       # Debugger
+watchfiles==1.0.3                   # File watching for auto-reload
+
+# ============================================================================
+# Documentation
+# ============================================================================
+mkdocs==1.6.1                       # Documentation generator
+mkdocs-material==9.5.51             # Material theme

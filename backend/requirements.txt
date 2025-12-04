@@ -1,0 +1,70 @@
+# Focus Mate Backend - Production Dependencies
+# ISO/IEC 25010 Quality Standards Compliant
+
+# ============================================================================
+# Core Framework
+# ============================================================================
+fastapi==0.115.6                    # Modern async web framework
+uvicorn[standard]==0.34.0           # ASGI server with WebSocket support
+python-multipart==0.0.20            # Form data parsing
+
+# ============================================================================
+# Data Validation & Serialization
+# ============================================================================
+pydantic==2.10.4                    # Strict data validation
+pydantic-settings==2.7.0            # Settings management
+email-validator==2.2.0              # Email validation
+
+# ============================================================================
+# Database
+# ============================================================================
+sqlalchemy[asyncio]==2.0.36         # Async ORM
+aiosqlite==0.20.0                   # Async SQLite driver
+alembic==1.14.0                     # Database migrations
+# psycopg2-binary==2.9.10           # PostgreSQL driver (production)
+asyncpg==0.30.0                     # Async PostgreSQL driver (production)
+
+# ============================================================================
+# Caching & Message Broker
+# ============================================================================
+redis==5.2.1                        # Redis client
+hiredis==3.0.0                      # Redis protocol performance
+
+# ============================================================================
+# Authentication & Security
+# ============================================================================
+python-jose[cryptography]==3.3.0   # JWT token handling
+passlib[bcrypt]==1.7.4              # Password hashing
+python-multipart==0.0.20            # OAuth2 password flow
+
+# ============================================================================
+# WebSocket
+# ============================================================================
+websockets==14.1                    # WebSocket support
+
+# ============================================================================
+# HTTP Client (for external APIs)
+# ============================================================================
+httpx==0.28.1                       # Async HTTP client
+
+# ============================================================================
+# Date & Time
+# ============================================================================
+python-dateutil==2.9.0              # Date utilities
+
+# ============================================================================
+# Monitoring & Logging
+# ============================================================================
+prometheus-client==0.21.1           # Metrics collection
+structlog==24.4.0                   # Structured logging
+
+# ============================================================================
+# Email
+# ============================================================================
+aiosmtplib==3.0.2                   # Async SMTP client
+jinja2==3.1.5                       # Email templates
+
+# ============================================================================
+# Utilities
+# ============================================================================
+python-dotenv==1.0.1                # Environment variable loading

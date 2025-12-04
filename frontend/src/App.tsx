@@ -13,6 +13,9 @@ import { ThemeToggle } from "./components/theme-toggle";
 import { Toaster } from "./components/ui/sonner";
 import { User } from "./types/user";
 import { toast } from "sonner";
+import { roomService } from "./features/room/services/roomService";
+import { LoadingOverlay } from "./components/ui/loading";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 interface RoomState {
   roomName: string;
@@ -34,35 +37,82 @@ function ProtectedRoute({ children, user }: { children: React.ReactNode; user: U
 function AppContent() {
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleCreateRoom = (
+  const handleCreateRoom = async (
     roomName: string,
     focusTime: number,
     breakTime: number,
   ) => {
-    // Generate a simple room ID
-    const roomId = `room-${Math.random().toString(36).substring(2, 9)}`;
+    setIsLoading(true);
+    try {
+      const response = await roomService.createRoom({
+        room_name: roomName,
+        work_duration_minutes: focusTime,
+        break_duration_minutes: breakTime,
+        auto_start_break: false,
+      });
 
-    setRoomState({
-      roomName,
-      roomId,
-      focusTime,
-      breakTime,
-    });
-    navigate("/room");
+      if (response.status === "success" && response.data) {
+        const room = response.data;
+        setRoomState({
+          roomName: room.room_name,
+          roomId: room.room_id,
+          focusTime: room.work_duration / 60, // seconds to minutes
+          breakTime: room.break_duration / 60, // seconds to minutes
+        });
+        navigate(`/room/${room.room_id}`);
+        toast.success("방이 생성되었습니다!");
+      } else {
+        const errorMessage =
+          response.error?.message || "방 생성에 실패했습니다";
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error("Failed to create room:", error);
+      toast.error("네트워크 오류가 발생했습니다");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleJoinRoom = (roomId: string) => {
-    // Mock joining a room - in real app, this would fetch room data
-    setRoomState({
-      roomName: "샘플 방",
-      roomId,
-      focusTime: 25,
-      breakTime: 5,
-    });
-    navigate("/room");
+  const handleJoinRoom = async (roomId: string) => {
+    setIsLoading(true);
+    try {
+      // Extract room ID from URL if full URL is provided
+      const extractedRoomId = roomId.includes("/room/")
+        ? roomId.split("/room/")[1].split("?")[0]
+        : roomId.trim();
+
+      const response = await roomService.getRoom(extractedRoomId);
+
+      if (response.status === "success" && response.data) {
+        const room = response.data;
+        setRoomState({
+          roomName: room.room_name,
+          roomId: room.room_id,
+          focusTime: room.work_duration / 60, // seconds to minutes
+          breakTime: room.break_duration / 60, // seconds to minutes
+        });
+        navigate(`/room/${room.room_id}`);
+        toast.success("방에 참여했습니다!");
+      } else {
+        if (response.error?.code === "ROOM_NOT_FOUND") {
+          toast.error("방을 찾을 수 없습니다. 방 ID를 확인해주세요.");
+        } else {
+          const errorMessage =
+            response.error?.message || "방 참여에 실패했습니다";
+          toast.error(errorMessage);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to join room:", error);
+      toast.error("네트워크 오류가 발생했습니다");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLeaveRoom = () => {
@@ -128,6 +178,7 @@ function AppContent() {
     <div className="flex flex-col min-h-screen">
       <ThemeToggle />
       <Toaster position="top-center" />
+      {isLoading && <LoadingOverlay />}
 
       {/* Navigation - Show on all pages except room and login */}
       {!isRoomPage && location.pathname !== "/login" && (
@@ -143,19 +194,11 @@ function AppContent() {
           />
 
           <Route
-            path="/room"
+            path="/room/:roomId"
             element={
-              roomState ? (
-                <RoomPage
-                  roomName={roomState.roomName}
-                  roomId={roomState.roomId}
-                  initialFocusTime={roomState.focusTime}
-                  initialBreakTime={roomState.breakTime}
-                  onLeaveRoom={handleLeaveRoom}
-                />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              <RoomPage
+                onLeaveRoom={handleLeaveRoom}
+              />
             }
           />
 
@@ -219,8 +262,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

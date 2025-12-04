@@ -181,20 +181,36 @@ focus-mate/
 
 ## 💻 개발 가이드
 
+### ⚡ 빠른 시작 (스크립트 사용)
+
+```bash
+# 전체 스택 시작 (백엔드 + 프론트엔드)
+./scripts/start.sh
+
+# 개별 시작
+cd backend && ./run.sh        # 백엔드만
+cd frontend && ./run.sh       # 프론트엔드만
+
+# 테스트 실행
+./scripts/test-all.sh         # 전체 테스트
+cd backend && ./scripts/test.sh  # 백엔드 테스트만
+cd frontend && npm test       # 프론트엔드 테스트만
+```
+
 ### 로컬 개발 환경 설정
 
 자세한 내용은 [CONTRIBUTING.md](./docs/CONTRIBUTING.md)를 참조하세요.
 
 ```bash
 # 백엔드 개발
-cd src/backend
+cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 
 # 프론트엔드 개발
-cd src/frontend
+cd frontend
 npm install
 npm run dev
 ```
@@ -202,15 +218,18 @@ npm run dev
 ### 테스트 실행
 
 ```bash
+# 전체 테스트
+./scripts/test-all.sh
+
 # 백엔드 테스트
-docker-compose exec backend pytest --cov
+cd backend
+./scripts/test.sh
+# 또는
+pytest --cov=app
 
 # 프론트엔드 테스트
-docker-compose exec frontend npm test
-
-# 전체 테스트
-docker-compose exec backend pytest
-docker-compose exec frontend npm test
+cd frontend
+npm test
 ```
 
 ### 코드 품질 검사
@@ -234,9 +253,17 @@ npm run type-check                 # TypeScript
 
 ### 핵심 문서
 
+- **[DEVELOPMENT_STATUS.md](./DEVELOPMENT_STATUS.md)** - 개발 상태 요약 및 진행률
 - **[SRS.md](./docs/SRS.md)** - 소프트웨어 요구사항 명세서 (ISO/IEC/IEEE 29148)
 - **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - 시스템 아키텍처 설계서 (ISO/IEC/IEEE 42010)
 - **[API_SPECIFICATION.md](./docs/API_SPECIFICATION.md)** - REST API 및 WebSocket 명세
+
+### 백엔드 문서
+
+- **[backend/README.md](./backend/README.md)** - 백엔드 빠른 시작
+- **[backend/docs/ARCHITECTURE.md](./backend/docs/ARCHITECTURE.md)** - 백엔드 아키텍처
+- **[backend/docs/API.md](./backend/docs/API.md)** - 백엔드 API 참조
+- **[backend/docs/DEVELOPMENT.md](./backend/docs/DEVELOPMENT.md)** - 백엔드 개발 가이드
 - **[TEST_PLAN.md](./docs/TEST_PLAN.md)** - 테스트 계획 및 전략
 
 ### 개발 문서

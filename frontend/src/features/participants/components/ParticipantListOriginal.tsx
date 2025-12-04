@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import { Users, Crown } from "lucide-react";
 import { ScrollArea } from "../../../components/ui/scroll-area";
+import { ParticipantListSkeleton } from "../../../components/ui/room-skeleton";
 
 export interface Participant {
   id: string;
@@ -11,9 +12,14 @@ export interface Participant {
 
 interface ParticipantListProps {
   participants: Participant[];
+  isLoading?: boolean;
 }
 
-export function ParticipantList({ participants }: ParticipantListProps) {
+export function ParticipantList({ participants, isLoading = false }: ParticipantListProps) {
+  if (isLoading) {
+    return <ParticipantListSkeleton />;
+  }
+
   const getInitials = (name: string) => {
     const words = name.trim().split(" ");
     if (words.length >= 2) {
