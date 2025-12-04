@@ -1,0 +1,169 @@
+# Team Pomodoro Timer (Focus Mate) - AI Context File
+
+## Project Overview
+Team Pomodoro Timer는 ISO/IEC 25010 품질 표준을 준수하는 실시간 협업 포모도로 타이머 웹 애플리케이션입니다.
+원격 근무 환경에서 팀의 생산성을 극대화하고, 집중 시간과 휴식 시간을 동기화하여 관리합니다.
+
+## Core Documentation Index
+
+### 1. Requirements & Specifications
+- [docs/SRS.md](docs/SRS.md): 소프트웨어 요구사항 명세서 (ISO/IEC/IEEE 29148 준수)
+  - 기능 요구사항 (Functional Requirements)
+  - 비기능 요구사항 (Non-Functional Requirements)
+  - 요구사항 추적성 매트릭스 (RTM)
+
+### 2. Architecture & Design
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): 시스템 아키텍처 설계서 (ISO/IEC/IEEE 42010 준수)
+  - 논리적 뷰 (Logical View)
+  - 프로세스 뷰 (Process View)
+  - 배포 뷰 (Deployment View)
+  - 데이터 뷰 (Data View)
+
+- [docs/ADR/](docs/ADR/): Architecture Decision Records
+  - 주요 기술 선택의 근거와 트레이드오프 문서화
+
+### 3. Quality Assurance
+- [docs/TEST_PLAN.md](docs/TEST_PLAN.md): 테스트 계획 및 전략
+  - 단위 테스트, 통합 테스트, E2E 테스트 시나리오
+  - 커버리지 목표 및 품질 메트릭
+
+- [docs/QUALITY_METRICS.md](docs/QUALITY_METRICS.md): ISO 25010 품질 메트릭
+  - 신뢰성, 유지보수성, 성능 효율성 지표
+
+### 4. Development Guidelines
+- [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md): 코딩 표준 및 스타일 가이드
+  - Python (FastAPI) 표준
+  - TypeScript (React) 표준
+  - 복잡도 제한 및 타입 안정성 규칙
+
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): 기여 가이드
+  - 개발 환경 설정
+  - Git 워크플로우
+  - Pull Request 프로세스
+
+### 5. API Documentation
+- [docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md): REST API 및 WebSocket 명세
+  - 엔드포인트 정의
+  - 요청/응답 스키마
+  - 에러 처리 규약
+
+## Key Technical Constraints
+
+### Backend (Python/FastAPI)
+```python
+# 모든 코드는 다음 제약을 준수해야 함:
+# 1. Pydantic Strict Mode 사용 (ConfigDict(strict=True))
+# 2. Mypy --strict 모드 통과 (Any 타입 금지)
+# 3. Cyclomatic Complexity < 10 (함수당)
+# 4. Test Coverage > 90%
+```
+
+### Frontend (TypeScript/React)
+```typescript
+// 모든 코드는 다음 제약을 준수해야 함:
+// 1. TypeScript strict: true
+// 2. ESLint complexity < 10
+// 3. 접근성(A11y) 준수 (jsx-a11y)
+// 4. Test Coverage > 90%
+```
+
+## Quality Gates (CI/CD)
+모든 Pull Request는 다음을 통과해야 합니다:
+- ✅ Linting (ruff, eslint)
+- ✅ Type Checking (mypy --strict, tsc --noEmit)
+- ✅ Complexity Analysis (radon, eslint-complexity)
+- ✅ Security Scan (bandit, npm audit)
+- ✅ Test Coverage (pytest-cov, jest)
+- ✅ Docker Build Success
+
+## Project Structure (Feature-based Modularity)
+```
+focus-mate/
+├── docs/                    # 📚 ISO 표준 준수 문서
+├── src/
+│   ├── backend/            # 🐍 FastAPI 애플리케이션
+│   │   ├── app/
+│   │   │   ├── routers/    # ⭐ 기능별 라우터 (rooms, timer, participants, websocket)
+│   │   │   ├── core/       # 설정, 보안, 의존성
+│   │   │   ├── schemas/    # Pydantic 스키마 (Request/Response)
+│   │   │   ├── services/   # 비즈니스 로직 (기능별 분리)
+│   │   │   ├── repositories/ # 데이터 액세스 (인터페이스 + 구현체)
+│   │   │   └── db/         # DB 연결 및 ORM 모델
+│   │   └── tests/          # Pytest 테스트 스위트
+│   └── frontend/           # ⚛️ React 애플리케이션
+│       ├── src/
+│       │   ├── features/   # ⭐ 기능 단위 모듈 (room, timer, participants)
+│       │   │   ├── room/   # 방 관리 (components, hooks, stores, services)
+│       │   │   ├── timer/  # 타이머 (components, hooks, stores, services)
+│       │   │   └── participants/ # 참여자 (components, hooks, services)
+│       │   ├── components/ # 공통 UI 컴포넌트 (Atomic Design)
+│       │   ├── pages/      # 라우트 페이지 (Feature 조합)
+│       │   └── services/   # 공통 API 인프라
+│       └── tests/          # Jest/Vitest 테스트
+├── scripts/                # 🔧 자동화 스크립트
+└── .github/workflows/      # 🚀 CI/CD 파이프라인
+```
+
+## 확장성 원칙 (Scalability Principles)
+1. **기능 추가**: 새 라우터/feature 폴더만 추가 (기존 코드 수정 불필요)
+2. **모듈 독립성**: 각 기능은 자체 컴포넌트, 훅, 스토어, 서비스 포함
+3. **의존성 역전**: Repository Interface로 DB 구현체 교체 용이
+4. **낮은 결합도**: 모델 간 직접 참조 최소화 (UUID 기반 조인)
+
+## Development Workflow
+
+### 1. 로컬 개발 환경 설정
+```bash
+# 전체 스택 실행
+docker-compose up --build
+
+# 백엔드 개발 모드
+cd src/backend && uvicorn app.main:app --reload
+
+# 프론트엔드 개발 모드
+cd src/frontend && npm run dev
+```
+
+### 2. 테스트 실행
+```bash
+# 백엔드 테스트
+docker-compose exec backend pytest --cov
+
+# 프론트엔드 테스트
+docker-compose exec frontend npm test
+```
+
+### 3. 품질 검사
+```bash
+# 전체 품질 게이트 실행
+./scripts/run_quality_checks.sh
+```
+
+## AI Agent Instructions
+
+### When Implementing Features:
+1. **항상 요구사항 ID를 참조하세요** (예: REQ-F-001)
+2. **테스트를 먼저 작성하세요** (TDD 방식)
+3. **복잡도 제한을 준수하세요** (CC < 10)
+4. **타입 안정성을 보장하세요** (strict 모드)
+5. **문서화를 함께 업데이트하세요** (Docstring, JSDoc)
+
+### When Reviewing Code:
+- Pydantic 모델이 strict=True를 사용하는지 확인
+- 모든 함수에 타입 힌트가 있는지 확인
+- 테스트 커버리지가 90% 이상인지 확인
+- 순환 복잡도가 10 이하인지 확인
+
+## References
+- ISO/IEC 25010: Software Quality Model
+- ISO/IEC/IEEE 29148: Requirements Engineering
+- ISO/IEC/IEEE 42010: Architecture Description
+- Pydantic V2 Documentation: https://docs.pydantic.dev/
+- FastAPI Best Practices: https://fastapi.tiangolo.com/
+- React TypeScript Cheatsheet: https://react-typescript-cheatsheet.netlify.app/
+
+## Contact & Support
+- 프로젝트 이슈: GitHub Issues
+- 문서 개선 제안: Pull Request 환영
+- 아키텍처 질문: docs/ADR/ 참조
+

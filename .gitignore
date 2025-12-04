@@ -1,0 +1,155 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+env/
+ENV/
+.venv
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+*.dockerignore
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+data/
+*.sqlite
+*.sqlite3
+
+# Reports
+reports/
+*.xml
+*.html
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.code-workspace
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# ESLint cache
+.eslintcache
+
+# Prettier
+.prettierignore
+
+# Misc
+*.bak
+*.orig
+.cache/
+
+# Development temporary files (삭제 예정)
+dev_tmp/
+
