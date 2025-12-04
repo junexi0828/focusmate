@@ -3,7 +3,12 @@
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.database.models.community import Comment, CommentLike, Post, PostLike
+from app.infrastructure.database.models.community import (
+    Comment,
+    CommentLike,
+    Post,
+    PostLike,
+)
 
 
 class PostRepository:
@@ -51,8 +56,7 @@ class PostRepository:
             search_pattern = f"%{search}%"
             query = query.where(
                 or_(
-                    Post.title.ilike(search_pattern),
-                    Post.content.ilike(search_pattern)
+                    Post.title.ilike(search_pattern), Post.content.ilike(search_pattern)
                 )
             )
 
@@ -115,7 +119,9 @@ class CommentRepository:
     async def get_by_id(self, comment_id: str) -> Comment | None:
         """Get comment by ID."""
         result = await self.db.execute(
-            select(Comment).where(Comment.id == comment_id).where(Comment.is_deleted == False)
+            select(Comment)
+            .where(Comment.id == comment_id)
+            .where(Comment.is_deleted == False)
         )
         return result.scalar_one_or_none()
 
@@ -192,7 +198,9 @@ class CommentLikeRepository:
         await self.db.refresh(comment_like)
         return comment_like
 
-    async def get_by_comment_and_user(self, comment_id: str, user_id: str) -> CommentLike | None:
+    async def get_by_comment_and_user(
+        self, comment_id: str, user_id: str
+    ) -> CommentLike | None:
         """Check if user already liked comment."""
         result = await self.db.execute(
             select(CommentLike)

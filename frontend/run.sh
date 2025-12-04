@@ -3,7 +3,12 @@
 
 set -e
 
+# Change to frontend directory (script is in frontend/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 echo "🚀 Focus Mate Frontend - Starting..."
+echo "   Working directory: $(pwd)"
 echo ""
 
 # Check if node_modules exists

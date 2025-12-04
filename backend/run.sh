@@ -3,7 +3,12 @@
 
 set -e
 
+# Change to backend directory (script is in backend/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 echo "🚀 Focus Mate Backend - Starting..."
+echo "   Working directory: $(pwd)"
 echo ""
 
 # Find compatible Python version (prefer 3.13, then 3.12, fallback to 3.x)

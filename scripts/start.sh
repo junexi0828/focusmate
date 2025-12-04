@@ -7,13 +7,15 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "🚀 Focus Mate - Starting Backend and Frontend..."
+echo "   Working directory: $(pwd)"
 echo ""
 
 # Function to cleanup on exit
 cleanup() {
     echo ""
     echo "🛑 Shutting down services..."
-    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+    [ -n "$BACKEND_PID" ] && kill $BACKEND_PID 2>/dev/null || true
+    [ -n "$FRONTEND_PID" ] && kill $FRONTEND_PID 2>/dev/null || true
     exit 0
 }
 
@@ -119,9 +121,33 @@ else
 fi
 echo ""
 
+# Check if port 8000 is already in use
+BACKEND_PORT=8000
+PORT_PID=$(lsof -ti:$BACKEND_PORT 2>/dev/null || true)
+
+if [ -n "$PORT_PID" ]; then
+    echo "⚠️  Port $BACKEND_PORT is already in use (PID: $PORT_PID)"
+    echo "   Port is already in use. Kill the process and restart? (y/n)"
+    echo "   (Auto-restart in 5 seconds if no response)"
+
+    # Read with timeout (5 seconds)
+    read -t 5 -r RESPONSE || RESPONSE="y"
+
+    if [[ "$RESPONSE" =~ ^[Yy]$ ]] || [ -z "$RESPONSE" ]; then
+        echo "🛑 Killing the process..."
+        kill -9 $PORT_PID 2>/dev/null || true
+        sleep 1
+        echo "✅ Process terminated."
+    else
+        echo "❌ User cancelled. Exiting script."
+        exit 1
+    fi
+    echo ""
+fi
+
 # Start backend in background using venv python
 echo "🚀 Starting backend server..."
-venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/focusmate-backend.log 2>&1 &
+venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port $BACKEND_PORT > /tmp/focusmate-backend.log 2>&1 &
 BACKEND_PID=$!
 
 # Wait a moment for process to start
@@ -178,27 +204,74 @@ if [ ! -f .env ]; then
     cp .env.example .env 2>/dev/null || true
 fi
 
-# Start frontend in background
-npm run dev > /tmp/focusmate-frontend.log 2>&1 &
-FRONTEND_PID=$!
-echo "✅ Frontend started (PID: $FRONTEND_PID)"
-echo "   📍 Frontend: http://localhost:3000"
-echo ""
+# Check if port 3000 is already in use
+FRONTEND_PORT=3000
+FRONTEND_PORT_PID=$(lsof -ti:$FRONTEND_PORT 2>/dev/null || true)
 
-echo "🎉 All services are running!"
-echo ""
-echo "📋 Service Status:"
-echo "   Backend:  http://localhost:8000"
-echo "   Frontend: http://localhost:3000"
-echo "   API Docs: http://localhost:8000/docs"
-echo ""
-echo "📝 Logs:"
-echo "   Backend:  tail -f /tmp/focusmate-backend.log"
-echo "   Frontend: tail -f /tmp/focusmate-frontend.log"
-echo ""
-echo "Press Ctrl+C to stop all services"
-echo ""
+SKIP_FRONTEND=false
+if [ -n "$FRONTEND_PORT_PID" ]; then
+    echo "⚠️  Port $FRONTEND_PORT is already in use (PID: $FRONTEND_PORT_PID)"
+    echo "   Port is already in use. Kill the process and restart? (y/n)"
+    echo "   (Auto-restart in 5 seconds if no response)"
 
-# Wait for both processes
-wait
+    # Read with timeout (5 seconds)
+    read -t 5 -r RESPONSE || RESPONSE="y"
+
+    if [[ "$RESPONSE" =~ ^[Yy]$ ]] || [ -z "$RESPONSE" ]; then
+        echo "🛑 Killing the process..."
+        kill -9 $FRONTEND_PORT_PID 2>/dev/null || true
+        sleep 1
+        echo "✅ Process terminated."
+    else
+        echo "❌ User cancelled. Skipping frontend."
+        SKIP_FRONTEND=true
+    fi
+    echo ""
+fi
+
+# Start frontend in background (only if not cancelled)
+if [ "$SKIP_FRONTEND" = false ]; then
+    npm run dev > /tmp/focusmate-frontend.log 2>&1 &
+    FRONTEND_PID=$!
+    echo "✅ Frontend started (PID: $FRONTEND_PID)"
+    echo "   📍 Frontend: http://localhost:3000"
+    echo ""
+else
+    FRONTEND_PID=""
+    echo "⏭️  Skipping frontend startup."
+    echo ""
+fi
+
+if [ "$SKIP_FRONTEND" = true ]; then
+    echo "🎉 Backend service is running!"
+    echo ""
+    echo "📋 Service Status:"
+    echo "   Backend:  http://localhost:8000"
+    echo "   API Docs: http://localhost:8000/docs"
+    echo "   Frontend: (skipped)"
+    echo ""
+    echo "📝 Logs:"
+    echo "   Backend:  tail -f /tmp/focusmate-backend.log"
+    echo ""
+    echo "Press Ctrl+C to stop the service"
+    echo ""
+    # Wait only for backend
+    wait $BACKEND_PID
+else
+    echo "🎉 All services are running!"
+    echo ""
+    echo "📋 Service Status:"
+    echo "   Backend:  http://localhost:8000"
+    echo "   Frontend: http://localhost:3000"
+    echo "   API Docs: http://localhost:8000/docs"
+    echo ""
+    echo "📝 Logs:"
+    echo "   Backend:  tail -f /tmp/focusmate-backend.log"
+    echo "   Frontend: tail -f /tmp/focusmate-frontend.log"
+    echo ""
+    echo "Press Ctrl+C to stop all services"
+    echo ""
+    # Wait for both processes
+    wait
+fi
 

@@ -59,11 +59,15 @@ def get_community_service(
     post_repo: Annotated[PostRepository, Depends(get_post_repository)],
     comment_repo: Annotated[CommentRepository, Depends(get_comment_repository)],
     post_like_repo: Annotated[PostLikeRepository, Depends(get_post_like_repository)],
-    comment_like_repo: Annotated[CommentLikeRepository, Depends(get_comment_like_repository)],
+    comment_like_repo: Annotated[
+        CommentLikeRepository, Depends(get_comment_like_repository)
+    ],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> CommunityService:
     """Get community service."""
-    return CommunityService(post_repo, comment_repo, post_like_repo, comment_like_repo, user_repo)
+    return CommunityService(
+        post_repo, comment_repo, post_like_repo, comment_like_repo, user_repo
+    )
 
 
 # Post Endpoints
@@ -223,7 +227,11 @@ async def toggle_post_like(
 
 
 # Comment Endpoints
-@router.post("/posts/{post_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/posts/{post_id}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_comment(
     post_id: str,
     data: CommentCreate,

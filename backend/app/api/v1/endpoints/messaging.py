@@ -25,23 +25,28 @@ router = APIRouter(prefix="/messages", tags=["messaging"])
 
 
 # Dependency Injection
-def get_conversation_repository(db: DatabaseSession) -> ConversationRepository:
+# Note: DatabaseSession is Annotated[AsyncSession, Depends(get_db)]
+# This is FastAPI's recommended pattern. Type checkers may show warnings,
+# but this is correct at runtime - FastAPI extracts Depends() automatically.
+def get_conversation_repository(db: DatabaseSession) -> ConversationRepository:  # type: ignore[valid-type]
     """Get conversation repository."""
     return ConversationRepository(db)
 
 
-def get_message_repository(db: DatabaseSession) -> MessageRepository:
+def get_message_repository(db: DatabaseSession) -> MessageRepository:  # type: ignore[valid-type]
     """Get message repository."""
     return MessageRepository(db)
 
 
-def get_user_repository(db: DatabaseSession) -> UserRepository:
+def get_user_repository(db: DatabaseSession) -> UserRepository:  # type: ignore[valid-type]
     """Get user repository."""
     return UserRepository(db)
 
 
 def get_messaging_service(
-    conversation_repo: Annotated[ConversationRepository, Depends(get_conversation_repository)],
+    conversation_repo: Annotated[
+        ConversationRepository, Depends(get_conversation_repository)
+    ],
     message_repo: Annotated[MessageRepository, Depends(get_message_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> MessagingService:
@@ -50,11 +55,13 @@ def get_messaging_service(
 
 
 # Message Endpoints
-@router.post("/send", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/send", response_model=MessageResponse, status_code=status.HTTP_201_CREATED
+)
 async def send_message(
     data: MessageCreate,
+    service: Annotated[MessagingService, Depends(get_messaging_service)],
     sender_id: str = Query(..., description="User ID sending the message"),
-    service: Annotated[MessagingService, Depends(get_messaging_service)] = None,
 ) -> MessageResponse:
     """Send a message to another user.
 
@@ -80,8 +87,8 @@ async def send_message(
 # Conversation Endpoints
 @router.get("/conversations", response_model=list[ConversationListResponse])
 async def get_user_conversations(
+    service: Annotated[MessagingService, Depends(get_messaging_service)],
     user_id: str = Query(..., description="User ID"),
-    service: Annotated[MessagingService, Depends(get_messaging_service)] = None,
 ) -> list[ConversationListResponse]:
     """Get all conversations for a user.
 
@@ -95,13 +102,15 @@ async def get_user_conversations(
     return await service.get_user_conversations(user_id)
 
 
-@router.get("/conversations/{conversation_id}", response_model=ConversationDetailResponse)
+@router.get(
+    "/conversations/{conversation_id}", response_model=ConversationDetailResponse
+)
 async def get_conversation_detail(
     conversation_id: str,
+    service: Annotated[MessagingService, Depends(get_messaging_service)],
     user_id: str = Query(..., description="User ID requesting conversation"),
     limit: int = Query(50, ge=1, le=100, description="Max messages to return"),
     offset: int = Query(0, ge=0, description="Message offset for pagination"),
-    service: Annotated[MessagingService, Depends(get_messaging_service)] = None,
 ) -> ConversationDetailResponse:
     """Get conversation details with messages.
 
@@ -119,17 +128,21 @@ async def get_conversation_detail(
         HTTPException: If conversation not found or user not authorized
     """
     try:
-        return await service.get_conversation_detail(conversation_id, user_id, limit, offset)
+        return await service.get_conversation_detail(
+            conversation_id, user_id, limit, offset
+        )
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
 
 
-@router.post("/conversations/{conversation_id}/read", response_model=MarkMessagesReadResponse)
+@router.post(
+    "/conversations/{conversation_id}/read", response_model=MarkMessagesReadResponse
+)
 async def mark_messages_as_read(
     conversation_id: str,
     data: MarkMessagesReadRequest,
+    service: Annotated[MessagingService, Depends(get_messaging_service)],
     user_id: str = Query(..., description="User ID marking messages as read"),
-    service: Annotated[MessagingService, Depends(get_messaging_service)] = None,
 ) -> MarkMessagesReadResponse:
     """Mark messages as read in a conversation.
 
@@ -146,15 +159,17 @@ async def mark_messages_as_read(
         HTTPException: If conversation not found or user not authorized
     """
     try:
-        return await service.mark_messages_as_read(conversation_id, user_id, data.message_ids)
+        return await service.mark_messages_as_read(
+            conversation_id, user_id, data.message_ids
+        )
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
 
 
 @router.get("/unread-count", response_model=dict)
 async def get_unread_message_count(
+    service: Annotated[MessagingService, Depends(get_messaging_service)],
     user_id: str = Query(..., description="User ID"),
-    service: Annotated[MessagingService, Depends(get_messaging_service)] = None,
 ) -> dict:
     """Get total unread message count for a user.
 

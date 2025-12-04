@@ -2,8 +2,10 @@
 # Focus Mate - Check Service Status
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
 
 echo "🔍 Focus Mate - Service Status Check"
+echo "   Working directory: $(pwd)"
 echo "======================================"
 echo ""
 

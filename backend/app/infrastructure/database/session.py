@@ -72,6 +72,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 # Type alias for dependency injection
+# This is FastAPI's recommended pattern: Annotated[AsyncSession, Depends(get_db)]
+# FastAPI will extract the Depends() at runtime, leaving AsyncSession as the actual type
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
 

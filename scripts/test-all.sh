@@ -4,8 +4,10 @@
 set -e
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
 
 echo "🧪 Focus Mate - Running All Tests..."
+echo "   Working directory: $(pwd)"
 echo ""
 
 # Test Backend

@@ -2,7 +2,11 @@
 
 from datetime import datetime, timezone
 
-from app.core.exceptions import InvalidTimerStateException, RoomNotFoundException, TimerNotFoundException
+from app.core.exceptions import (
+    InvalidTimerStateException,
+    RoomNotFoundException,
+    TimerNotFoundException,
+)
 from app.domain.timer.schemas import TimerStateResponse
 from app.infrastructure.database.models import Timer
 from app.infrastructure.repositories.room_repository import RoomRepository
@@ -20,7 +24,7 @@ class TimerService:
         room_repository: RoomRepository,
     ) -> None:
         """Initialize service.
-        
+
         Args:
             timer_repository: Timer repository
             room_repository: Room repository
@@ -30,13 +34,13 @@ class TimerService:
 
     async def get_or_create_timer(self, room_id: str) -> TimerStateResponse:
         """Get timer for room, creating if not exists.
-        
+
         Args:
             room_id: Room identifier
-            
+
         Returns:
             Timer state
-            
+
         Raises:
             RoomNotFoundException: If room not found
         """
@@ -63,13 +67,13 @@ class TimerService:
 
     async def start_timer(self, room_id: str) -> TimerStateResponse:
         """Start timer.
-        
+
         Args:
             room_id: Room identifier
-            
+
         Returns:
             Updated timer state
-            
+
         Raises:
             TimerNotFoundException: If timer not found
             InvalidTimerStateException: If timer cannot be started
@@ -92,13 +96,13 @@ class TimerService:
 
     async def pause_timer(self, room_id: str) -> TimerStateResponse:
         """Pause timer.
-        
+
         Args:
             room_id: Room identifier
-            
+
         Returns:
             Updated timer state
-            
+
         Raises:
             TimerNotFoundException: If timer not found
             InvalidTimerStateException: If timer cannot be paused
@@ -125,13 +129,13 @@ class TimerService:
 
     async def reset_timer(self, room_id: str) -> TimerStateResponse:
         """Reset timer to initial state.
-        
+
         Args:
             room_id: Room identifier
-            
+
         Returns:
             Reset timer state
-            
+
         Raises:
             TimerNotFoundException: If timer not found
             RoomNotFoundException: If room not found
@@ -215,13 +219,13 @@ class TimerService:
 
     async def get_timer_state(self, room_id: str) -> TimerStateResponse:
         """Get current timer state (with real-time calculation).
-        
+
         Args:
             room_id: Room identifier
-            
+
         Returns:
             Current timer state
-            
+
         Raises:
             TimerNotFoundException: If timer not found
         """
@@ -233,7 +237,7 @@ class TimerService:
         if timer.status == TimerStatus.RUNNING.value and timer.started_at:
             elapsed = (datetime.now(timezone.utc) - timer.started_at).total_seconds()
             current_remaining = max(0, timer.remaining_seconds - int(elapsed))
-            
+
             # Check if timer completed
             if current_remaining == 0:
                 timer.status = TimerStatus.COMPLETED.value

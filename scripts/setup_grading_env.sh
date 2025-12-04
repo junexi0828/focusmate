@@ -38,6 +38,7 @@ cd "$PROJECT_ROOT"
 
 log_info "Focus Mate AI 체점 환경 설정을 시작합니다..."
 log_info "프로젝트 루트: $PROJECT_ROOT"
+log_info "Working directory: $(pwd)"
 
 # 실행 모드 확인
 MODE="${1:---docker}"

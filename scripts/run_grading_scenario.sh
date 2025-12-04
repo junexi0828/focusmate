@@ -44,6 +44,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+log_info "Working directory: $(pwd)"
+
 # 리포트 디렉토리 생성
 REPORTS_DIR="$PROJECT_ROOT/reports"
 mkdir -p "$REPORTS_DIR"

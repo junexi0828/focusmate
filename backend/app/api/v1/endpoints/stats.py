@@ -2,13 +2,15 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.core.exceptions import UnauthorizedException
 from app.domain.stats.service import StatsService
 from app.infrastructure.database.session import DatabaseSession
-from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
+from app.infrastructure.repositories.session_history_repository import (
+    SessionHistoryRepository,
+)
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -40,20 +42,27 @@ class UserStatsResponse(BaseModel):
 
 
 # Dependency Injection
-def get_session_history_repository(db: DatabaseSession) -> SessionHistoryRepository:
+# Note: DatabaseSession is Annotated[AsyncSession, Depends(get_db)]
+# This is FastAPI's recommended pattern. Type checkers may show warnings,
+# but this is correct at runtime - FastAPI extracts Depends() automatically.
+def get_session_history_repository(db: DatabaseSession) -> SessionHistoryRepository:  # type: ignore[valid-type]
     """Get session history repository."""
     return SessionHistoryRepository(db)
 
 
 def get_stats_service(
-    repo: Annotated[SessionHistoryRepository, Depends(get_session_history_repository)]
+    repo: Annotated[SessionHistoryRepository, Depends(get_session_history_repository)],
 ) -> StatsService:
     """Get stats service."""
     return StatsService(repo)
 
 
 # Endpoints
-@router.post("/session", response_model=SessionRecordResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/session",
+    response_model=SessionRecordResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def record_session(
     data: SessionRecordRequest,
     service: Annotated[StatsService, Depends(get_stats_service)],
@@ -80,7 +89,7 @@ async def record_session(
 async def get_user_stats(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
-    days: int = 7,
+    days: int = Query(7, ge=1, le=365),
 ) -> UserStatsResponse:
     """Get user statistics for the last N days.
 
@@ -95,12 +104,6 @@ async def get_user_stats(
     Raises:
         HTTPException: If user not found or invalid parameters
     """
-    if days < 1 or days > 365:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Days must be between 1 and 365"
-        )
-
     try:
         stats = await service.get_user_stats(user_id, days)
         return UserStatsResponse(**stats)
