@@ -3,14 +3,20 @@
  */
 
 export interface Participant {
-  participant_id: string;
+  id: string; // Backend returns 'id'
+  participant_id?: string; // Keep for backward compatibility
   room_id: string;
-  name: string;
+  username: string; // Backend returns 'username'
+  name?: string; // Keep for backward compatibility (use username if not available)
   is_host: boolean;
   joined_at: string;
+  // Optional fields from backend
+  user_id?: string | null;
+  is_connected?: boolean;
+  left_at?: string | null;
 }
 
 export interface JoinRoomRequest {
-  participant_name: string;
+  username: string; // Backend expects 'username'
 }
 

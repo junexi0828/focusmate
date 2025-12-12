@@ -2,7 +2,23 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import achievements, auth, community, messaging, participants, rooms, stats, timer, websocket
+from app.api.v1.endpoints import (
+    achievements,
+    auth,
+    chat,
+    community,
+    matching,
+    messaging,
+    participants,
+    proposals,
+    ranking,
+    room_reservations,
+    rooms,
+    stats,
+    timer,
+    verification,
+    websocket,
+)
 
 api_router = APIRouter()
 
@@ -16,3 +32,9 @@ api_router.include_router(achievements.router)
 api_router.include_router(community.router)
 api_router.include_router(messaging.router)
 api_router.include_router(websocket.router)
+api_router.include_router(ranking.router)
+api_router.include_router(room_reservations.router)
+api_router.include_router(verification.router)
+api_router.include_router(matching.router)
+api_router.include_router(proposals.router)
+api_router.include_router(chat.router)

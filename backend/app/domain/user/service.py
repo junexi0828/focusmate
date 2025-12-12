@@ -1,5 +1,6 @@
 """User domain service."""
 
+from app.core.config import settings
 from app.core.exceptions import UnauthorizedException, ValidationException
 from app.core.security import create_access_token, hash_password, verify_password
 from app.domain.user.schemas import (
@@ -23,13 +24,13 @@ class UserService:
 
     async def register(self, data: UserRegister) -> TokenResponse:
         """Register new user.
-        
+
         Args:
             data: Registration data
-            
+
         Returns:
             Token response with user data
-            
+
         Raises:
             ValidationException: If email already exists
         """
@@ -39,6 +40,12 @@ class UserService:
             raise ValidationException("email", "Email already registered")
 
         # Create user
+        # Check if admin email (development only)
+        is_admin = (
+            settings.APP_ENV == "development"
+            and data.email.lower() == settings.ADMIN_EMAIL.lower()
+        )
+
         user = User(
             id=generate_uuid(),
             email=data.email,
@@ -46,6 +53,7 @@ class UserService:
             hashed_password=hash_password(data.password),
             is_active=True,
             is_verified=False,
+            is_admin=is_admin,
             total_focus_time=0,
             total_sessions=0,
         )
@@ -62,13 +70,13 @@ class UserService:
 
     async def login(self, data: UserLogin) -> TokenResponse:
         """Login user.
-        
+
         Args:
             data: Login credentials
-            
+
         Returns:
             Token response with user data
-            
+
         Raises:
             UnauthorizedException: If credentials invalid
         """
@@ -95,13 +103,13 @@ class UserService:
 
     async def get_profile(self, user_id: str) -> UserResponse:
         """Get user profile.
-        
+
         Args:
             user_id: User identifier
-            
+
         Returns:
             User profile
-            
+
         Raises:
             UnauthorizedException: If user not found
         """
@@ -111,16 +119,18 @@ class UserService:
 
         return UserResponse.model_validate(user)
 
-    async def update_profile(self, user_id: str, data: UserProfileUpdate) -> UserResponse:
+    async def update_profile(
+        self, user_id: str, data: UserProfileUpdate
+    ) -> UserResponse:
         """Update user profile.
-        
+
         Args:
             user_id: User identifier
             data: Update data
-            
+
         Returns:
             Updated user profile
-            
+
         Raises:
             UnauthorizedException: If user not found
         """
@@ -139,11 +149,11 @@ class UserService:
 
     async def increment_stats(self, user_id: str, focus_minutes: int) -> UserResponse:
         """Increment user statistics after session completion.
-        
+
         Args:
             user_id: User identifier
             focus_minutes: Minutes focused in session
-            
+
         Returns:
             Updated user profile
         """

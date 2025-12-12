@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { Timer, Github, Mail } from "lucide-react";
 
 export function Footer() {

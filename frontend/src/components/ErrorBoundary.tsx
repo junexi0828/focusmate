@@ -5,7 +5,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "./ui/button-enhanced";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 interface Props {

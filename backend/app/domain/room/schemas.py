@@ -24,8 +24,16 @@ class RoomCreate(BaseModel):
         max_length=MAX_ROOM_NAME_LENGTH,
         pattern=r"^[a-zA-Z0-9_-]+$",
     )
-    work_duration: int = Field(ge=MIN_WORK_DURATION, le=MAX_WORK_DURATION, default=25)
-    break_duration: int = Field(ge=MIN_BREAK_DURATION, le=MAX_BREAK_DURATION, default=5)
+    work_duration: int = Field(
+        ge=MIN_WORK_DURATION * 60,  # Convert minutes to seconds
+        le=MAX_WORK_DURATION * 60,  # Convert minutes to seconds
+        default=25 * 60,  # 25 minutes in seconds
+    )
+    break_duration: int = Field(
+        ge=MIN_BREAK_DURATION * 60,  # Convert minutes to seconds
+        le=MAX_BREAK_DURATION * 60,  # Convert minutes to seconds
+        default=5 * 60,  # 5 minutes in seconds
+    )
     auto_start_break: bool = True
 
 
@@ -34,8 +42,16 @@ class RoomUpdate(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    work_duration: int | None = Field(None, ge=MIN_WORK_DURATION, le=MAX_WORK_DURATION)
-    break_duration: int | None = Field(None, ge=MIN_BREAK_DURATION, le=MAX_BREAK_DURATION)
+    work_duration: int | None = Field(
+        None,
+        ge=MIN_WORK_DURATION * 60,  # Convert minutes to seconds
+        le=MAX_WORK_DURATION * 60,  # Convert minutes to seconds
+    )
+    break_duration: int | None = Field(
+        None,
+        ge=MIN_BREAK_DURATION * 60,  # Convert minutes to seconds
+        le=MAX_BREAK_DURATION * 60,  # Convert minutes to seconds
+    )
     auto_start_break: bool | None = None
 
 

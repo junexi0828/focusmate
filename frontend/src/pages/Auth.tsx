@@ -8,9 +8,10 @@ type AuthView = "login" | "signup";
 interface AuthPageProps {
   onLogin: (email: string, password: string) => void;
   onSignup: (email: string, password: string, name: string) => void;
+  isLoading?: boolean;
 }
 
-export function AuthPage({ onLogin, onSignup }: AuthPageProps) {
+export function AuthPage({ onLogin, onSignup, isLoading = false }: AuthPageProps) {
   const [view, setView] = useState<AuthView>("login");
 
   return (

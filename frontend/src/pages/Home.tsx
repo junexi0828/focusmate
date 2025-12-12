@@ -2,6 +2,8 @@ import React from "react";
 import { Timer } from "lucide-react";
 import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
+import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
+import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -26,7 +28,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         컨테이너 최대 너비 설정
         - max-w-6xl: 최대 너비 (변경: max-w-4xl, max-w-5xl, max-w-7xl 등)
       */}
-      <div className="w-full max-w-6xl mx-auto">
+      <div className="w-full max-w-5xl mx-auto">
         {/* Header */}
         {/*
           헤더 섹션 간격 설정
@@ -71,11 +73,23 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
           카드 그리드 레이아웃 설정
           - md:grid-cols-2: 중간 화면 이상에서 2열 (변경: sm:grid-cols-2, lg:grid-cols-2 등)
           - gap-8: 카드 간 간격 (변경: gap-4, gap-6, gap-12 등)
-          - mb-16: 하단 여백 (변경: mb-8, mb-12, mb-20 등)
+          - mb-8: 하단 여백 (변경: mb-8, mb-12, mb-20 등)
         */}
-        <div className="grid md:grid-cols-2 gap-8 mb-16">
+        <div className="grid md:grid-cols-2 gap-8 mb-8">
           <CreateRoomCard onCreateRoom={onCreateRoom} />
           <JoinRoomCard onJoinRoom={onJoinRoom} />
+        </div>
+
+        {/* Additional Sections: Room Reservations & My Rooms */}
+        {/*
+          작은 디자인의 추가 섹션
+          - grid-cols-2: 2열 그리드
+          - gap-4: 작은 간격
+          - mb-16: 하단 여백
+        */}
+        <div className="grid md:grid-cols-2 gap-4 mb-16">
+          <RoomReservationSection />
+          <MyRoomsSection />
         </div>
 
         {/* How It Works Section */}

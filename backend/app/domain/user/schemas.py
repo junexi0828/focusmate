@@ -34,6 +34,7 @@ class UserResponse(BaseModel):
     username: str
     is_active: bool
     is_verified: bool
+    is_admin: bool = False
     bio: str | None
     total_focus_time: int
     total_sessions: int

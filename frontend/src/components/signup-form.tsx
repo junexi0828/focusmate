@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
+import { Button } from "./ui/button-enhanced";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { UserPlus } from "lucide-react";
@@ -61,11 +61,11 @@ export function SignupForm({ onSignup, onSwitchToLogin }: SignupFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       onSignup(email, password, name);
@@ -138,7 +138,7 @@ export function SignupForm({ onSignup, onSwitchToLogin }: SignupFormProps) {
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" loading={isLoading}>
             {isLoading ? "가입 중..." : "회원가입"}
           </Button>
 
@@ -146,7 +146,7 @@ export function SignupForm({ onSignup, onSwitchToLogin }: SignupFormProps) {
             <span className="text-muted-foreground">이미 계정이 있으신가요? </span>
             <Button
               type="button"
-              variant="link"
+              variant="ghost"
               className="p-0 h-auto"
               onClick={onSwitchToLogin}
             >

@@ -36,6 +36,14 @@ class ParticipantRepository:
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
+    async def get_by_user_id(self, user_id: str, active_only: bool = True) -> list[Participant]:
+        """Get all participants for a user."""
+        query = select(Participant).where(Participant.user_id == user_id)
+        if active_only:
+            query = query.where(Participant.is_connected == True)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
     async def count_active_participants(self, room_id: str) -> int:
         """Count active participants in a room."""
         participants = await self.get_by_room_id(room_id, active_only=True)

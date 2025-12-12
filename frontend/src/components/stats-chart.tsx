@@ -13,19 +13,23 @@ import {
 } from "recharts";
 import { StatsTimeRange } from "../types/stats";
 import {
-  mockSessions,
   calculateDailyStats,
   calculateWeeklyStats,
   calculateMonthlyStats,
-} from "../utils/mock-data";
+} from "../utils/stats-calculator";
+import { SessionRecord } from "../features/stats/services/statsService";
 import { BarChart3 } from "lucide-react";
 
-export function StatsChart() {
+interface StatsChartProps {
+  sessions: SessionRecord[];
+}
+
+export function StatsChart({ sessions }: StatsChartProps) {
   const [timeRange, setTimeRange] = useState<StatsTimeRange>("daily");
 
-  const dailyStats = calculateDailyStats(mockSessions).slice(-7); // Last 7 days
-  const weeklyStats = calculateWeeklyStats(mockSessions).slice(-4); // Last 4 weeks
-  const monthlyStats = calculateMonthlyStats(mockSessions); // All months
+  const dailyStats = calculateDailyStats(sessions).slice(-7); // Last 7 days
+  const weeklyStats = calculateWeeklyStats(sessions).slice(-4); // Last 4 weeks
+  const monthlyStats = calculateMonthlyStats(sessions); // All months
 
   const getChartData = () => {
     switch (timeRange) {
@@ -63,7 +67,7 @@ export function StatsChart() {
     const totalFocus = data.reduce((sum, stat) => sum + stat.focusTime, 0);
     const totalBreak = data.reduce((sum, stat) => sum + stat.breakTime, 0);
     const totalSessions = data.reduce((sum, stat) => sum + stat.sessions, 0);
-    
+
     return { totalFocus, totalBreak, totalSessions };
   };
 

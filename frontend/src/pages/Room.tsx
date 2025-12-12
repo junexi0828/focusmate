@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "@tanstack/react-router";
 import { Button } from "../components/ui/button";
 import { TimerDisplay } from "../features/timer/components/TimerDisplay";
 import { TimerControls } from "../features/timer/components/TimerControls";
@@ -25,8 +25,7 @@ interface RoomPageProps {
 }
 
 export function RoomPage({ onLeaveRoom }: RoomPageProps) {
-  const { roomId } = useParams<{ roomId: string }>();
-  const navigate = useNavigate();
+  const { roomId } = useParams({ from: '/room/$roomId' });
   const [room, setRoom] = useState<Room | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [focusTime, setFocusTime] = useState(25);
@@ -35,6 +34,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const [copied, setCopied] = useState(false);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [listParticipants, setListParticipants] = useState<{ id: string; name: string; isHost: boolean }[]>([]);
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
   const [currentParticipantId, setCurrentParticipantId] = useState<string | null>(null);
   const [participantName, setParticipantName] = useState<string>("");
@@ -53,7 +53,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   useEffect(() => {
     if (!roomId) {
       toast.error("방 ID가 없습니다");
-      navigate("/");
+      onLeaveRoom();
       return;
     }
 
@@ -66,7 +66,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           setRoom(roomData);
           setFocusTime(roomData.work_duration / 60); // seconds to minutes
           setBreakTime(roomData.break_duration / 60); // seconds to minutes
-          setAutoStart(roomData.auto_start_break || false);
+          setAutoStart(roomData.auto_start_break ?? false);
 
           // Load participants from API
           await loadParticipants(roomId);
@@ -79,19 +79,19 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           } else {
             toast.error(response.error?.message || "방 정보를 불러오는데 실패했습니다");
           }
-          navigate("/");
+          onLeaveRoom();
         }
       } catch (error) {
         console.error("Failed to load room:", error);
         toast.error("네트워크 오류가 발생했습니다");
-        navigate("/");
+        onLeaveRoom();
       } finally {
         setIsLoading(false);
       }
     };
 
     loadRoom();
-  }, [roomId, navigate]);
+  }, [roomId, onLeaveRoom]);
 
   // Load participants
   const loadParticipants = async (roomId: string) => {
@@ -101,11 +101,26 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       if (response.status === "success" && response.data) {
         // Convert API participant format to UI format
         const uiParticipants: Participant[] = response.data.map((p) => ({
-          id: p.participant_id,
-          name: p.name,
+          id: p.id || p.participant_id || "",
+          participant_id: p.participant_id || p.id,
+          room_id: p.room_id,
+          username: p.username,
+          name: p.name || p.username, // Use username as name if name not available
+          is_host: p.is_host,
+          joined_at: p.joined_at,
+          user_id: p.user_id,
+          is_connected: p.is_connected,
+          left_at: p.left_at,
+        }));
+
+        // Also convert to ParticipantList format (which uses isHost instead of is_host)
+        const listFormat = uiParticipants.map((p) => ({
+          id: p.id,
+          name: p.name || p.username,
           isHost: p.is_host,
         }));
         setParticipants(uiParticipants);
+        setListParticipants(listFormat);
       }
     } catch (error) {
       console.error("Failed to load participants:", error);
@@ -130,7 +145,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       const input = prompt("참여자 이름을 입력해주세요:");
       if (!input || input.trim().length === 0) {
         toast.error("이름을 입력해야 방에 참여할 수 있습니다");
-        navigate("/");
+        onLeaveRoom();
         return;
       }
       name = input.trim();
@@ -139,15 +154,16 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
     try {
       const response = await participantService.joinRoom(roomId, {
-        participant_name: name,
+        username: name, // Backend expects 'username', not 'participant_name'
       });
       if (response.status === "success" && response.data) {
-        setCurrentParticipantId(response.data.participant_id);
+        const participantId = response.data.id || response.data.participant_id || "";
+        setCurrentParticipantId(participantId);
         localStorage.setItem(
           `participant_${roomId}`,
-          response.data.participant_id
+          participantId
         );
-        setParticipantName(response.data.name);
+        setParticipantName(response.data.username || response.data.name || "");
         // Reload participants list
         await loadParticipants(roomId);
         toast.success("방에 참여했습니다!");
@@ -239,9 +255,13 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
             // Update participants list
             if (message.data.action === "joined" && message.data.participant) {
               const newParticipant: Participant = {
-                id: message.data.participant.id,
-                name: message.data.participant.name,
-                isHost: false, // Will be updated when we reload the list
+                id: message.data.participant.id || "",
+                participant_id: message.data.participant.id,
+                room_id: roomId || "",
+                username: message.data.participant.username || message.data.participant.name || "",
+                name: message.data.participant.name || message.data.participant.username || "",
+                is_host: false,
+                joined_at: new Date().toISOString(),
               };
               setParticipants((prev) => {
                 // Check if participant already exists
@@ -327,8 +347,8 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
     try {
       const response = await roomService.updateRoomSettings(roomId, {
-        work_duration_minutes: newFocusTime,
-        break_duration_minutes: newBreakTime,
+        work_duration: newFocusTime * 60, // 분을 초로 변환
+        break_duration: newBreakTime * 60, // 분을 초로 변환
         auto_start_break: newAutoStart,
       });
 

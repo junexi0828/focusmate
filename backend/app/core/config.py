@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     # Database
     # ==========================================================================
     DATABASE_URL: str = Field(
-        default="sqlite+aiosqlite:///./focus_mate.db",
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/focus_mate",
         description="Database connection URL",
     )
     DATABASE_ECHO: bool = False
@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Admin Configuration
+    ADMIN_EMAIL: str = Field(
+        default="admin@focusmate.dev",
+        description="Admin email for development environment",
+    )
+
     BCRYPT_ROUNDS: int = Field(default=12, ge=10, le=14)
 
     # ==========================================================================

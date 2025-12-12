@@ -8,7 +8,7 @@ from app.infrastructure.database.base import Base, TimestampMixin
 
 class User(Base, TimestampMixin):
     """User model for authentication and profile.
-    
+
     Attributes:
         id: Unique user identifier (UUID)
         email: User email (unique)
@@ -59,6 +59,13 @@ class User(Base, TimestampMixin):
         nullable=False,
         default=False,
         comment="Email verification status",
+    )
+
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Admin user status",
     )
 
     bio: Mapped[str | None] = mapped_column(

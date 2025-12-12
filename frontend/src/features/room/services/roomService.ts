@@ -37,6 +37,10 @@ class RoomService extends BaseApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  async getMyRooms(): Promise<ApiResponse<Room[]>> {
+    return this.request("/rooms/my-rooms");
+  }
 }
 
 export const roomService = new RoomService();

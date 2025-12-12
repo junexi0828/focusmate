@@ -1,6 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
+import { Button } from "./ui/button-enhanced";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { LogIn } from "lucide-react";
@@ -35,13 +35,13 @@ export function LoginForm({ onLogin, onSwitchToSignup }: LoginFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       onLogin(email, password);
@@ -86,7 +86,7 @@ export function LoginForm({ onLogin, onSwitchToSignup }: LoginFormProps) {
             {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" loading={isLoading}>
             {isLoading ? "로그인 중..." : "로그인"}
           </Button>
 
@@ -94,7 +94,7 @@ export function LoginForm({ onLogin, onSwitchToSignup }: LoginFormProps) {
             <span className="text-muted-foreground">계정이 없으신가요? </span>
             <Button
               type="button"
-              variant="link"
+              variant="ghost"
               className="p-0 h-auto"
               onClick={onSwitchToSignup}
             >

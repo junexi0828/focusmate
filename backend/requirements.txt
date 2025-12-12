@@ -35,6 +35,7 @@ hiredis==3.0.0                      # Redis protocol performance
 # ============================================================================
 python-jose[cryptography]==3.3.0   # JWT token handling
 passlib[bcrypt]==1.7.4              # Password hashing
+bcrypt==4.0.1                       # Hashing algorithm used by passlib
 python-multipart==0.0.20            # OAuth2 password flow
 
 # ============================================================================

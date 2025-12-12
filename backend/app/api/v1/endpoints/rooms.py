@@ -4,10 +4,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import get_room_service
+from app.api.deps import get_current_user, get_room_service
 from app.core.exceptions import RoomNameTakenException, RoomNotFoundException
 from app.domain.room.schemas import RoomCreate, RoomResponse, RoomUpdate
 from app.domain.room.service import RoomService
+from app.infrastructure.database.session import DatabaseSession
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -18,6 +19,38 @@ async def list_rooms(
 ) -> list[RoomResponse]:
     """List all active rooms."""
     return await service.get_all_rooms()
+
+
+@router.get("/my-rooms", response_model=list[RoomResponse])
+async def get_my_rooms(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    db: DatabaseSession,
+    service: Annotated[RoomService, Depends(get_room_service)],
+) -> list[RoomResponse]:
+    """Get rooms that the current user is participating in."""
+    from app.infrastructure.repositories.participant_repository import (
+        ParticipantRepository,
+    )
+
+    participant_repo = ParticipantRepository(db)
+
+    # Get all participants for this user
+    participants = await participant_repo.get_by_user_id(current_user["id"], active_only=True)
+
+    # Get unique room IDs
+    room_ids = list(set([p.room_id for p in participants]))
+
+    # Get rooms
+    rooms = []
+    for room_id in room_ids:
+        try:
+            room = await service.get_room(room_id)
+            if room:
+                rooms.append(room)
+        except Exception:
+            continue
+
+    return rooms
 
 
 @router.post("/", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)

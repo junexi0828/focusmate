@@ -1,6 +1,7 @@
 """Stats API endpoints."""
 
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -38,7 +39,34 @@ class UserStatsResponse(BaseModel):
     total_focus_time: int
     total_sessions: int
     average_session: int
-    sessions: list[dict]
+    sessions: list[dict]  # List of session records with session_id, user_id, room_id, session_type, duration_minutes, completed_at
+
+
+class HourlyPatternResponse(BaseModel):
+    """Hourly focus pattern response for radar chart."""
+
+    hourly_focus_time: list[int]  # 24 hours (0-23)
+    total_days: int
+    peak_hour: Optional[int] = None
+
+
+class MonthlyComparisonResponse(BaseModel):
+    """Monthly comparison response for line chart."""
+
+    monthly_data: list[dict]
+    total_months: int
+
+
+class GoalAchievementResponse(BaseModel):
+    """Goal achievement response for progress ring."""
+
+    goal_type: str
+    goal_value: int
+    current_value: int
+    achievement_rate: int  # 0-100
+    period: str
+    is_achieved: bool
+    remaining: int
 
 
 # Dependency Injection
@@ -90,12 +118,16 @@ async def get_user_stats(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
     days: int = Query(7, ge=1, le=365),
+    start_date: Optional[str] = Query(None, description="Start date (ISO format: YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (ISO format: YYYY-MM-DD)"),
 ) -> UserStatsResponse:
-    """Get user statistics for the last N days.
+    """Get user statistics for the last N days or date range.
 
     Args:
         user_id: User identifier
-        days: Number of days to look back (default: 7)
+        days: Number of days to look back (default: 7, used if start_date/end_date not provided)
+        start_date: Start date for date range filtering (ISO format: YYYY-MM-DD)
+        end_date: End date for date range filtering (ISO format: YYYY-MM-DD)
         service: Stats service
 
     Returns:
@@ -105,7 +137,124 @@ async def get_user_stats(
         HTTPException: If user not found or invalid parameters
     """
     try:
-        stats = await service.get_user_stats(user_id, days)
+        start_dt = None
+        end_dt = None
+
+        if start_date and end_date:
+            try:
+                start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid date format. Use ISO format (YYYY-MM-DD)",
+                )
+
+        stats = await service.get_user_stats(user_id, days, start_dt, end_dt)
         return UserStatsResponse(**stats)
     except UnauthorizedException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve stats: {str(e)}",
+        )
+
+
+@router.get("/user/{user_id}/hourly-pattern", response_model=HourlyPatternResponse)
+async def get_hourly_pattern(
+    user_id: str,
+    service: Annotated[StatsService, Depends(get_stats_service)],
+    days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
+) -> HourlyPatternResponse:
+    """Get hourly focus pattern for radar chart.
+
+    Args:
+        user_id: User identifier
+        days: Number of days to analyze (default: 30)
+        service: Stats service
+
+    Returns:
+        Hourly focus time distribution (24 hours: 0-23)
+
+    Raises:
+        HTTPException: If user not found or invalid parameters
+    """
+    try:
+        pattern = await service.get_hourly_pattern(user_id, days)
+        return HourlyPatternResponse(**pattern)
+    except UnauthorizedException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve hourly pattern: {str(e)}",
+        )
+
+
+@router.get("/user/{user_id}/monthly-comparison", response_model=MonthlyComparisonResponse)
+async def get_monthly_comparison(
+    user_id: str,
+    service: Annotated[StatsService, Depends(get_stats_service)],
+    months: int = Query(6, ge=1, le=24, description="Number of months to compare"),
+) -> MonthlyComparisonResponse:
+    """Get monthly comparison data for line chart.
+
+    Args:
+        user_id: User identifier
+        months: Number of months to compare (default: 6)
+        service: Stats service
+
+    Returns:
+        Monthly statistics for comparison
+
+    Raises:
+        HTTPException: If user not found or invalid parameters
+    """
+    try:
+        comparison = await service.get_monthly_comparison(user_id, months)
+        return MonthlyComparisonResponse(**comparison)
+    except UnauthorizedException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve monthly comparison: {str(e)}",
+        )
+
+
+@router.get("/user/{user_id}/goal-achievement", response_model=GoalAchievementResponse)
+async def get_goal_achievement(
+    user_id: str,
+    service: Annotated[StatsService, Depends(get_stats_service)],
+    goal_type: str = Query(..., pattern="^(focus_time|sessions)$", description="Type of goal"),
+    goal_value: int = Query(..., gt=0, description="Target value for the goal"),
+    period: str = Query("week", pattern="^(day|week|month)$", description="Time period"),
+) -> GoalAchievementResponse:
+    """Get goal achievement rate for progress ring.
+
+    Args:
+        user_id: User identifier
+        goal_type: Type of goal ('focus_time' or 'sessions')
+        goal_value: Target value for the goal
+        period: Time period ('day', 'week', 'month')
+        service: Stats service
+
+    Returns:
+        Goal achievement statistics with progress rate
+
+    Raises:
+        HTTPException: If user not found or invalid parameters
+    """
+    try:
+        achievement = await service.get_goal_achievement(user_id, goal_type, goal_value, period)
+        return GoalAchievementResponse(**achievement)
+    except UnauthorizedException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve goal achievement: {str(e)}",
+        )

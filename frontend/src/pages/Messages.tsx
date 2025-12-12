@@ -1,230 +1,306 @@
-import React, { useState } from "react";
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Avatar, AvatarFallback } from "../components/ui/avatar";
-import { ScrollArea } from "../components/ui/scroll-area";
-import { mockConversations, mockMessages } from "../utils/mock-messages";
-import { Conversation, Message } from "../types/message";
-import { Send, MessageCircle } from "lucide-react";
-import { cn } from "../components/ui/utils";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { MessageSquare, Users, Heart, Search, Plus, Send } from "lucide-react";
+import { chatApi } from "@/api/chat";
+import { useChatWebSocket } from "@/hooks/useChatWebSocket";
+import type { ChatRoom, MessageCreate } from "@/types/chat";
+import { PageTransition } from "@/components/PageTransition";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button-enhanced";
+import { Input } from "@/components/ui/input";
 
 export function MessagesPage() {
-  const [conversations] = useState<Conversation[]>(mockConversations);
-  const [selectedConversationId, setSelectedConversationId] = useState<
-    string | null
-  >(conversations[0]?.id || null);
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [newMessage, setNewMessage] = useState("");
-
-  const currentUserId = "user-1"; // Mock current user
-
-  const selectedConversation = conversations.find(
-    (c) => c.id === selectedConversationId
+  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
+  const [activeTab, setActiveTab] = useState<"direct" | "team" | "matching">(
+    "direct"
   );
-  const conversationMessages = messages.filter(
-    (m) => m.conversationId === selectedConversationId
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [messageInput, setMessageInput] = useState("");
 
-  const getInitials = (name: string) => {
-    const words = name.trim().split(" ");
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
+  const queryClient = useQueryClient();
+  const token = localStorage.getItem("access_token");
+
+  // WebSocket connection
+  const {
+    isConnected,
+    messages: wsMessages,
+    joinRoom,
+    leaveRoom,
+  } = useChatWebSocket(token);
+
+  // Fetch rooms
+  const { data: roomsData, isLoading } = useQuery({
+    queryKey: ["chat-rooms", activeTab],
+    queryFn: () => chatApi.getRooms(activeTab),
+  });
+
+  // Fetch messages for selected room
+  const { data: messagesData } = useQuery({
+    queryKey: ["chat-messages", selectedRoom?.room_id],
+    queryFn: () =>
+      selectedRoom ? chatApi.getMessages(selectedRoom.room_id) : null,
+    enabled: !!selectedRoom,
+  });
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: (data: MessageCreate) =>
+      chatApi.sendMessage(selectedRoom!.room_id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", selectedRoom?.room_id],
+      });
+      setMessageInput("");
+    },
+  });
+
+  const rooms = roomsData?.rooms || [];
+  const apiMessages = messagesData?.messages || [];
+  const roomWsMessages = selectedRoom
+    ? wsMessages.get(selectedRoom.room_id) || []
+    : [];
+  const allMessages = [...apiMessages, ...roomWsMessages];
+
+  // Join/leave room on selection
+  useEffect(() => {
+    if (selectedRoom) {
+      joinRoom(selectedRoom.room_id);
+      chatApi.markAsRead(selectedRoom.room_id);
+      return () => leaveRoom(selectedRoom.room_id);
     }
-    return name.substring(0, 2).toUpperCase();
-  };
+  }, [selectedRoom, joinRoom, leaveRoom]);
 
-  const formatTime = (date: Date) => {
-    const now = new Date();
-    const diffInMinutes = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60)
-    );
-
-    if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
-    if (diffInMinutes < 1440)
-      return date.toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    if (diffInMinutes < 10080)
-      return date.toLocaleDateString("ko-KR", {
-        month: "short",
-        day: "numeric",
-      });
-    return date.toLocaleDateString("ko-KR");
-  };
+  const filteredRooms = rooms.filter((room) =>
+    room.room_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!messageInput.trim() || !selectedRoom) return;
 
-    if (!newMessage.trim() || !selectedConversationId) return;
+    sendMessageMutation.mutate({
+      content: messageInput.trim(),
+      message_type: "text",
+    });
+  };
 
-    const message: Message = {
-      id: `msg-${Date.now()}`,
-      conversationId: selectedConversationId,
-      senderId: currentUserId,
-      senderName: "김철수",
-      content: newMessage.trim(),
-      createdAt: new Date(),
-      isRead: true,
-    };
-
-    setMessages([...messages, message]);
-    setNewMessage("");
+  const getRoomIcon = (type: string) => {
+    switch (type) {
+      case "direct":
+        return <MessageSquare className="w-4 h-4" />;
+      case "team":
+        return <Users className="w-4 h-4" />;
+      case "matching":
+        return <Heart className="w-4 h-4" />;
+      default:
+        return <MessageSquare className="w-4 h-4" />;
+    }
   };
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-primary-foreground" />
+    <PageTransition>
+      <div className="h-[calc(100vh-4rem)] flex bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+        {/* Sidebar */}
+        <div className="w-80 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col">
+          {/* Header */}
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Messages
+              </h1>
+              <Button size="icon" variant="ghost">
+                <Plus className="w-5 h-5" />
+              </Button>
             </div>
-            <h1>메시지</h1>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
-          <p className="text-muted-foreground">팀원들과 소통하세요</p>
+
+          {/* Tabs */}
+          <div className="flex border-b border-slate-200 dark:border-slate-700">
+            {(["direct", "team", "matching"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 transition-colors ${
+                  activeTab === tab
+                    ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                {getRoomIcon(tab)}
+                <span className="text-sm font-medium capitalize">{tab}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Room List */}
+          <div className="flex-1 overflow-y-auto">
+            {isLoading ? (
+              <div className="p-4 text-center text-slate-500">Loading...</div>
+            ) : filteredRooms.length === 0 ? (
+              <div className="p-8 text-center">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+                <p className="text-slate-500 dark:text-slate-400">
+                  No conversations yet
+                </p>
+              </div>
+            ) : (
+              filteredRooms.map((room) => (
+                <button
+                  key={room.room_id}
+                  onClick={() => setSelectedRoom(room)}
+                  className={`w-full p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-l-2 ${
+                    selectedRoom?.room_id === room.room_id
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-transparent"
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="font-medium text-slate-900 dark:text-slate-100">
+                      {room.room_name || "Unnamed Room"}
+                    </h3>
+                    {room.unread_count > 0 && (
+                      <span className="px-2 py-0.5 text-xs font-medium text-white bg-blue-500 rounded-full">
+                        {room.unread_count}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                    {room.description || "No description"}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Connection Status */}
+          <div className="p-3 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 text-xs">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isConnected ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
+              <span className="text-slate-600 dark:text-slate-400">
+                {isConnected ? "Connected" : "Disconnected"}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Messages Container */}
-        <Card className="h-[calc(100vh-250px)]">
-          <div className="grid md:grid-cols-[350px_1fr] h-full">
-            {/* Conversations List */}
-            <div className="border-r">
-              <div className="p-4 border-b">
-                <h3>대화</h3>
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {selectedRoom ? (
+            <>
+              {/* Chat Header */}
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                    {selectedRoom.room_name?.slice(0, 2).toUpperCase() || "CH"}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                      {selectedRoom.room_name || "Unnamed Room"}
+                    </h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {selectedRoom.room_type === "matching" &&
+                      selectedRoom.display_mode === "blind"
+                        ? "🎭 Blind Mode"
+                        : selectedRoom.room_type === "team"
+                          ? "👥 Team Channel"
+                          : "💬 Direct Message"}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <ScrollArea className="h-[calc(100%-73px)]">
-                <div className="p-2">
-                  {conversations.map((conversation) => (
-                    <button
-                      key={conversation.id}
-                      onClick={() => setSelectedConversationId(conversation.id)}
-                      className={cn(
-                        "w-full flex items-center gap-3 p-3 rounded-lg transition-colors",
-                        selectedConversationId === conversation.id
-                          ? "bg-primary/10"
-                          : "hover:bg-muted"
-                      )}
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-slate-900">
+                {allMessages.length === 0 ? (
+                  <div className="text-center text-slate-500 dark:text-slate-400 py-8">
+                    No messages yet. Start the conversation!
+                  </div>
+                ) : (
+                  allMessages.map((message) => (
+                    <div
+                      key={message.message_id}
+                      className="flex gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors"
                     >
-                      <Avatar>
-                        <AvatarFallback className="bg-secondary text-secondary-foreground">
-                          {getInitials(conversation.participantName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="truncate">
-                            {conversation.participantName}
-                          </p>
-                          {conversation.unreadCount > 0 && (
-                            <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center flex-shrink-0">
-                              {conversation.unreadCount}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium flex-shrink-0">
+                        {message.sender_id.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="font-medium text-slate-900 dark:text-slate-100">
+                            {message.sender_id}
+                          </span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500">
+                            {new Date(message.created_at).toLocaleTimeString()}
+                          </span>
+                          {message.is_edited && (
+                            <span className="text-xs text-slate-400 dark:text-slate-500">
+                              (edited)
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {conversation.lastMessage}
+                        <p className="text-slate-700 dark:text-slate-300 break-words">
+                          {message.content}
                         </p>
-                        {conversation.lastMessageTime && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatTime(conversation.lastMessageTime)}
-                          </p>
-                        )}
                       </div>
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Message Input */}
+              <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={
+                      !messageInput.trim() || sendMessageMutation.isPending
+                    }
+                    className="bg-gradient-to-r from-blue-600 to-purple-600"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send
+                  </Button>
+                </form>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-white dark:bg-slate-900">
+              <div className="text-center">
+                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                  Select a conversation
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400">
+                  Choose a chat from the sidebar to start messaging
+                </p>
+              </div>
             </div>
-
-            {/* Chat Area */}
-            {selectedConversation ? (
-              <div className="flex flex-col h-full">
-                {/* Chat Header */}
-                <div className="p-4 border-b flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      {getInitials(selectedConversation.participantName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <h3>{selectedConversation.participantName}</h3>
-                </div>
-
-                {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4">
-                    {conversationMessages.map((message) => {
-                      const isCurrentUser = message.senderId === currentUserId;
-                      return (
-                        <div
-                          key={message.id}
-                          className={cn(
-                            "flex",
-                            isCurrentUser ? "justify-end" : "justify-start"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "max-w-[70%] rounded-lg p-3",
-                              isCurrentUser
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted"
-                            )}
-                          >
-                            {!isCurrentUser && (
-                              <p className="text-xs text-muted-foreground mb-1">
-                                {message.senderName}
-                              </p>
-                            )}
-                            <p className="break-words">{message.content}</p>
-                            <p
-                              className={cn(
-                                "text-xs mt-1",
-                                isCurrentUser
-                                  ? "text-primary-foreground/70"
-                                  : "text-muted-foreground"
-                              )}
-                            >
-                              {message.createdAt.toLocaleTimeString("ko-KR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-
-                {/* Message Input */}
-                <div className="p-4 border-t">
-                  <form onSubmit={handleSendMessage} className="flex gap-2">
-                    <Input
-                      placeholder="메시지를 입력하세요..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button type="submit" size="icon">
-                      <Send className="w-4 h-4" />
-                    </Button>
-                  </form>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center text-muted-foreground">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>대화를 선택하세요</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
+          )}
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }

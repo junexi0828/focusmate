@@ -11,21 +11,33 @@ class ParticipantService extends BaseApiClient {
     roomId: string,
     data: JoinRoomRequest
   ): Promise<ApiResponse<Participant>> {
-    return this.request(`/rooms/${roomId}/participants`, {
+    // Backend endpoint: POST /api/v1/participants/{room_id}/join
+    return this.request(`/participants/${roomId}/join`, {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
   async getParticipants(roomId: string): Promise<ApiResponse<Participant[]>> {
-    return this.request(`/rooms/${roomId}/participants`);
+    // Backend endpoint: GET /api/v1/participants/{room_id}
+    // Backend returns: { participants: ParticipantResponse[], total: int }
+    const response = await this.request<{ participants: Participant[]; total: number }>(`/participants/${roomId}`);
+    // Extract participants array from response
+    if (response.status === "success" && response.data) {
+      return {
+        ...response,
+        data: response.data.participants,
+      };
+    }
+    return response as ApiResponse<Participant[]>;
   }
 
   async leaveRoom(
     roomId: string,
     participantId: string
   ): Promise<ApiResponse<void>> {
-    return this.request(`/rooms/${roomId}/participants/${participantId}`, {
+    // Backend endpoint: DELETE /api/v1/participants/{participant_id}
+    return this.request(`/participants/${participantId}`, {
       method: "DELETE",
     });
   }

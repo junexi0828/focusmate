@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
@@ -61,7 +61,7 @@ export function Navigation({ user, unreadMessages = 0 }: NavigationProps) {
           {/* Nav Items */}
           <div className="flex items-center gap-1">
             {navItems.map((item) => (
-              <Link key={item.path} to={item.path}>
+              <Link key={item.path} to={item.path as any}>
                 <Button
                   variant={isActive(item.path) ? "secondary" : "ghost"}
                   className="relative"

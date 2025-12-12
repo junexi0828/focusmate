@@ -1,6 +1,7 @@
 """Session history repository."""
 
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +28,31 @@ class SessionHistoryRepository:
             select(SessionHistory)
             .where(SessionHistory.user_id == user_id)
             .where(SessionHistory.completed_at >= since)
+            .order_by(SessionHistory.completed_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_by_user_date_range(
+        self,
+        user_id: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[SessionHistory]:
+        """Get user sessions within date range.
+
+        Args:
+            user_id: User identifier
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            List of session history records ordered by completed_at descending
+        """
+        result = await self.db.execute(
+            select(SessionHistory)
+            .where(SessionHistory.user_id == user_id)
+            .where(SessionHistory.completed_at >= start_date)
+            .where(SessionHistory.completed_at <= end_date)
             .order_by(SessionHistory.completed_at.desc())
         )
         return list(result.scalars().all())

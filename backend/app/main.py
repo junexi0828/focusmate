@@ -14,30 +14,47 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppException
 from app.infrastructure.database.session import close_db, init_db
+from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager.
-    
+
     Handles startup and shutdown events.
     """
     # Startup
     print("🚀 Starting Focus Mate Backend...")
     print(f"📍 Environment: {settings.APP_ENV}")
     print(f"🗄️  Database: {settings.DATABASE_URL.split('://')[0]}")
-    
+
     if settings.DEV_RESET_DB and settings.is_development:
         print("⚠️  Resetting database (development only)...")
-        
+
     # Initialize database
     await init_db()
     print("✅ Database initialized")
-    
+
+    # Initialize Redis Pub/Sub
+    try:
+        await redis_pubsub_manager.connect()
+        await redis_pubsub_manager.start_listener()
+        print("✅ Redis Pub/Sub initialized")
+    except Exception as e:
+        print(f"⚠️  Redis Pub/Sub initialization failed: {e}")
+
     yield
-    
+
     # Shutdown
     print("🛑 Shutting down Focus Mate Backend...")
+
+    # Disconnect Redis
+    try:
+        await redis_pubsub_manager.disconnect()
+        print("✅ Redis Pub/Sub disconnected")
+    except Exception:
+        pass
+
     await close_db()
     print("✅ Database connections closed")
 
@@ -61,6 +78,7 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
 
 # Exception handler for custom exceptions
 @app.exception_handler(AppException)
@@ -97,7 +115,7 @@ app.include_router(api_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,

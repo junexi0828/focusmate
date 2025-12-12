@@ -1,10 +1,14 @@
-
   import { defineConfig } from 'vite';
   import react from '@vitejs/plugin-react-swc';
+  import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
   import path from 'path';
 
+// https://vitejs.dev/config/
   export default defineConfig({
-    plugins: [react()],
+    plugins: [
+    TanStackRouterVite(),
+    react()
+  ],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
@@ -56,5 +60,12 @@
     server: {
       port: 3000,
       open: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
   });
