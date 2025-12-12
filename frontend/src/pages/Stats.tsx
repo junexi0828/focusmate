@@ -13,6 +13,7 @@ import { ChartFilters } from "../components/ChartFilters";
 import { useQuery } from "@tanstack/react-query";
 import { statsService } from "../features/stats/services/statsService";
 import { calculateDailyStats } from "../utils/stats-calculator";
+import { transformSessionRecordsForStats } from "../utils/api-transformers";
 import type {
   UserStatsResponse,
   HourlyPatternResponse,
@@ -85,8 +86,8 @@ export function StatsPage({
     // 세션 타입 필터링
     if (filters.sessionType && filters.sessionType.length > 0 && !filters.sessionType.includes("all")) {
       sessions = sessions.filter((s) => {
-        const sessionType = s.session_type || s.type || "work";
-        const duration = s.duration_minutes || s.duration || 0;
+        const sessionType = s.sessionType || "work";
+        const duration = s.durationMinutes || 0;
 
         // 세션 타입 매칭
         if (filters.sessionType.includes("break") && sessionType === "break") {
@@ -112,17 +113,8 @@ export function StatsPage({
   const weeklyStats = useMemo(() => {
     if (!filteredSessions || filteredSessions.length === 0) return [];
 
-    const dailyStats = calculateDailyStats(
-      filteredSessions.map((s) => ({
-        session_id: s.session_id || s.id || "",
-        user_id: s.user_id,
-        room_id: s.room_id,
-        session_type: s.session_type || (s.type as "work" | "break") || "work",
-        duration_minutes: s.duration_minutes || s.duration || 0,
-        completed_at: s.completed_at,
-        room_name: s.room_name,
-      }))
-    );
+    const sessionsForStats = transformSessionRecordsForStats(filteredSessions);
+    const dailyStats = calculateDailyStats(sessionsForStats);
 
     // 최근 7일 데이터
     const recentDays = dailyStats.slice(-7);
@@ -132,8 +124,8 @@ export function StatsPage({
       const date = new Date(day.date);
       const dayName = dayNames[date.getDay()];
       const daySessions = filteredSessions.filter((s) => {
-        const sessionDate = new Date(s.completed_at).toISOString().split("T")[0];
-        return sessionDate === day.date && (s.session_type || s.type) === "work";
+        const sessionDate = new Date(s.completedAt).toISOString().split("T")[0];
+        return sessionDate === day.date && s.sessionType === "work";
       });
 
       return {
@@ -148,17 +140,8 @@ export function StatsPage({
   const heatmapData = useMemo(() => {
     if (!filteredSessions || filteredSessions.length === 0) return [];
 
-    const dailyStats = calculateDailyStats(
-      filteredSessions.map((s) => ({
-        session_id: s.session_id || s.id || "",
-        user_id: s.user_id,
-        room_id: s.room_id,
-        session_type: s.session_type || (s.type as "work" | "break") || "work",
-        duration_minutes: s.duration_minutes || s.duration || 0,
-        completed_at: s.completed_at,
-        room_name: s.room_name,
-      }))
-    );
+    const sessionsForStats = transformSessionRecordsForStats(filteredSessions);
+    const dailyStats = calculateDailyStats(sessionsForStats);
 
     // 최근 12주 데이터 구성
     const weeks: Array<{ week: number; days: Array<{ day: string; hours: number }> }> = [];
@@ -202,17 +185,17 @@ export function StatsPage({
     return hourlyPattern.hourly_focus_time.map((focusTime, hour) => {
       // 해당 시간대의 세션 수 계산
       const hourSessions = filteredSessions.filter((s) => {
-        const sessionDate = new Date(s.completed_at);
+        const sessionDate = new Date(s.completedAt);
         return (
           sessionDate.getHours() === hour &&
-          (s.session_type || s.type) === "work"
+          s.sessionType === "work"
         );
       });
 
       const avgDuration =
         hourSessions.length > 0
           ? hourSessions.reduce(
-              (sum, s) => sum + (s.duration_minutes || s.duration || 0),
+              (sum, s) => sum + s.durationMinutes,
               0
             ) / hourSessions.length
           : 0;
@@ -324,10 +307,10 @@ export function StatsPage({
             filteredSessions.length > 0
               ? `${roundToDecimal(
                   filteredSessions
-                    .filter((s) => (s.session_type || s.type) === "work")
+                    .filter((s) => s.sessionType === "work")
                     .reduce(
                       (sum, s) =>
-                        sum + (s.duration_minutes || s.duration || 0),
+                        sum + s.durationMinutes,
                       0
                     ) / 60,
                   1
@@ -336,7 +319,7 @@ export function StatsPage({
           }
           change={
             filteredSessions.length > 0
-              ? `${filteredSessions.filter((s) => (s.session_type || s.type) === "work").length}개 세션`
+              ? `${filteredSessions.filter((s) => s.sessionType === "work").length}개 세션`
               : "데이터 없음"
           }
           trend={filteredSessions.length > 0 ? "up" : "neutral"}
@@ -344,20 +327,20 @@ export function StatsPage({
         <StatCard
           icon={Target}
           label="완료한 세션"
-          value={filteredSessions.filter((s) => (s.session_type || s.type) === "work").length.toString()}
+          value={filteredSessions.filter((s) => s.sessionType === "work").length.toString()}
           change={
             filteredSessions.length > 0
               ? `평균 ${Math.round(
                   filteredSessions
-                    .filter((s) => (s.session_type || s.type) === "work")
+                    .filter((s) => s.sessionType === "work")
                     .reduce(
                       (sum, s) =>
-                        sum + (s.duration_minutes || s.duration || 0),
+                        sum + s.durationMinutes,
                       0
                     ) /
                     Math.max(
                       1,
-                      filteredSessions.filter((s) => (s.session_type || s.type) === "work").length
+                      filteredSessions.filter((s) => s.sessionType === "work").length
                     )
                 )}분`
               : "시작해보세요"
@@ -370,16 +353,16 @@ export function StatsPage({
           value={
             filteredSessions.length > 0
               ? `${roundToDecimal(
-                  filteredSessions
-                    .filter((s) => (s.session_type || s.type) === "work")
+                    filteredSessions
+                    .filter((s) => s.sessionType === "work")
                     .reduce(
                       (sum, s) =>
-                        sum + (s.duration_minutes || s.duration || 0),
+                        sum + s.durationMinutes,
                       0
                     ) /
                     Math.max(
                       1,
-                      filteredSessions.filter((s) => (s.session_type || s.type) === "work").length
+                      filteredSessions.filter((s) => s.sessionType === "work").length
                     ) /
                     60,
                   1
@@ -388,7 +371,7 @@ export function StatsPage({
           }
           change={
             filteredSessions.length > 0
-              ? `${filteredSessions.filter((s) => (s.session_type || s.type) === "work").length}개 세션`
+              ? `${filteredSessions.filter((s) => s.sessionType === "work").length}개 세션`
               : "데이터 없음"
           }
           trend={filteredSessions.length > 0 ? "up" : "neutral"}

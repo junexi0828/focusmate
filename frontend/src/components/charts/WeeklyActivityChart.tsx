@@ -71,7 +71,7 @@ export function WeeklyActivityChart({ data }: WeeklyActivityChartProps) {
             animationDuration={1000}
             animationEasing="ease-in-out"
           >
-            {data.map((entry, index) => (
+            {data.map((_, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={

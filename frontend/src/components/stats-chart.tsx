@@ -18,6 +18,7 @@ import {
   calculateMonthlyStats,
 } from "../utils/stats-calculator";
 import { SessionRecord } from "../features/stats/services/statsService";
+import { transformSessionRecordsForStats } from "../utils/api-transformers";
 import { BarChart3 } from "lucide-react";
 
 interface StatsChartProps {
@@ -27,9 +28,10 @@ interface StatsChartProps {
 export function StatsChart({ sessions }: StatsChartProps) {
   const [timeRange, setTimeRange] = useState<StatsTimeRange>("daily");
 
-  const dailyStats = calculateDailyStats(sessions).slice(-7); // Last 7 days
-  const weeklyStats = calculateWeeklyStats(sessions).slice(-4); // Last 4 weeks
-  const monthlyStats = calculateMonthlyStats(sessions); // All months
+  const sessionsForStats = transformSessionRecordsForStats(sessions);
+  const dailyStats = calculateDailyStats(sessionsForStats).slice(-7); // Last 7 days
+  const weeklyStats = calculateWeeklyStats(sessionsForStats).slice(-4); // Last 4 weeks
+  const monthlyStats = calculateMonthlyStats(sessionsForStats); // All months
 
   const getChartData = () => {
     switch (timeRange) {
@@ -83,7 +85,7 @@ export function StatsChart({ sessions }: StatsChartProps) {
         <CardDescription>시간대별 집중 및 휴식 시간 분석</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as StatsTimeRange)}>
+        <Tabs value={timeRange} onValueChange={(value: string) => setTimeRange(value as StatsTimeRange)}>
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="daily">일간</TabsTrigger>
             <TabsTrigger value="weekly">주간</TabsTrigger>

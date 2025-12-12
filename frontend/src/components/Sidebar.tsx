@@ -15,7 +15,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { authService } from "../features/auth/services/authService";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
@@ -25,14 +25,18 @@ export function Sidebar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = authService.getCurrentUser();
-  const [unreadMessages, setUnreadMessages] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // TODO: 실제 읽지 않은 메시지 수 가져오기
-  useEffect(() => {
-    // 임시로 0으로 설정, 나중에 API 연동
-    setUnreadMessages(0);
-  }, []);
+  // 실제 읽지 않은 메시지 수 가져오기
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["unreadMessages"],
+    queryFn: async () => {
+      const { getUnreadMessageCount } = await import("../api/chat");
+      return getUnreadMessageCount();
+    },
+    refetchInterval: 30000, // 30초마다 갱신
+    retry: 1,
+  });
 
   const handleLogout = () => {
     authService.logout();
@@ -167,7 +171,7 @@ export function Sidebar() {
           to="/messages"
           icon={<MessageSquare size={18} />}
           label="메시지"
-          badge={unreadMessages > 0 ? unreadMessages : undefined}
+          badge={unreadCount > 0 ? unreadCount : undefined}
           isCollapsed={isCollapsed}
         />
         <NavItem

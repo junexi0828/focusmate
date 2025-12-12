@@ -102,7 +102,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </CardContent>
             <CardFooter className="flex gap-3">
-              <Button onClick={this.handleReset} variant="default">
+              <Button onClick={this.handleReset} variant="primary">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 다시 시도
               </Button>

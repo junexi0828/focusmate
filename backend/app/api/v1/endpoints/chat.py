@@ -47,13 +47,32 @@ def get_chat_service(db: Annotated[DatabaseSession, Depends()]) -> ChatService:
 # Room Endpoints
 @router.get("/rooms", response_model=ChatRoomListResponse)
 async def get_user_rooms(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
     room_type: Optional[str] = Query(None, regex="^(direct|team|matching)$"),
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
-):
-    """Get all chat rooms for current user."""
-    rooms = await service.get_user_rooms(current_user["id"], room_type)
+) -> ChatRoomListResponse:
+    """Get all chat rooms for the current user."""
+    user_id = current_user["id"]
+    rooms = await service.get_user_rooms(user_id, room_type)
     return ChatRoomListResponse(rooms=rooms, total=len(rooms))
+
+
+@router.get("/unread-count")
+async def get_unread_count(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
+) -> dict:
+    """Get total unread message count for the current user."""
+    try:
+        user_id = current_user["id"]
+        count = await service.get_unread_count(user_id)
+        return {"count": count}
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Get unread count error: {str(e)}", exc_info=True)
+        # Return 0 if there's an error (e.g., chat tables don't exist yet)
+        return {"count": 0}
 
 
 @router.post("/rooms/direct", status_code=status.HTTP_201_CREATED)

@@ -144,9 +144,87 @@ class VerificationService:
         if not verification:
             raise ValueError("Verification not found")
 
-        # TODO: Send email notification
+        # Send email notification
+        from app.infrastructure.email.email_service import EmailService
+        from app.core.config import settings
+
+        email_service = EmailService(
+            smtp_host=settings.SMTP_HOST,
+            smtp_port=settings.SMTP_PORT,
+            from_name=settings.SMTP_FROM_NAME,
+            from_email=settings.SMTP_FROM_EMAIL,
+            smtp_user=settings.SMTP_USER if settings.SMTP_ENABLED else None,
+            smtp_password=settings.SMTP_PASSWORD if settings.SMTP_ENABLED else None,
+        )
+
+        # Get user email (would need user repository)
+        # For now, using verification data
+        user_email = f"user_{verification.user_id}@example.com"  # TODO: Get from user service
+
+        if approved:
+            await email_service.send_verification_approved_email(
+                team_name=team_name,
+                leader_email=user_email,
+                admin_note=admin_note or "",
+            )
+        else:
+            await email_service.send_verification_rejected_email(
+                user_email=user_email,
+                team_name=team_name,
+                admin_note=admin_note,
+            )
 
         return VerificationResponse.model_validate(verification)
+
+    async def _encrypt_file(self, content: bytes) -> bytes:
+        """Encrypt file content using Fernet symmetric encryption.
+
+        Args:
+            content: Raw file content
+
+        Returns:
+            Encrypted content
+        """
+        from cryptography.fernet import Fernet
+        from app.core.config import settings
+
+        # Use encryption key from settings or generate one
+        # In production, this should be stored securely (e.g., environment variable)
+        encryption_key = getattr(settings, 'FILE_ENCRYPTION_KEY', None)
+
+        if not encryption_key:
+            # Generate a key for development (NOT for production!)
+            # In production, use a fixed key from environment
+            encryption_key = Fernet.generate_key()
+
+        if isinstance(encryption_key, str):
+            encryption_key = encryption_key.encode()
+
+        cipher = Fernet(encryption_key)
+        return cipher.encrypt(content)
+
+    async def _decrypt_file(self, encrypted_content: bytes) -> bytes:
+        """Decrypt file content.
+
+        Args:
+            encrypted_content: Encrypted file content
+
+        Returns:
+            Decrypted content
+        """
+        from cryptography.fernet import Fernet
+        from app.core.config import settings
+
+        encryption_key = getattr(settings, 'FILE_ENCRYPTION_KEY', None)
+
+        if not encryption_key:
+            raise ValueError("Encryption key not configured")
+
+        if isinstance(encryption_key, str):
+            encryption_key = encryption_key.encode()
+
+        cipher = Fernet(encryption_key)
+        return cipher.decrypt(encrypted_content)
 
     def _get_status_message(self, status: str) -> str:
         """Get status message."""

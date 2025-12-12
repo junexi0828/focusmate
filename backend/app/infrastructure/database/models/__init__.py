@@ -16,6 +16,7 @@ from app.infrastructure.database.models.message import Conversation, Message
 from app.infrastructure.database.models.participant import Participant
 from app.infrastructure.database.models.room import Room
 from app.infrastructure.database.models.room_reservation import RoomReservation
+from app.infrastructure.database.models.notification import Notification
 from app.infrastructure.database.models.session_history import SessionHistory
 from app.infrastructure.database.models.timer import Timer
 from app.infrastructure.database.models.user import User
@@ -38,4 +39,5 @@ __all__ = [
     "ChatRoom",
     "ChatMember",
     "ChatMessage",
+    "Notification",
 ]

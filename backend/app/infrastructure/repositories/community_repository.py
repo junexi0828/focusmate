@@ -36,39 +36,34 @@ class PostRepository:
         category: str | None = None,
         user_id: str | None = None,
         search: str | None = None,
+    async def get_posts(
+        self,
         limit: int = 20,
         offset: int = 0,
-    ) -> tuple[list[Post], int]:
-        """Get posts with filters and pagination.
-
-        Returns:
-            Tuple of (posts, total_count)
-        """
-        # Build query
+        category: Optional[str] = None,
+        user_id: Optional[str] = None,
+        search_query: Optional[str] = None,
+    ) -> list[Post]:
+        """Get posts with optional filtering and search."""
         query = select(Post).where(Post.is_deleted == False)
 
-        # Apply filters
         if category:
             query = query.where(Post.category == category)
         if user_id:
             query = query.where(Post.user_id == user_id)
-        if search:
-            search_pattern = f"%{search}%"
+        if search_query:
+            # Search in title and content
+            search_pattern = f"%{search_query}%"
             query = query.where(
                 or_(
-                    Post.title.ilike(search_pattern), Post.content.ilike(search_pattern)
+                    Post.title.ilike(search_pattern),
+                    Post.content.ilike(search_pattern),
                 )
             )
-
-        # Count total
-        count_query = select(func.count()).select_from(query.subquery())
-        total_result = await self.db.execute(count_query)
-        total = total_result.scalar_one()
 
         # Apply ordering (pinned first, then by created_at)
         query = query.order_by(desc(Post.is_pinned), desc(Post.created_at))
 
-        # Apply pagination
         query = query.limit(limit).offset(offset)
 
         # Execute

@@ -12,7 +12,6 @@ import {
   ResponsiveContainer,
   ZAxis,
   Cell,
-  Legend,
 } from 'recharts';
 import { motion } from 'framer-motion';
 

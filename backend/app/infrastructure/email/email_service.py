@@ -1,17 +1,30 @@
 """Email notification service for ranking system."""
 
 from typing import Optional
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
 class EmailService:
     """Service for sending email notifications."""
 
-    def __init__(self, smtp_host: str = "localhost", smtp_port: int = 587):
+    def __init__(
+        self,
+        smtp_host: str = "localhost",
+        smtp_port: int = 587,
+        from_name: str = "FocusMate",
+        from_email: str = "noreply@focusmate.com",
+        smtp_user: Optional[str] = None,
+        smtp_password: Optional[str] = None,
+    ):
         """Initialize email service."""
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
-        # TODO: Initialize SMTP client
-        # self.smtp_client = smtplib.SMTP(smtp_host, smtp_port)
+        self.from_name = from_name
+        self.from_email = from_email
+        self.smtp_user = smtp_user
+        self.smtp_password = smtp_password
 
     async def send_verification_submitted_email(
         self, team_name: str, leader_email: str
@@ -93,26 +106,41 @@ FocusMate 팀
 감사합니다.
 FocusMate 팀
 """
-        return await self._send_email(invitee_email, subject, body, body)
+        return await self._send_email(invitee_email, subject, body)
 
     async def _send_email(
-        self,
-        to_email: str,
-        subject: str,
-        html_content: str,
-        text_content: Optional[str] = None,
+        self, to_email: str, subject: str, body: str
     ) -> bool:
-        """Send email via SMTP."""
+        """Send email using SMTP."""
         try:
-            # For now, just log the email
-            print(f"[EMAIL] To: {to_email}")
-            print(f"[EMAIL] Subject: {subject}")
-            print(f"[EMAIL] Body: {body}")
-            print("-" * 50)
+            # Create message
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            msg["To"] = to_email
+
+            # Attach plain text content
+            text_part = MIMEText(body, "plain")
+            msg.attach(text_part)
+
+            # Send email
+            if self.smtp_user and self.smtp_password:
+                # Production mode - actual SMTP sending
+                with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                    server.starttls()  # Enable TLS
+                    server.login(self.smtp_user, self.smtp_password)
+                    server.send_message(msg)
+                print(f"[EMAIL] ✅ Sent to {to_email}: {subject}")
+            else:
+                # Development mode - just log
+                print(f"[EMAIL] 📧 To: {to_email}")
+                print(f"[EMAIL] 📝 Subject: {subject}")
+                print(f"[EMAIL] 📄 Body: {body[:100]}...")
 
             return True
+
         except Exception as e:
-            print(f"Error sending email: {e}")
+            print(f"[EMAIL ERROR] ❌ Failed to send to {to_email}: {e}")
             return False
 
 

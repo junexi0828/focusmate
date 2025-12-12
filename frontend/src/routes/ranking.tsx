@@ -153,8 +153,8 @@ function RankingComponent() {
   };
 
   const handleViewTeam = (teamId: string) => {
-    // TODO: Navigate to team detail page
-    toast.info(`팀 상세 페이지: ${teamId}`);
+    // Navigate to team detail page
+    navigate({ to: `/ranking/teams/${teamId}` });
   };
 
   const handleLeaveTeam = async (teamId: string) => {
@@ -167,8 +167,8 @@ function RankingComponent() {
   };
 
   const handleManageTeam = (teamId: string) => {
-    // TODO: Navigate to team management page
-    toast.info(`팀 관리 페이지: ${teamId}`);
+    // Navigate to team management page
+    navigate({ to: `/ranking/teams/${teamId}/manage` });
   };
 
   if (isLoading && !teams.length) {

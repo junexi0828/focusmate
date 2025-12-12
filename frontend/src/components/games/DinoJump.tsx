@@ -1,8 +1,8 @@
 /**
  * Dino Jump Game - Chrome dinosaur style
  */
-import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 
 interface DinoJumpProps {
   onGameOver: (score: number, time: number) => void;
@@ -19,7 +19,7 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
     if (!isPlaying || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext("2d")!;
     const width = canvas.width;
     const height = canvas.height;
 
@@ -33,7 +33,12 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
       jumping: false,
     };
 
-    let obstacles: Array<{ x: number; width: number; height: number }> = [];
+    let obstacles: Array<{
+      x: number;
+      width: number;
+      height: number;
+      scored?: boolean;
+    }> = [];
     let gameScore = 0;
     let gameSpeed = 5;
     let obstacleTimer = 0;
@@ -48,7 +53,7 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
 
     // Handle keyboard
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (e.code === "Space") {
         e.preventDefault();
         jump();
       }
@@ -57,13 +62,13 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
     // Handle click/touch
     const handleClick = () => jump();
 
-    window.addEventListener('keydown', handleKeyPress);
-    canvas.addEventListener('click', handleClick);
+    window.addEventListener("keydown", handleKeyPress);
+    canvas.addEventListener("click", handleClick);
 
     // Game loop
     const gameLoop = () => {
       // Clear canvas
-      ctx.fillStyle = '#1a1a1a';
+      ctx.fillStyle = "#1a1a1a";
       ctx.fillRect(0, 0, width, height);
 
       // Update dino
@@ -77,7 +82,7 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
       }
 
       // Draw dino
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = "#10b981";
       ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
 
       // Update obstacles
@@ -97,7 +102,7 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
         obs.x -= gameSpeed;
 
         // Draw obstacle
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = "#ef4444";
         ctx.fillRect(obs.x, height - obs.height, obs.width, obs.height);
 
         // Check collision
@@ -108,7 +113,9 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
         ) {
           setGameOver(true);
           setIsPlaying(false);
-          const playTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
+          const playTime = Math.floor(
+            (Date.now() - startTimeRef.current) / 1000
+          );
           onGameOver(gameScore, playTime);
           return;
         }
@@ -122,12 +129,12 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
       });
 
       // Draw ground
-      ctx.fillStyle = '#4b5563';
+      ctx.fillStyle = "#4b5563";
       ctx.fillRect(0, height - 10, width, 10);
 
       // Draw score
-      ctx.fillStyle = '#fff';
-      ctx.font = '20px monospace';
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px monospace";
       ctx.fillText(`Score: ${gameScore}`, 10, 30);
 
       // Increase difficulty
@@ -143,8 +150,8 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
     gameLoop();
 
     return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-      canvas.removeEventListener('click', handleClick);
+      window.removeEventListener("keydown", handleKeyPress);
+      canvas.removeEventListener("click", handleClick);
     };
   }, [isPlaying, onGameOver]);
 

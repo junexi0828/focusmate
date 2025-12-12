@@ -10,7 +10,7 @@ interface SessionHistoryProps {
 
 export function SessionHistory({ sessions }: SessionHistoryProps) {
   const recentSessions = [...sessions]
-    .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
+    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
     .slice(0, 20);
 
   const formatDate = (dateString: string) => {
@@ -56,13 +56,13 @@ export function SessionHistory({ sessions }: SessionHistoryProps) {
             ) : (
               recentSessions.map((session) => (
                 <div
-                  key={session.session_id}
+                  key={session.sessionId}
                   className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                 >
                   {/* Icon */}
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      session.session_type === "work"
+                      session.sessionType === "work"
                         ? "bg-primary/10 text-primary"
                         : "bg-secondary/10 text-secondary"
                     }`}
@@ -74,29 +74,29 @@ export function SessionHistory({ sessions }: SessionHistoryProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge
-                        variant={session.session_type === "work" ? "default" : "secondary"}
+                        variant={session.sessionType === "work" ? "default" : "secondary"}
                         className="text-xs"
                       >
-                        {session.session_type === "work" ? "집중" : "휴식"}
+                        {session.sessionType === "work" ? "집중" : "휴식"}
                       </Badge>
                       <CheckCircle2 className="w-4 h-4 text-secondary" />
                     </div>
 
                     <p className="text-sm">
-                      {session.duration_minutes}분 완료
+                      {session.durationMinutes}분 완료
                     </p>
 
-                    {session.room_name && (
+                    {session.roomName && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        방: {session.room_name}
+                        방: {session.roomName}
                       </p>
                     )}
                   </div>
 
                   {/* Date/Time */}
                   <div className="text-right text-xs text-muted-foreground flex-shrink-0">
-                    <p>{formatDate(session.completed_at)}</p>
-                    <p className="mt-1">{formatTime(session.completed_at)}</p>
+                    <p>{formatDate(session.completedAt)}</p>
+                    <p className="mt-1">{formatTime(session.completedAt)}</p>
                   </div>
                 </div>
               ))

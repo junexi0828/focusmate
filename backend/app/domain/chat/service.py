@@ -134,17 +134,13 @@ class ChatService:
     async def get_user_rooms(
         self, user_id: str, room_type: Optional[str] = None
     ) -> list[ChatRoomResponse]:
-        """Get all rooms for user."""
+        """Get all chat rooms for a user."""
         rooms = await self.repository.get_user_rooms(user_id, room_type)
+        return [ChatRoomResponse.model_validate(room) for room in rooms]
 
-        responses = []
-        for room in rooms:
-            unread_count = await self.repository.get_unread_count(room.room_id, user_id)
-            room_response = ChatRoomResponse.model_validate(room)
-            room_response.unread_count = unread_count
-            responses.append(room_response)
-
-        return responses
+    async def get_unread_count(self, user_id: str) -> int:
+        """Get total unread message count for a user across all rooms."""
+        return await self.repository.get_unread_count(user_id)
 
     async def get_room(self, room_id: UUID, user_id: str) -> ChatRoomResponse:
         """Get room details."""

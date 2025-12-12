@@ -22,6 +22,7 @@ import { UserStatsResponse } from "../features/stats/services/statsService";
 import { calculateDailyStats } from "../utils/stats-calculator";
 import { DataExporter } from "../utils/dataExporter";
 import { CelebrationSystem } from "../utils/celebrationSystem";
+import { transformSessionRecordsForStats } from "../utils/api-transformers";
 
 interface DashboardPageProps {
   stats?: UserStatsResponse;
@@ -42,16 +43,16 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
     today.setHours(0, 0, 0, 0);
 
     const todaySessions = stats.sessions.filter((session) => {
-      const sessionDate = new Date(session.completed_at);
+      const sessionDate = new Date(session.completedAt);
       sessionDate.setHours(0, 0, 0, 0);
       return (
         sessionDate.getTime() === today.getTime() &&
-        session.session_type === "work"
+        session.sessionType === "work"
       );
     });
 
     const todayFocusTime = todaySessions.reduce(
-      (sum, session) => sum + session.duration_minutes,
+      (sum, session) => sum + session.durationMinutes,
       0
     );
 
@@ -59,18 +60,18 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
 
     // 연속 기록 계산
     const sortedSessions = [...stats.sessions]
-      .filter((s) => s.session_type === "work")
+      .filter((s) => s.sessionType === "work")
       .sort(
         (a, b) =>
-          new Date(b.completed_at).getTime() -
-          new Date(a.completed_at).getTime()
+          new Date(b.completedAt).getTime() -
+          new Date(a.completedAt).getTime()
       );
 
     let consecutiveDays = 0;
     const checkedDates = new Set<string>();
 
     for (const session of sortedSessions) {
-      const sessionDate = new Date(session.completed_at)
+      const sessionDate = new Date(session.completedAt)
         .toISOString()
         .split("T")[0];
       if (!checkedDates.has(sessionDate)) {
@@ -87,7 +88,7 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
       }
     }
 
-    const weeklyAverageHours = stats.average_session / 60;
+    const weeklyAverageHours = stats.averageSession / 60;
 
     const formatTime = (minutes: number) => {
       const hours = Math.floor(minutes / 60);
@@ -123,11 +124,11 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
       {
         title: "주간 평균",
         value: `${weeklyAverageHours.toFixed(1)}h`,
-        change:
-          stats.total_sessions > 0
-            ? `${stats.total_sessions}개 세션`
+          change:
+          stats.totalSessions > 0
+            ? `${stats.totalSessions}개 세션`
             : "데이터 없음",
-        trend: stats.total_sessions > 0 ? ("up" as const) : ("neutral" as const),
+        trend: stats.totalSessions > 0 ? ("up" as const) : ("neutral" as const),
         icon: TrendingUp,
       },
     ];
@@ -137,26 +138,18 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
   const chartData = useMemo(() => {
     if (!stats || !stats.sessions.length) return null;
 
-    const dailyStats = calculateDailyStats(
-      stats.sessions.map((s) => ({
-        id: s.session_id,
-        date: new Date(s.completed_at),
-        duration: s.duration_minutes,
-        type: s.session_type === "work" ? ("focus" as const) : ("break" as const),
-        completed: true,
-        room_name: s.room_name,
-      }))
-    );
+    const sessionsForStats = transformSessionRecordsForStats(stats.sessions);
+    const dailyStats = calculateDailyStats(sessionsForStats);
 
     const recentDays = dailyStats.slice(-7);
 
     const focusTimeData = recentDays.map((day) => {
       const date = new Date(day.date);
       const daySessions = stats.sessions.filter((s) => {
-        const sessionDate = new Date(s.completed_at);
+        const sessionDate = new Date(s.completedAt);
         return (
           sessionDate.toISOString().split("T")[0] ===
-            date.toISOString().split("T")[0] && s.session_type === "work"
+            date.toISOString().split("T")[0] && s.sessionType === "work"
         );
       });
 
@@ -168,8 +161,8 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
     });
 
     const sessionDurations = stats.sessions
-      .filter((s) => s.session_type === "work")
-      .map((s) => s.duration_minutes);
+      .filter((s) => s.sessionType === "work")
+      .map((s) => s.durationMinutes);
 
     const distribution: Record<string, number> = {
       "포모도로 (25분)": 0,
@@ -188,7 +181,7 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
     });
 
     const breakCount = stats.sessions.filter(
-      (s) => s.session_type === "break"
+      (s) => s.sessionType === "break"
     ).length;
 
     const sessionDistribution = [
@@ -221,24 +214,16 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
   const streakData = useMemo(() => {
     if (!stats) return [];
 
-    const dailyStats = calculateDailyStats(
-      stats.sessions.map((s) => ({
-        id: s.session_id,
-        date: new Date(s.completed_at),
-        duration: s.duration_minutes,
-        type: s.session_type === "work" ? ("focus" as const) : ("break" as const),
-        completed: true,
-        room_name: s.room_name,
-      }))
-    );
+    const sessionsForStats = transformSessionRecordsForStats(stats.sessions);
+    const dailyStats = calculateDailyStats(sessionsForStats);
 
     return dailyStats.map((day) => ({
       date: day.date,
       hours: day.focusTime / 60,
       sessions: stats.sessions.filter(
         (s) =>
-          new Date(s.completed_at).toISOString().split("T")[0] === day.date &&
-          s.session_type === "work"
+          new Date(s.completedAt).toISOString().split("T")[0] === day.date &&
+          s.sessionType === "work"
       ).length,
     }));
   }, [stats]);
@@ -284,20 +269,37 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
     DataExporter.exportToPDF(exportData);
   };
 
-  const handleGoalSave = (goal: {
+  const handleGoalSave = async (goal: {
     type: "weekly" | "monthly" | "yearly";
     targetHours: number;
   }) => {
-    // TODO: Save goal to backend
-    console.log("Goal saved:", goal);
-    CelebrationSystem.celebrate();
+    try {
+      const { saveUserGoal } = await import("../api/stats");
+      await saveUserGoal({
+        daily_goal_minutes: Math.round((goal.targetHours * 60) / 7),
+        weekly_goal_sessions: 5,
+      });
+      console.log("Goal saved:", goal);
+      CelebrationSystem.celebrate();
+    } catch (error) {
+      console.error("Failed to save goal:", error);
+    }
   };
 
-  const handleSessionComplete = (duration: number, type: "work" | "break") => {
-    // TODO: Save session to backend
-    console.log("Session completed:", duration, type);
-    if (type === "work") {
-      CelebrationSystem.firstSession();
+  const handleSessionComplete = async (duration: number, type: "work" | "break") => {
+    try {
+      const { saveManualSession } = await import("../api/stats");
+      await saveManualSession({
+        duration_minutes: duration,
+        session_type: type === "work" ? "focus" : "break",
+        completed_at: new Date().toISOString(),
+      });
+      console.log("Session completed:", duration, type);
+      if (type === "work") {
+        CelebrationSystem.firstSession();
+      }
+    } catch (error) {
+      console.error("Failed to save session:", error);
     }
   };
 
@@ -309,12 +311,12 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
         type: "weekly",
         data: {
           title: "이번 주 집중 시간",
-          value: `${(stats.total_focus_time / 60).toFixed(1)}시간`,
-          subtitle: `${stats.total_sessions}개의 세션 완료`,
+          value: `${(stats.totalFocusTime / 60).toFixed(1)}시간`,
+          subtitle: `${stats.totalSessions}개의 세션 완료`,
           icon: <Clock className="h-12 w-12" />,
         },
       });
-    } else {
+    } else if (type === "streak") {
       const consecutiveDays = dashboardStats?.[2]?.value || "0일";
       setSharingCardData({
         type: "streak",

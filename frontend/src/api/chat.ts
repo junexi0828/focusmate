@@ -1,5 +1,5 @@
 /**
- * API client for unified chat system.
+ * Chat API client functions
  */
 
 import { api } from "./client";
@@ -10,6 +10,12 @@ import type {
   TeamChatCreate,
   MessageCreate,
 } from "@/types/chat";
+
+// Get unread message count
+export const getUnreadMessageCount = async (): Promise<number> => {
+  const response = await api.get("/chats/unread-count");
+  return response.data.count;
+};
 
 export const chatApi = {
   // Room operations

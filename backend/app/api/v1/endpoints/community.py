@@ -90,6 +90,38 @@ async def create_post(
     return await service.create_post(user_id, data)
 
 
+@router.get("/posts", response_model=PaginatedPostsResponse)
+async def get_posts(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    category: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    service: Annotated[CommunityService, Depends(get_community_service)],
+) -> PaginatedPostsResponse:
+    """Get community posts with optional filtering and search.
+
+    Args:
+        limit: Maximum number of posts to return
+        offset: Number of posts to skip
+        category: Optional category filter
+        search: Optional search query (searches in title and content)
+    """
+    posts = await service.get_posts(
+        limit=limit,
+        offset=offset,
+        category=category,
+        search_query=search,
+    )
+    total = await service.get_posts_count(category=category, search_query=search)
+
+    return PaginatedPostsResponse(
+        posts=posts,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
 @router.get("/posts/{post_id}", response_model=PostResponse)
 async def get_post(
     post_id: str,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   CommandDialog,
@@ -16,8 +16,6 @@ import {
   MessageSquare,
   User,
   LogOut,
-  Settings,
-  Search,
 } from "lucide-react";
 import { authService } from "../features/auth/services/authService";
 import { toast } from "sonner";

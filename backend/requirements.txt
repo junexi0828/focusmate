@@ -11,14 +11,14 @@ python-multipart==0.0.20            # Form data parsing
 # ============================================================================
 # Data Validation & Serialization
 # ============================================================================
-pydantic==2.10.4                    # Strict data validation
-pydantic-settings==2.7.0            # Settings management
+pydantic>=2.12.0,<3.0.0            # Strict data validation (updated for Python 3.14 compatibility)
+pydantic-settings>=2.7.0            # Settings management
 email-validator==2.2.0              # Email validation
 
 # ============================================================================
 # Database
 # ============================================================================
-sqlalchemy[asyncio]==2.0.36         # Async ORM
+sqlalchemy[asyncio]>=2.0.45,<3.0.0  # Async ORM (updated for Python 3.14 compatibility)
 aiosqlite==0.20.0                   # Async SQLite driver
 alembic==1.14.0                     # Database migrations
 # psycopg2-binary==2.9.10           # PostgreSQL driver (production)
@@ -33,10 +33,10 @@ hiredis==3.0.0                      # Redis protocol performance
 # ============================================================================
 # Authentication & Security
 # ============================================================================
-python-jose[cryptography]==3.3.0   # JWT token handling
+python-jose[cryptography]==3.3.0   # JWT token handling (imported as 'jose')
 passlib[bcrypt]==1.7.4              # Password hashing
 bcrypt==4.0.1                       # Hashing algorithm used by passlib
-python-multipart==0.0.20            # OAuth2 password flow
+# Note: python-multipart is already listed above (line 9)
 
 # ============================================================================
 # WebSocket
@@ -64,6 +64,12 @@ structlog==24.4.0                   # Structured logging
 # ============================================================================
 aiosmtplib==3.0.2                   # Async SMTP client
 jinja2==3.1.5                       # Email templates
+
+# ============================================================================
+# Cloud Storage (Optional - for production S3 uploads)
+# ============================================================================
+boto3==1.35.0                       # AWS SDK for S3 uploads (optional)
+botocore==1.35.0                    # AWS SDK core (required by boto3)
 
 # ============================================================================
 # Utilities

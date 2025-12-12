@@ -50,9 +50,9 @@ function StatsPageWithData({ userId }: { userId: string }) {
         // Admin can proceed with empty data
         if (isAdmin) {
           return {
-            total_focus_time: 0,
-            total_sessions: 0,
-            average_session: 0,
+            totalFocusTime: 0,
+            totalSessions: 0,
+            averageSession: 0,
             sessions: [],
           };
         }

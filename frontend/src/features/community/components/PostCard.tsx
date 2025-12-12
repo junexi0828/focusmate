@@ -1,4 +1,3 @@
-import React from "react";
 import { Post } from "../../../types/community";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import { Badge } from "../../../components/ui/badge";
@@ -24,7 +23,6 @@ export function PostCard({
   post,
   onViewPost,
   onLike,
-  currentUserId,
 }: PostCardProps) {
   const getInitials = (name: string) => {
     const words = name.trim().split(" ");

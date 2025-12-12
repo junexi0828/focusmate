@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { X, Save, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -19,7 +19,7 @@ export default function RoomSettings({
   onClose,
   onUpdate,
 }: RoomSettingsProps) {
-  const [roomName, setRoomName] = useState(room.room_name);
+  const [roomName, setRoomName] = useState(room.room_name ?? room.name);
   const [focusTime, setFocusTime] = useState(
     Math.floor(room.work_duration / 60)
   );
@@ -36,7 +36,12 @@ export default function RoomSettings({
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!roomName.trim() || roomName.length < 3 || roomName.length > 50) {
+    if (
+      !roomName ||
+      !roomName.trim() ||
+      roomName.length < 3 ||
+      roomName.length > 50
+    ) {
       newErrors.roomName = "Room name must be between 3 and 50 characters";
     }
 
@@ -57,10 +62,13 @@ export default function RoomSettings({
 
     setIsSaving(true);
     try {
-      const response = await apiClient.updateRoomSettings(room.room_id, {
-        work_duration_minutes: focusTime,
-        break_duration_minutes: breakTime,
-      });
+      const response = await apiClient.updateRoomSettings(
+        room.room_id ?? room.id,
+        {
+          work_duration_minutes: focusTime,
+          break_duration_minutes: breakTime,
+        }
+      );
 
       if (response.status === "error") {
         setErrors({
@@ -82,7 +90,7 @@ export default function RoomSettings({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await apiClient.deleteRoom(room.room_id);
+      const response = await apiClient.deleteRoom(room.room_id ?? room.id);
 
       if (response.status === "error") {
         setErrors({

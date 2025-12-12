@@ -215,43 +215,27 @@ async def get_verification_status(
     return status_info
 
 
-@router.get("/admin/verification/pending")
+@router.get("/verifications/pending", response_model=list[VerificationResponse])
 async def get_pending_verifications(
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[dict, Depends(require_admin)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-) -> list[dict]:
-    """Get all pending verification requests (admin only)."""
-    # TODO: Add admin role check
-    # if not current_user.get("is_admin"):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+) -> list[VerificationResponse]:
+    """Get all pending verifications (Admin only)."""
     return await service.get_pending_verifications()
 
 
-@router.post("/admin/verification/{request_id}/review", status_code=status.HTTP_200_OK)
+@router.post("/verifications/{verification_id}/review", response_model=VerificationResponse)
 async def review_verification(
-    request_id: UUID,
-    approved: bool,
-    current_user: Annotated[dict, Depends(get_current_user)],
+    verification_id: UUID,
+    review: VerificationReview,
+    current_user: Annotated[dict, Depends(require_admin)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    admin_note: str = "",
-) -> dict:
-    """Review a verification request (admin only)."""
-    # TODO: Add admin role check
-    # if not current_user.get("is_admin"):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
-
-    success = await service.review_verification(
-        request_id, approved, admin_note, current_user["id"]
+) -> VerificationResponse:
+    """Review a verification (Admin only)."""
+    result = await service.review_verification(
+        verification_id, review.status, review.admin_note
     )
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid request or already reviewed",
-        )
-
-    return {
-        "message": f"Verification request {'approved' if approved else 'rejected'} successfully"
-    }
+    return result
 
 
 # File Upload Endpoint
@@ -339,6 +323,58 @@ async def get_session_history(
 ) -> list[dict]:
     """Get session history for a team or user."""
     return await service.get_session_history(team_id, user_id, limit)
+
+
+@router.post("/teams/{team_id}/invite")
+async def invite_member(
+    team_id: str,
+    data: InviteMemberRequest,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RankingService, Depends(get_ranking_service)],
+) -> InvitationResponse:
+    """Invite a member to the team."""
+    try:
+        invitation = await service.invite_member(team_id, current_user["id"], data)
+        return invitation
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get("/invitations")
+async def get_user_invitations(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RankingService, Depends(get_ranking_service)],
+    status_filter: Optional[str] = Query(None, regex="^(pending|accepted|rejected)$"),
+) -> dict:
+    """Get all invitations for the current user."""
+    try:
+        invitations = await service.get_user_invitations(
+            current_user["id"], status_filter
+        )
+        return {"invitations": invitations, "total": len(invitations)}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve invitations: {str(e)}",
+        )
+
+
+@router.get("/teams/{team_id}/members")
+async def get_team_members(
+    team_id: str,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RankingService, Depends(get_ranking_service)],
+) -> dict:
+    """Get all members of a team."""
+    try:
+        members = await service.get_team_members(team_id, current_user["id"])
+        return {"members": members, "total": len(members)}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
 # Mini-Game Endpoints

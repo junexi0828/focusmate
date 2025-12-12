@@ -15,7 +15,6 @@ interface WebSocketStatusProps {
 
 export function WebSocketStatus({ className, showLabel = true }: WebSocketStatusProps) {
   const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     // 초기 연결 상태 확인
@@ -37,18 +36,6 @@ export function WebSocketStatus({ className, showLabel = true }: WebSocketStatus
     // 주기적으로 확인하는 방식 사용
     // (실제 구현에서는 WebSocket 클라이언트에 이벤트 리스너 추가 가능)
   }, []);
-
-  if (isConnecting) {
-    return (
-      <Badge
-        variant="secondary"
-        className={cn("flex items-center gap-1.5", className)}
-      >
-        <Loader2 className="w-3 h-3 animate-spin" />
-        {showLabel && <span>연결 중...</span>}
-      </Badge>
-    );
-  }
 
   return (
     <Badge

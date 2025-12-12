@@ -30,7 +30,11 @@ interface RoomSettingsDialogProps {
   focusTime: number;
   breakTime: number;
   autoStart: boolean;
-  onUpdateSettings: (focusTime: number, breakTime: number, autoStart: boolean) => void;
+  onUpdateSettings: (
+    focusTime: number,
+    breakTime: number,
+    autoStart: boolean
+  ) => void;
   onDeleteRoom: () => void;
 }
 
@@ -76,7 +80,9 @@ export function RoomSettingsDialog({
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <Label htmlFor="focus-time-setting">집중 시간</Label>
-              <span className="text-sm text-muted-foreground">{focusTime}분</span>
+              <span className="text-sm text-muted-foreground">
+                {focusTime}분
+              </span>
             </div>
             <Slider
               id="focus-time-setting"
@@ -84,7 +90,7 @@ export function RoomSettingsDialog({
               max={60}
               step={5}
               value={[focusTime]}
-              onValueChange={(value) => setFocusTime(value[0])}
+              onValueChange={(value: number[]) => setFocusTime(value[0])}
               disabled={!isHost}
             />
           </div>
@@ -92,7 +98,9 @@ export function RoomSettingsDialog({
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <Label htmlFor="break-time-setting">휴식 시간</Label>
-              <span className="text-sm text-muted-foreground">{breakTime}분</span>
+              <span className="text-sm text-muted-foreground">
+                {breakTime}분
+              </span>
             </div>
             <Slider
               id="break-time-setting"
@@ -100,7 +108,7 @@ export function RoomSettingsDialog({
               max={30}
               step={5}
               value={[breakTime]}
-              onValueChange={(value) => setBreakTime(value[0])}
+              onValueChange={(value: number[]) => setBreakTime(value[0])}
               disabled={!isHost}
             />
           </div>
@@ -125,21 +133,23 @@ export function RoomSettingsDialog({
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" className="w-full">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    방 삭제
+                    <Trash2 className="w-4 h-4 mr-2" />방 삭제
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>방을 삭제하시겠습니까?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      이 작업은 취소할 수 없습니다. 방이 영구적으로 삭제되며 모든 참여자가
-                      퇴장됩니다.
+                      이 작업은 취소할 수 없습니다. 방이 영구적으로 삭제되며
+                      모든 참여자가 퇴장됩니다.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>취소</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDeleteRoom} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    <AlertDialogAction
+                      onClick={onDeleteRoom}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
                       삭제
                     </AlertDialogAction>
                   </AlertDialogFooter>

@@ -35,35 +35,6 @@ export function TimerDisplay({
     }
   };
 
-  const getStatusBgColor = () => {
-    switch (status) {
-      case "idle":
-        return "bg-[#f9fafb]";
-      case "running":
-        return "bg-[#eef2ff]";
-      case "paused":
-        return "bg-[#fef3c7]";
-      case "completed":
-        return "bg-[#d1fae5]";
-      default:
-        return "bg-[#f9fafb]";
-    }
-  };
-
-  const getStatusBorderColor = () => {
-    switch (status) {
-      case "idle":
-        return "border-[#d1d5db]";
-      case "running":
-        return "border-[#4f46e5]";
-      case "paused":
-        return "border-[#f59e0b]";
-      case "completed":
-        return "border-[#10b981]";
-      default:
-        return "border-[#d1d5db]";
-    }
-  };
 
   const progress = totalSeconds > 0 ? (remainingSeconds / totalSeconds) * 100 : 100;
   const circumference = 2 * Math.PI * 140;

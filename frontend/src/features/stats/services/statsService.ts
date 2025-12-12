@@ -1,25 +1,22 @@
 import { BaseApiClient, ApiResponse } from '../../../lib/api/base';
+import {
+  SessionRecordResponse,
+  UserStatsResponseBackend,
+  transformSessionRecord,
+  transformUserStatsResponse,
+  SessionRecord,
+  UserStatsResponseFrontend,
+} from '../../../utils/api-transformers';
 
-export interface SessionRecord {
-  session_id: string;
-  user_id: string;
-  room_id: string;
-  session_type: 'work' | 'break';
-  duration_minutes: number;
-  completed_at: string;
-  room_name?: string;
-  // Backward compatibility
-  id?: string;
-  type?: string;
-  duration?: number;
-}
+/**
+ * @deprecated 백엔드 응답 타입입니다. transformUserStatsResponse를 사용하세요.
+ */
+export type { SessionRecordResponse, UserStatsResponseBackend };
 
-export interface UserStatsResponse {
-  total_focus_time: number;
-  total_sessions: number;
-  average_session: number;
-  sessions: SessionRecord[];
-}
+/**
+ * 프론트엔드에서 사용하는 세션 레코드 타입 (camelCase)
+ */
+export type { SessionRecord, UserStatsResponseFrontend as UserStatsResponse };
 
 export interface HourlyPatternResponse {
   hourly_focus_time: number[]; // 24 hours (0-23)
@@ -55,7 +52,7 @@ class StatsService extends BaseApiClient {
     days?: number,
     startDate?: string,
     endDate?: string
-  ): Promise<ApiResponse<UserStatsResponse>> {
+  ): Promise<ApiResponse<UserStatsResponseFrontend>> {
     const params = new URLSearchParams();
     if (days !== undefined) {
       params.append('days', days.toString());
@@ -66,9 +63,19 @@ class StatsService extends BaseApiClient {
     }
 
     const queryString = params.toString();
-    return this.request<UserStatsResponse>(
+    const response = await this.request<UserStatsResponseBackend>(
       `/stats/user/${userId}${queryString ? `?${queryString}` : ''}`
     );
+
+    // 변환 레이어 적용
+    if (response.status === 'success' && response.data) {
+      return {
+        ...response,
+        data: transformUserStatsResponse(response.data),
+      };
+    }
+
+    return response as ApiResponse<UserStatsResponseFrontend>;
   }
 
   async getHourlyPattern(

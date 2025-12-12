@@ -115,6 +115,45 @@ class ChatRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_unread_count(self, user_id: str) -> int:
+        """Get total unread message count for a user across all rooms."""
+        try:
+            # Get all rooms where user is a member
+            rooms_result = await self.session.execute(
+                select(ChatMember.room_id, ChatMember.last_read_at)
+                .where(
+                    and_(
+                        ChatMember.user_id == user_id,
+                        ChatMember.is_active == True,
+                    )
+                )
+            )
+
+            total_unread = 0
+            for row in rooms_result:
+                room_id = row.room_id
+                last_read_at = row.last_read_at
+                # Count messages in this room after last_read_at
+                query = select(func.count()).select_from(ChatMessage).where(
+                    and_(
+                        ChatMessage.room_id == room_id,
+                        ChatMessage.sender_id != user_id,  # Don't count own messages
+                        ChatMessage.is_deleted == False,
+                    )
+                )
+
+                if last_read_at:
+                    query = query.where(ChatMessage.created_at > last_read_at)
+
+                result = await self.session.execute(query)
+                count = result.scalar() or 0
+                total_unread += count
+
+            return total_unread
+        except Exception:
+            # If chat tables don't exist or there's any error, return 0
+            return 0
+
     async def update_member_read_status(
         self, room_id: UUID, user_id: str, last_read_at: datetime
     ) -> Optional[ChatMember]:

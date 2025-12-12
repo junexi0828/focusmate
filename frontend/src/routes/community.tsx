@@ -162,7 +162,7 @@ function CommunityComponent() {
     createdAt: new Date(post.created_at),
     likes: post.likes,
     comments: post.comment_count,
-    isLiked: false, // TODO: Get from API if available
+    isLiked: post.is_liked || false,
   }));
 
   return (

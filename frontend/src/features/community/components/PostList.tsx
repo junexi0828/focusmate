@@ -1,7 +1,5 @@
-import React from "react";
 import { Post } from "../../../types/community";
 import { PostCard } from "./PostCard";
-import { ScrollArea } from "../../../components/ui/scroll-area";
 import { Card, CardContent } from "../../../components/ui/card";
 import { MessageSquare } from "lucide-react";
 

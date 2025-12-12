@@ -60,6 +60,71 @@ class RankingService:
             return None
         return TeamResponse.model_validate(team)
 
+    async def get_team_members(self, team_id: str, user_id: str) -> list:
+        """Get all members of a team.
+
+        Args:
+            team_id: Team identifier
+            user_id: Current user identifier (for permission check)
+
+        Returns:
+            List of team members
+
+        Raises:
+            ValueError: If team not found
+            PermissionError: If user is not a team member
+        """
+        from uuid import UUID
+        team_uuid = UUID(team_id)
+
+        # Check if team exists
+        team = await self.repository.get_team_by_id(team_uuid)
+        if not team:
+            raise ValueError("Team not found")
+
+        # Check if user is a member of the team
+        member = await self.repository.get_member_by_user_and_team(user_id, team_uuid)
+        if not member:
+            raise PermissionError("You are not a member of this team")
+
+        # Get all team members
+        members = await self.repository.get_team_members(team_uuid)
+        return [
+            {
+                "user_id": m.user_id,
+                "role": m.role,
+                "joined_at": m.joined_at.isoformat(),
+                "total_sessions": m.total_sessions,
+                "total_focus_time": m.total_focus_time,
+            }
+            for m in members
+        ]
+
+    async def get_user_invitations(
+        self, user_id: str, status_filter: Optional[str] = None
+    ) -> list:
+        """Get all invitations for a user.
+
+        Args:
+            user_id: User identifier
+            status_filter: Optional status filter (pending, accepted, rejected)
+
+        Returns:
+            List of invitations
+        """
+        invitations = await self.repository.get_user_invitations(user_id, status_filter)
+        return [
+            {
+                "invitation_id": str(inv.invitation_id),
+                "team_id": str(inv.team_id),
+                "team_name": inv.team.name if hasattr(inv, 'team') else "Unknown",
+                "status": inv.status,
+                "created_at": inv.created_at.isoformat(),
+                "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
+            }
+            for inv in invitations
+        ]
+
     async def update_team(
         self, team_id: UUID, update_data: TeamUpdate, user_id: str
     ) -> Optional[TeamResponse]:
@@ -313,20 +378,35 @@ class RankingService:
         if not team:
             return
 
-        # TODO: Get leader email from user service
-        leader_email = f"leader_{team.leader_id}@example.com"  # Placeholder
+        from app.infrastructure.email.email_service import EmailService
+        from app.core.config import settings
+
+        email_service_instance = EmailService(
+            smtp_host=settings.SMTP_HOST,
+            smtp_port=settings.SMTP_PORT,
+            from_name=settings.SMTP_FROM_NAME,
+            from_email=settings.SMTP_FROM_EMAIL,
+            smtp_user=settings.SMTP_USER if settings.SMTP_ENABLED else None,
+            smtp_password=settings.SMTP_PASSWORD if settings.SMTP_ENABLED else None,
+        )
+
+        # Get leader email from team
+        leader_email = team.leader.email if hasattr(team.leader, 'email') else f"user_{team.leader_id}@example.com"
 
         if status == "pending":
-            await email_service.send_verification_submitted_email(
-                team.team_name, leader_email
+            await email_service_instance.send_verification_submitted_email(
+                user_email=leader_email,
+                team_name=team.name,
             )
         elif status == "approved":
-            await email_service.send_verification_approved_email(
-                team.team_name, leader_email, admin_note
+            await email_service_instance.send_verification_approved_email(
+                user_email=leader_email,
+                team_name=team.name,
             )
         elif status == "rejected":
-            await email_service.send_verification_rejected_email(
-                team.team_name, leader_email, admin_note
+            await email_service_instance.send_verification_rejected_email(
+                user_email=leader_email,
+                team_name=team.name,
             )
 
     # Session methods

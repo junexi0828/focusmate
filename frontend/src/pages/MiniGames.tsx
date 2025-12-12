@@ -41,17 +41,23 @@ export default function MiniGames() {
   const handleGameOver = async (score: number, time: number) => {
     console.log('Game Over:', { score, time, game: selectedGame });
 
-    // TODO: Submit score to backend
-    // await api.post('/ranking/mini-games/submit', {
-    //   team_id: currentTeam.id,
-    //   game_type: selectedGame,
-    //   score,
-    //   completion_time: time,
-    // });
+    // Submit score to backend
+    try {
+      const { submitMiniGameScore, getMiniGameLeaderboard } = await import('../api/miniGames');
+      if (selectedGame) {
+        await submitMiniGameScore({
+          game_type: selectedGame,
+          score,
+          completed_at: new Date().toISOString(),
+        });
 
-    // TODO: Refresh leaderboard
-    // const response = await api.get(`/ranking/mini-games/leaderboard/${selectedGame}`);
-    // setLeaderboard(response.data);
+        // Refresh leaderboard after submission
+        const leaderboardData = await getMiniGameLeaderboard(selectedGame);
+        setLeaderboard(leaderboardData);
+      }
+    } catch (error) {
+      console.error('Failed to submit score or refresh leaderboard:', error);
+    }
   };
 
   if (selectedGame) {

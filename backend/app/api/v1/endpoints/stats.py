@@ -2,12 +2,21 @@
 
 from datetime import datetime
 from typing import Annotated, Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
+from app.api.deps import get_current_user
 from app.core.exceptions import UnauthorizedException
+from app.domain.stats.schemas import (
+    ManualSessionCreate,
+    ManualSessionResponse,
+    UserGoalCreate,
+    UserGoalResponse,
+)
 from app.domain.stats.service import StatsService
+from app.infrastructure.database.models.user_stats import ManualSession, UserGoal
 from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.session_history_repository import (
     SessionHistoryRepository,
@@ -258,3 +267,101 @@ async def get_goal_achievement(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve goal achievement: {str(e)}",
         )
+
+
+# User Goals Endpoints
+@router.post("/goals", response_model=UserGoalResponse, status_code=status.HTTP_201_CREATED)
+async def save_user_goal(
+    goal_data: UserGoalCreate,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    db: DatabaseSession,
+) -> UserGoalResponse:
+    """Save or update user's goals."""
+    user_id = current_user["id"]
+
+    # Check if user already has goals
+    existing_goal = db.query(UserGoal).filter(UserGoal.user_id == user_id).first()
+
+    if existing_goal:
+        # Update existing
+        existing_goal.daily_goal_minutes = goal_data.daily_goal_minutes
+        existing_goal.weekly_goal_sessions = goal_data.weekly_goal_sessions
+        db.commit()
+        db.refresh(existing_goal)
+        return UserGoalResponse.model_validate(existing_goal)
+    else:
+        # Create new
+        new_goal = UserGoal(
+            id=uuid4(),
+            user_id=user_id,
+            daily_goal_minutes=goal_data.daily_goal_minutes,
+            weekly_goal_sessions=goal_data.weekly_goal_sessions,
+        )
+        db.add(new_goal)
+        db.commit()
+        db.refresh(new_goal)
+        return UserGoalResponse.model_validate(new_goal)
+
+
+@router.get("/goals", response_model=UserGoalResponse)
+async def get_user_goal(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    db: DatabaseSession,
+) -> UserGoalResponse:
+    """Get user's current goals."""
+    user_id = current_user["id"]
+
+    goal = db.query(UserGoal).filter(UserGoal.user_id == user_id).first()
+
+    if not goal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No goals set yet",
+        )
+
+    return UserGoalResponse.model_validate(goal)
+
+
+# Manual Session Endpoints
+@router.post("/sessions", response_model=ManualSessionResponse, status_code=status.HTTP_201_CREATED)
+async def save_manual_session(
+    session_data: ManualSessionCreate,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    db: DatabaseSession,
+) -> ManualSessionResponse:
+    """Save a manually logged session."""
+    user_id = current_user["id"]
+
+    new_session = ManualSession(
+        id=uuid4(),
+        user_id=user_id,
+        duration_minutes=session_data.duration_minutes,
+        session_type=session_data.session_type,
+        completed_at=session_data.completed_at,
+    )
+
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+
+    return ManualSessionResponse.model_validate(new_session)
+
+
+@router.get("/sessions", response_model=list[ManualSessionResponse])
+async def get_manual_sessions(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    db: DatabaseSession,
+    limit: int = 100,
+) -> list[ManualSessionResponse]:
+    """Get user's manual sessions."""
+    user_id = current_user["id"]
+
+    sessions = (
+        db.query(ManualSession)
+        .filter(ManualSession.user_id == user_id)
+        .order_by(ManualSession.completed_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [ManualSessionResponse.model_validate(s) for s in sessions]

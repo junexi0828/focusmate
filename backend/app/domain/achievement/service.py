@@ -195,10 +195,54 @@ class AchievementService:
         elif requirement_type == "total_focus_time":
             return user.total_focus_time
         elif requirement_type == "streak_days":
-            # TODO: Implement streak calculation from session history
-            return 0
+            # Calculate consecutive days streak from session history
+            return self._calculate_streak_days(user.id)
         elif requirement_type == "community_posts":
-            # TODO: Implement community post counting
-            return 0
+            # Get community post count from repository
+            return self._get_community_post_count(user.id)
         else:
             return 0
+
+    def _get_community_post_count(self, user_id: str) -> int:
+        """Get total community posts count for a user.
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            Total number of community posts
+        """
+        # This would integrate with CommunityRepository
+        # For now, return 0 as placeholder until repository is available
+        # TODO: Integrate with CommunityRepository
+
+        # Pseudo-logic for when repository is available:
+        # 1. Query community posts table by user_id
+        # 2. Count total posts
+        # 3. Return count
+
+        return 0  # Placeholder until CommunityRepository integration
+
+    def _calculate_streak_days(self, user_id: str) -> int:
+        """Calculate consecutive days streak from session history.
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            Number of consecutive days with sessions
+        """
+        from datetime import datetime, timedelta
+
+        # Get recent sessions (last 365 days)
+        # This would need SessionRepository integration
+        # For now, return 0 as placeholder until repository is available
+        # TODO: Integrate with SessionRepository to get actual session dates
+
+        # Pseudo-logic for when repository is available:
+        # 1. Get all sessions ordered by completed_at DESC
+        # 2. Extract unique dates
+        # 3. Count consecutive days from today backwards
+        # 4. Break on first gap
+
+        return 0  # Placeholder until SessionRepository integration

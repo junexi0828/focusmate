@@ -18,7 +18,7 @@ factory-boy==3.3.1                  # Test fixtures
 # ============================================================================
 mypy==1.14.0                        # Static type checker (strict mode)
 ruff==0.8.5                         # Fast linter & formatter
-sqlalchemy[mypy]==2.0.36            # SQLAlchemy stubs
+sqlalchemy[mypy]>=2.0.45,<3.0.0   # SQLAlchemy stubs (updated for Python 3.14 compatibility)
 
 # ============================================================================
 # Code Quality
@@ -32,7 +32,7 @@ coverage[toml]==7.6.10              # Coverage tools
 # ============================================================================
 ipython==8.31.0                     # Enhanced REPL
 ipdb==0.13.13                       # Debugger
-watchfiles==1.0.3                   # File watching for auto-reload
+watchfiles>=1.1.0                   # File watching for auto-reload (updated for Python 3.14 compatibility)
 
 # ============================================================================
 # Documentation

@@ -2,6 +2,7 @@
 
 import os
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -96,21 +97,70 @@ class S3UploadService:
 
     def __init__(self, bucket_name: str):
         """Initialize S3 client."""
+        import boto3
+        from botocore.exceptions import ClientError
+        from datetime import datetime
+
         self.bucket_name = bucket_name
-            raise ValueError(error_msg)
+        self.s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION", "us-east-1"),
+        )
+        self.ClientError = ClientError
+        self.datetime = datetime
 
-        # Generate unique filename
-        file_ext = Path(file.filename).suffix.lower()
-        unique_filename = f"verification/{team_id}/{uuid.uuid4().hex}{file_ext}"
+    async def save_file(self, file: UploadFile, user_id: str) -> tuple[str, str]:
+        """Upload file to S3."""
+        try:
+            # Generate unique filename
+            file_ext = Path(file.filename or "file").suffix
+            unique_filename = f"{uuid.uuid4()}{file_ext}"
 
-        # TODO: Upload to S3
-        # content = await file.read()
-        # self.s3_client.put_object(
-        #     Bucket=self.bucket_name,
-        #     Key=unique_filename,
-        #     Body=content,
-        #     ContentType=file.content_type
-        # )
+            # Create S3 key with user directory structure
+            date_dir = self.datetime.now().strftime("%Y/%m/%d")
+            s3_key = f"uploads/{user_id}/{date_dir}/{unique_filename}"
 
-        # Return S3 URL
-        return f"https://{self.bucket_name}.s3.{self.aws_region}.amazonaws.com/{unique_filename}"
+            # Read file content
+            content = await file.read()
+
+            # Upload to S3
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+                Body=content,
+                ContentType=file.content_type or "application/octet-stream",
+            )
+
+            # Generate URL
+            region = os.getenv("AWS_REGION", "us-east-1")
+            file_url = f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+
+            return s3_key, file_url
+
+        except self.ClientError as e:
+            raise ValueError(f"S3 upload failed: {e}")
+
+    async def save_multiple_files(
+        self, files: list[UploadFile], user_id: str
+    ) -> list[tuple[str, str]]:
+        """Upload multiple files to S3."""
+        results = []
+        for file in files:
+            try:
+                s3_key, file_url = await self.save_file(file, user_id)
+                results.append((s3_key, file_url))
+            except Exception as e:
+                print(f"Error uploading file {file.filename}: {e}")
+                continue
+        return results
+
+    def delete_file(self, s3_key: str) -> bool:
+        """Delete file from S3."""
+        try:
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
+            return True
+        except self.ClientError as e:
+            print(f"Error deleting file {s3_key}: {e}")
+            return False

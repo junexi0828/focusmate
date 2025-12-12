@@ -1,3 +1,7 @@
+/**
+ * 통계 계산용 세션 레코드 (프론트엔드 내부 사용)
+ * 변환 유틸리티를 통해 백엔드 응답에서 생성됩니다.
+ */
 export interface SessionRecord {
   id: string;
   date: Date;
