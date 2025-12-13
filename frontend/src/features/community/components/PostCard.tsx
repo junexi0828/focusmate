@@ -75,8 +75,8 @@ export function PostCard({
     });
   };
 
-  // Discourse 스타일: 읽지 않은 게시글 표시 (예시)
-  const isUnread = false; // TODO: 실제 읽음 상태 연동
+  // Discourse 스타일: 읽지 않은 게시글 표시
+  const isUnread = post.isRead === false; // Show as unread if not read
 
   return (
     <div

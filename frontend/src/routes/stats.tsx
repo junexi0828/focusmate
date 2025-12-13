@@ -5,6 +5,7 @@ import { StatsPage } from "../pages/Stats";
 import { authService } from "../features/auth/services/authService";
 import { statsService } from "../features/stats/services/statsService";
 import { PageTransition } from "../components/PageTransition";
+import { StatsPageSkeleton } from "../components/ui/stats-skeleton";
 
 export const Route = createFileRoute("/stats")({
   beforeLoad: () => {
@@ -189,9 +190,9 @@ function StatsPageWithData({ userId }: { userId: string }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <PageTransition>
+        <StatsPageSkeleton />
+      </PageTransition>
     );
   }
 

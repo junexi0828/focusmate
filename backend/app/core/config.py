@@ -5,7 +5,7 @@ ISO/IEC 25010: Maintainability, Security
 """
 
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -88,6 +88,12 @@ class Settings(BaseSettings):
     )
 
     BCRYPT_ROUNDS: int = Field(default=12, ge=10, le=14)
+
+    # File Encryption (optional - if not set, derives from SECRET_KEY)
+    FILE_ENCRYPTION_KEY: Optional[str] = Field(
+        default=None,
+        description="Base64-encoded Fernet key for file encryption. If not set, derives from SECRET_KEY.",
+    )
 
     # ==========================================================================
     # CORS

@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Wifi, WifiOff, Loader2 } from "lucide-react";
+import { Wifi, WifiOff } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { cn } from "./ui/utils";
 import { wsClient } from "../lib/websocket";
@@ -64,21 +64,32 @@ export function useWebSocketStatus(roomId: string | null) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   useEffect(() => {
     if (!roomId) {
       setIsConnected(false);
       setIsConnecting(false);
+      setConnectionError(null);
+      setReconnectAttempts(0);
       return;
     }
 
     // WebSocket 연결 상태 변경 감지
-    const unsubscribe = wsClient.onConnectionChange((state) => {
+    const unsubscribe = wsClient.onConnectionChange((state, attempts) => {
       setIsConnected(state === "connected");
       setIsConnecting(state === "connecting");
+      setReconnectAttempts(attempts || 0);
 
       if (state === "disconnected" && roomId) {
-        setConnectionError("연결이 끊어졌습니다. 재연결을 시도합니다...");
+        const maxAttempts = wsClient.getMaxReconnectAttempts();
+        if (attempts && attempts >= maxAttempts) {
+          setConnectionError("자동 재연결에 실패했습니다. 수동으로 재연결을 시도해주세요.");
+        } else {
+          setConnectionError("연결이 끊어졌습니다. 재연결을 시도합니다...");
+        }
+      } else if (state === "connecting") {
+        setConnectionError("재연결 중...");
       } else {
         setConnectionError(null);
       }
@@ -93,6 +104,7 @@ export function useWebSocketStatus(roomId: string | null) {
     isConnected,
     isConnecting,
     connectionError,
+    reconnectAttempts,
   };
 }
 

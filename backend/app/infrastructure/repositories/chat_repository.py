@@ -230,6 +230,21 @@ class ChatRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_last_message(self, room_id: UUID) -> Optional[ChatMessage]:
+        """Get the last message in a room."""
+        result = await self.session.execute(
+            select(ChatMessage)
+            .where(
+                and_(
+                    ChatMessage.room_id == room_id,
+                    ChatMessage.is_deleted == False,
+                )
+            )
+            .order_by(ChatMessage.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def update_message(
         self, message_id: UUID, content: str
     ) -> Optional[ChatMessage]:

@@ -1,9 +1,7 @@
-import React from "react";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import { Button } from "../../../components/ui/button";
 import { User } from "../../../types/user";
 import { Settings, Edit } from "lucide-react";
-import { cn } from "../../../components/ui/utils";
 
 interface ProfileHeaderProps {
   user: User;

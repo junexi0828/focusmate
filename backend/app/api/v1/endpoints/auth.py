@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.exceptions import UnauthorizedException, ValidationException
 from app.domain.user.schemas import TokenResponse, UserLogin, UserProfileUpdate, UserRegister, UserResponse

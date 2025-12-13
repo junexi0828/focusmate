@@ -1,9 +1,11 @@
 """Community API endpoints - posts, comments, likes."""
 
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.api.deps import get_current_user
 from app.core.exceptions import NotFoundException, UnauthorizedException
 from app.domain.community.schemas import (
     CommentCreate,
@@ -22,6 +24,7 @@ from app.infrastructure.repositories.community_repository import (
     CommentLikeRepository,
     CommentRepository,
     PostLikeRepository,
+    PostReadRepository,
     PostRepository,
 )
 from app.infrastructure.repositories.user_repository import UserRepository
@@ -50,6 +53,11 @@ def get_comment_like_repository(db: DatabaseSession) -> CommentLikeRepository:
     return CommentLikeRepository(db)
 
 
+def get_post_read_repository(db: DatabaseSession) -> PostReadRepository:
+    """Get post read repository."""
+    return PostReadRepository(db)
+
+
 def get_user_repository(db: DatabaseSession) -> UserRepository:
     """Get user repository."""
     return UserRepository(db)
@@ -62,11 +70,12 @@ def get_community_service(
     comment_like_repo: Annotated[
         CommentLikeRepository, Depends(get_comment_like_repository)
     ],
+    post_read_repo: Annotated[PostReadRepository, Depends(get_post_read_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> CommunityService:
     """Get community service."""
     return CommunityService(
-        post_repo, comment_repo, post_like_repo, comment_like_repo, user_repo
+        post_repo, comment_repo, post_like_repo, comment_like_repo, post_read_repo, user_repo
     )
 
 
@@ -90,14 +99,18 @@ async def create_post(
     return await service.create_post(user_id, data)
 
 
-@router.get("/posts", response_model=PaginatedPostsResponse)
+@router.get("/posts", response_model=PostListResult)
 async def get_posts(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    category: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    service: Annotated[CommunityService, Depends(get_community_service)],
-) -> PaginatedPostsResponse:
+    category: Optional[str] = Query(None, description="Filter by category"),
+    search: Optional[str] = Query(None, description="Search in title and content"),
+    author_username: Optional[str] = Query(None, description="Filter by author username"),
+    date_from: Optional[str] = Query(None, description="Filter posts from this date (ISO 8601 format)"),
+    date_to: Optional[str] = Query(None, description="Filter posts until this date (ISO 8601 format)"),
+    current_user: Annotated[dict | None, Depends(get_current_user)] = None,
+    service: Annotated[CommunityService, Depends(get_community_service)] = None,
+) -> PostListResult:
     """Get community posts with optional filtering and search.
 
     Args:
@@ -105,42 +118,80 @@ async def get_posts(
         offset: Number of posts to skip
         category: Optional category filter
         search: Optional search query (searches in title and content)
+        author_username: Optional filter by author username
+        date_from: Optional filter posts from this date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
+        date_to: Optional filter posts until this date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
+        current_user: Current authenticated user (optional, for like status and read status)
     """
-    posts = await service.get_posts(
+    # Parse date strings to datetime objects
+    parsed_date_from = None
+    parsed_date_to = None
+
+    if date_from:
+        try:
+            # Try parsing ISO 8601 format
+            parsed_date_from = datetime.fromisoformat(date_from.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                # Try parsing date-only format (YYYY-MM-DD)
+                parsed_date_from = datetime.strptime(date_from, "%Y-%m-%d")
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid date_from format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"
+                )
+
+    if date_to:
+        try:
+            # Try parsing ISO 8601 format
+            parsed_date_to = datetime.fromisoformat(date_to.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                # Try parsing date-only format (YYYY-MM-DD)
+                parsed_date_to = datetime.strptime(date_to, "%Y-%m-%d")
+                # Set to end of day
+                parsed_date_to = parsed_date_to.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid date_to format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"
+                )
+
+    filters = PostFilters(
         limit=limit,
         offset=offset,
         category=category,
-        search_query=search,
+        search=search,
+        author_username=author_username,
+        date_from=parsed_date_from,
+        date_to=parsed_date_to,
     )
-    total = await service.get_posts_count(category=category, search_query=search)
-
-    return PaginatedPostsResponse(
-        posts=posts,
-        total=total,
-        limit=limit,
-        offset=offset,
-    )
+    current_user_id = current_user["id"] if current_user else None
+    return await service.get_posts(filters=filters, current_user_id=current_user_id)
 
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
 async def get_post(
     post_id: str,
-    service: Annotated[CommunityService, Depends(get_community_service)],
+    current_user: Annotated[dict | None, Depends(get_current_user)] = None,
+    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> PostResponse:
     """Get a specific post by ID.
 
     Args:
         post_id: Post identifier
+        current_user: Current authenticated user (optional)
         service: Community service
 
     Returns:
-        Post details with author info
+        Post details with author info and like status
 
     Raises:
         HTTPException: If post not found
     """
     try:
-        return await service.get_post(post_id)
+        current_user_id = current_user["id"] if current_user else None
+        return await service.get_post(post_id, current_user_id=current_user_id)
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
 
@@ -293,18 +344,21 @@ async def create_comment(
 @router.get("/posts/{post_id}/comments", response_model=list[CommentResponse])
 async def get_post_comments(
     post_id: str,
-    service: Annotated[CommunityService, Depends(get_community_service)],
+    current_user: Annotated[dict | None, Depends(get_current_user)] = None,
+    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> list[CommentResponse]:
-    """Get all comments for a post with nested replies.
+    """Get all comments for a post with nested replies and like status.
 
     Args:
         post_id: Post identifier
+        current_user: Current authenticated user (optional)
         service: Community service
 
     Returns:
-        List of root-level comments with nested replies
+        List of root-level comments with nested replies and like status
     """
-    return await service.get_post_comments(post_id)
+    current_user_id = current_user["id"] if current_user else None
+    return await service.get_post_comments(post_id, current_user_id=current_user_id)
 
 
 @router.put("/comments/{comment_id}", response_model=CommentResponse)
@@ -384,5 +438,30 @@ async def toggle_comment_like(
     """
     try:
         return await service.toggle_comment_like(comment_id, user_id)
+    except NotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+
+
+@router.post("/posts/{post_id}/read", status_code=status.HTTP_200_OK)
+async def mark_post_as_read(
+    post_id: str,
+    user_id: str = Query(..., description="User ID marking post as read"),
+    service: Annotated[CommunityService, Depends(get_community_service)] = None,
+) -> dict:
+    """Mark a post as read by a user.
+
+    Args:
+        post_id: Post identifier
+        user_id: ID of user marking post as read
+        service: Community service
+
+    Returns:
+        Status confirmation
+
+    Raises:
+        HTTPException: If post not found
+    """
+    try:
+        return await service.mark_post_as_read(post_id, user_id)
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)

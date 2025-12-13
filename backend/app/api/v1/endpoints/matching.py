@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import DatabaseSession, get_current_user
 from app.domain.matching.schemas import (
+    ComprehensiveMatchingStats,
     MatchingPoolCreate,
     MatchingPoolResponse,
     MatchingPoolStats,
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/matching", tags=["matching"])
 
 
 def get_matching_pool_service(
-    db: Annotated[DatabaseSession, Depends()],
+    db: DatabaseSession,
 ) -> MatchingPoolService:
     """Get matching pool service dependency."""
     pool_repository = MatchingPoolRepository(db)
@@ -49,12 +50,25 @@ async def create_matching_pool(
 async def get_my_matching_pool(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
-) -> dict:
+) -> Optional[MatchingPoolResponse]:
     """Get current user's active matching pool."""
     pool = await service.get_my_pool(current_user["id"])
+    return pool
+
+
+@router.get("/pools/{pool_id}")
+async def get_matching_pool(
+    pool_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
+) -> MatchingPoolResponse:
+    """Get matching pool by ID."""
+    pool = await service.get_pool(pool_id, current_user["id"])
     if not pool:
-        return {"pool": None, "message": "등록된 매칭 풀이 없습니다."}
-    return {"pool": pool}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Pool not found"
+        )
+    return pool
 
 
 @router.delete("/pools/{pool_id}")
@@ -81,3 +95,11 @@ async def get_pool_statistics(
 ) -> MatchingPoolStats:
     """Get matching pool statistics."""
     return await service.get_pool_statistics()
+
+
+@router.get("/stats/comprehensive")
+async def get_comprehensive_statistics(
+    service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
+) -> ComprehensiveMatchingStats:
+    """Get comprehensive matching statistics including pools and proposals."""
+    return await service.get_comprehensive_statistics()

@@ -15,11 +15,12 @@ from app.domain.community.schemas import (
     PostResponse,
     PostUpdate,
 )
-from app.infrastructure.database.models.community import Comment, CommentLike, Post, PostLike
+from app.infrastructure.database.models.community import Comment, CommentLike, Post, PostLike, PostRead
 from app.infrastructure.repositories.community_repository import (
     CommentLikeRepository,
     CommentRepository,
     PostLikeRepository,
+    PostReadRepository,
     PostRepository,
 )
 from app.infrastructure.repositories.user_repository import UserRepository
@@ -35,12 +36,14 @@ class CommunityService:
         comment_repo: CommentRepository,
         post_like_repo: PostLikeRepository,
         comment_like_repo: CommentLikeRepository,
+        post_read_repo: PostReadRepository,
         user_repo: UserRepository,
     ) -> None:
         self.post_repo = post_repo
         self.comment_repo = comment_repo
         self.post_like_repo = post_like_repo
         self.comment_like_repo = comment_like_repo
+        self.post_read_repo = post_read_repo
         self.user_repo = user_repo
 
     # Post Operations
@@ -68,8 +71,14 @@ class CommunityService:
 
         return response
 
-    async def get_post(self, post_id: str) -> PostResponse:
-        """Get post by ID with author info."""
+    async def get_post(self, post_id: str, current_user_id: str | None = None, mark_as_read: bool = True) -> PostResponse:
+        """Get post by ID with author info and like status.
+
+        Args:
+            post_id: Post identifier
+            current_user_id: Current user ID (optional)
+            mark_as_read: Whether to automatically mark post as read (default: True)
+        """
         post = await self.post_repo.get_by_id(post_id)
         if not post:
             raise NotFoundException(f"Post {post_id} not found")
@@ -81,25 +90,58 @@ class CommunityService:
         if user:
             response.author_username = user.username
 
+        # Check if current user liked this post and read status
+        if current_user_id:
+            existing_like = await self.post_like_repo.get_by_post_and_user(post_id, current_user_id)
+            response.is_liked = existing_like is not None
+
+            # Check if current user has read this post
+            existing_read = await self.post_read_repo.get_by_post_and_user(post_id, current_user_id)
+            response.is_read = existing_read is not None
+
+            # Automatically mark as read when viewing post detail
+            if mark_as_read and not response.is_read:
+                post_read = PostRead(
+                    id=generate_uuid(),
+                    post_id=post_id,
+                    user_id=current_user_id,
+                    read_at=datetime.now(timezone.utc),
+                )
+                await self.post_read_repo.create_or_update(post_read)
+                response.is_read = True
+
         return response
 
-    async def get_posts(self, filters: PostFilters) -> PostListResult:
+    async def get_posts(self, filters: PostFilters, current_user_id: str | None = None) -> PostListResult:
         """Get posts with filters and pagination."""
-        posts, total = await self.post_repo.get_all(
+        posts, total = await self.post_repo.get_posts(
             category=filters.category,
             user_id=filters.user_id,
-            search=filters.search,
+            search_query=filters.search,
+            author_username=filters.author_username,
+            date_from=filters.date_from,
+            date_to=filters.date_to,
             limit=filters.limit,
             offset=filters.offset,
         )
 
-        # Convert to list responses with author info
+        # Convert to list responses with author info and like status
         post_responses = []
         for post in posts:
             response = PostListResponse.model_validate(post)
             user = await self.user_repo.get_by_id(post.user_id)
             if user:
                 response.author_username = user.username
+
+            # Check if current user liked this post
+            if current_user_id:
+                existing_like = await self.post_like_repo.get_by_post_and_user(post.id, current_user_id)
+                response.is_liked = existing_like is not None
+
+                # Check if current user has read this post
+                existing_read = await self.post_read_repo.get_by_post_and_user(post.id, current_user_id)
+                response.is_read = existing_read is not None
+
             post_responses.append(response)
 
         return PostListResult(
@@ -218,8 +260,8 @@ class CommunityService:
 
         return response
 
-    async def get_post_comments(self, post_id: str) -> list[CommentResponse]:
-        """Get all comments for a post with nested replies."""
+    async def get_post_comments(self, post_id: str, current_user_id: str | None = None) -> list[CommentResponse]:
+        """Get all comments for a post with nested replies and like status."""
         comments = await self.comment_repo.get_by_post(post_id)
 
         # Build comment map
@@ -229,6 +271,12 @@ class CommunityService:
             user = await self.user_repo.get_by_id(comment.user_id)
             if user:
                 response.author_username = user.username
+
+            # Check if current user liked this comment
+            if current_user_id:
+                existing_like = await self.comment_like_repo.get_by_comment_and_user(comment.id, current_user_id)
+                response.is_liked = existing_like is not None
+
             comment_map[comment.id] = response
 
         # Build tree structure

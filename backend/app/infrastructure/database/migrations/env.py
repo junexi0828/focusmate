@@ -30,6 +30,24 @@ from app.infrastructure.database.models import (  # noqa: F401
     User,
     UserAchievement,
 )
+from app.infrastructure.database.models.user_stats import (  # noqa: F401
+    ManualSession,
+    UserGoal,
+)
+from app.infrastructure.database.models.chat import (  # noqa: F401
+    ChatRoom,
+    ChatMember,
+    ChatMessage,
+)
+from app.infrastructure.database.models.ranking import (  # noqa: F401
+    RankingTeam,
+    RankingTeamMember,
+    RankingTeamInvitation,
+    RankingSession,
+    RankingMiniGame,
+    RankingVerificationRequest,
+    RankingLeaderboard,
+)
 
 # Alembic Config object
 config = context.config

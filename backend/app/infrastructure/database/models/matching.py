@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import ARRAY, Boolean, CheckConstraint, ForeignKey, Integer, JSON, String, Text, TIMESTAMP, UniqueConstraint
+from sqlalchemy import ARRAY, Boolean, CheckConstraint, ForeignKey, Integer, JSON, String, Text, TIMESTAMP, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,7 +19,7 @@ class MatchingPool(Base):
     pool_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
     )
     creator_id: Mapped[str] = mapped_column(
         String(36),
@@ -50,20 +50,20 @@ class MatchingPool(Base):
 
     # Status
     status: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="waiting"
+        String(20), nullable=False, server_default=text("'waiting'")
     )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     expires_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(),
         nullable=False,
-        server_default="CURRENT_TIMESTAMP + INTERVAL '7 days'",
+        server_default=text("CURRENT_TIMESTAMP + INTERVAL '7 days'"),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
 
     __table_args__ = (
@@ -86,7 +86,7 @@ class MatchingProposal(Base):
     proposal_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
     )
     pool_id_a: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
@@ -101,15 +101,15 @@ class MatchingProposal(Base):
 
     # Acceptance status
     group_a_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="pending"
+        String(20), nullable=False, server_default=text("'pending'")
     )
     group_b_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="pending"
+        String(20), nullable=False, server_default=text("'pending'")
     )
 
     # Final status
     final_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="pending"
+        String(20), nullable=False, server_default=text("'pending'")
     )
 
     # Chat room
@@ -119,16 +119,16 @@ class MatchingProposal(Base):
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     expires_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(),
         nullable=False,
-        server_default="CURRENT_TIMESTAMP + INTERVAL '24 hours'",
+        server_default=text("CURRENT_TIMESTAMP + INTERVAL '24 hours'"),
     )
     matched_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
 
     __table_args__ = (
@@ -155,7 +155,7 @@ class MatchingChatRoom(Base):
     room_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
     )
     proposal_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
@@ -174,15 +174,15 @@ class MatchingChatRoom(Base):
 
     # Status
     is_active: Mapped[bool] = mapped_column(
-        Boolean(), nullable=False, server_default="true"
+        Boolean(), nullable=False, server_default=text("true")
     )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
 
     # Relationships
@@ -206,7 +206,7 @@ class MatchingChatMember(Base):
     member_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
     )
     room_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
@@ -228,13 +228,13 @@ class MatchingChatMember(Base):
 
     # Status
     is_active: Mapped[bool] = mapped_column(
-        Boolean(), nullable=False, server_default="true"
+        Boolean(), nullable=False, server_default=text("true")
     )
     last_read_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
 
     # Timestamps
     joined_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     left_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
 
@@ -259,7 +259,7 @@ class MatchingMessage(Base):
     message_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
     )
     room_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
@@ -274,7 +274,7 @@ class MatchingMessage(Base):
 
     # Message content
     message_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="text"
+        String(20), nullable=False, server_default=text("'text'")
     )
     content: Mapped[str] = mapped_column(Text(), nullable=False)
 
@@ -285,10 +285,10 @@ class MatchingMessage(Base):
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
 

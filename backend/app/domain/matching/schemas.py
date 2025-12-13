@@ -52,6 +52,37 @@ class MatchingPoolStats(BaseModel):
     """Schema for matching pool statistics."""
 
     total_waiting: int
+    total_all: int
+    total_matched: int
+    total_expired: int
+    by_status: dict[str, int]
     by_member_count: dict[str, int]
     by_gender: dict[str, int]
+    by_department: dict[str, int]
+    by_matching_type: dict[str, int]
     average_wait_time_hours: float
+
+
+class MatchingProposalStats(BaseModel):
+    """Schema for matching proposal statistics."""
+
+    total_proposals: int
+    by_status: dict[str, int]
+    matched_count: int
+    success_rate: float
+    acceptance_rate: float
+    rejection_rate: float
+    pending_count: int
+    average_matching_time_hours: float
+    min_matching_time_hours: float
+    max_matching_time_hours: float
+    daily_matches: list[dict[str, any]]
+    weekly_matches: list[dict[str, any]]
+    monthly_matches: list[dict[str, any]]
+
+
+class ComprehensiveMatchingStats(BaseModel):
+    """Comprehensive matching statistics combining pools and proposals."""
+
+    pools: MatchingPoolStats
+    proposals: MatchingProposalStats

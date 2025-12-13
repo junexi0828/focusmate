@@ -33,6 +33,8 @@ class ChatRoomResponse(BaseModel):
     is_archived: bool
     created_at: datetime
     last_message_at: Optional[datetime]
+    last_message_content: Optional[str] = None  # Last message preview
+    last_message_sender_id: Optional[str] = None  # Last message sender
     unread_count: int = 0  # Calculated field
 
     class Config:

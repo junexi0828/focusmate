@@ -202,3 +202,163 @@ class ProposalService:
 
         proposals = await self.proposal_repo.get_pool_proposals(pool.pool_id)
         return [ProposalResponse.model_validate(p) for p in proposals]
+
+    async def get_proposal_statistics(self) -> dict:
+        """Get comprehensive proposal statistics."""
+        from sqlalchemy import func, select
+        from datetime import datetime, timedelta
+        from app.infrastructure.database.models.matching import MatchingProposal
+
+        # Total proposals
+        total_result = await self.proposal_repo.session.execute(
+            select(func.count(MatchingProposal.proposal_id))
+        )
+        total_proposals = total_result.scalar() or 0
+
+        # By final status
+        status_result = await self.proposal_repo.session.execute(
+            select(
+                MatchingProposal.final_status,
+                func.count(MatchingProposal.proposal_id),
+            )
+            .group_by(MatchingProposal.final_status)
+        )
+        by_status = {row[0]: row[1] for row in status_result.all()}
+
+        # Matched proposals
+        matched_count = by_status.get("matched", 0)
+        success_rate = (
+            round((matched_count / total_proposals * 100), 2)
+            if total_proposals > 0
+            else 0.0
+        )
+
+        # Average matching time (from created to matched)
+        avg_match_time_result = await self.proposal_repo.session.execute(
+            select(
+                func.avg(
+                    func.extract(
+                        "epoch",
+                        MatchingProposal.matched_at - MatchingProposal.created_at,
+                    )
+                    / 3600
+                )
+            ).where(MatchingProposal.matched_at.isnot(None))
+        )
+        average_matching_time_hours = avg_match_time_result.scalar() or 0.0
+
+        # Min/Max matching time
+        min_match_time_result = await self.proposal_repo.session.execute(
+            select(
+                func.min(
+                    func.extract(
+                        "epoch",
+                        MatchingProposal.matched_at - MatchingProposal.created_at,
+                    )
+                    / 3600
+                )
+            ).where(MatchingProposal.matched_at.isnot(None))
+        )
+        min_matching_time_hours = min_match_time_result.scalar() or 0.0
+
+        max_match_time_result = await self.proposal_repo.session.execute(
+            select(
+                func.max(
+                    func.extract(
+                        "epoch",
+                        MatchingProposal.matched_at - MatchingProposal.created_at,
+                    )
+                    / 3600
+                )
+            ).where(MatchingProposal.matched_at.isnot(None))
+        )
+        max_matching_time_hours = max_match_time_result.scalar() or 0.0
+
+        # Daily matches (last 30 days)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        daily_matches_result = await self.proposal_repo.session.execute(
+            select(
+                func.date(MatchingProposal.matched_at).label("date"),
+                func.count(MatchingProposal.proposal_id).label("count"),
+            )
+            .where(
+                MatchingProposal.matched_at.isnot(None),
+                MatchingProposal.matched_at >= thirty_days_ago,
+            )
+            .group_by(func.date(MatchingProposal.matched_at))
+            .order_by(func.date(MatchingProposal.matched_at).desc())
+        )
+        daily_matches = [
+            {"date": str(row.date), "count": row.count}
+            for row in daily_matches_result.all()
+        ]
+
+        # Weekly matches (last 12 weeks)
+        twelve_weeks_ago = datetime.utcnow() - timedelta(weeks=12)
+        weekly_matches_result = await self.proposal_repo.session.execute(
+            select(
+                func.date_trunc("week", MatchingProposal.matched_at).label("week"),
+                func.count(MatchingProposal.proposal_id).label("count"),
+            )
+            .where(
+                MatchingProposal.matched_at.isnot(None),
+                MatchingProposal.matched_at >= twelve_weeks_ago,
+            )
+            .group_by(func.date_trunc("week", MatchingProposal.matched_at))
+            .order_by(func.date_trunc("week", MatchingProposal.matched_at).desc())
+        )
+        weekly_matches = [
+            {"week": str(row.week), "count": row.count}
+            for row in weekly_matches_result.all()
+        ]
+
+        # Monthly matches (last 12 months)
+        twelve_months_ago = datetime.utcnow() - timedelta(days=365)
+        monthly_matches_result = await self.proposal_repo.session.execute(
+            select(
+                func.date_trunc("month", MatchingProposal.matched_at).label("month"),
+                func.count(MatchingProposal.proposal_id).label("count"),
+            )
+            .where(
+                MatchingProposal.matched_at.isnot(None),
+                MatchingProposal.matched_at >= twelve_months_ago,
+            )
+            .group_by(func.date_trunc("month", MatchingProposal.matched_at))
+            .order_by(func.date_trunc("month", MatchingProposal.matched_at).desc())
+        )
+        monthly_matches = [
+            {"month": str(row.month), "count": row.count}
+            for row in monthly_matches_result.all()
+        ]
+
+        # Acceptance/Rejection rates
+        accepted_count = by_status.get("matched", 0)
+        rejected_count = by_status.get("rejected", 0)
+        pending_count = by_status.get("pending", 0)
+
+        acceptance_rate = (
+            round((accepted_count / total_proposals * 100), 2)
+            if total_proposals > 0
+            else 0.0
+        )
+        rejection_rate = (
+            round((rejected_count / total_proposals * 100), 2)
+            if total_proposals > 0
+            else 0.0
+        )
+
+        return {
+            "total_proposals": total_proposals,
+            "by_status": by_status,
+            "matched_count": matched_count,
+            "success_rate": success_rate,
+            "acceptance_rate": acceptance_rate,
+            "rejection_rate": rejection_rate,
+            "pending_count": pending_count,
+            "average_matching_time_hours": round(average_matching_time_hours, 2),
+            "min_matching_time_hours": round(min_matching_time_hours, 2),
+            "max_matching_time_hours": round(max_matching_time_hours, 2),
+            "daily_matches": daily_matches,
+            "weekly_matches": weekly_matches,
+            "monthly_matches": monthly_matches,
+        }

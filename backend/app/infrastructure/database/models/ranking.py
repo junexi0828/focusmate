@@ -4,9 +4,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import text, Boolean, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
 
@@ -30,7 +30,7 @@ class RankingTeam(Base, TimestampMixin):
     team_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
         comment="Unique team identifier",
     )
 
@@ -49,7 +49,7 @@ class RankingTeam(Base, TimestampMixin):
     verification_status: Mapped[str] = mapped_column(
         Enum("none", "pending", "verified", "rejected", name="ranking_verification_status"),
         nullable=False,
-        server_default="none",
+        server_default=text("'none'"),
         comment="School verification status",
     )
 
@@ -64,7 +64,7 @@ class RankingTeam(Base, TimestampMixin):
     mini_game_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        server_default="true",
+        server_default=text("true"),
         comment="Mini-games enabled",
     )
 
@@ -102,7 +102,7 @@ class RankingTeamMember(Base):
     member_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
         comment="Unique member record identifier",
     )
 
@@ -125,14 +125,14 @@ class RankingTeamMember(Base):
     role: Mapped[str] = mapped_column(
         Enum("leader", "member", name="ranking_member_role"),
         nullable=False,
-        server_default="member",
+        server_default=text("'member'"),
         comment="Member role",
     )
 
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default="now()",
+        server_default=text("now()"),
         comment="Join timestamp",
     )
 
@@ -160,7 +160,7 @@ class RankingTeamInvitation(Base):
     invitation_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
         comment="Unique invitation identifier",
     )
 
@@ -189,7 +189,7 @@ class RankingTeamInvitation(Base):
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        server_default="pending",
+        server_default=text("'pending'"),
         index=True,
         comment="Invitation status",
     )
@@ -197,7 +197,7 @@ class RankingTeamInvitation(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default="now()",
+        server_default=text("now()"),
         comment="Creation timestamp",
     )
 
@@ -236,7 +236,7 @@ class RankingSession(Base):
     session_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
         comment="Unique session identifier",
     )
 
@@ -272,14 +272,14 @@ class RankingSession(Base):
     success: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        server_default="true",
+        server_default=text("true"),
         comment="Session success status",
     )
 
     completed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default="now()",
+        server_default=text("now()"),
         index=True,
         comment="Completion timestamp",
     )
@@ -309,7 +309,7 @@ class RankingMiniGame(Base):
     game_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
         comment="Unique game identifier",
     )
 
@@ -339,14 +339,14 @@ class RankingMiniGame(Base):
     score: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
-        server_default="0",
+        server_default=text("0"),
         comment="Game score",
     )
 
     success: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        server_default="false",
+        server_default=text("false"),
         comment="Game success status",
     )
 
@@ -365,7 +365,7 @@ class RankingMiniGame(Base):
     played_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default="now()",
+        server_default=text("now()"),
         index=True,
         comment="Play timestamp",
     )
@@ -394,7 +394,7 @@ class RankingVerificationRequest(Base):
     request_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
         comment="Unique request identifier",
     )
 
@@ -415,7 +415,7 @@ class RankingVerificationRequest(Base):
     status: Mapped[str] = mapped_column(
         Enum("pending", "approved", "rejected", name="ranking_verification_request_status"),
         nullable=False,
-        server_default="pending",
+        server_default=text("'pending'"),
         index=True,
         comment="Request status",
     )
@@ -429,7 +429,7 @@ class RankingVerificationRequest(Base):
     submitted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default="now()",
+        server_default=text("now()"),
         comment="Submission timestamp",
     )
 
@@ -469,7 +469,7 @@ class RankingLeaderboard(Base, TimestampMixin):
     leaderboard_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
         comment="Unique leaderboard entry identifier",
     )
 
@@ -496,7 +496,7 @@ class RankingLeaderboard(Base, TimestampMixin):
     score: Mapped[float] = mapped_column(
         Numeric(10, 2),
         nullable=False,
-        server_default="0",
+        server_default=text("0"),
         comment="Ranking score",
     )
 
@@ -510,7 +510,7 @@ class RankingLeaderboard(Base, TimestampMixin):
     rank_change: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
-        server_default="0",
+        server_default=text("0"),
         comment="Rank change from previous period",
     )
 

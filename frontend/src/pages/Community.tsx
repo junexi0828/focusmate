@@ -10,6 +10,13 @@ interface CommunityPageProps {
   onCreatePost: () => void;
   onViewPost: (postId: string) => void;
   onLike: (postId: string) => void;
+  authorUsername: string;
+  dateFrom: string;
+  dateTo: string;
+  onAuthorUsernameChange: (value: string) => void;
+  onDateFromChange: (value: string) => void;
+  onDateToChange: (value: string) => void;
+  onClearAdvancedFilters: () => void;
 }
 
 export function CommunityPage({
@@ -17,6 +24,13 @@ export function CommunityPage({
   onCreatePost,
   onViewPost,
   onLike,
+  authorUsername,
+  dateFrom,
+  dateTo,
+  onAuthorUsernameChange,
+  onDateFromChange,
+  onDateToChange,
+  onClearAdvancedFilters,
 }: CommunityPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -42,6 +56,13 @@ export function CommunityPage({
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         onCreatePost={onCreatePost}
+        authorUsername={authorUsername || ""}
+        dateFrom={dateFrom || ""}
+        dateTo={dateTo || ""}
+        onAuthorUsernameChange={onAuthorUsernameChange}
+        onDateFromChange={onDateFromChange}
+        onDateToChange={onDateToChange}
+        onClearAdvancedFilters={onClearAdvancedFilters}
       />
 
       {/* 게시글 목록 (Discourse 스타일) */}

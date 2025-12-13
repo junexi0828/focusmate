@@ -34,7 +34,12 @@ export const matchingApi = {
   },
 
   getMyPool: async () => {
-    const response = await api.get<MatchingPool>("/matching/pools/my");
+    const response = await api.get<MatchingPool | null>("/matching/pools/my");
+    return response.data;
+  },
+
+  getPool: async (poolId: string) => {
+    const response = await api.get<MatchingPool>(`/matching/pools/${poolId}`);
     return response.data;
   },
 
@@ -43,16 +48,54 @@ export const matchingApi = {
     return response.data;
   },
 
-  getPoolStats: async () => {
-    const response = await api.get<{
-      total_pools: number;
-      waiting_pools: number;
-      matched_today: number;
-      by_gender: Record<string, number>;
-      by_university: Record<string, number>;
-    }>("/matching/pools/stats");
-    return response.data;
-  },
+        getPoolStats: async () => {
+          const response = await api.get<{
+            total_waiting: number;
+            total_all: number;
+            total_matched: number;
+            total_expired: number;
+            by_status: Record<string, number>;
+            by_member_count: Record<string, number>;
+            by_gender: Record<string, number>;
+            by_department: Record<string, number>;
+            by_matching_type: Record<string, number>;
+            average_wait_time_hours: number;
+          }>("/matching/pools/stats");
+          return response.data;
+        },
+
+        getComprehensiveStats: async () => {
+          const response = await api.get<{
+            pools: {
+              total_waiting: number;
+              total_all: number;
+              total_matched: number;
+              total_expired: number;
+              by_status: Record<string, number>;
+              by_member_count: Record<string, number>;
+              by_gender: Record<string, number>;
+              by_department: Record<string, number>;
+              by_matching_type: Record<string, number>;
+              average_wait_time_hours: number;
+            };
+            proposals: {
+              total_proposals: number;
+              by_status: Record<string, number>;
+              matched_count: number;
+              success_rate: number;
+              acceptance_rate: number;
+              rejection_rate: number;
+              pending_count: number;
+              average_matching_time_hours: number;
+              min_matching_time_hours: number;
+              max_matching_time_hours: number;
+              daily_matches: Array<{ date: string; count: number }>;
+              weekly_matches: Array<{ week: string; count: number }>;
+              monthly_matches: Array<{ month: string; count: number }>;
+            };
+          }>("/matching/stats/comprehensive");
+          return response.data;
+        },
 
   // Proposals
   getMyProposals: async () => {
@@ -62,9 +105,10 @@ export const matchingApi = {
     return response.data;
   },
 
-  getProposal: async (proposalId: string) => {
+  getProposal: async (proposalId: string, includePools: boolean = false) => {
+    const query = includePools ? "?include_pools=true" : "";
     const response = await api.get<MatchingProposal>(
-      `/matching/proposals/${proposalId}`
+      `/matching/proposals/${proposalId}${query}`
     );
     return response.data;
   },

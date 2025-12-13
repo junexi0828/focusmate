@@ -2,13 +2,12 @@
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import UnauthorizedException
 from app.domain.room.service import RoomService
 from app.infrastructure.database.session import get_db
 from app.infrastructure.repositories.room_repository import RoomRepository
@@ -21,21 +20,25 @@ security = HTTPBearer()
 
 
 async def get_current_user(
-    db: DatabaseSession,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> dict:
+    db: DatabaseSession | None = None,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> dict | None:
     """Get current authenticated user from JWT token.
 
     Args:
-        credentials: HTTP Bearer token credentials
+        credentials: HTTP Bearer token credentials (optional)
         db: Database session (injected via dependency)
 
     Returns:
-        User dictionary with id, email, username
+        User dictionary with id, email, username, or None if not authenticated
 
     Raises:
-        HTTPException: If token is invalid or user not found
+        HTTPException: If token is invalid or user not found (only if credentials provided)
     """
+    # If no credentials provided, return None (optional auth)
+    if not credentials:
+        return None
+
     token = credentials.credentials
 
     try:
@@ -45,34 +48,20 @@ async def get_current_user(
         )
         user_id: str = payload.get("sub")
         if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials: missing user ID",
-            )
-    except JWTError as e:
-        # Log the actual error for debugging
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(f"JWT decode error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid authentication credentials: {str(e)}",
-        )
+            return None
+    except JWTError:
+        # Invalid token, return None for optional auth
+        return None
 
     # Get user from database
-    # db is injected via DatabaseSession dependency
+    if not db:
+        return None
+
     user_repo = UserRepository(db)
     user = await user_repo.get_by_id(user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is deactivated",
-        )
+    if not user or not user.is_active:
+        return None
+
     return {
         "id": user.id,
         "email": user.email,

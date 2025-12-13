@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import get_room_repository, get_timer_repository
+from app.api.deps import get_room_repository
 from app.core.exceptions import ParticipantNotFoundException, RoomFullException, RoomNotFoundException
 from app.domain.participant.schemas import ParticipantJoin, ParticipantListResponse, ParticipantResponse
 from app.domain.participant.service import ParticipantService

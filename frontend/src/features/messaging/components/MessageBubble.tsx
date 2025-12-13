@@ -1,4 +1,3 @@
-import React from "react";
 import { Message } from "../../../types/message";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import { cn } from "../../../components/ui/utils";

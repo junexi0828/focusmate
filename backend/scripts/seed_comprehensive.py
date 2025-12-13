@@ -63,7 +63,6 @@ async def seed_comprehensive_data():
                     hashed_password=hash_password("admin123"),
                     is_active=True,
                     is_verified=True,
-                    role="admin",
                 )
                 db.add(admin)
                 await db.flush()
@@ -75,14 +74,14 @@ async def seed_comprehensive_data():
 
             # Test users
             test_users_data = [
-                ("user1@test.com", "김철수", "user"),
-                ("user2@test.com", "이영희", "user"),
-                ("user3@test.com", "박민수", "user"),
-                ("user4@test.com", "최지은", "user"),
-                ("user5@test.com", "정대현", "user"),
+                ("user1@test.com", "김철수"),
+                ("user2@test.com", "이영희"),
+                ("user3@test.com", "박민수"),
+                ("user4@test.com", "최지은"),
+                ("user5@test.com", "정대현"),
             ]
 
-            for email, username, role in test_users_data:
+            for email, username in test_users_data:
                 existing = await user_repo.get_by_email(email)
                 if existing:
                     users.append(existing)
@@ -96,7 +95,6 @@ async def seed_comprehensive_data():
                     hashed_password=hash_password("password123"),
                     is_active=True,
                     is_verified=True,
-                    role=role,
                     total_sessions=random.randint(10, 100),
                     total_focus_time=random.randint(1000, 5000),
                 )
@@ -125,7 +123,7 @@ async def seed_comprehensive_data():
                     session = ManualSession(
                         id=generate_uuid(),
                         user_id=user.id,
-                        room_name=random.choice(["Study Room", "Focus Zone", "Deep Work", "Team Session"]),
+                        session_type="focus",
                         duration_minutes=random.choice([25, 30, 45, 60]),
                         completed_at=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 7)),
                         created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 7)),
@@ -169,8 +167,8 @@ async def seed_comprehensive_data():
                 for i in range(random.randint(1, 3)):
                     comment = Comment(
                         id=generate_uuid(),
-                        post_id=post.id,
-                        user_id=users[i + 1].id,
+                        post_id=str(post.id),
+                        user_id=str(users[i + 1].id),
                         content=f"좋은 글이네요! 댓글 {i + 1}",
                         likes=random.randint(0, 10),
                         is_deleted=False,
@@ -186,8 +184,8 @@ async def seed_comprehensive_data():
                     if random.random() > 0.5:  # 50% chance
                         like = PostLike(
                             id=generate_uuid(),
-                            post_id=post.id,
-                            user_id=user.id,
+                            post_id=str(post.id),
+                            user_id=str(user.id),
                             created_at=datetime.now(timezone.utc),
                         )
                         db.add(like)
@@ -203,9 +201,9 @@ async def seed_comprehensive_data():
 
             teams = []
             for name, description, leader_id in team_data:
-                team = Team(
-                    id=generate_uuid(),
-                    name=name,
+                team = RankingTeam(
+                    team_id=generate_uuid(),
+                    team_name=name,
                     description=description,
                     leader_id=leader_id,
                     total_score=random.randint(500, 2000),
@@ -223,9 +221,9 @@ async def seed_comprehensive_data():
             print("\n👥 Creating team members...")
             for team in teams:
                 # Leader
-                leader_member = TeamMember(
-                    id=generate_uuid(),
-                    team_id=team.id,
+                leader_member = RankingTeamMember(
+                    member_id=generate_uuid(),
+                    team_id=team.team_id,
                     user_id=team.leader_id,
                     role="leader",
                     total_sessions=random.randint(20, 50),
@@ -236,9 +234,9 @@ async def seed_comprehensive_data():
 
                 # Other members
                 for user in users[3:5]:  # Add 2 members to each team
-                    member = TeamMember(
-                        id=generate_uuid(),
-                        team_id=team.id,
+                    member = RankingTeamMember(
+                        member_id=generate_uuid(),
+                        team_id=team.team_id,
                         user_id=user.id,
                         role="member",
                         total_sessions=random.randint(10, 30),
@@ -246,43 +244,40 @@ async def seed_comprehensive_data():
                         joined_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 20)),
                     )
                     db.add(member)
-                print(f"   ✅ Created members for team: {team.name}")
+                print(f"   ✅ Created members for team: {team.team_name}")
 
             # 9. Create team invitations
             print("\n📧 Creating team invitations...")
             for team in teams[:2]:  # First 2 teams
-                invitation = TeamInvitation(
-                    id=generate_uuid(),
-                    team_id=team.id,
-                    inviter_id=team.leader_id,
-                    invitee_email=f"newuser{random.randint(1, 100)}@test.com",
+                invitation = RankingTeamInvitation(
+                    invitation_id=generate_uuid(),
+                    team_id=team.team_id,
+                    email=f"newuser{random.randint(1, 100)}@test.com",
+                    invited_by=team.leader_id,
                     status="pending",
                     created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 5)),
                     expires_at=datetime.now(timezone.utc) + timedelta(days=7),
                 )
                 db.add(invitation)
-                print(f"   ✅ Created invitation for team: {team.name}")
+                print(f"   ✅ Created invitation for team: {team.team_name}")
 
             # 10. Create verifications
             print("\n🎓 Creating verifications...")
             verification_data = [
-                (users[1].id, "서울대학교", "pending"),
-                (users[2].id, "연세대학교", "approved"),
-                (users[3].id, "고려대학교", "rejected"),
+                (teams[0].team_id, "서울대학교", "pending"),
+                (teams[1].team_id, "연세대학교", "approved"),
+                (teams[2].team_id, "고려대학교", "rejected"),
             ]
 
-            for user_id, school_name, status in verification_data:
-                verification = Verification(
-                    id=generate_uuid(),
-                    user_id=user_id,
-                    school_name=school_name,
-                    student_id_encrypted=None,  # Encrypted data
-                    document_path="/uploads/verifications/sample.pdf",
+            for team_id, school_name, status in verification_data:
+                verification = RankingVerificationRequest(
+                    request_id=generate_uuid(),
+                    team_id=team_id,
+                    documents={"school_name": school_name, "document_path": "/uploads/verifications/sample.pdf"},
                     status=status,
                     submitted_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 10)),
                     reviewed_at=datetime.now(timezone.utc) if status != "pending" else None,
-                    reviewer_id=admin.id if status != "pending" else None,
-                    admin_note="검토 완료" if status != "pending" else None,
+                    reviewed_by=admin.id if status != "pending" else None,
                 )
                 db.add(verification)
                 print(f"   ✅ Created verification for {school_name}: {status}")
@@ -294,8 +289,9 @@ async def seed_comprehensive_data():
 
             for name in room_names:
                 room = ChatRoom(
-                    id=generate_uuid(),
-                    name=name,
+                    room_id=generate_uuid(),
+                    room_type="public",
+                    room_name=name,
                     description=f"{name} 채팅방",
                     is_active=True,
                     created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(5, 20)),
@@ -311,32 +307,34 @@ async def seed_comprehensive_data():
             for room in chat_rooms[:2]:  # First 2 rooms
                 for i in range(random.randint(5, 10)):
                     message = ChatMessage(
-                        id=generate_uuid(),
-                        room_id=room.id,
-                        user_id=users[i % len(users)].id,
+                        message_id=generate_uuid(),
+                        room_id=room.room_id,
+                        sender_id=users[i % len(users)].id,
+                        message_type="text",
                         content=f"안녕하세요! 메시지 {i + 1}",
-                        is_read=random.choice([True, False]),
                         created_at=datetime.now(timezone.utc) - timedelta(hours=random.randint(1, 48)),
                     )
                     db.add(message)
-                print(f"   ✅ Created messages for room: {room.name}")
+                print(f"   ✅ Created messages for room: {room.room_name}")
 
             # 13. Create achievements
             print("\n🏅 Creating achievements...")
             achievement_data = [
-                ("First Session", "첫 세션 완료", "total_sessions", 1),
-                ("10 Sessions", "10개 세션 완료", "total_sessions", 10),
-                ("Focus Master", "100시간 집중", "total_focus_time", 6000),
-                ("Week Streak", "7일 연속 출석", "streak_days", 7),
-                ("Community Star", "10개 게시글 작성", "community_posts", 10),
+                ("First Session", "첫 세션 완료", "sessions", "total_sessions", 1, "🎯"),
+                ("10 Sessions", "10개 세션 완료", "sessions", "total_sessions", 10, "🔥"),
+                ("Focus Master", "100시간 집중", "time", "total_focus_time", 6000, "⏱️"),
+                ("Week Streak", "7일 연속 출석", "streak", "streak_days", 7, "📅"),
+                ("Community Star", "10개 게시글 작성", "social", "community_posts", 10, "⭐"),
             ]
 
             achievements = []
-            for name, description, req_type, req_value in achievement_data:
+            for name, description, category, req_type, req_value, icon in achievement_data:
                 achievement = Achievement(
                     id=generate_uuid(),
                     name=name,
                     description=description,
+                    icon=icon,
+                    category=category,
                     requirement_type=req_type,
                     requirement_value=req_value,
                     is_active=True,
@@ -390,13 +388,14 @@ async def seed_comprehensive_data():
             print(f"\n🎯 You can now test all 15 implemented features!")
             print("="*60)
 
+            return  # Exit successfully
+
         except Exception as e:
             await db.rollback()
             print(f"\n❌ Error creating seed data: {e}")
             import traceback
             traceback.print_exc()
-        finally:
-            break
+            return  # Exit with error
 
 
 if __name__ == "__main__":

@@ -123,6 +123,20 @@ export function RoomReservationSection() {
           <CardTitle className="text-lg flex items-center gap-2">
             <Calendar className="w-4 h-4" />방 예약
           </CardTitle>
+          {reservations.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.location.href = "/reservations";
+                }
+              }}
+              className="text-xs"
+            >
+              전체 보기
+            </Button>
+          )}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
@@ -216,7 +230,13 @@ export function RoomReservationSection() {
             {reservations.slice(0, 3).map((reservation) => (
               <div
                 key={reservation.id}
-                className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                onClick={() => {
+                  // Navigate to reservation detail or reservations page
+                  if (typeof window !== "undefined") {
+                    window.location.href = "/reservations";
+                  }
+                }}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-sm">
@@ -233,7 +253,10 @@ export function RoomReservationSection() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleCancelReservation(reservation.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelReservation(reservation.id);
+                  }}
                   className="h-7 w-7 p-0"
                 >
                   <X className="w-3 h-3" />

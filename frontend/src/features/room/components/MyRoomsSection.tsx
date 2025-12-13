@@ -42,10 +42,22 @@ export function MyRoomsSection() {
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Users className="w-4 h-4" />
-          참여방
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            참여방
+          </CardTitle>
+          {rooms.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate({ to: "/reservations" })}
+              className="text-xs"
+            >
+              전체 보기
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (

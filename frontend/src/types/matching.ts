@@ -28,20 +28,17 @@ export interface MatchingPool {
   creator_id: string;
   member_ids: string[];
   member_count: number;
-  gender: "male" | "female" | "mixed";
-  university: string;
+  gender: string;
   department: string;
-  age_range_min: number;
-  age_range_max: number;
-  matching_type: "blind" | "open";
-  preferred_universities: string[];
-  preferred_departments: string[];
-  preferred_age_min: number | null;
-  preferred_age_max: number | null;
-  description: string | null;
+  grade: string;
+  preferred_match_type: string;
+  preferred_categories: string[] | null;
+  matching_type: string;
+  message: string | null;
   status: "waiting" | "matched" | "expired" | "cancelled";
   created_at: string;
   expires_at: string;
+  updated_at: string;
 }
 
 export interface MatchingPoolCreate {
@@ -70,6 +67,8 @@ export interface MatchingProposal {
   created_at: string;
   expires_at: string;
   matched_at: string | null;
+  pool_a?: MatchingPool | null;
+  pool_b?: MatchingPool | null;
 }
 
 export interface ProposalAction {

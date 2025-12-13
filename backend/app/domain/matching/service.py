@@ -90,6 +90,25 @@ class MatchingPoolService:
             return None
         return MatchingPoolResponse.model_validate(pool)
 
+    async def get_pool(
+        self, pool_id: UUID, user_id: str
+    ) -> Optional[MatchingPoolResponse]:
+        """Get pool by ID (user must be a member or admin)."""
+        pool = await self.pool_repository.get_pool_by_id(pool_id)
+        if not pool:
+            return None
+
+        # Check if user is a member or creator
+        if user_id not in pool.member_ids and pool.creator_id != user_id:
+            # Allow admin access (check via verification repository)
+            from app.infrastructure.repositories.user_repository import UserRepository
+            user_repo = UserRepository(self.pool_repository.session)
+            user = await user_repo.get_by_id(user_id)
+            if not user or not getattr(user, "is_admin", False):
+                return None
+
+        return MatchingPoolResponse.model_validate(pool)
+
     async def cancel_pool(self, pool_id: UUID, user_id: str) -> bool:
         """Cancel a pool."""
         pool = await self.pool_repository.get_pool_by_id(pool_id)
@@ -108,6 +127,29 @@ class MatchingPoolService:
         """Get pool statistics."""
         stats = await self.pool_repository.get_pool_statistics()
         return MatchingPoolStats(**stats)
+
+    async def get_comprehensive_statistics(self) -> "ComprehensiveMatchingStats":
+        """Get comprehensive matching statistics."""
+        from app.domain.matching.schemas import (
+            ComprehensiveMatchingStats,
+            MatchingProposalStats,
+        )
+        from app.domain.matching.proposal_service import ProposalService, ProposalRepository
+        from app.infrastructure.repositories.chat_repository import ChatRepository
+
+        # Get pool statistics
+        pool_stats = await self.get_pool_statistics()
+
+        # Get proposal statistics
+        proposal_repo = ProposalRepository(self.pool_repository.session)
+        chat_repo = ChatRepository(self.pool_repository.session)
+        proposal_service = ProposalService(
+            proposal_repo, self.pool_repository, chat_repo
+        )
+        proposal_stats_dict = await proposal_service.get_proposal_statistics()
+        proposal_stats = MatchingProposalStats(**proposal_stats_dict)
+
+        return ComprehensiveMatchingStats(pools=pool_stats, proposals=proposal_stats)
 
     async def find_matching_candidates(
         self, pool: MatchingPoolResponse

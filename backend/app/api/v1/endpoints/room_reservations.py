@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import get_current_user
+from app.core.exceptions import NotFoundException
 from app.domain.room_reservation.schemas import (
     RoomReservationCreate,
     RoomReservationResponse,

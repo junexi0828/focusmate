@@ -1,6 +1,6 @@
 """Achievement domain service - gamification and achievement tracking."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.core.exceptions import ValidationException
 from app.domain.achievement.schemas import (
@@ -14,6 +14,8 @@ from app.infrastructure.repositories.achievement_repository import (
     AchievementRepository,
     UserAchievementRepository,
 )
+from app.infrastructure.repositories.community_repository import PostRepository
+from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.shared.utils.uuid import generate_uuid
 
@@ -26,10 +28,14 @@ class AchievementService:
         achievement_repo: AchievementRepository,
         user_achievement_repo: UserAchievementRepository,
         user_repo: UserRepository,
+        post_repo: PostRepository | None = None,
+        session_repo: SessionHistoryRepository | None = None,
     ) -> None:
         self.achievement_repo = achievement_repo
         self.user_achievement_repo = user_achievement_repo
         self.user_repo = user_repo
+        self.post_repo = post_repo
+        self.session_repo = session_repo
 
     async def create_achievement(self, data: AchievementCreate) -> AchievementResponse:
         """Create a new achievement definition.
@@ -111,7 +117,7 @@ class AchievementService:
         result = []
         for achievement in all_achievements:
             # Calculate progress based on requirement type
-            current_progress = self._calculate_progress(
+            current_progress = await self._calculate_progress(
                 user, achievement.requirement_type
             )
 
@@ -158,7 +164,7 @@ class AchievementService:
                 continue
 
             # Calculate current progress
-            current_progress = self._calculate_progress(
+            current_progress = await self._calculate_progress(
                 user, achievement.requirement_type
             )
 
@@ -180,7 +186,7 @@ class AchievementService:
 
         return newly_unlocked
 
-    def _calculate_progress(self, user, requirement_type: str) -> int:
+    async def _calculate_progress(self, user, requirement_type: str) -> int:
         """Calculate user's progress for a specific requirement type.
 
         Args:
@@ -196,14 +202,14 @@ class AchievementService:
             return user.total_focus_time
         elif requirement_type == "streak_days":
             # Calculate consecutive days streak from session history
-            return self._calculate_streak_days(user.id)
+            return await self._calculate_streak_days(user.id)
         elif requirement_type == "community_posts":
             # Get community post count from repository
-            return self._get_community_post_count(user.id)
+            return await self._get_community_post_count(user.id)
         else:
             return 0
 
-    def _get_community_post_count(self, user_id: str) -> int:
+    async def _get_community_post_count(self, user_id: str) -> int:
         """Get total community posts count for a user.
 
         Args:
@@ -212,18 +218,11 @@ class AchievementService:
         Returns:
             Total number of community posts
         """
-        # This would integrate with CommunityRepository
-        # For now, return 0 as placeholder until repository is available
-        # TODO: Integrate with CommunityRepository
+        if not self.post_repo:
+            return 0
+        return await self.post_repo.get_count_by_user(user_id)
 
-        # Pseudo-logic for when repository is available:
-        # 1. Query community posts table by user_id
-        # 2. Count total posts
-        # 3. Return count
-
-        return 0  # Placeholder until CommunityRepository integration
-
-    def _calculate_streak_days(self, user_id: str) -> int:
+    async def _calculate_streak_days(self, user_id: str) -> int:
         """Calculate consecutive days streak from session history.
 
         Args:
@@ -232,17 +231,54 @@ class AchievementService:
         Returns:
             Number of consecutive days with sessions
         """
-        from datetime import datetime, timedelta
+        if not self.session_repo:
+            return 0
 
-        # Get recent sessions (last 365 days)
-        # This would need SessionRepository integration
-        # For now, return 0 as placeholder until repository is available
-        # TODO: Integrate with SessionRepository to get actual session dates
+        # Get sessions from the last 365 days
+        since = datetime.now(timezone.utc) - timedelta(days=365)
+        sessions = await self.session_repo.get_by_user_since(user_id, since)
 
-        # Pseudo-logic for when repository is available:
-        # 1. Get all sessions ordered by completed_at DESC
-        # 2. Extract unique dates
-        # 3. Count consecutive days from today backwards
-        # 4. Break on first gap
+        if not sessions:
+            return 0
 
-        return 0  # Placeholder until SessionRepository integration
+        # Extract unique dates (normalize to date only, ignoring time)
+        session_dates = set()
+        for session in sessions:
+            # Convert to date (timezone-aware)
+            if session.completed_at:
+                date = session.completed_at.date()
+                session_dates.add(date)
+
+        if not session_dates:
+            return 0
+
+        # Sort dates in descending order
+        sorted_dates = sorted(session_dates, reverse=True)
+
+        # Calculate streak from today backwards
+        today = datetime.now(timezone.utc).date()
+        streak = 0
+        current_date = today
+
+        # Check if today has a session
+        if sorted_dates and sorted_dates[0] == today:
+            streak = 1
+            current_date = today - timedelta(days=1)
+        elif sorted_dates and sorted_dates[0] == today - timedelta(days=1):
+            # Yesterday has a session, but not today - streak starts from yesterday
+            streak = 1
+            current_date = sorted_dates[0] - timedelta(days=1)
+        else:
+            # No recent sessions
+            return 0
+
+        # Count consecutive days backwards
+        for date in sorted_dates[1:]:
+            if date == current_date:
+                streak += 1
+                current_date = date - timedelta(days=1)
+            else:
+                # Gap found, streak is broken
+                break
+
+        return streak

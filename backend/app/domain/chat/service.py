@@ -93,7 +93,7 @@ class ChatService:
         """Create matching chat (called from matching proposal service)."""
         room_data = {
             "room_type": "matching",
-            "room_name": f"매칭 그룹 채팅",
+            "room_name": "매칭 그룹 채팅",
             "room_metadata": {
                 "type": "matching",
                 "proposal_id": str(info.proposal_id),
@@ -136,7 +136,25 @@ class ChatService:
     ) -> list[ChatRoomResponse]:
         """Get all chat rooms for a user."""
         rooms = await self.repository.get_user_rooms(user_id, room_type)
-        return [ChatRoomResponse.model_validate(room) for room in rooms]
+        room_responses = []
+
+        for room in rooms:
+            # Get last message for preview
+            last_message = await self.repository.get_last_message(room.room_id)
+
+            # Get unread count for this room
+            unread_count = await self.repository.get_unread_count(room.room_id, user_id)
+
+            room_dict = ChatRoomResponse.model_validate(room).model_dump()
+            room_dict["unread_count"] = unread_count
+
+            if last_message:
+                room_dict["last_message_content"] = last_message.content
+                room_dict["last_message_sender_id"] = str(last_message.sender_id)
+
+            room_responses.append(ChatRoomResponse(**room_dict))
+
+        return room_responses
 
     async def get_unread_count(self, user_id: str) -> int:
         """Get total unread message count for a user across all rooms."""

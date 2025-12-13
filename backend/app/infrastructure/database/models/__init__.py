@@ -11,6 +11,7 @@ from app.infrastructure.database.models.community import (
     CommentLike,
     Post,
     PostLike,
+    PostRead,
 )
 from app.infrastructure.database.models.message import Conversation, Message
 from app.infrastructure.database.models.participant import Participant
@@ -33,6 +34,7 @@ __all__ = [
     "Comment",
     "PostLike",
     "CommentLike",
+    "PostRead",
     "Conversation",
     "Message",
     "RoomReservation",

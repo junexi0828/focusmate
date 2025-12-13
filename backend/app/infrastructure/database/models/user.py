@@ -1,7 +1,9 @@
 """User ORM Model."""
 
+from typing import Optional
+
 from sqlalchemy import Boolean, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.base import Base, TimestampMixin
 
@@ -84,6 +86,11 @@ class User(Base, TimestampMixin):
         default=0,
         nullable=False,
         comment="Total completed sessions",
+    )
+
+    # Relationships
+    verification: Mapped[Optional["UserVerification"]] = relationship(
+        "UserVerification", back_populates="user", uselist=False
     )
 
     def __repr__(self) -> str:

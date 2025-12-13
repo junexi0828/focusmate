@@ -65,8 +65,8 @@ export default function RoomSettings({
       const response = await apiClient.updateRoomSettings(
         room.room_id ?? room.id,
         {
-          work_duration_minutes: focusTime,
-          break_duration_minutes: breakTime,
+          work_duration: focusTime * 60, // 분을 초로 변환
+          break_duration: breakTime * 60, // 분을 초로 변환
         }
       );
 

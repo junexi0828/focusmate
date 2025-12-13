@@ -1,6 +1,5 @@
 """WebSocket connection manager for unified chat system."""
 
-import json
 from typing import Dict, Set
 from uuid import UUID
 

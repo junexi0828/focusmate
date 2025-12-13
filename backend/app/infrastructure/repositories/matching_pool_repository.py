@@ -1,6 +1,6 @@
 """Repository for matching pool operations."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -115,15 +115,27 @@ class MatchingPoolRepository:
         )
         total_waiting = total_result.scalar() or 0
 
+        # Total pools (all statuses)
+        total_all_result = await self.session.execute(
+            select(func.count(MatchingPool.pool_id))
+        )
+        total_all = total_all_result.scalar() or 0
+
+        # By status
+        status_result = await self.session.execute(
+            select(MatchingPool.status, func.count(MatchingPool.pool_id)).group_by(
+                MatchingPool.status
+            )
+        )
+        by_status = {row[0]: row[1] for row in status_result.all()}
+
         # By member count
         member_count_result = await self.session.execute(
-            select(
-                MatchingPool.member_count, func.count(MatchingPool.pool_id)
-            ).where(MatchingPool.status == "waiting").group_by(MatchingPool.member_count)
+            select(MatchingPool.member_count, func.count(MatchingPool.pool_id))
+            .where(MatchingPool.status == "waiting")
+            .group_by(MatchingPool.member_count)
         )
-        by_member_count = {
-            str(row[0]): row[1] for row in member_count_result.all()
-        }
+        by_member_count = {str(row[0]): row[1] for row in member_count_result.all()}
 
         # By gender
         gender_result = await self.session.execute(
@@ -133,17 +145,59 @@ class MatchingPoolRepository:
         )
         by_gender = {row[0]: row[1] for row in gender_result.all()}
 
+        # By department
+        dept_result = await self.session.execute(
+            select(MatchingPool.department, func.count(MatchingPool.pool_id))
+            .where(MatchingPool.status == "waiting")
+            .group_by(MatchingPool.department)
+        )
+        by_department = {row[0]: row[1] for row in dept_result.all()}
+
+        # By matching type
+        type_result = await self.session.execute(
+            select(MatchingPool.matching_type, func.count(MatchingPool.pool_id))
+            .where(MatchingPool.status == "waiting")
+            .group_by(MatchingPool.matching_type)
+        )
+        by_matching_type = {row[0]: row[1] for row in type_result.all()}
+
         # Average wait time
         avg_wait_result = await self.session.execute(
-            select(func.avg(func.extract("epoch", datetime.utcnow() - MatchingPool.created_at) / 3600))
-            .where(MatchingPool.status == "waiting")
+            select(
+                func.avg(
+                    func.extract("epoch", datetime.utcnow() - MatchingPool.created_at)
+                    / 3600
+                )
+            ).where(MatchingPool.status == "waiting")
         )
         average_wait_time_hours = avg_wait_result.scalar() or 0.0
 
+        # Expired pools count
+        expired_result = await self.session.execute(
+            select(func.count(MatchingPool.pool_id)).where(
+                MatchingPool.status == "expired"
+            )
+        )
+        total_expired = expired_result.scalar() or 0
+
+        # Matched pools count
+        matched_result = await self.session.execute(
+            select(func.count(MatchingPool.pool_id)).where(
+                MatchingPool.status == "matched"
+            )
+        )
+        total_matched = matched_result.scalar() or 0
+
         return {
             "total_waiting": total_waiting,
+            "total_all": total_all,
+            "total_matched": total_matched,
+            "total_expired": total_expired,
+            "by_status": by_status,
             "by_member_count": by_member_count,
             "by_gender": by_gender,
+            "by_department": by_department,
+            "by_matching_type": by_matching_type,
             "average_wait_time_hours": round(average_wait_time_hours, 2),
         }
 

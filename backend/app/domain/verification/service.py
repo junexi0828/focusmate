@@ -10,6 +10,7 @@ from app.domain.verification.schemas import (
     VerificationStatusResponse,
     VerificationSubmit,
 )
+from app.infrastructure.repositories.user_repository import UserRepository
 from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
@@ -18,8 +19,11 @@ from app.infrastructure.repositories.verification_repository import (
 class VerificationService:
     """Service for user verification business logic."""
 
-    def __init__(self, repository: VerificationRepository):
+    def __init__(
+        self, repository: VerificationRepository, user_repository: UserRepository | None = None
+    ):
         self.repository = repository
+        self.user_repository = user_repository
 
     async def submit_verification(
         self, user_id: str, data: VerificationSubmit
@@ -36,8 +40,10 @@ class VerificationService:
         # Encrypt student ID if provided
         student_id_encrypted = None
         if data.student_id:
-            # TODO: Implement encryption
-            student_id_encrypted = data.student_id  # Placeholder
+            from app.shared.utils.encryption import get_encryption_service
+
+            encryption_service = get_encryption_service()
+            student_id_encrypted = encryption_service.encrypt_string(data.student_id)
 
         # Create verification request
         verification_data = {
@@ -157,22 +163,34 @@ class VerificationService:
             smtp_password=settings.SMTP_PASSWORD if settings.SMTP_ENABLED else None,
         )
 
-        # Get user email (would need user repository)
-        # For now, using verification data
-        user_email = f"user_{verification.user_id}@example.com"  # TODO: Get from user service
+        # Get user email from user repository
+        user_email = None
+        if self.user_repository:
+            user = await self.user_repository.get_by_id(verification.user_id)
+            if user:
+                user_email = user.email
 
-        if approved:
-            await email_service.send_verification_approved_email(
-                team_name=team_name,
-                leader_email=user_email,
-                admin_note=admin_note or "",
-            )
-        else:
-            await email_service.send_verification_rejected_email(
-                user_email=user_email,
-                team_name=team_name,
-                admin_note=admin_note,
-            )
+        # Fallback if user not found or repository not available
+        if not user_email:
+            user_email = f"user_{verification.user_id}@example.com"
+
+        # Note: Email sending is optional and can be disabled if SMTP is not configured
+        try:
+            if approved:
+                await email_service.send_verification_approved_email(
+                    team_name=verification.school_name,  # Use school_name as team_name
+                    leader_email=user_email,
+                    admin_note=admin_note or "",
+                )
+            else:
+                await email_service.send_verification_rejected_email(
+                    user_email=user_email,
+                    team_name=verification.school_name,  # Use school_name as team_name
+                    admin_note=admin_note,
+                )
+        except Exception as e:
+            # Log error but don't fail verification review
+            print(f"Failed to send verification email: {e}")
 
         return VerificationResponse.model_validate(verification)
 

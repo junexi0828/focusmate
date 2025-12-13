@@ -99,7 +99,6 @@ class S3UploadService:
         """Initialize S3 client."""
         import boto3
         from botocore.exceptions import ClientError
-        from datetime import datetime
 
         self.bucket_name = bucket_name
         self.s3_client = boto3.client(

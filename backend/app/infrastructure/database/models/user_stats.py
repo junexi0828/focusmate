@@ -1,7 +1,5 @@
 """User goals and manual session models."""
 
-from datetime import datetime
-from uuid import UUID
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -15,7 +13,7 @@ class UserGoal(Base):
     __tablename__ = "user_goals"
 
     id = Column(PGUUID(as_uuid=True), primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("user.id"), nullable=False, index=True)
 
     # Goals
     daily_goal_minutes = Column(Integer, nullable=False, default=120)
@@ -37,7 +35,7 @@ class ManualSession(Base):
     __tablename__ = "manual_sessions"
 
     id = Column(PGUUID(as_uuid=True), primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("user.id"), nullable=False, index=True)
 
     # Session details
     duration_minutes = Column(Integer, nullable=False)

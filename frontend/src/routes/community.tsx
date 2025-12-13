@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CommunityPage } from "../pages/Community";
 import { authService } from "../features/auth/services/authService";
@@ -12,6 +12,9 @@ import { z } from "zod";
 const communitySearchSchema = z.object({
   category: z.string().optional(),
   search: z.string().optional(),
+  author_username: z.string().optional(),
+  date_from: z.string().optional(),
+  date_to: z.string().optional(),
   page: z.number().int().min(1).optional().default(1),
 });
 
@@ -26,6 +29,9 @@ export const Route = createFileRoute("/community")({
   loaderDeps: ({ search }) => ({
     category: search.category,
     search: search.search,
+    author_username: search.author_username,
+    date_from: search.date_from,
+    date_to: search.date_to,
     page: search.page,
   }),
   loader: async ({ deps }) => {
@@ -36,6 +42,9 @@ export const Route = createFileRoute("/community")({
       offset,
       category: deps.category,
       search: deps.search,
+      author_username: deps.author_username,
+      date_from: deps.date_from,
+      date_to: deps.date_to,
     });
     if (response.status === "error") {
       throw new Error(response.error?.message || "Failed to load posts");
@@ -46,13 +55,14 @@ export const Route = createFileRoute("/community")({
 });
 
 function CommunityComponent() {
-  const { category, search: searchQuery, page } = Route.useSearch();
+  const navigate = useNavigate();
+  const { category, search: searchQuery, author_username, date_from, date_to, page } = Route.useSearch();
   const initialData = Route.useLoaderData();
   const queryClient = useQueryClient();
   const user = authService.getCurrentUser();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["community", "posts", category, searchQuery, page],
+    queryKey: ["community", "posts", category, searchQuery, author_username, date_from, date_to, page],
     queryFn: async () => {
       const limit = 20;
       const offset = (page - 1) * limit;
@@ -61,6 +71,9 @@ function CommunityComponent() {
         offset,
         category,
         search: searchQuery,
+        author_username,
+        date_from,
+        date_to,
       });
       if (response.status === "error") {
         throw new Error(response.error?.message || "Failed to load posts");
@@ -122,12 +135,56 @@ function CommunityComponent() {
     await createPostMutation.mutateAsync(data);
   };
 
+  const navigate = useNavigate();
+
   const handleViewPost = (postId: string) => {
-    toast.info(`게시글 보기: ${postId}`);
+    navigate({ to: "/community/$postId", params: { postId } });
   };
 
   const handleLike = (postId: string) => {
     likeMutation.mutate(postId);
+  };
+
+  const handleAuthorUsernameChange = (value: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        author_username: value || undefined,
+        page: 1, // Reset to first page when filter changes
+      }),
+    });
+  };
+
+  const handleDateFromChange = (value: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        date_from: value || undefined,
+        page: 1,
+      }),
+    });
+  };
+
+  const handleDateToChange = (value: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        date_to: value || undefined,
+        page: 1,
+      }),
+    });
+  };
+
+  const handleClearAdvancedFilters = () => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        author_username: undefined,
+        date_from: undefined,
+        date_to: undefined,
+        page: 1,
+      }),
+    });
   };
 
   if (isLoading && !data) {
@@ -163,6 +220,7 @@ function CommunityComponent() {
     likes: post.likes,
     comments: post.comment_count,
     isLiked: post.is_liked || false,
+    isRead: post.is_read || false, // Whether current user has read this post
   }));
 
   return (
@@ -172,6 +230,13 @@ function CommunityComponent() {
         onCreatePost={handleCreatePost}
         onViewPost={handleViewPost}
         onLike={handleLike}
+        authorUsername={author_username || ""}
+        dateFrom={date_from || ""}
+        dateTo={date_to || ""}
+        onAuthorUsernameChange={handleAuthorUsernameChange}
+        onDateFromChange={handleDateFromChange}
+        onDateToChange={handleDateToChange}
+        onClearAdvancedFilters={handleClearAdvancedFilters}
       />
       <CreatePostDialog
         open={isCreateDialogOpen}

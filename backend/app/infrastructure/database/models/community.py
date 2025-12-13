@@ -50,3 +50,12 @@ class CommentLike(Base, TimestampMixin):
     comment_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PostRead(Base, TimestampMixin):
+    """PostRead model - tracks which posts users have read."""
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    post_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

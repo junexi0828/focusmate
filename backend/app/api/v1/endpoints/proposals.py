@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import DatabaseSession, get_current_user
 from app.domain.matching.proposal_schemas import ProposalAction, ProposalResponse
@@ -66,8 +66,9 @@ async def get_proposal(
     proposal_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)] = None,
     service: Annotated[ProposalService, Depends(get_proposal_service)] = None,
+    include_pools: bool = Query(True, description="Include pool information in response"),
 ) -> ProposalResponse:
-    """Get proposal details."""
+    """Get proposal details with optional pool information."""
     proposal = await service.proposal_repo.get_proposal_by_id(proposal_id)
     if not proposal:
         raise HTTPException(
@@ -75,4 +76,18 @@ async def get_proposal(
             detail="Proposal not found",
         )
 
-    return ProposalResponse.model_validate(proposal)
+    response = ProposalResponse.model_validate(proposal)
+
+    # Include pool information if requested
+    if include_pools:
+        pool_a = await service.pool_repo.get_pool_by_id(proposal.pool_id_a)
+        pool_b = await service.pool_repo.get_pool_by_id(proposal.pool_id_b)
+
+        if pool_a:
+            from app.domain.matching.schemas import MatchingPoolResponse
+            response.pool_a = MatchingPoolResponse.model_validate(pool_a).model_dump()
+        if pool_b:
+            from app.domain.matching.schemas import MatchingPoolResponse
+            response.pool_b = MatchingPoolResponse.model_validate(pool_b).model_dump()
+
+    return response

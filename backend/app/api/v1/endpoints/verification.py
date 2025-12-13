@@ -1,20 +1,22 @@
 """API endpoints for user verification."""
 
+from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
+from fastapi.responses import Response
 
 from app.api.deps import DatabaseSession, get_current_user
 from app.core.rbac import require_admin
 from app.domain.verification.schemas import (
-    VerificationResponse,
     VerificationReview,
     VerificationSettingsUpdate,
     VerificationStatusResponse,
     VerificationSubmit,
 )
 from app.domain.verification.service import VerificationService
+from app.infrastructure.repositories.user_repository import UserRepository
 from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
@@ -27,7 +29,8 @@ def get_verification_service(
 ) -> VerificationService:
     """Get verification service dependency."""
     repository = VerificationRepository(db)
-    return VerificationService(repository)
+    user_repository = UserRepository(db)
+    return VerificationService(repository, user_repository)
 
 
 # User Endpoints
@@ -82,8 +85,8 @@ async def upload_verification_documents(
     files: list[UploadFile],
     current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
-    """Upload verification documents."""
-    from app.infrastructure.storage.file_upload import FileUploadService
+    """Upload verification documents (encrypted)."""
+    from app.infrastructure.storage.encrypted_file_upload import EncryptedFileUploadService
 
     if len(files) > 5:
         raise HTTPException(
@@ -91,7 +94,10 @@ async def upload_verification_documents(
             detail="Maximum 5 files allowed",
         )
 
-    upload_service = FileUploadService(upload_dir="uploads/verification")
+    # Use encrypted file upload service
+    upload_service = EncryptedFileUploadService(
+        upload_dir="uploads/verification", encrypt=True
+    )
 
     try:
         file_paths = await upload_service.save_multiple_files(files, current_user["id"])
@@ -100,6 +106,7 @@ async def upload_verification_documents(
         return {
             "uploaded_files": file_urls,
             "count": len(file_urls),
+            "encrypted": True,
         }
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -147,3 +154,58 @@ async def review_verification(
         }
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/admin/file/{file_path:path}")
+async def download_verification_file(
+    file_path: str,
+    current_user: Annotated[dict, Depends(require_admin)],
+) -> Response:
+    """Download verification file (admin only, automatically decrypted).
+
+    Args:
+        file_path: Relative file path (e.g., verification/user_id/filename.encrypted)
+        current_user: Current authenticated admin user
+
+    Returns:
+        File content with appropriate headers
+    """
+    from app.infrastructure.storage.encrypted_file_upload import EncryptedFileUploadService
+
+    upload_service = EncryptedFileUploadService(
+        upload_dir="uploads/verification", encrypt=False
+    )
+
+    try:
+        # Read and decrypt file
+        content = await upload_service.read_file(file_path, decrypt=True)
+
+        # Determine content type from file extension
+        path = Path(file_path)
+        content_type = "application/octet-stream"
+        if path.suffix.lower() in [".jpg", ".jpeg"]:
+            content_type = "image/jpeg"
+        elif path.suffix.lower() == ".png":
+            content_type = "image/png"
+        elif path.suffix.lower() == ".pdf":
+            content_type = "application/pdf"
+
+        # Get original filename (remove .encrypted extension if present)
+        filename = path.name
+        if filename.endswith(".encrypted"):
+            filename = filename[:-10]  # Remove .encrypted extension
+
+        return Response(
+            content=content,
+            media_type=content_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {e}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to read file: {e}",
+        )

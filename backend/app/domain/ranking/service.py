@@ -12,14 +12,18 @@ from app.domain.ranking.schemas import (
     TeamUpdate,
 )
 from app.infrastructure.repositories.ranking_repository import RankingRepository
+from app.infrastructure.repositories.user_repository import UserRepository
 
 
 class RankingService:
     """Service for ranking business logic."""
 
-    def __init__(self, repository: RankingRepository):
+    def __init__(
+        self, repository: RankingRepository, user_repository: UserRepository | None = None
+    ):
         """Initialize service with repository."""
         self.repository = repository
+        self.user_repository = user_repository
 
     def _generate_invite_code(self, length: int = 8) -> str:
         """Generate a random invite code."""
@@ -372,7 +376,6 @@ class RankingService:
         self, team_id: UUID, status: str, admin_note: Optional[str] = None
     ) -> None:
         """Send email notification for verification status change."""
-        from app.infrastructure.email.email_service import email_service
 
         team = await self.repository.get_team_by_id(team_id)
         if not team:
@@ -390,8 +393,16 @@ class RankingService:
             smtp_password=settings.SMTP_PASSWORD if settings.SMTP_ENABLED else None,
         )
 
-        # Get leader email from team
-        leader_email = team.leader.email if hasattr(team.leader, 'email') else f"user_{team.leader_id}@example.com"
+        # Get leader email from user repository
+        leader_email = None
+        if self.user_repository:
+            leader_user = await self.user_repository.get_by_id(team.leader_id)
+            if leader_user:
+                leader_email = leader_user.email
+
+        # Fallback if user not found or repository not available
+        if not leader_email:
+            leader_email = f"user_{team.leader_id}@example.com"
 
         if status == "pending":
             await email_service_instance.send_verification_submitted_email(
@@ -470,7 +481,7 @@ class RankingService:
         members = await self.repository.get_team_members(team_id)
 
         # Calculate streak (simplified - just check if there are sessions today)
-        from datetime import datetime, timedelta
+        from datetime import datetime
 
         today = datetime.utcnow().date()
         sessions_today = await self.repository.get_team_sessions(team_id, limit=1000)

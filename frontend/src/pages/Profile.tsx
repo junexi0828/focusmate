@@ -19,22 +19,41 @@ import {
   TrendingUp,
   Target,
   Award,
+  MessageSquare,
+  Clock,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ProfileHeader, ProfileTabs } from "../features/profile/components";
 import { StatCard } from "../features/stats/components";
+import { useNavigate } from "@tanstack/react-router";
+import { formatDistanceToNow } from "date-fns";
+import { ko } from "date-fns/locale";
+import { Badge } from "../components/ui/badge";
+import { Progress } from "../components/ui/progress";
+import type {
+  AchievementProgress,
+} from "../features/achievements/services/achievementService";
+import type { Post } from "../features/community/services/communityService";
+import { NotificationSettings } from "../features/notification/components/NotificationSettings";
 
 interface ProfilePageProps {
   user: User;
+  achievements?: AchievementProgress[];
+  userPosts?: Post[];
   onUpdateProfile: (updates: Partial<User>) => void;
   onLogout: () => void;
 }
 
 export function ProfilePage({
   user,
+  achievements = [],
+  userPosts = [],
   onUpdateProfile,
   onLogout,
 }: ProfilePageProps) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user.name);
   const [bio, setBio] = useState(user.bio || "");
@@ -142,41 +161,44 @@ export function ProfilePage({
 
               <Card>
                 <CardHeader>
-                  <CardTitle>업적</CardTitle>
+                  <CardTitle>업적 미리보기</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {user.totalSessions >= 10 && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center">
-                        🏆
+                  {achievements
+                    .filter((a) => a.is_unlocked)
+                    .slice(0, 3)
+                    .map((achievement) => (
+                      <div
+                        key={achievement.achievement_id}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Award className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {achievement.achievement_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {achievement.achievement_description}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">초보 집중러</p>
-                        <p className="text-xs text-muted-foreground">
-                          10개 세션 달성
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {user.totalFocusTime >= 300 && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
-                        ⭐
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">5시간 마스터</p>
-                        <p className="text-xs text-muted-foreground">
-                          5시간 집중 달성
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {user.totalSessions === 0 && (
+                    ))}
+                  {achievements.filter((a) => a.is_unlocked).length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       아직 획득한 업적이 없습니다
                     </p>
+                  )}
+                  {achievements.filter((a) => a.is_unlocked).length > 3 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setActiveTab("achievements")}
+                    >
+                      모든 업적 보기
+                    </Button>
                   )}
                 </CardContent>
               </Card>
@@ -192,9 +214,54 @@ export function ProfilePage({
               <CardDescription>최근 게시글 및 댓글</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-center py-8">
-                활동 내역이 없습니다
-              </p>
+              {userPosts.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  활동 내역이 없습니다
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {userPosts.map((post) => (
+                    <div
+                      key={post.id}
+                      className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => navigate({ to: `/community/${post.id}` })}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="outline" className="text-xs">
+                            {post.category === "tips" && "팁"}
+                            {post.category === "question" && "질문"}
+                            {post.category === "achievement" && "성취"}
+                            {post.category === "general" && "일반"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(post.created_at), {
+                              addSuffix: true,
+                              locale: ko,
+                            })}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold mb-1 line-clamp-1">
+                          {post.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {post.content}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="w-3 h-3" />
+                            {post.comment_count}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Award className="w-3 h-3" />
+                            {post.likes}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -227,47 +294,119 @@ export function ProfilePage({
 
         {/* Achievements Tab */}
         <TabsContent value="achievements" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>업적</CardTitle>
-              <CardDescription>획득한 업적 목록</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {user.totalSessions >= 10 && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center">
-                    🏆
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">초보 집중러</p>
-                    <p className="text-xs text-muted-foreground">
-                      10개 세션 달성
-                    </p>
-                  </div>
-                </div>
-              )}
+          <div className="space-y-6">
+            {/* Unlocked Achievements */}
+            <Card>
+              <CardHeader>
+                <CardTitle>획득한 업적</CardTitle>
+                <CardDescription>
+                  {achievements.filter((a) => a.is_unlocked).length}개의 업적을 획득했습니다
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {achievements
+                  .filter((a) => a.is_unlocked)
+                  .map((achievement) => (
+                    <div
+                      key={achievement.achievement_id}
+                      className="flex items-center gap-4 p-4 rounded-lg bg-primary/5 border border-primary/20"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                        <Award className="w-6 h-6 text-primary-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold">
+                            {achievement.achievement_name}
+                          </p>
+                          <Badge variant="secondary" className="text-xs">
+                            {achievement.achievement_category}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {achievement.achievement_description}
+                        </p>
+                        {achievement.unlocked_at && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            획득일:{" "}
+                            {formatDistanceToNow(
+                              new Date(achievement.unlocked_at),
+                              {
+                                addSuffix: true,
+                                locale: ko,
+                              }
+                            )}
+                          </p>
+                        )}
+                      </div>
+                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                    </div>
+                  ))}
+                {achievements.filter((a) => a.is_unlocked).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    아직 획득한 업적이 없습니다
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
-              {user.totalFocusTime >= 300 && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
-                    ⭐
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">5시간 마스터</p>
-                    <p className="text-xs text-muted-foreground">
-                      5시간 집중 달성
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {user.totalSessions === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  아직 획득한 업적이 없습니다
-                </p>
-              )}
-            </CardContent>
-          </Card>
+            {/* In Progress Achievements */}
+            <Card>
+              <CardHeader>
+                <CardTitle>진행 중인 업적</CardTitle>
+                <CardDescription>
+                  {achievements.filter((a) => !a.is_unlocked).length}개의 업적을 진행 중입니다
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {achievements
+                  .filter((a) => !a.is_unlocked)
+                  .map((achievement) => (
+                    <div
+                      key={achievement.achievement_id}
+                      className="flex items-start gap-4 p-4 rounded-lg bg-muted/50 border"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <Circle className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold">
+                            {achievement.achievement_name}
+                          </p>
+                          <Badge variant="outline" className="text-xs">
+                            {achievement.achievement_category}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {achievement.achievement_description}
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              진행률: {achievement.current_progress} /{" "}
+                              {achievement.requirement_value}
+                            </span>
+                            <span className="font-medium">
+                              {achievement.progress_percentage.toFixed(0)}%
+                            </span>
+                          </div>
+                          <Progress
+                            value={achievement.progress_percentage}
+                            className="h-2"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                {achievements.filter((a) => !a.is_unlocked).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    모든 업적을 획득했습니다! 🎉
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Settings Tab */}
@@ -316,6 +455,9 @@ export function ProfilePage({
                 )}
               </CardContent>
             </Card>
+
+            {/* Notification Settings */}
+            <NotificationSettings />
 
             {/* Account Management */}
             <Card>

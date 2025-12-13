@@ -10,12 +10,14 @@ from app.core.rbac import require_admin
 from app.domain.ranking.schemas import (
     TeamCreate,
     TeamInvitationCreate,
+    TeamInvitationResponse,
     TeamResponse,
     TeamUpdate,
 )
+from app.domain.verification.schemas import VerificationResponse, VerificationReview
 from app.domain.ranking.service import RankingService
-from app.infrastructure.database.session import get_db
 from app.infrastructure.repositories.ranking_repository import RankingRepository
+from app.infrastructure.repositories.user_repository import UserRepository
 
 router = APIRouter(prefix="/ranking", tags=["ranking"])
 
@@ -23,7 +25,8 @@ router = APIRouter(prefix="/ranking", tags=["ranking"])
 async def get_ranking_service(db: DatabaseSession) -> RankingService:
     """Dependency to get ranking service."""
     repository = RankingRepository(db)
-    return RankingService(repository)
+    user_repository = UserRepository(db)
+    return RankingService(repository, user_repository)
 
 
 # Team Management Endpoints
@@ -328,10 +331,10 @@ async def get_session_history(
 @router.post("/teams/{team_id}/invite")
 async def invite_member(
     team_id: str,
-    data: InviteMemberRequest,
+    data: TeamInvitationCreate,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-) -> InvitationResponse:
+) -> TeamInvitationResponse:
     """Invite a member to the team."""
     try:
         invitation = await service.invite_member(team_id, current_user["id"], data)

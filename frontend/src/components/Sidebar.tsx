@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Trophy,
+  Heart,
 } from "lucide-react";
 import { authService } from "../features/auth/services/authService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -165,6 +166,12 @@ export function Sidebar() {
           to="/ranking"
           icon={<Trophy size={18} />}
           label="랭킹전"
+          isCollapsed={isCollapsed}
+        />
+        <NavItem
+          to="/matching"
+          icon={<Heart size={18} />}
+          label="핑크캠퍼스"
           isCollapsed={isCollapsed}
         />
         <NavItem

@@ -1,13 +1,22 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Users, Heart, Search, Plus, Send } from "lucide-react";
-import { chatApi } from "@/api/chat";
-import { useChatWebSocket } from "@/hooks/useChatWebSocket";
-import type { ChatRoom, MessageCreate } from "@/types/chat";
-import { PageTransition } from "@/components/PageTransition";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button-enhanced";
-import { Input } from "@/components/ui/input";
+import { chatService, type ChatRoom, type MessageCreate, type Message } from "../features/chat/services/chatService";
+import { PageTransition } from "../components/PageTransition";
+import { Card } from "../components/ui/card";
+import { Button } from "../components/ui/button-enhanced";
+import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
+import { formatDistanceToNow } from "date-fns";
+import { ko } from "date-fns/locale";
+import { authService } from "../features/auth/services/authService";
+import { useChatWebSocket } from "../features/chat/hooks/useChatWebSocket";
+import { ScrollArea } from "../components/ui/scroll-area";
+import { MessageItem } from "../features/chat/components/MessageItem";
+import { FilePreview } from "../features/chat/components/FilePreview";
+import { Paperclip, X } from "lucide-react";
+import { toast } from "sonner";
 
 export function MessagesPage() {
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
@@ -16,59 +25,156 @@ export function MessagesPage() {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
-
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
+  const user = authService.getCurrentUser();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // WebSocket connection
-  const {
-    isConnected,
-    messages: wsMessages,
-    joinRoom,
-    leaveRoom,
-  } = useChatWebSocket(token);
+  // WebSocket connection for real-time messages
+  const { isConnected, messages: wsMessages, typingUsers, joinRoom, leaveRoom, sendTyping } = useChatWebSocket();
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Fetch rooms
   const { data: roomsData, isLoading } = useQuery({
     queryKey: ["chat-rooms", activeTab],
-    queryFn: () => chatApi.getRooms(activeTab),
+    queryFn: async () => {
+      const response = await chatService.getRooms(activeTab);
+      return response.status === "success" ? response.data : { rooms: [], total: 0 };
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds to update unread counts
   });
 
   // Fetch messages for selected room
   const { data: messagesData } = useQuery({
     queryKey: ["chat-messages", selectedRoom?.room_id],
-    queryFn: () =>
-      selectedRoom ? chatApi.getMessages(selectedRoom.room_id) : null,
+    queryFn: async () => {
+      if (!selectedRoom) return null;
+      const response = await chatService.getMessages(selectedRoom.room_id);
+      return response.status === "success" ? response.data : { messages: [], total: 0, has_more: false };
+    },
     enabled: !!selectedRoom,
   });
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: (data: MessageCreate) =>
-      chatApi.sendMessage(selectedRoom!.room_id, data),
+    mutationFn: async (data: MessageCreate) => {
+      // If there are files, upload them first
+      if (selectedFiles.length > 0 && selectedRoom) {
+        setIsUploading(true);
+        try {
+          const uploadResponse = await chatService.uploadFiles(
+            selectedRoom.room_id,
+            selectedFiles
+          );
+          if (uploadResponse.status === "success" && uploadResponse.data) {
+            data.attachments = uploadResponse.data.files.map((f) => f.url);
+            // Determine message type based on attachments
+            const hasImages = uploadResponse.data.files.some((f) =>
+              /\.(jpg|jpeg|png|gif|webp)$/i.test(f.url)
+            );
+            data.message_type = hasImages ? "image" : "file";
+          }
+        } catch (error) {
+          toast.error("파일 업로드에 실패했습니다");
+          throw error;
+        } finally {
+          setIsUploading(false);
+          setSelectedFiles([]);
+        }
+      }
+      return chatService.sendMessage(selectedRoom!.room_id, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["chat-messages", selectedRoom?.room_id],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["chat-rooms", activeTab],
+      });
       setMessageInput("");
+      setSelectedFiles([]);
+    },
+    onError: (error) => {
+      toast.error("메시지 전송에 실패했습니다");
+      console.error("Send message error:", error);
+    },
+  });
+
+  // Update message mutation
+  const updateMessageMutation = useMutation({
+    mutationFn: ({ messageId, content }: { messageId: string; content: string }) =>
+      chatService.updateMessage(selectedRoom!.room_id, messageId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", selectedRoom?.room_id],
+      });
+      toast.success("메시지가 수정되었습니다");
+    },
+    onError: () => {
+      toast.error("메시지 수정에 실패했습니다");
+    },
+  });
+
+  // Delete message mutation
+  const deleteMessageMutation = useMutation({
+    mutationFn: (messageId: string) =>
+      chatService.deleteMessage(selectedRoom!.room_id, messageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", selectedRoom?.room_id],
+      });
+      toast.success("메시지가 삭제되었습니다");
+    },
+    onError: () => {
+      toast.error("메시지 삭제에 실패했습니다");
     },
   });
 
   const rooms = roomsData?.rooms || [];
   const apiMessages = messagesData?.messages || [];
-  const roomWsMessages = selectedRoom
-    ? wsMessages.get(selectedRoom.room_id) || []
-    : [];
-  const allMessages = [...apiMessages, ...roomWsMessages];
+  const wsRoomMessages = selectedRoom ? wsMessages.get(selectedRoom.room_id) || [] : [];
+
+  // Merge API messages and WebSocket messages, removing duplicates
+  const allMessages = React.useMemo(() => {
+    const messageMap = new Map<string, Message>();
+
+    // Add API messages first
+    apiMessages.forEach((msg) => {
+      messageMap.set(msg.message_id, msg);
+    });
+
+    // Add/update with WebSocket messages
+    wsRoomMessages.forEach((msg) => {
+      messageMap.set(msg.message_id, msg);
+    });
+
+    // Sort by created_at
+    return Array.from(messageMap.values()).sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  }, [apiMessages, wsRoomMessages]);
 
   // Join/leave room on selection
   useEffect(() => {
     if (selectedRoom) {
       joinRoom(selectedRoom.room_id);
-      chatApi.markAsRead(selectedRoom.room_id);
-      return () => leaveRoom(selectedRoom.room_id);
+      chatService.markAsRead(selectedRoom.room_id).then(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["chat-rooms", activeTab],
+        });
+      });
+      return () => {
+        leaveRoom(selectedRoom.room_id);
+      };
     }
-  }, [selectedRoom, joinRoom, leaveRoom]);
+  }, [selectedRoom, joinRoom, leaveRoom, queryClient, activeTab]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [allMessages]);
 
   const filteredRooms = rooms.filter((room) =>
     room.room_name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -76,12 +182,46 @@ export function MessagesPage() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageInput.trim() || !selectedRoom) return;
+    if ((!messageInput.trim() && selectedFiles.length === 0) || !selectedRoom) return;
 
     sendMessageMutation.mutate({
-      content: messageInput.trim(),
+      content: messageInput.trim() || (selectedFiles.length > 0 ? "파일을 공유했습니다" : ""),
       message_type: "text",
     });
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      // Validate file sizes (10MB for images, 50MB for files)
+      const validFiles: File[] = [];
+      for (const file of files) {
+        const isImage = file.type.startsWith("image/");
+        const maxSize = isImage ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
+        if (file.size > maxSize) {
+          toast.error(`${file.name}의 크기가 너무 큽니다 (최대 ${isImage ? "10MB" : "50MB"})`);
+          continue;
+        }
+        validFiles.push(file);
+      }
+      setSelectedFiles((prev) => [...prev, ...validFiles]);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditMessage = (messageId: string, newContent: string) => {
+    updateMessageMutation.mutate({ messageId, content: newContent });
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    deleteMessageMutation.mutate(messageId);
   };
 
   const getRoomIcon = (type: string) => {
@@ -157,43 +297,22 @@ export function MessagesPage() {
               </div>
             ) : (
               filteredRooms.map((room) => (
-                <button
+                <ChatRoomItem
                   key={room.room_id}
+                  room={room}
+                  isSelected={selectedRoom?.room_id === room.room_id}
+                  currentUserId={user?.id || ""}
                   onClick={() => setSelectedRoom(room)}
-                  className={`w-full p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-l-2 ${
-                    selectedRoom?.room_id === room.room_id
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                      : "border-transparent"
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-1">
-                    <h3 className="font-medium text-slate-900 dark:text-slate-100">
-                      {room.room_name || "Unnamed Room"}
-                    </h3>
-                    {room.unread_count > 0 && (
-                      <span className="px-2 py-0.5 text-xs font-medium text-white bg-blue-500 rounded-full">
-                        {room.unread_count}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
-                    {room.description || "No description"}
-                  </p>
-                </button>
+                />
               ))
             )}
           </div>
 
-          {/* Connection Status */}
+          {/* Unread Count Summary */}
           <div className="p-3 border-t border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 text-xs">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isConnected ? "bg-green-500" : "bg-red-500"
-                }`}
-              />
+            <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 dark:text-slate-400">
-                {isConnected ? "Connected" : "Disconnected"}
+                총 {rooms.reduce((sum, r) => sum + r.unread_count, 0)}개의 읽지 않은 메시지
               </span>
             </div>
           </div>
@@ -205,85 +324,183 @@ export function MessagesPage() {
             <>
               {/* Chat Header */}
               <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
-                    {selectedRoom.room_name?.slice(0, 2).toUpperCase() || "CH"}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-medium">
+                        {selectedRoom.room_name?.slice(0, 2).toUpperCase() || "CH"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                        {selectedRoom.room_name || "Unnamed Room"}
+                      </h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {selectedRoom.room_type === "matching" &&
+                        selectedRoom.display_mode === "blind"
+                          ? "🎭 Blind Mode"
+                          : selectedRoom.room_type === "team"
+                            ? "👥 Team Channel"
+                            : "💬 Direct Message"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                      {selectedRoom.room_name || "Unnamed Room"}
-                    </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {selectedRoom.room_type === "matching" &&
-                      selectedRoom.display_mode === "blind"
-                        ? "🎭 Blind Mode"
-                        : selectedRoom.room_type === "team"
-                          ? "👥 Team Channel"
-                          : "💬 Direct Message"}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        isConnected ? "bg-green-500" : "bg-red-500"
+                      }`}
+                      title={isConnected ? "연결됨" : "연결 끊김"}
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-slate-900">
-                {allMessages.length === 0 ? (
-                  <div className="text-center text-slate-500 dark:text-slate-400 py-8">
-                    No messages yet. Start the conversation!
-                  </div>
-                ) : (
-                  allMessages.map((message) => (
-                    <div
-                      key={message.message_id}
-                      className="flex gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium flex-shrink-0">
-                        {message.sender_id.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="font-medium text-slate-900 dark:text-slate-100">
-                            {message.sender_id}
-                          </span>
-                          <span className="text-xs text-slate-400 dark:text-slate-500">
-                            {new Date(message.created_at).toLocaleTimeString()}
-                          </span>
-                          {message.is_edited && (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">
-                              (edited)
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-slate-700 dark:text-slate-300 break-words">
-                          {message.content}
-                        </p>
-                      </div>
+              <ScrollArea className="flex-1 bg-white dark:bg-slate-900">
+                <div className="p-4 space-y-4">
+                  {allMessages.length === 0 ? (
+                    <div className="text-center text-slate-500 dark:text-slate-400 py-8">
+                      메시지가 없습니다. 대화를 시작하세요!
                     </div>
-                  ))
-                )}
-              </div>
+                  ) : (
+                    <>
+                      {allMessages.map((message, index) => {
+                        const isOwn = message.sender_id === user?.id;
+                        const prevMessage = index > 0 ? allMessages[index - 1] : null;
+                        const showAvatar = !prevMessage || prevMessage.sender_id !== message.sender_id;
+                        const showSenderName = !prevMessage || prevMessage.sender_id !== message.sender_id;
+
+                        return (
+                          <MessageItem
+                            key={message.message_id}
+                            message={message}
+                            isOwn={isOwn}
+                            currentUserId={user?.id || ""}
+                            onEdit={handleEditMessage}
+                            onDelete={handleDeleteMessage}
+                            showAvatar={showAvatar}
+                            showSenderName={showSenderName}
+                          />
+                        );
+                      })}
+                      {/* Typing Indicator */}
+                      {selectedRoom && typingUsers.has(selectedRoom.room_id) && (
+                        <div className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground italic">
+                          <div className="flex gap-1">
+                            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </div>
+                          <span>
+                            {Array.from(typingUsers.get(selectedRoom.room_id) || [])
+                              .filter((id) => id !== user?.id)
+                              .join(", ") || "누군가"}
+                            가 입력 중...
+                          </span>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </>
+                  )}
+                </div>
+              </ScrollArea>
 
               {/* Message Input */}
               <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                {/* Selected Files Preview */}
+                {selectedFiles.length > 0 && (
+                  <div className="mb-2">
+                    <div className="flex flex-wrap gap-2">
+                      {selectedFiles.map((file, index) => (
+                        <FilePreview
+                          key={index}
+                          file={file}
+                          onRemove={() => handleRemoveFile(index)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!isConnected || isUploading}
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </Button>
                   <Input
                     type="text"
-                    placeholder="Type a message..."
+                    placeholder="메시지를 입력하세요..."
                     value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
+                    onChange={(e) => {
+                      setMessageInput(e.target.value);
+                      // Send typing indicator
+                      if (selectedRoom && isConnected) {
+                        // Clear existing timeout
+                        if (typingTimeoutRef.current) {
+                          clearTimeout(typingTimeoutRef.current);
+                        }
+                        // Send typing indicator
+                        sendTyping(selectedRoom.room_id);
+                        // Set timeout to stop sending (debounce)
+                        typingTimeoutRef.current = setTimeout(() => {
+                          // Typing indicator will auto-clear after 3 seconds on server
+                        }, 1000);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (
+                          (messageInput.trim() || selectedFiles.length > 0) &&
+                          !sendMessageMutation.isPending &&
+                          !isUploading
+                        ) {
+                          handleSendMessage(e);
+                        }
+                      }
+                    }}
                     className="flex-1"
+                    disabled={!isConnected || isUploading}
                   />
                   <Button
                     type="submit"
                     disabled={
-                      !messageInput.trim() || sendMessageMutation.isPending
+                      (!messageInput.trim() && selectedFiles.length === 0) ||
+                      sendMessageMutation.isPending ||
+                      !isConnected ||
+                      isUploading
                     }
                     className="bg-gradient-to-r from-blue-600 to-purple-600"
                   >
-                    <Send className="w-4 h-4 mr-2" />
-                    Send
+                    {isUploading ? (
+                      "업로드 중..."
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        전송
+                      </>
+                    )}
                   </Button>
                 </form>
+                {!isConnected && (
+                  <p className="text-xs text-red-500 mt-2">
+                    연결이 끊어졌습니다. 메시지를 보낼 수 없습니다.
+                  </p>
+                )}
               </div>
             </>
           ) : (
@@ -302,5 +519,91 @@ export function MessagesPage() {
         </div>
       </div>
     </PageTransition>
+  );
+}
+
+interface ChatRoomItemProps {
+  room: ChatRoom;
+  isSelected: boolean;
+  currentUserId: string;
+  onClick: () => void;
+}
+
+function ChatRoomItem({ room, isSelected, currentUserId, onClick }: ChatRoomItemProps) {
+  const getRoomDisplayName = () => {
+    if (room.room_name) return room.room_name;
+    if (room.room_type === "direct") return "1:1 대화";
+    if (room.room_type === "team") return "팀 채팅";
+    if (room.room_type === "matching") return "매칭 채팅";
+    return "이름 없음";
+  };
+
+  const getInitials = (name: string) => {
+    const words = name.trim().split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return "";
+    return formatDistanceToNow(new Date(dateString), {
+      addSuffix: true,
+      locale: ko,
+    });
+  };
+
+  const getLastMessagePreview = () => {
+    if (room.last_message_content) {
+      const isOwn = room.last_message_sender_id === currentUserId;
+      const prefix = isOwn ? "나: " : "";
+      return prefix + room.last_message_content;
+    }
+    return "메시지가 없습니다";
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-l-2 ${
+        isSelected
+          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+          : "border-transparent"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <Avatar className="w-12 h-12 flex-shrink-0">
+          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+            {getInitials(getRoomDisplayName())}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between mb-1">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+              {getRoomDisplayName()}
+            </h3>
+            {room.unread_count > 0 && (
+              <Badge className="ml-2 bg-blue-500 text-white min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                {room.unread_count > 99 ? "99+" : room.unread_count}
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 truncate mb-1">
+            {getLastMessagePreview()}
+          </p>
+          <div className="flex items-center justify-between">
+            {room.last_message_at && (
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                {formatTime(room.last_message_at)}
+              </p>
+            )}
+            {room.unread_count === 0 && room.last_message_at && (
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }

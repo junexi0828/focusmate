@@ -13,6 +13,8 @@ export interface Post {
   created_at: string;
   updated_at: string;
   author_username: string | null;
+  is_liked?: boolean; // Whether current user liked this post
+  is_read?: boolean; // Whether current user has read this post
 }
 
 export interface Comment {
@@ -26,6 +28,7 @@ export interface Comment {
   created_at: string;
   updated_at: string;
   author_username: string | null;
+  is_liked?: boolean; // Whether current user liked this comment
   replies: Comment[];
 }
 
@@ -60,6 +63,9 @@ class CommunityService extends BaseApiClient {
     category?: string;
     search?: string;
     user_id?: string;
+    author_username?: string;
+    date_from?: string;
+    date_to?: string;
   }): Promise<ApiResponse<PostListResponse>> {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.append('limit', String(params.limit));
@@ -67,6 +73,9 @@ class CommunityService extends BaseApiClient {
     if (params?.category) queryParams.append('category', params.category);
     if (params?.search) queryParams.append('search', params.search);
     if (params?.user_id) queryParams.append('user_id', params.user_id);
+    if (params?.author_username) queryParams.append('author_username', params.author_username);
+    if (params?.date_from) queryParams.append('date_from', params.date_from);
+    if (params?.date_to) queryParams.append('date_to', params.date_to);
 
     const query = queryParams.toString();
     return this.request<PostListResponse>(`/community/posts${query ? `?${query}` : ''}`);

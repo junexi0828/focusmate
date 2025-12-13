@@ -17,9 +17,9 @@ from fastapi import (
 from fastapi.websockets import WebSocketState
 
 from app.api.deps import DatabaseSession, get_current_user
-from app.core.config import settings
 from app.core.security import decode_jwt_token
 from app.domain.chat.schemas import (
+    ChatMemberResponse,
     ChatRoomListResponse,
     ChatRoomResponse,
     DirectChatCreate,
@@ -47,8 +47,8 @@ def get_chat_service(db: Annotated[DatabaseSession, Depends()]) -> ChatService:
 # Room Endpoints
 @router.get("/rooms", response_model=ChatRoomListResponse)
 async def get_user_rooms(
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[ChatService, Depends(get_chat_service)],
+    current_user: Annotated[dict, Depends(get_current_user)] = None,
+    service: Annotated[ChatService, Depends(get_chat_service)] = None,
     room_type: Optional[str] = Query(None, regex="^(direct|team|matching)$"),
 ) -> ChatRoomListResponse:
     """Get all chat rooms for the current user."""
@@ -59,8 +59,8 @@ async def get_user_rooms(
 
 @router.get("/unread-count")
 async def get_unread_count(
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[ChatService, Depends(get_chat_service)],
+    current_user: Annotated[dict, Depends(get_current_user)] = None,
+    service: Annotated[ChatService, Depends(get_chat_service)] = None,
 ) -> dict:
     """Get total unread message count for the current user."""
     try:
@@ -112,6 +112,26 @@ async def get_room(
         return await service.get_room(room_id, current_user["id"])
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/rooms/{room_id}/members", response_model=List[ChatMemberResponse])
+async def get_room_members(
+    room_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)] = None,
+    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+) -> List[ChatMemberResponse]:
+    """Get all members of a chat room."""
+    # Verify user is member
+    member = await service.repository.get_member(room_id, current_user["id"])
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this room",
+        )
+
+    # Get all members
+    members = await service.repository.get_room_members(room_id)
+    return [ChatMemberResponse.model_validate(m) for m in members]
 
 
 # Message Endpoints

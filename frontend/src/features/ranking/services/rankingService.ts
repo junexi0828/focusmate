@@ -96,14 +96,11 @@ class RankingService extends BaseApiClient {
 
   // Team Member Management
   async getTeamMembers(teamId: string): Promise<ApiResponse<TeamMember[]>> {
-    // Note: This endpoint might need to be added to backend
-    // For now, we'll get members from team response
-    const teamResponse = await this.getTeam(teamId);
-    if (teamResponse.status === 'error') {
-      return teamResponse as ApiResponse<TeamMember[]>;
+    const response = await this.request<{ members: TeamMember[]; total: number }>(`/ranking/teams/${teamId}/members`);
+    if (response.status === 'success' && response.data) {
+      return { status: 'success', data: response.data.members } as ApiResponse<TeamMember[]>;
     }
-    // TODO: Add dedicated endpoint for members
-    return { status: 'success', data: [] } as ApiResponse<TeamMember[]>;
+    return { status: 'error', error: response.error } as ApiResponse<TeamMember[]>;
   }
 
   async removeMember(
@@ -155,9 +152,142 @@ class RankingService extends BaseApiClient {
   }
 
   async getMyInvitations(): Promise<ApiResponse<TeamInvitation[]>> {
-    // TODO: Add endpoint for getting user's invitations
+    const response = await this.request<{ invitations: TeamInvitation[]; total: number }>('/ranking/invitations');
+    if (response.status === 'success' && response.data) {
+      return { status: 'success', data: response.data.invitations } as ApiResponse<TeamInvitation[]>;
+    }
     return { status: 'success', data: [] } as ApiResponse<TeamInvitation[]>;
   }
+
+  // Team Statistics
+  async getTeamStats(teamId: string): Promise<ApiResponse<TeamStats>> {
+    return this.request<TeamStats>(`/ranking/teams/${teamId}/stats`);
+  }
+
+  // Session History
+  async getSessionHistory(
+    teamId: string,
+    options?: {
+      userId?: string;
+      limit?: number;
+    }
+  ): Promise<ApiResponse<SessionHistory[]>> {
+    const params = new URLSearchParams();
+    if (options?.userId) {
+      params.append('user_id', options.userId);
+    }
+    if (options?.limit) {
+      params.append('limit', options.limit.toString());
+    }
+    const queryString = params.toString();
+    const url = `/ranking/teams/${teamId}/sessions${queryString ? `?${queryString}` : ''}`;
+    return this.request<SessionHistory[]>(url);
+  }
+
+  // Mini-Game History
+  async getTeamMiniGames(
+    teamId: string,
+    options?: {
+      gameType?: string;
+      limit?: number;
+    }
+  ): Promise<ApiResponse<MiniGameRecord[]>> {
+    const params = new URLSearchParams();
+    if (options?.gameType) {
+      params.append('game_type', options.gameType);
+    }
+    if (options?.limit) {
+      params.append('limit', options.limit.toString());
+    }
+    const queryString = params.toString();
+    const url = `/ranking/teams/${teamId}/mini-games${queryString ? `?${queryString}` : ''}`;
+    return this.request<MiniGameRecord[]>(url);
+  }
+
+  // Mini-Game Leaderboard
+  async getMiniGameLeaderboard(
+    gameType: string,
+    limit?: number
+  ): Promise<ApiResponse<MiniGameLeaderboardEntry[]>> {
+    const params = new URLSearchParams();
+    if (limit) {
+      params.append('limit', limit.toString());
+    }
+    const queryString = params.toString();
+    const url = `/ranking/mini-games/leaderboard/${gameType}${queryString ? `?${queryString}` : ''}`;
+    return this.request<MiniGameLeaderboardEntry[]>(url);
+  }
+
+  // Hall of Fame
+  async getHallOfFame(
+    period: 'weekly' | 'monthly' | 'all' = 'all'
+  ): Promise<ApiResponse<HallOfFameResponse>> {
+    return this.request<HallOfFameResponse>(`/ranking/hall-of-fame?period=${period}`);
+  }
+}
+
+export interface TeamStats {
+  team_id: string;
+  total_focus_time: number; // in minutes
+  total_sessions: number;
+  member_count: number;
+  current_streak: number;
+  mini_game_score?: number;
+  member_breakdown?: Array<{
+    user_id: string;
+    role: string;
+    joined_at: string;
+    total_sessions: number;
+    total_focus_time: number;
+  }>;
+}
+
+export interface SessionHistory {
+  session_id: string;
+  team_id: string;
+  user_id: string;
+  duration_minutes: number;
+  session_type: 'work' | 'break';
+  success: boolean;
+  completed_at: string;
+}
+
+export interface MiniGameRecord {
+  game_id: string;
+  team_id: string;
+  user_id: string;
+  game_type: string;
+  score: number;
+  success: boolean;
+  completion_time?: number;
+  game_data?: Record<string, any>;
+  played_at: string;
+}
+
+export interface MiniGameLeaderboardEntry {
+  team_id: string;
+  team_name: string;
+  best_score: number;
+  games_played: number;
+}
+
+export interface HallOfFameEntry {
+  team_id: string;
+  team_name: string;
+  team_type: string;
+  total_focus_time: number;
+  session_count: number;
+  total_game_score: number;
+  game_count: number;
+  rank?: number;
+}
+
+export interface HallOfFameResponse {
+  period: string;
+  total_teams: number;
+  teams: HallOfFameEntry[];
+  top_focus_teams: HallOfFameEntry[];
+  top_game_teams: HallOfFameEntry[];
 }
 
 export const rankingService = new RankingService();

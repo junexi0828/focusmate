@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import ARRAY, Boolean, ForeignKey, String, Text, TIMESTAMP
+from sqlalchemy import text, ARRAY, Boolean, ForeignKey, String, Text, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,7 +19,7 @@ class UserVerification(Base):
     verification_id: Mapped[UUID] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
     )
     user_id: Mapped[str] = mapped_column(
         String(36),
@@ -44,7 +44,7 @@ class UserVerification(Base):
 
     # Verification information
     verification_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="pending"
+        String(20), nullable=False, server_default=text("'pending'")
     )
     submitted_documents: Mapped[Optional[list[str]]] = mapped_column(
         ARRAY(Text()), nullable=True
@@ -53,19 +53,19 @@ class UserVerification(Base):
 
     # Display settings
     badge_visible: Mapped[bool] = mapped_column(
-        Boolean(), nullable=False, server_default="true"
+        Boolean(), nullable=False, server_default=text("true")
     )
     department_visible: Mapped[bool] = mapped_column(
-        Boolean(), nullable=False, server_default="true"
+        Boolean(), nullable=False, server_default=text("true")
     )
 
     # Timestamps
     submitted_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     verified_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(), nullable=False, server_default="CURRENT_TIMESTAMP"
+        TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
 
     # Relationships

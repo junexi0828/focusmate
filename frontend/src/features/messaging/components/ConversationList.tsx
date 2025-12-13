@@ -1,4 +1,3 @@
-import React from "react";
 import { Conversation } from "../../../types/message";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import { ScrollArea } from "../../../components/ui/scroll-area";
@@ -16,7 +15,7 @@ export function ConversationList({
   conversations,
   selectedConversationId,
   onSelectConversation,
-  currentUserId,
+  currentUserId: _currentUserId,
 }: ConversationListProps) {
   const getInitials = (name: string) => {
     const words = name.trim().split(" ");

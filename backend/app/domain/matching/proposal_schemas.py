@@ -21,6 +21,9 @@ class ProposalResponse(BaseModel):
     created_at: datetime
     expires_at: datetime
     matched_at: Optional[datetime]
+    # Optional pool information for detail view
+    pool_a: Optional[dict] = None
+    pool_b: Optional[dict] = None
 
     class Config:
         from_attributes = True

@@ -10,18 +10,32 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
+import { Route as ReservationsRouteImport } from './routes/reservations'
 import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as MatchingRouteImport } from './routes/matching'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomRoomIdRouteImport } from './routes/room.$roomId'
+import { Route as RankingHallOfFameRouteImport } from './routes/ranking.hall-of-fame'
+import { Route as MatchingStatsRouteImport } from './routes/matching.stats'
+import { Route as CommunityPostIdRouteImport } from './routes/community.$postId'
+import { Route as RankingTeamsTeamIdRouteImport } from './routes/ranking.teams.$teamId'
+import { Route as MatchingProposalsProposalIdRouteImport } from './routes/matching.proposals.$proposalId'
+import { Route as MatchingPoolsPoolIdRouteImport } from './routes/matching.pools.$poolId'
+import { Route as MatchingMatchedProposalIdRouteImport } from './routes/matching.matched.$proposalId'
 
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReservationsRoute = ReservationsRouteImport.update({
+  id: '/reservations',
+  path: '/reservations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RankingRoute = RankingRouteImport.update({
@@ -37,6 +51,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MatchingRoute = MatchingRouteImport.update({
+  id: '/matching',
+  path: '/matching',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -64,40 +83,104 @@ const RoomRoomIdRoute = RoomRoomIdRouteImport.update({
   path: '/room/$roomId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RankingHallOfFameRoute = RankingHallOfFameRouteImport.update({
+  id: '/hall-of-fame',
+  path: '/hall-of-fame',
+  getParentRoute: () => RankingRoute,
+} as any)
+const MatchingStatsRoute = MatchingStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => MatchingRoute,
+} as any)
+const CommunityPostIdRoute = CommunityPostIdRouteImport.update({
+  id: '/$postId',
+  path: '/$postId',
+  getParentRoute: () => CommunityRoute,
+} as any)
+const RankingTeamsTeamIdRoute = RankingTeamsTeamIdRouteImport.update({
+  id: '/teams/$teamId',
+  path: '/teams/$teamId',
+  getParentRoute: () => RankingRoute,
+} as any)
+const MatchingProposalsProposalIdRoute =
+  MatchingProposalsProposalIdRouteImport.update({
+    id: '/proposals/$proposalId',
+    path: '/proposals/$proposalId',
+    getParentRoute: () => MatchingRoute,
+  } as any)
+const MatchingPoolsPoolIdRoute = MatchingPoolsPoolIdRouteImport.update({
+  id: '/pools/$poolId',
+  path: '/pools/$poolId',
+  getParentRoute: () => MatchingRoute,
+} as any)
+const MatchingMatchedProposalIdRoute =
+  MatchingMatchedProposalIdRouteImport.update({
+    id: '/matched/$proposalId',
+    path: '/matched/$proposalId',
+    getParentRoute: () => MatchingRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/community': typeof CommunityRoute
+  '/community': typeof CommunityRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/matching': typeof MatchingRouteWithChildren
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
-  '/ranking': typeof RankingRoute
+  '/ranking': typeof RankingRouteWithChildren
+  '/reservations': typeof ReservationsRoute
   '/stats': typeof StatsRoute
+  '/community/$postId': typeof CommunityPostIdRoute
+  '/matching/stats': typeof MatchingStatsRoute
+  '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
   '/room/$roomId': typeof RoomRoomIdRoute
+  '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
+  '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
+  '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
+  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/community': typeof CommunityRoute
+  '/community': typeof CommunityRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/matching': typeof MatchingRouteWithChildren
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
-  '/ranking': typeof RankingRoute
+  '/ranking': typeof RankingRouteWithChildren
+  '/reservations': typeof ReservationsRoute
   '/stats': typeof StatsRoute
+  '/community/$postId': typeof CommunityPostIdRoute
+  '/matching/stats': typeof MatchingStatsRoute
+  '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
   '/room/$roomId': typeof RoomRoomIdRoute
+  '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
+  '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
+  '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
+  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/community': typeof CommunityRoute
+  '/community': typeof CommunityRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/matching': typeof MatchingRouteWithChildren
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
-  '/ranking': typeof RankingRoute
+  '/ranking': typeof RankingRouteWithChildren
+  '/reservations': typeof ReservationsRoute
   '/stats': typeof StatsRoute
+  '/community/$postId': typeof CommunityPostIdRoute
+  '/matching/stats': typeof MatchingStatsRoute
+  '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
   '/room/$roomId': typeof RoomRoomIdRoute
+  '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
+  '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
+  '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
+  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,43 +189,72 @@ export interface FileRouteTypes {
     | '/community'
     | '/dashboard'
     | '/login'
+    | '/matching'
     | '/messages'
     | '/profile'
     | '/ranking'
+    | '/reservations'
     | '/stats'
+    | '/community/$postId'
+    | '/matching/stats'
+    | '/ranking/hall-of-fame'
     | '/room/$roomId'
+    | '/matching/matched/$proposalId'
+    | '/matching/pools/$poolId'
+    | '/matching/proposals/$proposalId'
+    | '/ranking/teams/$teamId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/community'
     | '/dashboard'
     | '/login'
+    | '/matching'
     | '/messages'
     | '/profile'
     | '/ranking'
+    | '/reservations'
     | '/stats'
+    | '/community/$postId'
+    | '/matching/stats'
+    | '/ranking/hall-of-fame'
     | '/room/$roomId'
+    | '/matching/matched/$proposalId'
+    | '/matching/pools/$poolId'
+    | '/matching/proposals/$proposalId'
+    | '/ranking/teams/$teamId'
   id:
     | '__root__'
     | '/'
     | '/community'
     | '/dashboard'
     | '/login'
+    | '/matching'
     | '/messages'
     | '/profile'
     | '/ranking'
+    | '/reservations'
     | '/stats'
+    | '/community/$postId'
+    | '/matching/stats'
+    | '/ranking/hall-of-fame'
     | '/room/$roomId'
+    | '/matching/matched/$proposalId'
+    | '/matching/pools/$poolId'
+    | '/matching/proposals/$proposalId'
+    | '/ranking/teams/$teamId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CommunityRoute: typeof CommunityRoute
+  CommunityRoute: typeof CommunityRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  MatchingRoute: typeof MatchingRouteWithChildren
   MessagesRoute: typeof MessagesRoute
   ProfileRoute: typeof ProfileRoute
-  RankingRoute: typeof RankingRoute
+  RankingRoute: typeof RankingRouteWithChildren
+  ReservationsRoute: typeof ReservationsRoute
   StatsRoute: typeof StatsRoute
   RoomRoomIdRoute: typeof RoomRoomIdRoute
 }
@@ -154,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/stats'
       fullPath: '/stats'
       preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reservations': {
+      id: '/reservations'
+      path: '/reservations'
+      fullPath: '/reservations'
+      preLoaderRoute: typeof ReservationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ranking': {
@@ -175,6 +294,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/matching': {
+      id: '/matching'
+      path: '/matching'
+      fullPath: '/matching'
+      preLoaderRoute: typeof MatchingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -212,17 +338,111 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomRoomIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ranking/hall-of-fame': {
+      id: '/ranking/hall-of-fame'
+      path: '/hall-of-fame'
+      fullPath: '/ranking/hall-of-fame'
+      preLoaderRoute: typeof RankingHallOfFameRouteImport
+      parentRoute: typeof RankingRoute
+    }
+    '/matching/stats': {
+      id: '/matching/stats'
+      path: '/stats'
+      fullPath: '/matching/stats'
+      preLoaderRoute: typeof MatchingStatsRouteImport
+      parentRoute: typeof MatchingRoute
+    }
+    '/community/$postId': {
+      id: '/community/$postId'
+      path: '/$postId'
+      fullPath: '/community/$postId'
+      preLoaderRoute: typeof CommunityPostIdRouteImport
+      parentRoute: typeof CommunityRoute
+    }
+    '/ranking/teams/$teamId': {
+      id: '/ranking/teams/$teamId'
+      path: '/teams/$teamId'
+      fullPath: '/ranking/teams/$teamId'
+      preLoaderRoute: typeof RankingTeamsTeamIdRouteImport
+      parentRoute: typeof RankingRoute
+    }
+    '/matching/proposals/$proposalId': {
+      id: '/matching/proposals/$proposalId'
+      path: '/proposals/$proposalId'
+      fullPath: '/matching/proposals/$proposalId'
+      preLoaderRoute: typeof MatchingProposalsProposalIdRouteImport
+      parentRoute: typeof MatchingRoute
+    }
+    '/matching/pools/$poolId': {
+      id: '/matching/pools/$poolId'
+      path: '/pools/$poolId'
+      fullPath: '/matching/pools/$poolId'
+      preLoaderRoute: typeof MatchingPoolsPoolIdRouteImport
+      parentRoute: typeof MatchingRoute
+    }
+    '/matching/matched/$proposalId': {
+      id: '/matching/matched/$proposalId'
+      path: '/matched/$proposalId'
+      fullPath: '/matching/matched/$proposalId'
+      preLoaderRoute: typeof MatchingMatchedProposalIdRouteImport
+      parentRoute: typeof MatchingRoute
+    }
   }
 }
 
+interface CommunityRouteChildren {
+  CommunityPostIdRoute: typeof CommunityPostIdRoute
+}
+
+const CommunityRouteChildren: CommunityRouteChildren = {
+  CommunityPostIdRoute: CommunityPostIdRoute,
+}
+
+const CommunityRouteWithChildren = CommunityRoute._addFileChildren(
+  CommunityRouteChildren,
+)
+
+interface MatchingRouteChildren {
+  MatchingStatsRoute: typeof MatchingStatsRoute
+  MatchingMatchedProposalIdRoute: typeof MatchingMatchedProposalIdRoute
+  MatchingPoolsPoolIdRoute: typeof MatchingPoolsPoolIdRoute
+  MatchingProposalsProposalIdRoute: typeof MatchingProposalsProposalIdRoute
+}
+
+const MatchingRouteChildren: MatchingRouteChildren = {
+  MatchingStatsRoute: MatchingStatsRoute,
+  MatchingMatchedProposalIdRoute: MatchingMatchedProposalIdRoute,
+  MatchingPoolsPoolIdRoute: MatchingPoolsPoolIdRoute,
+  MatchingProposalsProposalIdRoute: MatchingProposalsProposalIdRoute,
+}
+
+const MatchingRouteWithChildren = MatchingRoute._addFileChildren(
+  MatchingRouteChildren,
+)
+
+interface RankingRouteChildren {
+  RankingHallOfFameRoute: typeof RankingHallOfFameRoute
+  RankingTeamsTeamIdRoute: typeof RankingTeamsTeamIdRoute
+}
+
+const RankingRouteChildren: RankingRouteChildren = {
+  RankingHallOfFameRoute: RankingHallOfFameRoute,
+  RankingTeamsTeamIdRoute: RankingTeamsTeamIdRoute,
+}
+
+const RankingRouteWithChildren =
+  RankingRoute._addFileChildren(RankingRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CommunityRoute: CommunityRoute,
+  CommunityRoute: CommunityRouteWithChildren,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  MatchingRoute: MatchingRouteWithChildren,
   MessagesRoute: MessagesRoute,
   ProfileRoute: ProfileRoute,
-  RankingRoute: RankingRoute,
+  RankingRoute: RankingRouteWithChildren,
+  ReservationsRoute: ReservationsRoute,
   StatsRoute: StatsRoute,
   RoomRoomIdRoute: RoomRoomIdRoute,
 }

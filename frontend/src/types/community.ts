@@ -9,6 +9,7 @@ export interface Post {
   likes: number;
   comments: number;
   isLiked?: boolean;
+  isRead?: boolean; // Whether current user has read this post
 }
 
 export interface Comment {

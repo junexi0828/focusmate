@@ -124,7 +124,7 @@ export function CreatePostDialog({
             <Label htmlFor="category">카테고리</Label>
             <Select
               value={category}
-              onValueChange={(value) =>
+              onValueChange={(value: string) =>
                 setCategory(
                   value as "general" | "tips" | "question" | "achievement"
                 )

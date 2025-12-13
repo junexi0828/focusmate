@@ -229,7 +229,6 @@ class RankingRepository:
         self, request_id: UUID, update_data: dict
     ) -> Optional["RankingVerificationRequest"]:
         """Update verification request."""
-        from app.infrastructure.database.models.ranking import RankingVerificationRequest
 
         request = await self.get_verification_request_by_id(request_id)
         if not request:

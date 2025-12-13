@@ -19,6 +19,7 @@ import { participantService } from "../features/participants/services/participan
 import { Participant as ParticipantType } from "../features/participants/types/participant.types";
 import { RoomPageSkeleton } from "../components/ui/room-skeleton";
 import { WebSocketStatus, useWebSocketStatus } from "../components/WebSocketStatus";
+import { WebSocketConnectionBanner } from "../components/WebSocketConnectionBanner";
 
 interface RoomPageProps {
   onLeaveRoom: () => void;
@@ -40,7 +41,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const [participantName, setParticipantName] = useState<string>("");
 
   // WebSocket 연결 상태
-  const { isConnected: wsConnected, isConnecting: wsConnecting, connectionError: wsError } = useWebSocketStatus(roomId || null);
+  const { isConnected: wsConnected, isConnecting: wsConnecting, connectionError: wsError, reconnectAttempts } = useWebSocketStatus(roomId || null);
 
   // WebSocket 에러 메시지 표시
   useEffect(() => {
@@ -211,19 +212,17 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   } = useServerTimer({
     roomId: roomId || "",
     initialTimerState: room?.timer_state,
-    onSessionComplete: (completedSessionType) => {
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(
-          completedSessionType === "work" ? "집중 시간 완료!" : "휴식 종료!",
-          {
-            body:
-              completedSessionType === "work"
-                ? "잘하셨습니다! 이제 휴식을 취하세요."
-                : "다시 집중할 시간입니다!",
-            icon: "/favicon.ico",
-          }
-        );
-      }
+    onSessionComplete: async (completedSessionType) => {
+      // Show notification using notification service
+      const { notificationService } = await import("../../lib/notificationService");
+      notificationService.notify(
+        completedSessionType === "work" ? "집중 시간 완료!" : "휴식 종료!",
+        completedSessionType === "work"
+          ? "잘하셨습니다! 이제 휴식을 취하세요."
+          : "다시 집중할 시간입니다!",
+        "/favicon.ico"
+      );
+
       toast.success(
         completedSessionType === "work" ? "집중 시간 완료!" : "휴식 종료!",
         {
@@ -401,11 +400,13 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     }
   };
 
-  // Request notification permission on mount
+  // Request notification permission on mount (using notification service)
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
+    import("../../lib/notificationService").then(({ notificationService }) => {
+      if (notificationService.isSupported() && notificationService.getPermission() === "default") {
+        notificationService.requestPermission().catch(console.error);
+      }
+    });
   }, []);
 
   if (isLoading) {
@@ -461,15 +462,24 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         </div>
       </header>
 
-      {/* WebSocket 연결 상태 알림 */}
-      {wsConnecting && (
-        <div className="container mx-auto px-4 py-2">
-          <div className="bg-muted border border-border rounded-lg p-3 flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">실시간 동기화 연결 중...</p>
-          </div>
-        </div>
-      )}
+      {/* WebSocket 연결 상태 배너 */}
+      <div className="container mx-auto px-4 py-2">
+        <WebSocketConnectionBanner
+          isConnected={wsConnected}
+          isConnecting={wsConnecting}
+          connectionError={wsError}
+          reconnectAttempts={reconnectAttempts}
+          maxReconnectAttempts={wsClient.getMaxReconnectAttempts()}
+          onReconnect={() => {
+            if (roomId) {
+              wsClient.connect(roomId).catch((error) => {
+                console.error("Manual reconnect failed:", error);
+                toast.error("재연결에 실패했습니다");
+              });
+            }
+          }}
+        />
+      </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">

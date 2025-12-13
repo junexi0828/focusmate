@@ -6,9 +6,12 @@ ISO/IEC 25010 Quality Standards Compliant.
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -111,6 +114,20 @@ async def health_check():
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
+
+# Mount static files for uploads
+uploads_dir = Path("uploads")
+uploads_dir.mkdir(exist_ok=True)
+
+# Mount chat uploads
+chat_uploads_dir = uploads_dir / "chat"
+chat_uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads/chat", StaticFiles(directory=str(chat_uploads_dir)), name="chat_uploads")
+
+# Mount verification uploads
+verification_uploads_dir = uploads_dir / "verification"
+verification_uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads/verification", StaticFiles(directory=str(verification_uploads_dir)), name="verification_uploads")
 
 
 if __name__ == "__main__":

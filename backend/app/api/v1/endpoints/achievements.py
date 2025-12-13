@@ -17,6 +17,8 @@ from app.infrastructure.repositories.achievement_repository import (
     AchievementRepository,
     UserAchievementRepository,
 )
+from app.infrastructure.repositories.community_repository import PostRepository
+from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 from app.infrastructure.repositories.user_repository import UserRepository
 
 router = APIRouter(prefix="/achievements", tags=["achievements"])
@@ -38,13 +40,25 @@ def get_user_repository(db: DatabaseSession) -> UserRepository:
     return UserRepository(db)
 
 
+def get_post_repository(db: DatabaseSession) -> PostRepository:
+    """Get post repository."""
+    return PostRepository(db)
+
+
+def get_session_history_repository(db: DatabaseSession) -> SessionHistoryRepository:
+    """Get session history repository."""
+    return SessionHistoryRepository(db)
+
+
 def get_achievement_service(
     achievement_repo: Annotated[AchievementRepository, Depends(get_achievement_repository)],
     user_achievement_repo: Annotated[UserAchievementRepository, Depends(get_user_achievement_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    post_repo: Annotated[PostRepository, Depends(get_post_repository)],
+    session_repo: Annotated[SessionHistoryRepository, Depends(get_session_history_repository)],
 ) -> AchievementService:
     """Get achievement service."""
-    return AchievementService(achievement_repo, user_achievement_repo, user_repo)
+    return AchievementService(achievement_repo, user_achievement_repo, user_repo, post_repo, session_repo)
 
 
 # Endpoints

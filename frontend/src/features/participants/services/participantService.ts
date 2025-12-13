@@ -33,7 +33,7 @@ class ParticipantService extends BaseApiClient {
   }
 
   async leaveRoom(
-    roomId: string,
+    _roomId: string,
     participantId: string
   ): Promise<ApiResponse<void>> {
     // Backend endpoint: DELETE /api/v1/participants/{participant_id}

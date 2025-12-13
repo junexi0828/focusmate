@@ -13,7 +13,6 @@ from sqlalchemy import (
     JSON,
     String,
     Text,
-    TIMESTAMP,
     UniqueConstraint,
     func,
     text,
@@ -107,7 +106,7 @@ class ChatMember(Base):
 
     # Member role
     role: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="member"
+        String(20), nullable=False, server_default=text("'member'")
     )
 
     # Display name
@@ -176,7 +175,7 @@ class ChatMessage(Base):
 
     # Message content
     message_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="text"
+        String(20), nullable=False, server_default=text("'text'")
     )
     content: Mapped[str] = mapped_column(Text(), nullable=False)
 
@@ -192,12 +191,12 @@ class ChatMessage(Base):
         nullable=True,
     )
     thread_count: Mapped[int] = mapped_column(
-        Integer(), nullable=False, server_default="0"
+        Integer(), nullable=False, server_default=text("0")
     )
 
     # Reactions
     reactions: Mapped[list[dict]] = mapped_column(
-        JSON(), nullable=False, server_default="[]"
+        JSON(), nullable=False, server_default=text("'[]'")
     )
 
     # Status

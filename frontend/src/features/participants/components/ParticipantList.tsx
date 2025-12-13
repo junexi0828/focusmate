@@ -1,4 +1,3 @@
-import React from "react";
 import { Users, Crown } from "lucide-react";
 import { Card } from "../../../components/ui/card";
 import { Participant } from "../types/participant.types";
@@ -56,7 +55,7 @@ export default function ParticipantList({
               }`}
               aria-label={`${participant.name}'s avatar`}
             >
-              {getInitials(participant.name)}
+              {getInitials(participant.name || "User")}
             </div>
 
             <div className="flex-1 min-w-0">

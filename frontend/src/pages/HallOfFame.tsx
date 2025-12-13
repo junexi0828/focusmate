@@ -1,271 +1,275 @@
-/**
- * Hall of Fame Page - Comprehensive leaderboard with scatter plot
- */
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { TeamScatterPlot } from '../components/charts/TeamScatterPlot';
-import { PageTransition } from '../components/PageTransition';
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button-enhanced";
+import { Badge } from "../components/ui/badge";
+import {
+  Trophy,
+  Medal,
+  Clock,
+  Target,
+  Gamepad2,
+  TrendingUp,
+  ArrowRight,
+} from "lucide-react";
+import {
+  HallOfFameResponse,
+  HallOfFameEntry,
+} from "../features/ranking/services/rankingService";
+import { useNavigate } from "@tanstack/react-router";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 
-type Period = 'weekly' | 'monthly' | 'all';
+interface HallOfFamePageProps {
+  data: HallOfFameResponse | null;
+  period: "weekly" | "monthly" | "all";
+  onPeriodChange: (period: "weekly" | "monthly" | "all") => void;
+  isLoading: boolean;
+}
 
-// Sample data - replace with API call
-const sampleTeams = [
-  {
-    team_id: '1',
-    team_name: 'AI 연구실',
-    team_type: 'lab',
-    total_focus_time: 1250,
-    session_count: 50,
-    total_game_score: 3200,
-    game_count: 25,
-  },
-  {
-    team_id: '2',
-    team_name: '컴공 동아리',
-    team_type: 'club',
-    total_focus_time: 980,
-    session_count: 42,
-    total_game_score: 2800,
-    game_count: 20,
-  },
-  {
-    team_id: '3',
-    team_name: '소프트웨어학과',
-    team_type: 'department',
-    total_focus_time: 1500,
-    session_count: 65,
-    total_game_score: 2100,
-    game_count: 15,
-  },
-  {
-    team_id: '4',
-    team_name: '일반팀 A',
-    team_type: 'general',
-    total_focus_time: 750,
-    session_count: 30,
-    total_game_score: 1800,
-    game_count: 18,
-  },
-  {
-    team_id: '5',
-    team_name: '데이터사이언스 연구실',
-    team_type: 'lab',
-    total_focus_time: 1100,
-    session_count: 48,
-    total_game_score: 2900,
-    game_count: 22,
-  },
-];
+export function HallOfFamePage({
+  data,
+  period,
+  onPeriodChange,
+  isLoading,
+}: HallOfFamePageProps) {
+  const navigate = useNavigate();
 
-export default function HallOfFame() {
-  const [period, setPeriod] = useState<Period>('all');
-  const [teams] = useState(sampleTeams);
-  const currentTeamId = '1'; // Replace with actual current team ID
+  const periodLabels: Record<string, string> = {
+    weekly: "주간",
+    monthly: "월간",
+    all: "전체",
+  };
 
-  // Sort teams for rankings
-  const topFocusTeams = [...teams]
-    .sort((a, b) => b.total_focus_time - a.total_focus_time)
-    .slice(0, 10);
+  const teamTypeLabels: Record<string, string> = {
+    general: "일반",
+    department: "학과",
+    lab: "연구실",
+    club: "동아리",
+  };
 
-  const topGameTeams = [...teams]
-    .sort((a, b) => b.total_game_score - a.total_game_score)
-    .slice(0, 10);
+  const handleTeamClick = (teamId: string) => {
+    navigate({ to: `/ranking/teams/${teamId}` });
+  };
 
-  const periods: { value: Period; label: string }[] = [
-    { value: 'weekly', label: 'This Week' },
-    { value: 'monthly', label: 'This Month' },
-    { value: 'all', label: 'All Time' },
-  ];
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) {
+      return <Trophy className="w-6 h-6 text-yellow-500" />;
+    } else if (rank === 2) {
+      return <Medal className="w-6 h-6 text-gray-400" />;
+    } else if (rank === 3) {
+      return <Medal className="w-6 h-6 text-orange-500" />;
+    }
+    return null;
+  };
+
+  const getRankBadgeColor = (rank: number) => {
+    if (rank === 1) {
+      return "bg-yellow-500 text-white";
+    } else if (rank === 2) {
+      return "bg-gray-400 text-white";
+    } else if (rank === 3) {
+      return "bg-orange-500 text-white";
+    }
+    return "bg-muted text-muted-foreground";
+  };
 
   return (
-    <PageTransition>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <h1 className="text-5xl font-bold text-white mb-4">
-              🏆 Hall of Fame
-            </h1>
-            <p className="text-xl text-gray-300">
-              Comprehensive team performance overview
-            </p>
-          </motion.div>
+    <div className="min-h-screen bg-muted/30">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+            <Trophy className="w-8 h-8 text-yellow-500" />
+            Hall of Fame
+          </h1>
+          <p className="text-muted-foreground">
+            최고의 집중력과 성과를 보여준 팀들을 확인하세요
+          </p>
+        </div>
 
-          {/* Period Filter */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-center gap-4 mb-8"
-          >
-            {periods.map((p) => (
-              <motion.button
-                key={p.value}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setPeriod(p.value)}
-                className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                  period === p.value
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+        {/* Period Filter */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>기간 선택</CardTitle>
+            <CardDescription>랭킹 기간을 선택하세요</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Button
+                variant={period === "weekly" ? "default" : "outline"}
+                onClick={() => onPeriodChange("weekly")}
               >
-                {p.label}
-              </motion.button>
-            ))}
-          </motion.div>
+                주간
+              </Button>
+              <Button
+                variant={period === "monthly" ? "default" : "outline"}
+                onClick={() => onPeriodChange("monthly")}
+              >
+                월간
+              </Button>
+              <Button
+                variant={period === "all" ? "default" : "outline"}
+                onClick={() => onPeriodChange("all")}
+              >
+                전체
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Scatter Plot */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 mb-8"
-          >
-            <h2 className="text-2xl font-bold text-white mb-6">
-              📊 Team Performance Overview
-            </h2>
-            <p className="text-gray-400 mb-6">
-              Scatter plot showing all teams' focus time vs game scores. Larger bubbles indicate higher activity.
-            </p>
-            <TeamScatterPlot teams={teams} currentTeamId={currentTeamId} />
-          </motion.div>
-
-          {/* Top Rankings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Top Focus Teams */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700"
-            >
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                <span>⏱️</span> Top Focus Teams
-              </h3>
-              <div className="space-y-3">
-                {topFocusTeams.map((team, index) => (
-                  <motion.div
-                    key={team.team_id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + index * 0.05 }}
-                    className={`flex items-center justify-between p-4 rounded-lg ${
-                      team.team_id === currentTeamId
-                        ? 'bg-green-600/20 border border-green-600/50'
-                        : 'bg-gray-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
-                      </span>
-                      <div>
-                        <div className="text-white font-semibold flex items-center gap-2">
-                          {team.team_name}
-                          {team.team_id === currentTeamId && (
-                            <span className="text-xs bg-green-600 px-2 py-0.5 rounded">YOU</span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-400 capitalize">{team.team_type}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-blue-400">
-                        {team.total_focus_time.toFixed(0)} min
-                      </div>
-                      <div className="text-sm text-gray-400">{team.session_count} sessions</div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Top Game Teams */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700"
-            >
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                <span>🎮</span> Top Game Teams
-              </h3>
-              <div className="space-y-3">
-                {topGameTeams.map((team, index) => (
-                  <motion.div
-                    key={team.team_id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + index * 0.05 }}
-                    className={`flex items-center justify-between p-4 rounded-lg ${
-                      team.team_id === currentTeamId
-                        ? 'bg-green-600/20 border border-green-600/50'
-                        : 'bg-gray-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
-                      </span>
-                      <div>
-                        <div className="text-white font-semibold flex items-center gap-2">
-                          {team.team_name}
-                          {team.team_id === currentTeamId && (
-                            <span className="text-xs bg-green-600 px-2 py-0.5 rounded">YOU</span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-400 capitalize">{team.team_type}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-yellow-400">{team.total_game_score}</div>
-                      <div className="text-sm text-gray-400">{team.game_count} games</div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Stats Summary */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mt-8 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700"
-          >
-            <h3 className="text-xl font-bold text-white mb-4">📈 Overall Statistics</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-400">{teams.length}</div>
-                <div className="text-sm text-gray-400">Total Teams</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-400">
-                  {teams.reduce((sum, t) => sum + t.total_focus_time, 0).toFixed(0)}
-                </div>
-                <div className="text-sm text-gray-400">Total Focus Time (min)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-400">
-                  {teams.reduce((sum, t) => sum + t.total_game_score, 0)}
-                </div>
-                <div className="text-sm text-gray-400">Total Game Score</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-400">
-                  {teams.reduce((sum, t) => sum + t.session_count + t.game_count, 0)}
-                </div>
-                <div className="text-sm text-gray-400">Total Activities</div>
+        {/* Leaderboard */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  {periodLabels[period]} 랭킹
+                </CardTitle>
+                <CardDescription>
+                  총 {data?.total_teams || 0}개 팀이 랭킹에 등록되어 있습니다
+                </CardDescription>
               </div>
             </div>
-          </motion.div>
-        </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                <p className="text-muted-foreground mt-4">로딩 중...</p>
+              </div>
+            ) : !data || data.top_focus_teams.length === 0 ? (
+              <div className="text-center py-12">
+                <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-lg font-medium text-muted-foreground mb-2">
+                  랭킹 데이터가 없습니다
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  아직 랭킹에 등록된 팀이 없습니다
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {data.top_focus_teams.map((team, index) => {
+                  const rank = index + 1;
+                  const rankIcon = getRankIcon(rank);
+                  const badgeColor = getRankBadgeColor(rank);
+
+                  return (
+                    <div
+                      key={team.team_id}
+                      className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer group"
+                      onClick={() => handleTeamClick(team.team_id)}
+                    >
+                      {/* Rank */}
+                      <div className="flex-shrink-0 w-16 flex items-center justify-center">
+                        {rankIcon ? (
+                          rankIcon
+                        ) : (
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${badgeColor}`}
+                          >
+                            {rank}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Team Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-lg truncate">
+                            {team.team_name}
+                          </h3>
+                          <Badge variant="outline" className="text-xs">
+                            {teamTypeLabels[team.team_type] || team.team_type}
+                          </Badge>
+                        </div>
+
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                집중 시간
+                              </p>
+                              <p className="text-sm font-medium">
+                                {Math.floor(team.total_focus_time / 60)}시간{" "}
+                                {Math.floor(team.total_focus_time % 60)}분
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Target className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                세션 수
+                              </p>
+                              <p className="text-sm font-medium">
+                                {team.session_count}개
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Gamepad2 className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                게임 점수
+                              </p>
+                              <p className="text-sm font-medium">
+                                {team.total_game_score}점
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                게임 횟수
+                              </p>
+                              <p className="text-sm font-medium">
+                                {team.game_count}회
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Arrow */}
+                      <div className="flex-shrink-0">
+                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Info Card */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>랭킹 기준</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                • 랭킹은 집중 시간, 세션 수, 게임 점수를 종합하여 계산됩니다
+              </p>
+              <p>• 인증된 팀만 랭킹에 표시됩니다</p>
+              <p>• 주간/월간 랭킹은 해당 기간 동안의 활동을 기준으로 합니다</p>
+              <p>• 전체 랭킹은 모든 기간의 누적 데이터를 기준으로 합니다</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </PageTransition>
+    </div>
   );
 }
