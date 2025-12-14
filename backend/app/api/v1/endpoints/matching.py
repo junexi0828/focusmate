@@ -52,8 +52,14 @@ async def get_my_matching_pool(
     service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
 ) -> Optional[MatchingPoolResponse]:
     """Get current user's active matching pool."""
-    pool = await service.get_my_pool(current_user["id"])
-    return pool
+    try:
+        pool = await service.get_my_pool(current_user["id"])
+        return pool
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get matching pool: {str(e)}"
+        )
 
 
 @router.get("/pools/{pool_id}")
@@ -94,7 +100,13 @@ async def get_pool_statistics(
     service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
 ) -> MatchingPoolStats:
     """Get matching pool statistics."""
-    return await service.get_pool_statistics()
+    try:
+        return await service.get_pool_statistics()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get pool statistics: {str(e)}"
+        )
 
 
 @router.get("/stats/comprehensive")
@@ -102,4 +114,10 @@ async def get_comprehensive_statistics(
     service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
 ) -> ComprehensiveMatchingStats:
     """Get comprehensive matching statistics including pools and proposals."""
-    return await service.get_comprehensive_statistics()
+    try:
+        return await service.get_comprehensive_statistics()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get comprehensive statistics: {str(e)}"
+        )

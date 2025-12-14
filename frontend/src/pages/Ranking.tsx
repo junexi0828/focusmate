@@ -170,22 +170,28 @@ export function RankingPage({
                       </div>
                     )}
 
-                    {/* Stats Placeholder */}
+                    {/* Stats - Real Data from API */}
                     <div className="grid grid-cols-3 gap-2 mb-4">
                       <div className="text-center p-2 bg-muted/50 rounded">
                         <Trophy className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
                         <p className="text-xs text-muted-foreground">순위</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold">
+                          {team.current_rank || "-"}
+                        </p>
                       </div>
                       <div className="text-center p-2 bg-muted/50 rounded">
                         <Target className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
                         <p className="text-xs text-muted-foreground">세션</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-sm font-semibold">
+                          {team.total_sessions || 0}
+                        </p>
                       </div>
                       <div className="text-center p-2 bg-muted/50 rounded">
                         <Zap className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">스트릭</p>
-                        <p className="text-sm font-semibold">-</p>
+                        <p className="text-xs text-muted-foreground">포인트</p>
+                        <p className="text-sm font-semibold">
+                          {team.total_points || 0}
+                        </p>
                       </div>
                     </div>
 

@@ -54,12 +54,13 @@ export default function RoomSettings({
 
   const handleSave = async () => {
     if (!validateForm()) return;
+    if (!room.room_id) return;
 
     setIsSaving(true);
     try {
       const response = await roomService.updateRoomSettings(room.room_id, {
-        work_duration_minutes: focusTime,
-        break_duration_minutes: breakTime,
+        work_duration: focusTime * 60, // 분을 초로 변환
+        break_duration: breakTime * 60, // 분을 초로 변환
       });
 
       if (response.status === "error") {
@@ -80,6 +81,8 @@ export default function RoomSettings({
   };
 
   const handleDelete = async () => {
+    if (!room.room_id) return;
+
     setIsDeleting(true);
     try {
       const response = await roomService.deleteRoom(room.room_id);

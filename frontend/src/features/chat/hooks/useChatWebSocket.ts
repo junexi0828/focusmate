@@ -1,5 +1,5 @@
 /**
- * WebSocket hook for real-time chat.
+ * WebSocket hook for real-time chat with improved reconnection logic.
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -7,7 +7,7 @@ import { authService } from "../../auth/services/authService";
 import type { Message } from "../services/chatService";
 
 const getWebSocketUrl = (): string => {
-  const env = (import.meta as any).env;
+  const env = import.meta.env;
   const apiBaseUrl = env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
   const wsBaseUrl = apiBaseUrl
     .replace(/^http:\/\//, "ws://")
@@ -15,25 +15,151 @@ const getWebSocketUrl = (): string => {
   return `${wsBaseUrl}/chats/ws`;
 };
 
+// Reconnection configuration
+const MAX_RECONNECT_ATTEMPTS = 5;
+const INITIAL_RECONNECT_DELAY = 1000; // 1 second
+const MAX_RECONNECT_DELAY = 30000; // 30 seconds
+const HEARTBEAT_INTERVAL = 5000; // 5 seconds (reduced from 30s to prevent connection timeout)
+
 export function useChatWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [messages, setMessages] = useState<Map<string, Message[]>>(new Map());
   const [typingUsers, setTypingUsers] = useState<Map<string, Set<string>>>(new Map()); // room_id -> Set of user_ids
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const joinedRoomsRef = useRef<Set<string>>(new Set());
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map()); // user_id -> timeout
+  const reconnectAttemptsRef = useRef(0);
+  const shouldReconnectRef = useRef(true);
+  const isOnlineRef = useRef(navigator.onLine);
+  const hasInitializedRef = useRef(false);
+  const consecutive1005ErrorsRef = useRef(0);
+  const isCleaningUpRef = useRef(false);
+  const connectionTimeRef = useRef<number>(0);
+
+  // Calculate exponential backoff delay
+  const getReconnectDelay = useCallback((attempt: number): number => {
+    const delay = Math.min(
+      INITIAL_RECONNECT_DELAY * Math.pow(2, attempt - 1),
+      MAX_RECONNECT_DELAY
+    );
+    return delay;
+  }, []);
+
+  // Clear all timers
+  const clearTimers = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = undefined;
+    }
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = undefined;
+    }
+  }, []);
+
+  // Start heartbeat to keep connection alive
+  const startHeartbeat = useCallback((ws: WebSocket) => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({ type: "ping" }));
+        } catch (error) {
+          console.error("Failed to send heartbeat:", error);
+        }
+      }
+    }, HEARTBEAT_INTERVAL);
+  }, []);
 
   const connect = useCallback(() => {
-    const token = authService.getToken();
-    if (!token) return;
+    // Prevent connection during cleanup (React StrictMode double-mount)
+    if (isCleaningUpRef.current) {
+      console.log("Chat WebSocket: Cleanup in progress, skipping connection");
+      return;
+    }
 
+    const token = authService.getToken();
+    if (!token || !shouldReconnectRef.current) return;
+
+    // Check if token is expired
+    if (authService.isTokenExpired()) {
+      console.warn("Chat WebSocket: Token expired, stopping reconnection attempts");
+      shouldReconnectRef.current = false;
+      setIsConnecting(false);
+      setIsConnected(false);
+      // Clear token and redirect to login
+      authService.logout();
+      window.location.href = "/login";
+      return;
+    }
+
+    // Don't reconnect if offline
+    if (!isOnlineRef.current) {
+      console.log("Chat WebSocket: Offline, skipping reconnection");
+      return;
+    }
+
+    // Prevent multiple simultaneous connection attempts
+    if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      console.log("Chat WebSocket: Already connecting, skipping");
+      return;
+    }
+
+    // If already connected and open, don't reconnect
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log("Chat WebSocket: Already connected, skipping");
+      return;
+    }
+
+    // Close existing connection if any (but not if it's already open)
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
+      try {
+        wsRef.current.close();
+      } catch (e) {
+        // Ignore errors when closing
+      }
+      wsRef.current = null;
+    }
+
+    setIsConnecting(true);
     const wsUrl = `${getWebSocketUrl()}?token=${token}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
+      // Check if we're cleaning up (React StrictMode double-mount)
+      if (isCleaningUpRef.current) {
+        console.log("Chat WebSocket: Cleanup in progress, closing connection");
+        try {
+          ws.close();
+        } catch (e) {
+          // Ignore errors
+        }
+        return;
+      }
+
+      connectionTimeRef.current = Date.now();
       console.log("Chat WebSocket connected");
       setIsConnected(true);
+      setIsConnecting(false);
+      reconnectAttemptsRef.current = 0; // Reset on successful connection
+      consecutive1005ErrorsRef.current = 0; // Reset consecutive 1005 errors on successful connection
+
+      // Send immediate ping to keep connection alive and verify backend is responsive
+      try {
+        ws.send(JSON.stringify({ type: "ping" }));
+        console.log("Chat WebSocket: Sent initial ping");
+      } catch (error) {
+        console.error("Chat WebSocket: Failed to send initial ping:", error);
+      }
+
+      // Start heartbeat
+      startHeartbeat(ws);
 
       // Rejoin all previously joined rooms
       joinedRoomsRef.current.forEach((roomId) => {
@@ -51,6 +177,18 @@ export function useChatWebSocket() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        // Handle pong response
+        if (data.type === "pong") {
+          console.log("[WebSocket] Received pong from server");
+          return; // Heartbeat response, no action needed
+        }
+
+        // Handle connection confirmation
+        if (data.type === "connected") {
+          console.log("Chat WebSocket: Connection confirmed by server");
+          return; // Connection confirmed, no action needed
+        }
 
         if (data.type === "message" && data.message) {
           const message: Message = data.message;
@@ -129,31 +267,139 @@ export function useChatWebSocket() {
 
     ws.onerror = (error) => {
       console.error("Chat WebSocket error:", error);
+      setIsConnecting(false);
     };
 
-    ws.onclose = () => {
-      console.log("Chat WebSocket disconnected");
-      setIsConnected(false);
+    ws.onclose = (event) => {
+      const connectionDuration = connectionTimeRef.current
+        ? Date.now() - connectionTimeRef.current
+        : 0;
 
-      // Reconnect after 3 seconds
+      console.log("Chat WebSocket disconnected", {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+        duration: `${connectionDuration}ms`,
+        timestamp: new Date().toISOString(),
+      });
+
+      setIsConnected(false);
+      setIsConnecting(false);
+      clearTimers();
+
+      // If connection lasted less than 100ms, likely React StrictMode cleanup
+      if (connectionDuration > 0 && connectionDuration < 100) {
+        console.warn(
+          `Chat WebSocket: Connection closed very quickly (${connectionDuration}ms), ` +
+          "likely due to React StrictMode double-mount. This is normal in development."
+        );
+        // Don't reconnect if it was a very short connection (likely cleanup)
+        if (isCleaningUpRef.current) {
+          return;
+        }
+      }
+
+      // Code 1005: No Status Received - server closed connection without close frame
+      // This often happens when server rejects connection or closes immediately
+      if (event.code === 1005) {
+        consecutive1005ErrorsRef.current++;
+
+        // Check if token is expired
+        if (authService.isTokenExpired()) {
+          console.warn("Chat WebSocket: Token expired (code 1005), stopping reconnection");
+          shouldReconnectRef.current = false;
+          authService.logout();
+          window.location.href = "/login";
+          return;
+        }
+
+        // If 1005 errors occur consecutively 3+ times, likely server issue - stop reconnecting
+        if (consecutive1005ErrorsRef.current >= 3) {
+          console.error(
+            `Chat WebSocket: ${consecutive1005ErrorsRef.current} consecutive 1005 errors, stopping reconnection. ` +
+            "This usually indicates a server-side issue. Please check backend logs."
+          );
+          shouldReconnectRef.current = false;
+          return;
+        }
+
+        // If not expired, might be server issue - wait longer before reconnecting
+        console.warn(
+          `Chat WebSocket: Connection closed with code 1005 (${consecutive1005ErrorsRef.current}/3), may be server issue`
+        );
+      } else {
+        // Reset counter if different error code
+        consecutive1005ErrorsRef.current = 0;
+      }
+
+      // Check if connection was rejected due to expired token (403 Forbidden or 1008 Policy Violation)
+      if (event.code === 1008 || event.code === 403) {
+        // Check if token is expired
+        if (authService.isTokenExpired()) {
+          console.warn("Chat WebSocket: Token expired, stopping reconnection");
+          shouldReconnectRef.current = false;
+          authService.logout();
+          window.location.href = "/login";
+          return;
+        }
+      }
+
+      // Don't reconnect if manually disconnected or max attempts reached
+      if (!shouldReconnectRef.current) {
+        return;
+      }
+
+      if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+        console.error(
+          `Chat WebSocket: Max reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached`
+        );
+        return;
+      }
+
+      // For code 1005, use longer delay to avoid rapid reconnection loops
+      const baseDelay = event.code === 1005 ? 3000 : 1000;
+
+      // Exponential backoff reconnection
+      reconnectAttemptsRef.current++;
+      const delay = Math.max(
+        getReconnectDelay(reconnectAttemptsRef.current),
+        baseDelay
+      );
+      console.log(
+        `Chat WebSocket: Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`
+      );
+
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
-      }, 3000);
+        if (shouldReconnectRef.current && isOnlineRef.current) {
+          connect();
+        }
+      }, delay);
     };
 
     wsRef.current = ws;
-  }, []);
+  }, [clearTimers, getReconnectDelay, startHeartbeat]);
 
   const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
+    isCleaningUpRef.current = true;
+    shouldReconnectRef.current = false;
+    clearTimers();
     if (wsRef.current) {
-      wsRef.current.close();
+      try {
+        wsRef.current.close();
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
       wsRef.current = null;
     }
+    setIsConnected(false);
+    setIsConnecting(false);
     joinedRoomsRef.current.clear();
-  }, []);
+
+    // Reset cleanup flag after a short delay to allow cleanup to complete
+    setTimeout(() => {
+      isCleaningUpRef.current = false;
+    }, 100);
+  }, [clearTimers]);
 
   const joinRoom = useCallback((roomId: string) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -190,18 +436,60 @@ export function useChatWebSocket() {
     }
   }, []);
 
+  // Handle online/offline events
   useEffect(() => {
+    const handleOnline = () => {
+      console.log("Chat WebSocket: Network online, attempting reconnection");
+      isOnlineRef.current = true;
+      if (!isConnected && shouldReconnectRef.current) {
+        reconnectAttemptsRef.current = 0; // Reset attempts on network recovery
+        connect();
+      }
+    };
+
+    const handleOffline = () => {
+      console.log("Chat WebSocket: Network offline");
+      isOnlineRef.current = false;
+      clearTimers();
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [connect, clearTimers, isConnected]);
+
+  useEffect(() => {
+    // Prevent double initialization in React StrictMode
+    if (hasInitializedRef.current) {
+      return;
+    }
+
+    hasInitializedRef.current = true;
+    shouldReconnectRef.current = true;
     connect();
-    return () => disconnect();
-  }, [connect, disconnect]);
+
+    return () => {
+      shouldReconnectRef.current = false;
+      disconnect();
+      hasInitializedRef.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   return {
     isConnected,
+    isConnecting,
     messages,
     typingUsers,
     joinRoom,
     leaveRoom,
     sendTyping,
+    reconnectAttempts: reconnectAttemptsRef.current,
+    maxReconnectAttempts: MAX_RECONNECT_ATTEMPTS,
   };
 }
 

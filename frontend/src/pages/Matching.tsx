@@ -19,7 +19,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button-enhanced";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/EmptyState";
+import { CreatePoolDialog } from "@/features/matching/components/CreatePoolDialog";
 import type { MatchingPoolCreate } from "@/types/matching";
+import { toast } from "sonner";
 
 export default function Matching() {
   const [showPoolForm, setShowPoolForm] = useState(false);
@@ -40,11 +42,12 @@ export default function Matching() {
     retry: false,
   });
 
-  // Fetch proposals
+  // Fetch proposals with real-time polling
   const { data: proposals = [] } = useQuery({
     queryKey: ["my-proposals"],
     queryFn: matchingApi.getMyProposals,
     enabled: verification?.status === "approved",
+    refetchInterval: 15000, // Poll every 15 seconds for new proposals
   });
 
   // Fetch stats
@@ -58,6 +61,21 @@ export default function Matching() {
     mutationFn: (poolId: string) => matchingApi.cancelPool(poolId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-pool"] });
+      toast.success("풀이 취소되었습니다");
+    },
+  });
+
+  // Create pool mutation
+  const createPoolMutation = useMutation({
+    mutationFn: (data: MatchingPoolCreate) => matchingApi.createPool(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-pool"] });
+      queryClient.invalidateQueries({ queryKey: ["pool-stats"] });
+      setShowPoolForm(false);
+      toast.success("매칭 풀이 생성되었습니다!");
+    },
+    onError: (error: unknown) => {
+      toast.error(error?.message || "풀 생성에 실패했습니다");
     },
   });
 
@@ -73,6 +91,7 @@ export default function Matching() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-proposals"] });
       queryClient.invalidateQueries({ queryKey: ["my-pool"] });
+      toast.success("응답이 전송되었습니다");
     },
   });
 
@@ -128,7 +147,13 @@ export default function Matching() {
                   </div>
                 </div>
                 {!verification && (
-                  <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
+                  <Button
+                    className="bg-gradient-to-r from-blue-600 to-purple-600"
+                    onClick={() => {
+                      // Navigate to verification page
+                      window.location.href = "/verification";
+                    }}
+                  >
                     인증 시작하기
                   </Button>
                 )}
@@ -148,7 +173,7 @@ export default function Matching() {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       대기 중
                     </p>
-                    <p className="text-2xl font-bold">{stats.waiting_pools}</p>
+                    <p className="text-2xl font-bold">{stats.total_waiting || 0}</p>
                   </div>
                 </div>
               </Card>
@@ -161,7 +186,7 @@ export default function Matching() {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       오늘 매칭
                     </p>
-                    <p className="text-2xl font-bold">{stats.matched_today}</p>
+                    <p className="text-2xl font-bold">{stats.total_matched || 0}</p>
                   </div>
                 </div>
               </Card>
@@ -174,7 +199,7 @@ export default function Matching() {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       전체 풀
                     </p>
-                    <p className="text-2xl font-bold">{stats.total_pools}</p>
+                    <p className="text-2xl font-bold">{stats.total_all || 0}</p>
                   </div>
                 </div>
               </Card>
@@ -201,7 +226,13 @@ export default function Matching() {
               title="인증이 필요합니다"
               description="매칭 시스템을 이용하려면 먼저 학생 인증을 완료해주세요"
               action={
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
+                <Button
+                  className="bg-gradient-to-r from-blue-600 to-purple-600"
+                  onClick={() => {
+                    // Navigate to verification page
+                    window.location.href = "/verification";
+                  }}
+                >
                   인증 시작하기
                 </Button>
               }
@@ -372,6 +403,15 @@ export default function Matching() {
             </div>
           )}
         </div>
+
+        {/* Create Pool Dialog */}
+        <CreatePoolDialog
+          open={showPoolForm}
+          onOpenChange={setShowPoolForm}
+          onSubmit={async (data) => {
+            await createPoolMutation.mutateAsync(data);
+          }}
+        />
       </div>
     </PageTransition>
   );

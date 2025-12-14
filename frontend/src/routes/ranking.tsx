@@ -70,6 +70,7 @@ function RankingComponent() {
     },
     initialData: initialTeams,
     staleTime: 1000 * 30, // 30 seconds
+    refetchInterval: 30000, // Poll every 30 seconds for real-time ranking updates
   });
 
   const createTeamMutation = useMutation({

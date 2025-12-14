@@ -21,6 +21,20 @@ export function MyRoomsSection() {
     }
   }, []);
 
+  // Reload when page becomes visible (e.g., after returning from room creation)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && authService.isAuthenticated()) {
+        loadMyRooms();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const loadMyRooms = async () => {
     setIsLoading(true);
     try {
@@ -86,7 +100,7 @@ export function MyRoomsSection() {
                   size="sm"
                   variant="ghost"
                   className="h-7 w-7 p-0"
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
                     handleJoinRoom(room.id);
                   }}

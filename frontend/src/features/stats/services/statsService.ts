@@ -118,6 +118,29 @@ class StatsService extends BaseApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  async saveGoal(data: {
+    daily_goal_minutes: number;
+    weekly_goal_sessions: number;
+  }): Promise<ApiResponse<UserGoalResponse>> {
+    return this.request<UserGoalResponse>('/stats/goals', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getGoal(): Promise<ApiResponse<UserGoalResponse>> {
+    return this.request<UserGoalResponse>('/stats/goals');
+  }
+}
+
+export interface UserGoalResponse {
+  id: string;
+  user_id: string;
+  daily_goal_minutes: number;
+  weekly_goal_sessions: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export const statsService = new StatsService();

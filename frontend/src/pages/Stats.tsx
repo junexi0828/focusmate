@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Clock, Target, TrendingUp, Award, Flame } from "lucide-react";
+import { Calendar, Clock, Target, TrendingUp, Award, Flame, Settings } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { PageTransition, staggerContainer, staggerItem } from "../components/PageTransition";
 import { Button } from "../components/ui/button-enhanced";
@@ -10,10 +10,12 @@ import { HourlyPatternChart } from "../components/charts/HourlyPatternChart";
 import { MonthlyComparisonChart } from "../components/charts/MonthlyComparisonChart";
 import { GoalProgressRing } from "../components/charts/GoalProgressRing";
 import { ChartFilters } from "../components/ChartFilters";
-import { useQuery } from "@tanstack/react-query";
-import { statsService } from "../features/stats/services/statsService";
+import { GoalSettingModal } from "../components/GoalSettingModal";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { statsService, UserGoalResponse } from "../features/stats/services/statsService";
 import { calculateDailyStats } from "../utils/stats-calculator";
 import { transformSessionRecordsForStats } from "../utils/api-transformers";
+import { toast } from "sonner";
 import type {
   UserStatsResponse,
   HourlyPatternResponse,
@@ -40,10 +42,35 @@ export function StatsPage({
   yearlyGoal,
   userId,
 }: StatsPageProps) {
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState<{
     sessionType: string[];
     dateRange?: DateRange;
   }>({ sessionType: ["all"] });
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+
+  // Fetch user goals
+  const { data: userGoal } = useQuery({
+    queryKey: ["user-goal", userId],
+    queryFn: () => statsService.getGoal(),
+    enabled: !!userId,
+    retry: false, // Don't retry if 404 (no goals set yet)
+  });
+
+  // Save goal mutation
+  const saveGoalMutation = useMutation({
+    mutationFn: (data: { daily_goal_minutes: number; weekly_goal_sessions: number }) =>
+      statsService.saveGoal(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-goal", userId] });
+      queryClient.invalidateQueries({ queryKey: ["stats", "goal"] });
+      toast.success("목표가 저장되었습니다");
+      setIsGoalModalOpen(false);
+    },
+    onError: (error: unknown) => {
+      toast.error(error?.message || "목표 저장에 실패했습니다");
+    },
+  });
 
   // 필터에 따른 통계 데이터 조회
   const { data: filteredStats, isLoading: isLoadingFiltered } = useQuery({
@@ -290,7 +317,17 @@ export function StatsPage({
             당신의 집중 패턴을 분석해보세요
           </p>
         </div>
-        <ChartFilters onFilterChange={setFilters} />
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsGoalModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            목표 설정
+          </Button>
+          <ChartFilters onFilterChange={setFilters} />
+        </div>
       </div>
 
       {/* Weekly Overview */}
@@ -528,6 +565,30 @@ export function StatsPage({
           ))}
         </motion.div>
       </motion.div>
+
+      {/* Goal Setting Modal */}
+      <GoalSettingModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        onSave={async (goal) => {
+          // Convert hours to minutes for daily goal
+          const dailyGoalMinutes = Math.round((goal.targetHours * 60) / (goal.type === "weekly" ? 7 : goal.type === "monthly" ? 30 : 365));
+          const weeklyGoalSessions = goal.type === "weekly" ? Math.round(goal.targetHours / 2) : 5;
+
+          await saveGoalMutation.mutateAsync({
+            daily_goal_minutes: dailyGoalMinutes,
+            weekly_goal_sessions: weeklyGoalSessions,
+          });
+        }}
+        currentGoal={
+          userGoal?.data
+            ? {
+                type: "weekly" as const,
+                targetHours: Math.round((userGoal.data.daily_goal_minutes * 7) / 60),
+              }
+            : undefined
+        }
+      />
     </PageTransition>
   );
 }

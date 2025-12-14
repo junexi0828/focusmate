@@ -116,24 +116,29 @@ class AchievementService:
 
         result = []
         for achievement in all_achievements:
-            # Calculate progress based on requirement type
-            current_progress = await self._calculate_progress(
-                user, achievement.requirement_type
-            )
+            try:
+                # Calculate progress based on requirement type
+                current_progress = await self._calculate_progress(
+                    user, achievement.requirement_type
+                )
 
-            is_unlocked = achievement.id in unlocked_map
-            progress_percentage = min(
-                100.0, (current_progress / achievement.requirement_value) * 100
-            )
+                is_unlocked = achievement.id in unlocked_map
+                progress_percentage = min(
+                    100.0, (current_progress / achievement.requirement_value) * 100
+                )
 
-            progress_response = AchievementProgressResponse(
-                achievement=AchievementResponse.model_validate(achievement),
-                is_unlocked=is_unlocked,
-                progress=current_progress,
-                progress_percentage=progress_percentage,
-                unlocked_at=unlocked_map[achievement.id].unlocked_at if is_unlocked else None,
-            )
-            result.append(progress_response)
+                progress_response = AchievementProgressResponse(
+                    achievement=AchievementResponse.model_validate(achievement),
+                    is_unlocked=is_unlocked,
+                    progress=current_progress,
+                    progress_percentage=progress_percentage,
+                    unlocked_at=unlocked_map[achievement.id].unlocked_at if is_unlocked else None,
+                )
+                result.append(progress_response)
+            except Exception as e:
+                # Log error but continue processing other achievements
+                print(f"Error calculating progress for achievement {achievement.id}: {e}")
+                continue
 
         return result
 

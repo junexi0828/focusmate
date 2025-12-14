@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     # CORS
     # ==========================================================================
     CORS_ORIGINS: str = Field(
-        default="http://localhost:3000,http://localhost:5173,http://localhost:8080"
+        default="http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:8080"
     )
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: str = Field(default="*")

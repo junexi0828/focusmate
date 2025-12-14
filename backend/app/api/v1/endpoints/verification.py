@@ -25,7 +25,7 @@ router = APIRouter(prefix="/verification", tags=["verification"])
 
 
 def get_verification_service(
-    db: Annotated[DatabaseSession, Depends()],
+    db: DatabaseSession,
 ) -> VerificationService:
     """Get verification service dependency."""
     repository = VerificationRepository(db)

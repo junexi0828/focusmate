@@ -118,6 +118,36 @@ class AuthService extends BaseApiClient {
     const user = this.getCurrentUser();
     return user?.is_admin === true;
   }
+
+  /**
+   * Check if JWT token is expired
+   */
+  isTokenExpired(): boolean {
+    const token = this.getToken();
+    if (!token) return true;
+
+    try {
+      // JWT token format: header.payload.signature
+      const parts = token.split(".");
+      if (parts.length !== 3) return true;
+
+      // Decode payload (base64url)
+      const payload = JSON.parse(
+        atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+      );
+
+      // Check expiration
+      if (!payload.exp) return true;
+      const expirationTime = payload.exp * 1000; // Convert to milliseconds
+      const now = Date.now();
+
+      // Consider token expired if less than 1 minute remaining
+      return now >= expirationTime - 60000;
+    } catch (error) {
+      console.error("Error checking token expiration:", error);
+      return true;
+    }
+  }
 }
 
 export const authService = new AuthService();

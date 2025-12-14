@@ -328,6 +328,15 @@ class RankingRepository:
     async def create_mini_game(self, game_data: dict) -> "RankingMiniGame":
         """Create a mini-game record."""
         from app.infrastructure.database.models.ranking import RankingMiniGame
+        from app.shared.utils.uuid import generate_uuid
+
+        # Generate game_id if not provided
+        if "game_id" not in game_data:
+            game_data["game_id"] = generate_uuid()
+
+        # Set success based on score (can be customized)
+        if "success" not in game_data:
+            game_data["success"] = game_data.get("score", 0) > 0
 
         game = RankingMiniGame(**game_data)
         self.session.add(game)

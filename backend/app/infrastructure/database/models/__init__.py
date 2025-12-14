@@ -21,6 +21,14 @@ from app.infrastructure.database.models.notification import Notification
 from app.infrastructure.database.models.session_history import SessionHistory
 from app.infrastructure.database.models.timer import Timer
 from app.infrastructure.database.models.user import User
+from app.infrastructure.database.models.verification import UserVerification
+from app.infrastructure.database.models.matching import (
+    MatchingPool,
+    MatchingProposal,
+    MatchingChatRoom,
+    MatchingChatMember,
+    MatchingMessage,
+)
 
 __all__ = [
     "Room",
@@ -42,4 +50,10 @@ __all__ = [
     "ChatMember",
     "ChatMessage",
     "Notification",
+    "UserVerification",
+    "MatchingPool",
+    "MatchingProposal",
+    "MatchingChatRoom",
+    "MatchingChatMember",
+    "MatchingMessage",
 ]

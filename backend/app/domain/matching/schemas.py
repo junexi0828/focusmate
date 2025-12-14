@@ -1,7 +1,7 @@
 """Pydantic schemas for matching pool."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -76,9 +76,9 @@ class MatchingProposalStats(BaseModel):
     average_matching_time_hours: float
     min_matching_time_hours: float
     max_matching_time_hours: float
-    daily_matches: list[dict[str, any]]
-    weekly_matches: list[dict[str, any]]
-    monthly_matches: list[dict[str, any]]
+    daily_matches: list[dict[str, Any]]
+    weekly_matches: list[dict[str, Any]]
+    monthly_matches: list[dict[str, Any]]
 
 
 class ComprehensiveMatchingStats(BaseModel):

@@ -5,45 +5,67 @@
 /* Define base CSS variables first */
 :root {
   --font-size: 16px;
+
+  /* Neutral System (유지) */
   --background: #ffffff;
-  --foreground: #111827;
+  --foreground: #111827;        /* Ink Dark - 본문 텍스트 */
   --card: #ffffff;
   --card-foreground: #111827;
   --popover: #ffffff;
   --popover-foreground: #111827;
-  --primary: #4F46E5;
-  --primary-foreground: #ffffff;
-  --secondary: #10B981;
-  --secondary-foreground: #ffffff;
-  --muted: #F9FAFB;
-  --muted-foreground: #6B7280;
-  --accent: #F9FAFB;
-  --accent-foreground: #111827;
-  --destructive: #EF4444;
+
+  /* Main Colors - Air Mint & Campus Pink */
+  --primary: #7ED6E8;           /* Air Mint Sky - 메인 Primary */
+  --primary-foreground: #111827;
+  --secondary: #F9A8D4;         /* Light Campus Pink - 메인 Secondary */
+  --secondary-foreground: #111827;
+
+  /* Supporting Colors */
+  --success: #2DD4BF;           /* Mint/Teal - 성공/완료 */
+  --success-foreground: #111827;
+  --warning: #FBBF24;           /* Warm Amber - 경고 */
+  --warning-foreground: #111827;
+  --destructive: #F87171;       /* Soft Red - 에러 */
   --destructive-foreground: #ffffff;
-  --warning: #F59E0B;
-  --warning-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+
+  /* Neutral Grays */
+  --muted: #F9FAFB;             /* Soft Light - 라이트 배경 */
+  --muted-foreground: #6B7280;  /* Muted Gray - 서브 텍스트 */
+  --accent: #E0F7FD;            /* Soft Sky - 라이트 블루 배경 */
+  --accent-foreground: #111827;
+
+  /* Borders & Inputs */
+  --border: #E5E7EB;            /* Divider Gray - 라인/보더 */
   --input: transparent;
   --input-background: #F9FAFB;
-  --switch-background: #cbced4;
+  --switch-background: #E5E7EB;
+
+  /* Typography */
   --font-weight-medium: 600;
   --font-weight-normal: 400;
-  --ring: #4F46E5;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+
+  /* Focus Ring */
+  --ring: #7ED6E8;              /* Air Mint Sky */
+
+  /* Chart Colors - 새 팔레트 기반 */
+  --chart-1: #7ED6E8;           /* Air Mint Sky */
+  --chart-2: #F9A8D4;           /* Light Campus Pink */
+  --chart-3: #2DD4BF;           /* Mint/Teal */
+  --chart-4: #FBBF24;           /* Warm Amber */
+  --chart-5: #FCE7F5;           /* Soft Pink */
+
+  /* Border Radius */
   --radius: 0.5rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Sidebar */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #7ED6E8;
+  --sidebar-primary-foreground: #111827;
+  --sidebar-accent: #E0F7FD;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #7ED6E8;
 }
 
 @theme {
@@ -61,6 +83,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -98,42 +122,59 @@
 
 /* Dark mode overrides - class-based strategy */
 .dark {
-  --background: #111827;
+  /* Neutral System - Deep Night */
+  --background: #020617;        /* Deep Night - 다크 배경 */
   --foreground: #F9FAFB;
-  --card: #1F2937;
+  --card: #0B1120;
   --card-foreground: #F9FAFB;
-  --popover: #1F2937;
+  --popover: #0B1120;
   --popover-foreground: #F9FAFB;
-  --primary: #6366F1;
-  --primary-foreground: #F9FAFB;
-  --secondary: #10B981;
-  --secondary-foreground: #F9FAFB;
-  --muted: #1F2937;
+
+  /* Main Colors - 다크모드용 조정 */
+  --primary: #7ED6E8;           /* Air Mint Sky - 다크에서도 선명 */
+  --primary-foreground: #020617;
+  --secondary: #F9A8D4;         /* Light Campus Pink */
+  --secondary-foreground: #020617;
+
+  /* Supporting Colors */
+  --success: #2DD4BF;           /* Mint/Teal */
+  --success-foreground: #020617;
+  --warning: #FBBF24;           /* Warm Amber */
+  --warning-foreground: #020617;
+  --destructive: #F87171;       /* Soft Red */
+  --destructive-foreground: #020617;
+
+  /* Neutral Grays - 다크 */
+  --muted: #0B1120;
   --muted-foreground: #9CA3AF;
-  --accent: #1F2937;
+  --accent: #1E3A4C;            /* 다크 Soft Sky */
   --accent-foreground: #F9FAFB;
-  --destructive: #EF4444;
-  --destructive-foreground: #F9FAFB;
-  --warning: #F59E0B;
-  --warning-foreground: #F9FAFB;
-  --border: #374151;
-  --input: #1F2937;
-  --input-background: #1F2937;
-  --switch-background: #374151;
-  --ring: #6366F1;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+
+  /* Borders & Inputs */
+  --border: #1E293B;
+  --input: #0B1120;
+  --input-background: #0B1120;
+  --switch-background: #1E293B;
+
+  /* Focus Ring */
+  --ring: #7ED6E8;
+
+  /* Chart Colors - 다크모드 */
+  --chart-1: #7ED6E8;
+  --chart-2: #F9A8D4;
+  --chart-3: #2DD4BF;
+  --chart-4: #FBBF24;
+  --chart-5: #FCE7F5;
+
+  /* Sidebar - 다크 */
+  --sidebar: #020617;
+  --sidebar-foreground: #F9FAFB;
+  --sidebar-primary: #7ED6E8;
+  --sidebar-primary-foreground: #020617;
+  --sidebar-accent: #0B1120;
+  --sidebar-accent-foreground: #F9FAFB;
+  --sidebar-border: #1E293B;
+  --sidebar-ring: #7ED6E8;
 }
 
 /* Base layer styles */
@@ -210,41 +251,43 @@
 /* System preference fallback */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: #111827;
+    --background: #020617;
     --foreground: #F9FAFB;
-    --card: #1F2937;
+    --card: #0B1120;
     --card-foreground: #F9FAFB;
-    --popover: #1F2937;
+    --popover: #0B1120;
     --popover-foreground: #F9FAFB;
-    --primary: #6366F1;
-    --primary-foreground: #F9FAFB;
-    --secondary: #10B981;
-    --secondary-foreground: #F9FAFB;
-    --muted: #1F2937;
+    --primary: #7ED6E8;
+    --primary-foreground: #020617;
+    --secondary: #F9A8D4;
+    --secondary-foreground: #020617;
+    --success: #2DD4BF;
+    --success-foreground: #020617;
+    --warning: #FBBF24;
+    --warning-foreground: #020617;
+    --destructive: #F87171;
+    --destructive-foreground: #020617;
+    --muted: #0B1120;
     --muted-foreground: #9CA3AF;
-    --accent: #1F2937;
+    --accent: #1E3A4C;
     --accent-foreground: #F9FAFB;
-    --destructive: #EF4444;
-    --destructive-foreground: #F9FAFB;
-    --warning: #F59E0B;
-    --warning-foreground: #F9FAFB;
-    --border: #374151;
-    --input: #1F2937;
-    --input-background: #1F2937;
-    --switch-background: #374151;
-    --ring: #6366F1;
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --border: #1E293B;
+    --input: #0B1120;
+    --input-background: #0B1120;
+    --switch-background: #1E293B;
+    --ring: #7ED6E8;
+    --chart-1: #7ED6E8;
+    --chart-2: #F9A8D4;
+    --chart-3: #2DD4BF;
+    --chart-4: #FBBF24;
+    --chart-5: #FCE7F5;
+    --sidebar: #020617;
+    --sidebar-foreground: #F9FAFB;
+    --sidebar-primary: #7ED6E8;
+    --sidebar-primary-foreground: #020617;
+    --sidebar-accent: #0B1120;
+    --sidebar-accent-foreground: #F9FAFB;
+    --sidebar-border: #1E293B;
+    --sidebar-ring: #7ED6E8;
   }
 }

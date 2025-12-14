@@ -183,10 +183,21 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   useEffect(() => {
     return () => {
       if (roomId && currentParticipantId) {
+        // Leave room API call
         participantService
           .leaveRoom(roomId, currentParticipantId)
-          .catch(console.error);
+          .then(() => {
+            console.log("Successfully left room");
+          })
+          .catch((error) => {
+            console.error("Failed to leave room:", error);
+          });
+
+        // Clean up localStorage
         localStorage.removeItem(`participant_${roomId}`);
+
+        // Disconnect WebSocket
+        wsClient.disconnect();
       }
     };
   }, [roomId, currentParticipantId]);
@@ -214,7 +225,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     initialTimerState: room?.timer_state,
     onSessionComplete: async (completedSessionType) => {
       // Show notification using notification service
-      const { notificationService } = await import("../../lib/notificationService");
+      const { notificationService } = await import("../lib/notificationService");
       notificationService.notify(
         completedSessionType === "work" ? "집중 시간 완료!" : "휴식 종료!",
         completedSessionType === "work"
@@ -402,7 +413,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
   // Request notification permission on mount (using notification service)
   useEffect(() => {
-    import("../../lib/notificationService").then(({ notificationService }) => {
+    import("../lib/notificationService").then(({ notificationService }) => {
       if (notificationService.isSupported() && notificationService.getPermission() === "default") {
         notificationService.requestPermission().catch(console.error);
       }

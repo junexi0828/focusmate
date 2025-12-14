@@ -20,14 +20,12 @@ security = HTTPBearer()
 
 
 async def get_current_user(
-    db: DatabaseSession | None = None,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict | None:
     """Get current authenticated user from JWT token.
 
     Args:
         credentials: HTTP Bearer token credentials (optional)
-        db: Database session (injected via dependency)
 
     Returns:
         User dictionary with id, email, username, or None if not authenticated
@@ -53,21 +51,45 @@ async def get_current_user(
         # Invalid token, return None for optional auth
         return None
 
-    # Get user from database
-    if not db:
-        return None
+    # Get user from database - create a new session for this operation
+    from app.infrastructure.database.session import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        user_repo = UserRepository(db)
+        user = await user_repo.get_by_id(user_id)
+        if not user or not user.is_active:
+            return None
 
-    user_repo = UserRepository(db)
-    user = await user_repo.get_by_id(user_id)
-    if not user or not user.is_active:
-        return None
+        return {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "is_admin": user.is_admin,
+        }
 
-    return {
-        "id": user.id,
-        "email": user.email,
-        "username": user.username,
-        "is_admin": user.is_admin,
-    }
+
+async def get_current_user_required(
+    current_user: dict | None = Depends(get_current_user),
+) -> dict:
+    """Get current authenticated user (required).
+
+    Args:
+        current_user: User from get_current_user dependency
+
+    Returns:
+        User dictionary with id, email, username
+
+    Raises:
+        HTTPException: 401 if user is not authenticated
+    """
+    from fastapi import HTTPException, status
+
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return current_user
 
 
 def get_room_repository(db: DatabaseSession) -> RoomRepository:

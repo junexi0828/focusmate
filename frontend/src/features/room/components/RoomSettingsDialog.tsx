@@ -90,7 +90,7 @@ export function RoomSettingsDialog({
               max={60}
               step={5}
               value={[focusTime]}
-              onValueChange={(value) => setFocusTime(value[0])}
+              onValueChange={(value: number[]) => setFocusTime(value[0])}
               disabled={!isHost}
             />
           </div>
@@ -108,7 +108,7 @@ export function RoomSettingsDialog({
               max={30}
               step={5}
               value={[breakTime]}
-              onValueChange={(value) => setBreakTime(value[0])}
+              onValueChange={(value: number[]) => setBreakTime(value[0])}
               disabled={!isHost}
             />
           </div>

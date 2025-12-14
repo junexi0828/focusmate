@@ -30,8 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Heart, Users2, UserPlus, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Heart, Users2, UserPlus, CheckCircle2, XCircle, Clock, BarChart3 } from "lucide-react";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 import type { MatchingPoolCreate } from "../types/matching";
+import { VerificationStatus, VerificationSettings } from "../features/verification";
 
 export const Route = createFileRoute("/matching")({
   beforeLoad: () => {
@@ -134,12 +137,12 @@ function MatchingComponent() {
         age_range_max: 30,
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const detail = error?.response?.data?.detail;
       const message = typeof detail === "string"
         ? detail
         : Array.isArray(detail)
-        ? detail.map((e: any) => e.msg || e).join(", ")
+        ? detail.map((e: { msg?: string } | string) => (typeof e === 'string' ? e : e.msg || String(e))).join(", ")
         : "매칭 풀 생성에 실패했습니다";
       toast.error(message);
     },
@@ -166,6 +169,9 @@ function MatchingComponent() {
             같은 학교 친구들과 그룹 매칭을 통해 함께 공부하세요
           </p>
         </div>
+
+        {/* Verification Status */}
+        <VerificationStatus />
 
         {/* Stats */}
         {stats && (
@@ -213,6 +219,9 @@ function MatchingComponent() {
             </Card>
           </div>
         )}
+
+        {/* Verification Settings */}
+        <VerificationSettings />
 
         {/* My Pool */}
         <Card>

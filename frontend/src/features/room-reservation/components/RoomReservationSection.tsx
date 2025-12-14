@@ -64,8 +64,24 @@ export function RoomReservationSection() {
     }
 
     try {
+      // datetime-local input returns format: "YYYY-MM-DDTHH:mm"
+      // Convert to ISO 8601 format with timezone
+      const scheduledDate = new Date(formData.scheduled_at);
+
+      // Validate date
+      if (isNaN(scheduledDate.getTime())) {
+        toast.error("올바른 날짜와 시간을 입력해주세요");
+        return;
+      }
+
+      // Check if date is in the future
+      if (scheduledDate <= new Date()) {
+        toast.error("미래 시간으로 예약해주세요");
+        return;
+      }
+
       const response = await roomReservationService.createReservation({
-        scheduled_at: new Date(formData.scheduled_at).toISOString(),
+        scheduled_at: scheduledDate.toISOString(),
         work_duration: formData.work_duration * 60, // 분을 초로 변환
         break_duration: formData.break_duration * 60,
         description: formData.description || null,
@@ -253,7 +269,7 @@ export function RoomReservationSection() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
                     handleCancelReservation(reservation.id);
                   }}

@@ -143,7 +143,7 @@ class ChatService:
             last_message = await self.repository.get_last_message(room.room_id)
 
             # Get unread count for this room
-            unread_count = await self.repository.get_unread_count(room.room_id, user_id)
+            unread_count = await self.repository.get_room_unread_count(room.room_id, user_id)
 
             room_dict = ChatRoomResponse.model_validate(room).model_dump()
             room_dict["unread_count"] = unread_count
@@ -171,7 +171,7 @@ class ChatService:
         if not member:
             raise ValueError("Not a member of this room")
 
-        unread_count = await self.repository.get_unread_count(room_id, user_id)
+        unread_count = await self.repository.get_room_unread_count(room_id, user_id)
         room_response = ChatRoomResponse.model_validate(room)
         room_response.unread_count = unread_count
 

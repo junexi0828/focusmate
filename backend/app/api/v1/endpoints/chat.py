@@ -16,7 +16,7 @@ from fastapi import (
 )
 from fastapi.websockets import WebSocketState
 
-from app.api.deps import DatabaseSession, get_current_user
+from app.api.deps import DatabaseSession, get_current_user, get_current_user_required
 from app.core.security import decode_jwt_token
 from app.domain.chat.schemas import (
     ChatMemberResponse,
@@ -38,17 +38,23 @@ from app.services.chat_file_upload import ChatFileUploadService
 router = APIRouter(prefix="/chats", tags=["chats"])
 
 
-def get_chat_service(db: Annotated[DatabaseSession, Depends()]) -> ChatService:
+def get_chat_repository(db: DatabaseSession) -> ChatRepository:
+    """Get chat repository."""
+    return ChatRepository(db)
+
+
+def get_chat_service(
+    repository: Annotated[ChatRepository, Depends(get_chat_repository)]
+) -> ChatService:
     """Get chat service dependency."""
-    repository = ChatRepository(db)
     return ChatService(repository)
 
 
 # Room Endpoints
 @router.get("/rooms", response_model=ChatRoomListResponse)
 async def get_user_rooms(
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
     room_type: Optional[str] = Query(None, regex="^(direct|team|matching)$"),
 ) -> ChatRoomListResponse:
     """Get all chat rooms for the current user."""
@@ -59,8 +65,8 @@ async def get_user_rooms(
 
 @router.get("/unread-count")
 async def get_unread_count(
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> dict:
     """Get total unread message count for the current user."""
     try:
@@ -78,8 +84,8 @@ async def get_unread_count(
 @router.post("/rooms/direct", status_code=status.HTTP_201_CREATED)
 async def create_direct_chat(
     data: DirectChatCreate,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> ChatRoomResponse:
     """Create or get direct chat."""
     try:
@@ -91,8 +97,8 @@ async def create_direct_chat(
 @router.post("/rooms/team", status_code=status.HTTP_201_CREATED)
 async def create_team_chat(
     data: TeamChatCreate,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> ChatRoomResponse:
     """Create team chat."""
     try:
@@ -104,8 +110,8 @@ async def create_team_chat(
 @router.get("/rooms/{room_id}")
 async def get_room(
     room_id: UUID,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> ChatRoomResponse:
     """Get room details."""
     try:
@@ -117,8 +123,8 @@ async def get_room(
 @router.get("/rooms/{room_id}/members", response_model=List[ChatMemberResponse])
 async def get_room_members(
     room_id: UUID,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> List[ChatMemberResponse]:
     """Get all members of a chat room."""
     # Verify user is member
@@ -138,10 +144,10 @@ async def get_room_members(
 @router.get("/rooms/{room_id}/messages")
 async def get_messages(
     room_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
     limit: int = Query(50, ge=1, le=100),
     before_message_id: Optional[UUID] = None,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
 ) -> MessageListResponse:
     """Get messages from room."""
     try:
@@ -156,8 +162,8 @@ async def get_messages(
 async def send_message(
     room_id: UUID,
     data: MessageCreate,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> MessageResponse:
     """Send a message."""
     try:
@@ -188,8 +194,8 @@ async def update_message(
     room_id: UUID,
     message_id: UUID,
     data: MessageUpdate,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> MessageResponse:
     """Update a message."""
     try:
@@ -221,9 +227,9 @@ async def update_message(
 @router.post("/rooms/{room_id}/upload")
 async def upload_files(
     room_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
     files: List[UploadFile] = File(...),
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
 ) -> dict:
     """Upload files to chat room."""
     # Verify user is member
@@ -250,9 +256,9 @@ async def upload_files(
 async def add_reaction(
     room_id: UUID,
     message_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
     emoji: str = Query(..., max_length=10),
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
 ) -> dict:
     """Add emoji reaction to message."""
     # Verify user is member
@@ -318,9 +324,9 @@ async def add_reaction(
 async def remove_reaction(
     room_id: UUID,
     message_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
     emoji: str = Query(..., max_length=10),
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
 ) -> dict:
     """Remove emoji reaction from message."""
     # Verify user is member
@@ -369,8 +375,8 @@ async def remove_reaction(
 async def delete_message(
     room_id: UUID,
     message_id: UUID,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> MessageResponse:
     """Delete a message."""
     try:
@@ -400,10 +406,10 @@ async def delete_message(
 @router.get("/rooms/{room_id}/search")
 async def search_messages(
     room_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
     q: str = Query(..., min_length=1),
     limit: int = Query(50, ge=1, le=100),
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
 ) -> MessageListResponse:
     """Search messages in room."""
     # Verify user is member
@@ -427,8 +433,8 @@ async def search_messages(
 @router.post("/rooms/{room_id}/read")
 async def mark_as_read(
     room_id: UUID,
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
-    service: Annotated[ChatService, Depends(get_chat_service)] = None,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> dict:
     """Mark all messages as read."""
     try:
@@ -447,51 +453,134 @@ async def websocket_chat(
     """WebSocket endpoint for real-time chat."""
     # Verify token and get user
     try:
+        print(f"[WebSocket] Connection attempt with token: {token[:20]}...")
         payload = decode_jwt_token(token)
         user_id: str = payload.get("sub")
         if not user_id:
+            print("[WebSocket] ERROR: No user_id in token payload")
             if websocket.client_state != WebSocketState.DISCONNECTED:
                 await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
+        print(f"[WebSocket] Token validated for user {user_id}")
         # Note: Full user verification would require DB session
         # For WebSocket, we trust the JWT token for now
         # Full verification can be added if needed
 
-    except Exception:
+    except Exception as e:
+        print(f"[WebSocket] ERROR: Token validation failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
+    print(f"[WebSocket] Connection accepted for user {user_id}")
+
+    # Send welcome message to confirm connection is established
+    try:
+        await websocket.send_json({
+            "type": "connected",
+            "message": "WebSocket connection established",
+            "user_id": user_id
+        })
+        print(f"[WebSocket] Sent welcome message to {user_id}")
+    except Exception as e:
+        print(f"[WebSocket] ERROR: Failed to send welcome message to {user_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # If we can't send welcome message, connection is likely broken
+        try:
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        except:
+            pass
+        return
 
     try:
         while True:
-            data = await websocket.receive_json()
+            try:
+                # Use receive_text() and parse JSON manually for better error handling
+                message = await websocket.receive_text()
+                print(f"[WebSocket] Received raw message from {user_id}: {message[:100]}")
 
-            # Handle different message types
-            if data.get("type") == "join_room":
-                room_id = UUID(data["room_id"])
-                await connection_manager.connect(websocket, room_id, user_id)
-                await websocket.send_json({"type": "joined", "room_id": str(room_id)})
+                import json
+                data = json.loads(message)
+                print(f"[WebSocket] Received message from {user_id}: {data.get('type')}")
 
-            elif data.get("type") == "leave_room":
-                room_id = UUID(data["room_id"])
-                connection_manager.disconnect(websocket, room_id)
-                await websocket.send_json({"type": "left", "room_id": str(room_id)})
+                # Handle different message types
+                if data.get("type") == "ping":
+                    # Heartbeat - respond with pong
+                    await websocket.send_json({"type": "pong"})
+                    print(f"[WebSocket] Sent pong to {user_id}")
 
-            elif data.get("type") == "typing":
-                room_id = UUID(data["room_id"])
-                await connection_manager.broadcast_to_room(
-                    room_id,
-                    {
-                        "type": "typing",
-                        "user_id": user_id,
-                        "room_id": str(room_id),
-                    },
-                )
+                elif data.get("type") == "join_room":
+                    room_id = UUID(data["room_id"])
+                    await connection_manager.connect(websocket, room_id, user_id)
+                    await websocket.send_json({"type": "joined", "room_id": str(room_id)})
+                    print(f"[WebSocket] User {user_id} joined room {room_id}")
 
-    except WebSocketDisconnect:
+                elif data.get("type") == "leave_room":
+                    room_id = UUID(data["room_id"])
+                    connection_manager.disconnect(websocket, room_id)
+                    await websocket.send_json({"type": "left", "room_id": str(room_id)})
+                    print(f"[WebSocket] User {user_id} left room {room_id}")
+
+                elif data.get("type") == "typing":
+                    room_id = UUID(data["room_id"])
+                    await connection_manager.broadcast_to_room(
+                        room_id,
+                        {
+                            "type": "typing",
+                            "user_id": user_id,
+                            "room_id": str(room_id),
+                        },
+                    )
+                    print(f"[WebSocket] User {user_id} typing in room {room_id}")
+                else:
+                    print(f"[WebSocket] Unknown message type from {user_id}: {data.get('type')}")
+
+            except json.JSONDecodeError as e:
+                print(f"[WebSocket] JSON decode error from {user_id}: {str(e)}")
+                # Send error response and continue
+                try:
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Invalid JSON format"
+                    })
+                except:
+                    pass
+                continue
+            except RuntimeError as e:
+                # Connection was closed - exit loop
+                if "Cannot call \"receive\"" in str(e):
+                    print(f"[WebSocket] Connection closed for {user_id}, exiting receive loop")
+                    break
+                print(f"[WebSocket] RuntimeError from {user_id}: {str(e)}")
+                continue
+            except ValueError as e:
+                print(f"[WebSocket] ValueError from {user_id}: {str(e)}")
+                continue
+            except Exception as e:
+                print(f"[WebSocket] Error processing message from {user_id}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                continue
+
+    except WebSocketDisconnect as e:
+        print(f"[WebSocket] User {user_id} disconnected (code: {e.code})")
         # Clean up all connections for this websocket
         for room_id in list(connection_manager.active_connections.keys()):
             connection_manager.disconnect(websocket, room_id)
+    except Exception as e:
+        print(f"[WebSocket] ERROR: Fatal error for user {user_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Clean up all connections for this websocket
+        for room_id in list(connection_manager.active_connections.keys()):
+            connection_manager.disconnect(websocket, room_id)
+        # Try to close connection gracefully
+        try:
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        except:
+            pass

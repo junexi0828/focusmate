@@ -547,7 +547,7 @@ class RankingService:
         user_id: str,
         game_type: str,
         score: int,
-        completion_time: int,
+        completion_time: float,
     ) -> dict:
         """Submit mini-game score."""
         # Verify user is team member
@@ -559,7 +559,7 @@ class RankingService:
         if score < 0 or score > 999999:
             raise ValueError("Invalid score")
 
-        if completion_time < 1 or completion_time > 3600:  # Max 1 hour
+        if completion_time <= 0 or completion_time > 3600:  # Max 1 hour
             raise ValueError("Invalid completion time")
 
         # Create game record

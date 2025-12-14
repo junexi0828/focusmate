@@ -145,7 +145,7 @@ export function CreateTeamDialog({
             <Label htmlFor="teamType">소속 유형 *</Label>
             <Select
               value={teamType}
-              onValueChange={(value) =>
+              onValueChange={(value: string) =>
                 setTeamType(value as "general" | "department" | "lab" | "club")
               }
             >

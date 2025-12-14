@@ -135,9 +135,8 @@ function CommunityComponent() {
     await createPostMutation.mutateAsync(data);
   };
 
-  const navigate = useNavigate();
-
   const handleViewPost = (postId: string) => {
+
     navigate({ to: "/community/$postId", params: { postId } });
   };
 

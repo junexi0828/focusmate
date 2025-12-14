@@ -412,6 +412,7 @@ export function ProfilePage({
         {/* Settings Tab */}
         <TabsContent value="settings" className="mt-6">
           <div className="space-y-6">
+
             {/* Profile Edit Card */}
             <Card>
               <CardHeader>

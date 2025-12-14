@@ -17,6 +17,11 @@ export interface Team {
   } | null;
   created_at: string;
   updated_at: string;
+  // Optional stats fields (populated from team stats API)
+  current_rank?: number;
+  total_sessions?: number;
+  total_points?: number;
+  total_focus_time?: number;
 }
 
 export interface TeamCreateRequest {

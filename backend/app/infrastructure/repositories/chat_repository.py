@@ -274,7 +274,7 @@ class ChatRepository:
         await self.session.refresh(message)
         return message
 
-    async def get_unread_count(self, room_id: UUID, user_id: str) -> int:
+    async def get_room_unread_count(self, room_id: UUID, user_id: str) -> int:
         """Get unread message count for user in room."""
         member = await self.get_member(room_id, user_id)
         if not member:

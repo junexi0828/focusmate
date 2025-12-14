@@ -34,8 +34,42 @@ function IndexComponent() {
           toast.error("방 ID를 받아오지 못했습니다");
           return;
         }
-        navigate({ to: "/room/$roomId", params: { roomId } });
-        toast.success("방이 생성되었습니다!");
+
+        // 방 생성 후 자동으로 참여 (방장으로 참여)
+        const { participantService } = await import("../features/participants/services/participantService");
+        const { authService } = await import("../features/auth/services/authService");
+
+        // 사용자 이름 가져오기 (localStorage 또는 인증 정보에서)
+        let username = localStorage.getItem("participant_name") || "";
+        const user = authService.getCurrentUser();
+        const userId = user?.id || null;
+
+        if (!username) {
+          username = user?.username || user?.email?.split("@")[0] || "사용자";
+          localStorage.setItem("participant_name", username);
+        }
+
+        // 방에 참여 (인증된 사용자의 경우 user_id 전달)
+        const joinResponse = await participantService.joinRoom(roomId, {
+          username: username,
+          user_id: userId, // 인증된 사용자의 경우 user_id 전달
+        });
+
+        if (joinResponse.status === "success" && joinResponse.data) {
+          // 참여 성공 시 participant ID 저장
+          const participantId = joinResponse.data.id || joinResponse.data.participant_id || "";
+          if (participantId) {
+            localStorage.setItem(`participant_${roomId}`, participantId);
+          }
+
+          // 방으로 이동
+          navigate({ to: "/room/$roomId", params: { roomId } });
+          toast.success("방이 생성되고 참여되었습니다!");
+        } else {
+          // 참여 실패해도 방으로 이동 (Room 페이지에서 다시 참여 시도)
+          navigate({ to: "/room/$roomId", params: { roomId } });
+          toast.warning("방이 생성되었습니다. 참여 중...");
+        }
       } else {
         const errorMessage =
           response.error?.message || "방 생성에 실패했습니다";

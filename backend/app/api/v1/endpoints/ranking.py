@@ -60,12 +60,18 @@ async def get_my_teams(
     service: Annotated[RankingService, Depends(get_ranking_service)],
 ) -> list[TeamResponse]:
     """Get all teams the current user is a member of."""
-    # Admin can access all teams, regular users only their teams
-    if current_user.get("is_admin"):
-        # Return all teams for admin (or empty list if no teams exist)
-        all_teams = await service.get_all_teams()
-        return all_teams if all_teams else []
-    return await service.get_user_teams(current_user["id"])
+    try:
+        # Admin can access all teams, regular users only their teams
+        if current_user.get("is_admin"):
+            # Return all teams for admin (or empty list if no teams exist)
+            all_teams = await service.get_all_teams()
+            return all_teams if all_teams else []
+        return await service.get_user_teams(current_user["id"])
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get teams: {str(e)}"
+        )
 
 
 @router.patch("/teams/{team_id}", response_model=TeamResponse)
@@ -383,10 +389,10 @@ async def get_team_members(
 # Mini-Game Endpoints
 @router.post("/mini-games/start", status_code=status.HTTP_201_CREATED)
 async def start_mini_game(
-    team_id: UUID,
-    game_type: str,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
+    team_id: UUID = Query(..., description="Team ID"),
+    game_type: str = Query(..., description="Game type: dino_jump, dot_collector, snake"),
 ) -> dict:
     """Start a mini-game session."""
     try:
@@ -397,12 +403,12 @@ async def start_mini_game(
 
 @router.post("/mini-games/submit", status_code=status.HTTP_201_CREATED)
 async def submit_mini_game_score(
-    team_id: UUID,
-    game_type: str,
-    score: int,
-    completion_time: int,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
+    team_id: UUID = Query(..., description="Team ID"),
+    game_type: str = Query(..., description="Game type: dino_jump, dot_collector, snake"),
+    score: int = Query(..., ge=0, le=999999, description="Game score"),
+    completion_time: float = Query(..., gt=0, le=3600, description="Completion time in seconds"),
 ) -> dict:
     """Submit mini-game score."""
     try:

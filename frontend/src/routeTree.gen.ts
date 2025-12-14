@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerificationRouteImport } from './routes/verification'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as ReservationsRouteImport } from './routes/reservations'
 import { Route as RankingRouteImport } from './routes/ranking'
@@ -28,6 +29,11 @@ import { Route as MatchingProposalsProposalIdRouteImport } from './routes/matchi
 import { Route as MatchingPoolsPoolIdRouteImport } from './routes/matching.pools.$poolId'
 import { Route as MatchingMatchedProposalIdRouteImport } from './routes/matching.matched.$proposalId'
 
+const VerificationRoute = VerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
   '/stats': typeof StatsRoute
+  '/verification': typeof VerificationRoute
   '/community/$postId': typeof CommunityPostIdRoute
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
   '/stats': typeof StatsRoute
+  '/verification': typeof VerificationRoute
   '/community/$postId': typeof CommunityPostIdRoute
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
   '/stats': typeof StatsRoute
+  '/verification': typeof VerificationRoute
   '/community/$postId': typeof CommunityPostIdRoute
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/reservations'
     | '/stats'
+    | '/verification'
     | '/community/$postId'
     | '/matching/stats'
     | '/ranking/hall-of-fame'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/reservations'
     | '/stats'
+    | '/verification'
     | '/community/$postId'
     | '/matching/stats'
     | '/ranking/hall-of-fame'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/reservations'
     | '/stats'
+    | '/verification'
     | '/community/$postId'
     | '/matching/stats'
     | '/ranking/hall-of-fame'
@@ -256,11 +268,19 @@ export interface RootRouteChildren {
   RankingRoute: typeof RankingRouteWithChildren
   ReservationsRoute: typeof ReservationsRoute
   StatsRoute: typeof StatsRoute
+  VerificationRoute: typeof VerificationRoute
   RoomRoomIdRoute: typeof RoomRoomIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verification': {
+      id: '/verification'
+      path: '/verification'
+      fullPath: '/verification'
+      preLoaderRoute: typeof VerificationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stats': {
       id: '/stats'
       path: '/stats'
@@ -444,6 +464,7 @@ const rootRouteChildren: RootRouteChildren = {
   RankingRoute: RankingRouteWithChildren,
   ReservationsRoute: ReservationsRoute,
   StatsRoute: StatsRoute,
+  VerificationRoute: VerificationRoute,
   RoomRoomIdRoute: RoomRoomIdRoute,
 }
 export const routeTree = rootRouteImport
