@@ -12,7 +12,7 @@ from app.domain.matching.schemas import (
     MatchingPoolResponse,
     MatchingPoolStats,
 )
-from app.domain.matching.service import MatchingPoolService
+from app.domain.matching.optimized_service import OptimizedMatchingPoolService
 from app.infrastructure.repositories.matching_pool_repository import (
     MatchingPoolRepository,
 )
@@ -25,11 +25,11 @@ router = APIRouter(prefix="/matching", tags=["matching"])
 
 def get_matching_pool_service(
     db: DatabaseSession,
-) -> MatchingPoolService:
-    """Get matching pool service dependency."""
+) -> OptimizedMatchingPoolService:
+    """Get optimized matching pool service dependency."""
     pool_repository = MatchingPoolRepository(db)
     verification_repository = VerificationRepository(db)
-    return MatchingPoolService(pool_repository, verification_repository)
+    return OptimizedMatchingPoolService(pool_repository, verification_repository)
 
 
 # Matching Pool Endpoints
@@ -37,7 +37,7 @@ def get_matching_pool_service(
 async def create_matching_pool(
     data: MatchingPoolCreate,
     current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
 ) -> MatchingPoolResponse:
     """Create a new matching pool."""
     try:
@@ -49,7 +49,7 @@ async def create_matching_pool(
 @router.get("/pools/my")
 async def get_my_matching_pool(
     current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
 ) -> Optional[MatchingPoolResponse]:
     """Get current user's active matching pool."""
     try:
@@ -66,7 +66,7 @@ async def get_my_matching_pool(
 async def get_matching_pool(
     pool_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
 ) -> MatchingPoolResponse:
     """Get matching pool by ID."""
     pool = await service.get_pool(pool_id, current_user["id"])
@@ -81,7 +81,7 @@ async def get_matching_pool(
 async def cancel_matching_pool(
     pool_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
 ) -> dict:
     """Cancel a matching pool."""
     try:
@@ -97,7 +97,7 @@ async def cancel_matching_pool(
 
 @router.get("/pools/stats")
 async def get_pool_statistics(
-    service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
 ) -> MatchingPoolStats:
     """Get matching pool statistics."""
     try:
@@ -111,7 +111,7 @@ async def get_pool_statistics(
 
 @router.get("/stats/comprehensive")
 async def get_comprehensive_statistics(
-    service: Annotated[MatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
 ) -> ComprehensiveMatchingStats:
     """Get comprehensive matching statistics including pools and proposals."""
     try:

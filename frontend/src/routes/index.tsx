@@ -1,11 +1,13 @@
-import React, { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { HomePage } from "../pages/Home";
 import { PageTransition } from "../components/PageTransition";
 import { roomService } from "../features/room/services/roomService";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/")(
+
+{
   component: IndexComponent,
 });
 
@@ -65,6 +67,9 @@ function IndexComponent() {
           // 방으로 이동
           navigate({ to: "/room/$roomId", params: { roomId } });
           toast.success("방이 생성되고 참여되었습니다!");
+
+          // Trigger refresh of MyRoomsSection
+          window.dispatchEvent(new Event("refreshMyRooms"));
         } else {
           // 참여 실패해도 방으로 이동 (Room 페이지에서 다시 참여 시도)
           navigate({ to: "/room/$roomId", params: { roomId } });

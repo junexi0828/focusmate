@@ -9,11 +9,13 @@ from app.api.v1.endpoints import (
     community,
     matching,
     messaging,
+    notifications,
     participants,
     proposals,
     ranking,
     room_reservations,
     rooms,
+    settings,
     stats,
     timer,
     verification,
@@ -38,3 +40,5 @@ api_router.include_router(verification.router)
 api_router.include_router(matching.router)
 api_router.include_router(proposals.router)
 api_router.include_router(chat.router)
+api_router.include_router(notifications.router)
+api_router.include_router(settings.router)

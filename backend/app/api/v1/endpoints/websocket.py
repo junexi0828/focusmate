@@ -1,5 +1,7 @@
 """WebSocket endpoint for real-time communication."""
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.infrastructure.websocket.manager import connection_manager

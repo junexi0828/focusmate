@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerificationRouteImport } from './routes/verification'
 import { Route as StatsRouteImport } from './routes/stats'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReservationsRouteImport } from './routes/reservations'
 import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -37,6 +38,11 @@ const VerificationRoute = VerificationRouteImport.update({
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReservationsRoute = ReservationsRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/verification': typeof VerificationRoute
   '/community/$postId': typeof CommunityPostIdRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/verification': typeof VerificationRoute
   '/community/$postId': typeof CommunityPostIdRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/verification': typeof VerificationRoute
   '/community/$postId': typeof CommunityPostIdRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/ranking'
     | '/reservations'
+    | '/settings'
     | '/stats'
     | '/verification'
     | '/community/$postId'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/ranking'
     | '/reservations'
+    | '/settings'
     | '/stats'
     | '/verification'
     | '/community/$postId'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/ranking'
     | '/reservations'
+    | '/settings'
     | '/stats'
     | '/verification'
     | '/community/$postId'
@@ -267,6 +279,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RankingRoute: typeof RankingRouteWithChildren
   ReservationsRoute: typeof ReservationsRoute
+  SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
   VerificationRoute: typeof VerificationRoute
   RoomRoomIdRoute: typeof RoomRoomIdRoute
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/stats'
       fullPath: '/stats'
       preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reservations': {
@@ -463,6 +483,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RankingRoute: RankingRouteWithChildren,
   ReservationsRoute: ReservationsRoute,
+  SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
   VerificationRoute: VerificationRoute,
   RoomRoomIdRoute: RoomRoomIdRoute,

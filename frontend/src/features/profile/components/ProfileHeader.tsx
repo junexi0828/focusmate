@@ -1,13 +1,17 @@
+import { useState } from "react";
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import { Button } from "../../../components/ui/button";
 import { User } from "../../../types/user";
 import { Settings, Edit } from "lucide-react";
+import { ProfileEditDialog } from "./ProfileEditDialog";
+import { useNavigate } from "@tanstack/react-router";
 
 interface ProfileHeaderProps {
   user: User;
   isOwnProfile?: boolean;
   onEdit?: () => void;
   onSettings?: () => void;
+  onUpdate?: (user: User) => void;
 }
 
 export function ProfileHeader({
@@ -15,7 +19,11 @@ export function ProfileHeader({
   isOwnProfile = false,
   onEdit,
   onSettings,
+  onUpdate,
 }: ProfileHeaderProps) {
+  const navigate = useNavigate();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
   const getInitials = (name: string) => {
     const words = name.trim().split(" ");
     if (words.length >= 2) {
@@ -30,6 +38,28 @@ export function ProfileHeader({
       month: "long",
       day: "numeric",
     });
+  };
+
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit();
+    } else {
+      setEditDialogOpen(true);
+    }
+  };
+
+  const handleSettings = () => {
+    if (onSettings) {
+      onSettings();
+    } else {
+      navigate({ to: "/settings" });
+    }
+  };
+
+  const handleUpdate = (updatedUser: User) => {
+    if (onUpdate) {
+      onUpdate(updatedUser);
+    }
   };
 
   return (
@@ -63,18 +93,14 @@ export function ProfileHeader({
               {/* 액션 버튼 (자신의 프로필일 때만) */}
               {isOwnProfile && (
                 <div className="flex gap-2 flex-shrink-0">
-                  {onEdit && (
-                    <Button variant="outline" size="sm" onClick={onEdit}>
-                      <Edit className="w-4 h-4 mr-2" />
-                      수정
-                    </Button>
-                  )}
-                  {onSettings && (
-                    <Button variant="outline" size="sm" onClick={onSettings}>
-                      <Settings className="w-4 h-4 mr-2" />
-                      설정
-                    </Button>
-                  )}
+                  <Button variant="outline" size="sm" onClick={handleEdit}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    수정
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleSettings}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    설정
+                  </Button>
                 </div>
               )}
             </div>
@@ -93,6 +119,14 @@ export function ProfileHeader({
           </div>
         </div>
       </div>
+
+      {/* Profile Edit Dialog */}
+      <ProfileEditDialog
+        user={user}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onUpdate={handleUpdate}
+      />
     </div>
   );
 }

@@ -29,9 +29,19 @@ export function MyRoomsSection() {
       }
     };
 
+    // Custom event listener for manual refresh (e.g., after creating/leaving a room)
+    const handleRefreshRooms = () => {
+      if (authService.isAuthenticated()) {
+        loadMyRooms();
+      }
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("refreshMyRooms", handleRefreshRooms);
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("refreshMyRooms", handleRefreshRooms);
     };
   }, []);
 

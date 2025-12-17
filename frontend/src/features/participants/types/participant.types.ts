@@ -18,5 +18,5 @@ export interface Participant {
 
 export interface JoinRoomRequest {
   username: string; // Backend expects 'username'
+  user_id?: string | null; // Optional user_id for authenticated users
 }
-

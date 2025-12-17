@@ -1,13 +1,14 @@
-"""Enhanced seed data script for development.
+"""Enhanced comprehensive seed data script for beta testing.
 
-Creates comprehensive sample data for all implemented features:
-- Users (admin + test users)
-- Stats (goals, sessions)
+Creates complete sample data for ALL implemented features:
+- Users (2 admins + 5 regular users)
+- Stats (goals, sessions, session history)
 - Community (posts, comments, likes)
 - Ranking (teams, members, invitations, verifications)
-- Chat (rooms, messages)
-- Achievements
-- Mini Games scores
+- Chat (rooms, members, messages)
+- Achievements (definitions, user achievements)
+- Room Management (rooms, participants, timers)
+- Notifications (various types)
 
 Run with: python scripts/seed_comprehensive.py
 """
@@ -220,19 +221,30 @@ async def seed_comprehensive_data():
             ]
 
             teams = []
+            from sqlalchemy import select
             for name, team_type, leader_id in team_data:
-                team = RankingTeam(
-                    team_name=name,
-                    team_type=team_type,
-                    leader_id=leader_id,
-                    verification_status="none",
-                    mini_game_enabled=True,
+                # Check if team already exists
+                existing_team = await db.execute(
+                    select(RankingTeam).where(RankingTeam.team_name == name)
                 )
-                db.add(team)
-                await db.commit()
-                await db.refresh(team)
-                teams.append(team)
-                print(f"   ✅ Created team: {name}")
+                existing = existing_team.scalar_one_or_none()
+
+                if existing:
+                    teams.append(existing)
+                    print(f"   ⏭️  Team '{name}' already exists")
+                else:
+                    team = RankingTeam(
+                        team_name=name,
+                        team_type=team_type,
+                        leader_id=leader_id,
+                        verification_status="none",
+                        mini_game_enabled=True,
+                    )
+                    db.add(team)
+                    await db.commit()
+                    await db.refresh(team)
+                    teams.append(team)
+                    print(f"   ✅ Created team: {name}")
 
             await db.commit()
 
@@ -419,6 +431,140 @@ async def seed_comprehensive_data():
 
             await db.commit()
 
+            # ============================================================
+            # ADDITIONAL DATA: Rooms, Participants, Timers, Notifications
+            # ============================================================
+
+            print("\n" + "="*60)
+            print("🔧 Adding additional data...")
+            print("="*60)
+
+            # ROOMS
+            print("\n🏠 Creating Rooms...")
+            from sqlalchemy import select
+
+            sample_rooms = []
+            room_data = [
+                ("아침 집중방", 25 * 60, 5 * 60, True),
+                ("점심 스터디", 30 * 60, 10 * 60, False),
+                ("저녁 공부방", 45 * 60, 15 * 60, True),
+                ("심야 집중", 50 * 60, 10 * 60, False),
+                ("주말 특별방", 60 * 60, 20 * 60, True),
+            ]
+
+            for name, work_dur, break_dur, auto_start in room_data:
+                existing = await db.execute(
+                    select(Room).where(Room.name == name, Room.is_active == True)
+                )
+                if existing.scalar_one_or_none():
+                    print(f"   ⏭️  Room '{name}' already exists")
+                    continue
+
+                room = Room(
+                    id=str(generate_uuid()),
+                    name=name,
+                    work_duration=work_dur,
+                    break_duration=break_dur,
+                    auto_start_break=auto_start,
+                )
+                db.add(room)
+                await db.commit()
+                await db.refresh(room)
+                sample_rooms.append(room)
+                print(f"   ✅ Created room: {name}")
+
+            # Get all rooms for participants
+            all_rooms_result = await db.execute(select(Room).where(Room.is_active == True))
+            all_rooms = all_rooms_result.scalars().all()
+            print(f"✅ Total rooms: {len(all_rooms)}")
+
+            # PARTICIPANTS
+            print("\n👥 Creating Participants...")
+            participants_count = 0
+            for room in all_rooms:
+                num_participants = random.randint(2, 4)
+                selected_users = random.sample(users, min(num_participants, len(users)))
+
+                for user in selected_users:
+                    existing = await db.execute(
+                        select(Participant).where(
+                            Participant.room_id == room.id,
+                            Participant.user_id == user.id
+                        )
+                    )
+                    if existing.scalar_one_or_none():
+                        continue
+
+                    participant = Participant(
+                        id=str(generate_uuid()),
+                        username=user.username,
+                        room_id=str(room.id),
+                        user_id=str(user.id),
+                        joined_at=datetime.now(timezone.utc),
+                    )
+                    db.add(participant)
+                    participants_count += 1
+
+            await db.commit()
+            print(f"✅ Created {participants_count} participants")
+
+            # TIMERS
+            print("\n⏱️  Creating Timers...")
+            timers_count = 0
+            for room in all_rooms:
+                existing = await db.execute(
+                    select(Timer).where(Timer.room_id == room.id)
+                )
+                if existing.scalar_one_or_none():
+                    continue
+
+                timer = Timer(
+                    id=str(generate_uuid()),
+                    room_id=str(room.id),
+                    status="idle",
+                    phase="work",
+                    duration=room.work_duration,
+                    remaining_seconds=room.work_duration,
+                    is_auto_start=room.auto_start_break,
+                )
+                db.add(timer)
+                timers_count += 1
+
+            await db.commit()
+            print(f"✅ Created {timers_count} timers")
+
+            # NOTIFICATIONS
+            print("\n🔔 Creating Notifications...")
+            from app.infrastructure.database.models.notification import Notification
+
+            notification_templates = [
+                ("새 댓글", "회원님의 게시글에 새 댓글이 달렸습니다", "comment"),
+                ("좋아요", "회원님의 게시글을 좋아합니다", "like"),
+                ("팀 초대", "새로운 팀에 초대되었습니다", "team_invite"),
+                ("업적 달성", "새로운 업적을 달성했습니다!", "achievement"),
+                ("예약 알림", "예약한 세션이 곧 시작됩니다", "reservation"),
+            ]
+
+            notifications_count = 0
+            for user in users:
+                num_notifications = random.randint(3, 8)
+                for i in range(num_notifications):
+                    title, message, notif_type = random.choice(notification_templates)
+                    notification = Notification(
+                        notification_id=str(generate_uuid()),
+                        user_id=str(user.id),
+                        title=title,
+                        message=message,
+                        type=notif_type,
+                        is_read=random.choice([True, False, False]),
+                        created_at=datetime.now(timezone.utc) - timedelta(hours=random.randint(1, 48)),
+                    )
+                    db.add(notification)
+                    notifications_count += 1
+
+            await db.commit()
+            print(f"✅ Created {notifications_count} notifications")
+
             # Summary
             print("\n" + "="*60)
             print("✅ Comprehensive seed data creation completed!")
@@ -440,6 +586,10 @@ async def seed_comprehensive_data():
             print(f"   - Chat Messages: ~14")
             print(f"   - Achievements: 5")
             print(f"   - User Achievements: ~6")
+            print(f"   - Rooms: {len(all_rooms)}")
+            print(f"   - Participants: {participants_count}")
+            print(f"   - Timers: {timers_count}")
+            print(f"   - Notifications: {notifications_count}")
 
             print(f"\n💡 Test Accounts:")
             print(f"   Admins:")

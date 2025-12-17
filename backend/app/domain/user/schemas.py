@@ -36,6 +36,8 @@ class UserResponse(BaseModel):
     is_verified: bool
     is_admin: bool = False
     bio: str | None
+    school: str | None = None
+    profile_image: str | None = None
     total_focus_time: int
     total_sessions: int
     created_at: datetime
@@ -49,6 +51,8 @@ class UserProfileUpdate(BaseModel):
 
     username: str | None = Field(None, min_length=2, max_length=50)
     bio: str | None = Field(None, max_length=500)
+    school: str | None = Field(None, max_length=100)
+    profile_image: str | None = Field(None, max_length=500)
 
 
 class TokenResponse(BaseModel):

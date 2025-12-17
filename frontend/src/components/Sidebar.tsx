@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Trophy,
   Heart,
+  Settings,
 } from "lucide-react";
 import { authService } from "../features/auth/services/authService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -185,6 +186,12 @@ export function Sidebar() {
           to="/profile"
           icon={<User size={18} />}
           label="프로필"
+          isCollapsed={isCollapsed}
+        />
+        <NavItem
+          to="/settings"
+          icon={<Settings size={18} />}
+          label="설정"
           isCollapsed={isCollapsed}
         />
       </nav>

@@ -2,8 +2,9 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 
+from app.api.deps import get_current_user
 from app.core.exceptions import UnauthorizedException, ValidationException
 from app.domain.user.schemas import TokenResponse, UserLogin, UserProfileUpdate, UserRegister, UserResponse
 from app.domain.user.service import UserService
@@ -96,7 +97,7 @@ async def update_profile(
 
     Args:
         user_id: User identifier
-        data: Profile updates (username, bio)
+        data: Profile updates (username, bio, school, profile_image)
         service: User service
 
     Returns:
@@ -109,3 +110,56 @@ async def update_profile(
         return await service.update_profile(user_id, data)
     except UnauthorizedException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+
+
+@router.post("/profile/{user_id}/upload-image", status_code=status.HTTP_200_OK)
+async def upload_profile_image(
+    user_id: str,
+    file: UploadFile = File(...),
+    current_user: Annotated[dict, Depends(get_current_user)] = None,
+    service: Annotated[UserService, Depends(get_user_service)] = None,
+) -> dict:
+    """Upload user profile image.
+
+    Args:
+        user_id: User identifier
+        file: Image file to upload
+        current_user: Current authenticated user
+        service: User service
+
+    Returns:
+        Response with image URL
+
+    Raises:
+        HTTPException: If user not found or unauthorized
+    """
+    from app.infrastructure.storage.file_upload import FileUploadService
+
+    # Verify user is updating their own profile
+    if current_user["id"] != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only update your own profile image",
+        )
+
+    # Validate file type
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be an image",
+        )
+
+    # Upload file
+    upload_service = FileUploadService()
+    try:
+        file_path = await upload_service.save_file(file, f"profile/{user_id}")
+        file_url = upload_service.get_file_url(file_path)
+
+        # Update user profile with image URL
+        await service.update_profile(
+            user_id, UserProfileUpdate(profile_image=file_url)
+        )
+
+        return {"profile_image": file_url}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

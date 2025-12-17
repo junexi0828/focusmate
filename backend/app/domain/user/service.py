@@ -143,6 +143,10 @@ class UserService:
             user.username = data.username
         if data.bio is not None:
             user.bio = data.bio
+        if data.school is not None:
+            user.school = data.school
+        if data.profile_image is not None:
+            user.profile_image = data.profile_image
 
         updated_user = await self.repository.update(user)
         return UserResponse.model_validate(updated_user)

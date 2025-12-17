@@ -40,6 +40,7 @@ from app.infrastructure.database.models.user_stats import (
     UserGoal,
     ManualSession,
 )
+from app.infrastructure.database.models.user_settings import UserSettings
 
 __all__ = [
     "Room",
@@ -74,4 +75,5 @@ __all__ = [
     "RankingLeaderboard",
     "UserGoal",
     "ManualSession",
+    "UserSettings",
 ]

@@ -19,6 +19,8 @@ class User(Base, TimestampMixin):
         is_active: Account active status
         is_verified: Email verification status
         bio: User bio/description (optional)
+        school: User school/university (optional)
+        profile_image: Profile image URL (optional)
         total_focus_time: Total focus time in minutes
         total_sessions: Total completed sessions
     """
@@ -74,6 +76,18 @@ class User(Base, TimestampMixin):
         String(500),
         nullable=True,
         comment="User bio",
+    )
+
+    school: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="User school/university",
+    )
+
+    profile_image: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Profile image URL",
     )
 
     total_focus_time: Mapped[int] = mapped_column(

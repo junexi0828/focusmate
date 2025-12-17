@@ -1,5 +1,6 @@
 """Ranking API endpoints."""
 
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 from uuid import UUID
 
@@ -8,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile
 from app.api.deps import DatabaseSession, get_current_user
 from app.core.rbac import require_admin
 from app.domain.ranking.schemas import (
+    LeaderboardEntry,
+    LeaderboardResponse,
     TeamCreate,
     TeamInvitationCreate,
     TeamInvitationResponse,
@@ -116,7 +119,38 @@ async def invite_member(
 ) -> dict:
     """Invite a new member to the team (leader only)."""
     try:
-        return await service.invite_member(team_id, invitation_data, current_user["id"])
+        result = await service.invite_member(team_id, invitation_data, current_user["id"])
+
+        # Send invitation email
+        try:
+            from app.services.email_service import email_service
+            from app.infrastructure.database.repositories.ranking_repository import RankingRepository
+            from app.infrastructure.database.repositories.user_repository import UserRepository
+            from app.infrastructure.database.session import get_db
+
+            async for db in get_db():
+                repo = RankingRepository(db)
+                user_repo = UserRepository(db)
+
+                team = await repo.get_team_by_id(team_id)
+                inviter = await user_repo.get_by_id(current_user["id"])
+
+                if team and inviter:
+                    # Generate invitation link
+                    invitation_link = f"https://focusmate.com/ranking/invitations/{result['invitation_id']}"
+
+                    email_service.send_team_invitation(
+                        to_email=invitation_data.email,
+                        team_name=team.team_name,
+                        inviter_name=inviter.username or inviter.email.split("@")[0],
+                        invitation_link=invitation_link,
+                    )
+                break
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to send invitation email: {str(e)}")
+
+        return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -169,6 +203,69 @@ async def leave_team(
             detail="Cannot leave team (leader must delete team or transfer leadership)",
         )
     return {"message": "Left team successfully"}
+
+
+# Leaderboard Endpoints
+@router.get("/leaderboard")
+async def get_leaderboard(
+    service: Annotated[RankingService, Depends(get_ranking_service)],
+    period: str = Query("weekly", description="Period: weekly, monthly, all_time"),
+    limit: int = Query(50, ge=1, le=100, description="Number of teams to return"),
+) -> dict:
+    """Get leaderboard rankings for teams.
+
+    Args:
+        period: Time period (weekly, monthly, all_time)
+        limit: Maximum number of teams to return
+
+    Returns:
+        Leaderboard with team rankings
+    """
+
+    try:
+        # Get all teams
+        teams = await service.get_all_teams()
+
+        if not teams:
+            # Return empty leaderboard
+            response = LeaderboardResponse(
+                ranking_type="team",
+                period=period,
+                updated_at=datetime.now(timezone.utc),
+                leaderboard=[],
+            )
+            return response.model_dump()
+
+        # Create leaderboard entries
+        leaderboard_entries = []
+        for idx, team in enumerate(teams[:limit]):
+            entry = LeaderboardEntry(
+                rank=idx + 1,
+                team_id=team.team_id,
+                team_name=team.team_name,
+                team_type=team.team_type,
+                score=0.0,  # TODO: Calculate from sessions
+                rank_change=0,
+                member_count=None,
+                average_score=0.0,
+            )
+            leaderboard_entries.append(entry)
+
+        response = LeaderboardResponse(
+            ranking_type="team",
+            period=period,
+            updated_at=datetime.now(timezone.utc),
+            leaderboard=leaderboard_entries,
+        )
+
+        return response.model_dump()
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get leaderboard: {str(e)}"
+        )
+
 
 
 @router.delete(
@@ -244,6 +341,40 @@ async def review_verification(
     result = await service.review_verification(
         verification_id, review.status, review.admin_note
     )
+
+    # Send email notification
+    try:
+        from app.services.email_service import email_service
+        from app.infrastructure.database.repositories.ranking_repository import RankingRepository
+        from app.infrastructure.database.session import get_db
+
+        # Get team and leader info
+        async for db in get_db():
+            repo = RankingRepository(db)
+            verification = await repo.get_verification_by_id(verification_id)
+            if verification and verification.team:
+                team = verification.team
+                leader = team.leader
+
+                if review.status == "approved":
+                    email_service.send_verification_approved(
+                        to_email=leader.email,
+                        team_name=team.team_name,
+                        username=leader.username or leader.email.split("@")[0],
+                    )
+                elif review.status == "rejected":
+                    email_service.send_verification_rejected(
+                        to_email=leader.email,
+                        team_name=team.team_name,
+                        username=leader.username or leader.email.split("@")[0],
+                        reason=review.admin_note,
+                    )
+            break
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to send verification email: {str(e)}")
+
     return result
 
 

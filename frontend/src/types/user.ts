@@ -4,6 +4,8 @@ export interface User {
   name: string;
   avatar?: string;
   bio?: string;
+  school?: string;
+  profile_image?: string;
   createdAt: Date;
   totalFocusTime: number; // in minutes
   totalSessions: number;
