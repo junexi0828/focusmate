@@ -2,6 +2,8 @@
  * Room Reservation Feature 타입 정의
  */
 
+export type RecurrenceType = "none" | "daily" | "weekly" | "monthly";
+
 export interface RoomReservation {
   id: string;
   room_id: string | null;
@@ -12,6 +14,10 @@ export interface RoomReservation {
   description: string | null;
   is_active: boolean;
   is_completed: boolean;
+  recurrence_type?: string | null;
+  recurrence_end_date?: string | null;
+  notification_minutes?: number;
+  notification_sent?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +27,9 @@ export interface CreateRoomReservationRequest {
   work_duration: number; // seconds
   break_duration: number; // seconds
   description?: string | null;
+  recurrence_type?: RecurrenceType;
+  recurrence_end_date?: string | null;
+  notification_minutes?: number;
 }
 
 export interface UpdateRoomReservationRequest {

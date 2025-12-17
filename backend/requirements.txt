@@ -18,7 +18,7 @@ email-validator==2.2.0              # Email validation
 # ============================================================================
 # Database
 # ============================================================================
-sqlalchemy[asyncio]>=2.0.45,<3.0.0  # Async ORM (updated for Python 3.14 compatibility)
+sqlalchemy[asyncio]==2.0.23          # Async ORM (stable version for SQLite compatibility)
 aiosqlite==0.20.0                   # Async SQLite driver
 alembic==1.14.0                     # Database migrations
 # psycopg2-binary==2.9.10           # PostgreSQL driver (production)

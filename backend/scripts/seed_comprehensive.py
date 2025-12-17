@@ -33,8 +33,14 @@ from app.infrastructure.database.models.ranking import (
     RankingTeamInvitation,
     RankingVerificationRequest,
 )
-from app.infrastructure.database.models.chat import ChatRoom, ChatMessage
+from app.infrastructure.database.models.chat import ChatRoom, ChatMessage, ChatMember
 from app.infrastructure.database.models.achievement import Achievement, UserAchievement
+from app.infrastructure.database.models.session_history import SessionHistory
+from app.infrastructure.database.models import Room, Participant, Timer, RoomReservation
+from app.infrastructure.repositories.room_repository import RoomRepository
+from app.infrastructure.repositories.participant_repository import ParticipantRepository
+from app.infrastructure.repositories.timer_repository import TimerRepository
+from app.infrastructure.repositories.room_reservation_repository import RoomReservationRepository
 from app.shared.utils.uuid import generate_uuid
 
 
@@ -48,72 +54,83 @@ async def seed_comprehensive_data():
             print("\n👥 Creating test users...")
             users = []
 
-            # Admin user (should already exist)
+            # Admin users
             from app.infrastructure.repositories.user_repository import UserRepository
             user_repo = UserRepository(db)
-            admin = await user_repo.get_by_email(settings.ADMIN_EMAIL)
 
-            if not admin:
-                print(f"❌ Admin user ({settings.ADMIN_EMAIL}) not found!")
-                print("   Creating admin user...")
-                admin = User(
-                    id=generate_uuid(),
-                    email=settings.ADMIN_EMAIL,
-                    username="admin",
-                    hashed_password=hash_password("admin123"),
-                    is_active=True,
-                    is_verified=True,
-                )
-                db.add(admin)
-                await db.flush()
-                print(f"   ✅ Created admin user: {admin.email}")
-            else:
-                print(f"✅ Found admin user: {admin.email}")
-
-            users.append(admin)
-
-            # Test users
-            test_users_data = [
-                ("user1@test.com", "김철수"),
-                ("user2@test.com", "이영희"),
-                ("user3@test.com", "박민수"),
-                ("user4@test.com", "최지은"),
-                ("user5@test.com", "정대현"),
+            admin_data = [
+                ("junexi@naver.com", "juns", True),
+                ("sc82.choi@pknu.ac.kr", "sc82", True),
             ]
 
-            for email, username in test_users_data:
+            for email, username, is_admin in admin_data:
                 existing = await user_repo.get_by_email(email)
                 if existing:
                     users.append(existing)
-                    print(f"   ⏭️  User '{email}' already exists")
-                    continue
+                    print(f"   ⏭️  Admin '{username}' already exists")
+                else:
+                    user = User(
+                        id=str(generate_uuid()),
+                        email=email,
+                        username=username,
+                        hashed_password=hash_password("admin123"),
+                        is_active=True,
+                        is_verified=True,
+                        is_admin=is_admin,
+                        total_sessions=random.randint(20, 50),
+                        total_focus_time=random.randint(800, 2000),
+                    )
+                    db.add(user)
+                    await db.commit()
+                    await db.refresh(user)
+                    users.append(user)
+                    print(f"   ✅ Created admin: {username} ({email})")
 
-                user = User(
-                    id=generate_uuid(),
-                    email=email,
-                    username=username,
-                    hashed_password=hash_password("password123"),
-                    is_active=True,
-                    is_verified=True,
-                    total_sessions=random.randint(10, 100),
-                    total_focus_time=random.randint(1000, 5000),
-                )
-                db.add(user)
-                await db.flush()
-                users.append(user)
-                print(f"   ✅ Created user: {email}")
+            # Regular users
+            regular_users_data = [
+                ("user1@test.com", "김도윤"),
+                ("user2@test.com", "김지운"),
+                ("user3@test.com", "심동혁"),
+                ("user4@test.com", "유재성"),
+                ("user5@test.com", "김시은"),
+            ]
+
+            for email, username in regular_users_data:
+                existing = await user_repo.get_by_email(email)
+                if existing:
+                    users.append(existing)
+                    print(f"   ⏭️  User '{username}' already exists")
+                    continue
+                else:
+                    user = User(
+                        id=str(generate_uuid()),
+                        email=email,
+                        username=username,
+                        hashed_password=hash_password("password123"),
+                        is_active=True,
+                        is_verified=True,
+                        is_admin=False,
+                        total_sessions=random.randint(10, 40),
+                        total_focus_time=random.randint(500, 1500),
+                    )
+                    db.add(user)
+                    await db.commit()
+                    await db.refresh(user)
+                    users.append(user)
+                    print(f"   ✅ Created user: {username} ({email})")
 
             # 2. Create user goals
             print("\n🎯 Creating user goals...")
             for user in users[:4]:  # First 4 users
                 goal = UserGoal(
-                    id=generate_uuid(),
-                    user_id=user.id,
+                    id=str(generate_uuid()),
+                    user_id=str(user.id),
                     daily_goal_minutes=random.choice([60, 90, 120, 180]),
                     weekly_goal_sessions=random.choice([5, 10, 15, 20]),
                     created_at=datetime.now(timezone.utc),
                 )
                 db.add(goal)
+                await db.commit()
                 print(f"   ✅ Created goal for {user.username}")
 
             # 3. Create manual sessions
@@ -121,31 +138,32 @@ async def seed_comprehensive_data():
             for user in users[:4]:
                 for i in range(random.randint(3, 8)):
                     session = ManualSession(
-                        id=generate_uuid(),
-                        user_id=user.id,
+                        id=str(generate_uuid()),
+                        user_id=str(user.id),
                         session_type="focus",
                         duration_minutes=random.choice([25, 30, 45, 60]),
                         completed_at=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 7)),
                         created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 7)),
                     )
                     db.add(session)
+                    await db.commit()
                 print(f"   ✅ Created sessions for {user.username}")
 
             # 4. Create community posts
             print("\n📰 Creating community posts...")
             post_data = [
-                ("공부 팁 공유", "효과적인 집중 방법을 공유합니다!", "tips", admin.id),
-                ("오늘의 목표", "오늘 3시간 집중하기!", "general", users[1].id),
-                ("질문있어요", "포모도로 타이머 사용법 알려주세요", "question", users[2].id),
-                ("성공 후기", "한 달 동안 매일 2시간씩 공부했어요!", "success", users[3].id),
-                ("스터디 모집", "함께 공부할 팀원 모집합니다", "recruitment", users[4].id),
+                ("공부 팁 공유", "효과적인 집중 방법을 공유합니다!", "tips", users[0].id),
+                ("오늘의 목표", "오늘 3시간 집중하기!", "general", users[2].id),
+                ("질문있어요", "포모도로 타이머 사용법 알려주세요", "question", users[3].id),
+                ("성공 후기", "한 달 동안 매일 2시간씩 공부했어요!", "success", users[4].id),
+                ("스터디 모집", "함께 공부할 팀원 모집합니다", "recruitment", users[5].id),
             ]
 
             posts = []
             for title, content, category, user_id in post_data:
                 post = Post(
-                    id=generate_uuid(),
-                    user_id=user_id,
+                    id=str(generate_uuid()),  # Convert UUID to string
+                    user_id=str(user_id),  # Convert UUID to string
                     title=title,
                     content=content,
                     category=category,
@@ -156,17 +174,18 @@ async def seed_comprehensive_data():
                     created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 5)),
                 )
                 db.add(post)
+                await db.commit()
                 posts.append(post)
                 print(f"   ✅ Created post: {title}")
 
-            await db.flush()
+            await db.commit()
 
             # 5. Create comments
             print("\n💬 Creating comments...")
             for post in posts[:3]:  # First 3 posts
                 for i in range(random.randint(1, 3)):
                     comment = Comment(
-                        id=generate_uuid(),
+                        id=str(generate_uuid()),
                         post_id=str(post.id),
                         user_id=str(users[i + 1].id),
                         content=f"좋은 글이네요! 댓글 {i + 1}",
@@ -175,6 +194,7 @@ async def seed_comprehensive_data():
                         created_at=datetime.now(timezone.utc) - timedelta(hours=random.randint(1, 24)),
                     )
                     db.add(comment)
+                await db.commit()
                 print(f"   ✅ Created comments for post: {post.title}")
 
             # 6. Create post likes
@@ -183,7 +203,7 @@ async def seed_comprehensive_data():
                 for user in users[:3]:  # First 3 users like posts
                     if random.random() > 0.5:  # 50% chance
                         like = PostLike(
-                            id=generate_uuid(),
+                            id=str(generate_uuid()),
                             post_id=str(post.id),
                             user_id=str(user.id),
                             created_at=datetime.now(timezone.utc),
@@ -194,127 +214,149 @@ async def seed_comprehensive_data():
             # 7. Create teams
             print("\n🏆 Creating teams...")
             team_data = [
-                ("Study Warriors", "열심히 공부하는 팀", admin.id),
-                ("Focus Masters", "집중력 마스터들", users[1].id),
-                ("Deep Work Team", "딥워크 실천팀", users[2].id),
+                ("Study Warriors", "general", users[0].id),
+                ("Focus Masters", "department", users[2].id),
+                ("Deep Work Team", "lab", users[3].id),
             ]
 
             teams = []
-            for name, description, leader_id in team_data:
+            for name, team_type, leader_id in team_data:
                 team = RankingTeam(
-                    team_id=generate_uuid(),
                     team_name=name,
-                    description=description,
+                    team_type=team_type,
                     leader_id=leader_id,
-                    total_score=random.randint(500, 2000),
-                    member_count=random.randint(3, 8),
-                    is_active=True,
-                    created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(10, 30)),
+                    verification_status="none",
+                    mini_game_enabled=True,
                 )
                 db.add(team)
+                await db.commit()
+                await db.refresh(team)
                 teams.append(team)
                 print(f"   ✅ Created team: {name}")
 
-            await db.flush()
+            await db.commit()
+
 
             # 8. Create team members
             print("\n👥 Creating team members...")
             for team in teams:
-                # Leader
+                # Add leader as member
                 leader_member = RankingTeamMember(
-                    member_id=generate_uuid(),
                     team_id=team.team_id,
                     user_id=team.leader_id,
                     role="leader",
-                    total_sessions=random.randint(20, 50),
-                    total_focus_time=random.randint(2000, 5000),
-                    joined_at=team.created_at,
                 )
                 db.add(leader_member)
+                await db.commit()
 
-                # Other members
+                # Add other members
                 for user in users[3:5]:  # Add 2 members to each team
                     member = RankingTeamMember(
-                        member_id=generate_uuid(),
                         team_id=team.team_id,
                         user_id=user.id,
                         role="member",
-                        total_sessions=random.randint(10, 30),
-                        total_focus_time=random.randint(1000, 3000),
-                        joined_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 20)),
                     )
                     db.add(member)
+                    await db.commit()
                 print(f"   ✅ Created members for team: {team.team_name}")
 
             # 9. Create team invitations
             print("\n📧 Creating team invitations...")
             for team in teams[:2]:  # First 2 teams
                 invitation = RankingTeamInvitation(
-                    invitation_id=generate_uuid(),
                     team_id=team.team_id,
                     email=f"newuser{random.randint(1, 100)}@test.com",
                     invited_by=team.leader_id,
                     status="pending",
-                    created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 5)),
                     expires_at=datetime.now(timezone.utc) + timedelta(days=7),
                 )
                 db.add(invitation)
+                await db.commit()
                 print(f"   ✅ Created invitation for team: {team.team_name}")
 
-            # 10. Create verifications
-            print("\n🎓 Creating verifications...")
-            verification_data = [
-                (teams[0].team_id, "서울대학교", "pending"),
-                (teams[1].team_id, "연세대학교", "approved"),
-                (teams[2].team_id, "고려대학교", "rejected"),
-            ]
-
-            for team_id, school_name, status in verification_data:
+            # 10. Create verification requests
+            print("\n🎓 Creating verification requests...")
+            for team in teams:
                 verification = RankingVerificationRequest(
-                    request_id=generate_uuid(),
-                    team_id=team_id,
-                    documents={"school_name": school_name, "document_path": "/uploads/verifications/sample.pdf"},
-                    status=status,
-                    submitted_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 10)),
-                    reviewed_at=datetime.now(timezone.utc) if status != "pending" else None,
-                    reviewed_by=admin.id if status != "pending" else None,
+                    team_id=team.team_id,
+                    documents={"school_name": f"학교{random.randint(1,3)}", "document_url": "https://example.com/doc.pdf"},
+                    status="pending",
                 )
                 db.add(verification)
-                print(f"   ✅ Created verification for {school_name}: {status}")
+                await db.commit()
+            print(f"   ✅ Created {len(teams)} verification requests")
+
+            # 10.5. Create session history
+            print("\n📊 Creating session history...")
+            sessions_created = 0
+            now = datetime.now(timezone.utc)
+
+            for user in users:
+                # Create 5-15 sessions per user over the past 30 days
+                num_sessions = random.randint(5, 15)
+                for i in range(num_sessions):
+                    days_ago = random.randint(0, 30)
+                    session = SessionHistory(
+                        id=str(generate_uuid()),
+                        user_id=user.id,
+                        room_id=str(generate_uuid()),  # Dummy room ID
+                        session_type=random.choice(["work", "break"]),
+                        duration_minutes=random.choice([25, 30, 45, 50, 60]),
+                        completed_at=now - timedelta(days=days_ago, hours=random.randint(0, 23)),
+                    )
+                    db.add(session)
+                    await db.commit()
+                    sessions_created += 1
+            print(f"   ✅ Created {sessions_created} session records")
 
             # 11. Create chat rooms
             print("\n💬 Creating chat rooms...")
             chat_rooms = []
-            room_names = ["General", "Study Tips", "Q&A", "Team Chat"]
+            room_names = [("General", "public"), ("Study Tips", "public"), ("Q&A", "public"), ("Team Chat", "private")]
 
-            for name in room_names:
+            for name, room_type in room_names:
                 room = ChatRoom(
-                    room_id=generate_uuid(),
-                    room_type="public",
+                    room_type=room_type,
                     room_name=name,
                     description=f"{name} 채팅방",
                     is_active=True,
-                    created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(5, 20)),
                 )
                 db.add(room)
+                await db.commit()
+                await db.refresh(room)
                 chat_rooms.append(room)
                 print(f"   ✅ Created chat room: {name}")
 
-            await db.flush()
+            # 11.5. Add chat members
+            print("\n👥 Adding chat members...")
+            members_created = 0
+
+            for i, user in enumerate(users[:5]):  # First 5 users join first chat room
+                member = ChatMember(
+                    room_id=chat_rooms[0].room_id,
+                    user_id=user.id,
+                    role="admin" if i == 0 else "member",
+                    is_active=True,
+                    is_muted=False,
+                    unread_count=0,
+                )
+                db.add(member)
+                await db.commit()
+                members_created += 1
+            print(f"   ✅ Added {members_created} chat members")
 
             # 12. Create chat messages
             print("\n💬 Creating chat messages...")
             for room in chat_rooms[:2]:  # First 2 rooms
                 for i in range(random.randint(5, 10)):
                     message = ChatMessage(
-                        message_id=generate_uuid(),
                         room_id=room.room_id,
-                        sender_id=users[i % len(users)].id,
+                        sender_id=users[random.randint(0, len(users)-1)].id,
                         message_type="text",
-                        content=f"안녕하세요! 메시지 {i + 1}",
-                        created_at=datetime.now(timezone.utc) - timedelta(hours=random.randint(1, 48)),
+                        content=f"메시지 {i+1}: 안녕하세요!",
                     )
                     db.add(message)
+                    await db.commit()
                 print(f"   ✅ Created messages for room: {room.room_name}")
 
             # 13. Create achievements
@@ -329,34 +371,51 @@ async def seed_comprehensive_data():
 
             achievements = []
             for name, description, category, req_type, req_value, icon in achievement_data:
+                # Check if achievement already exists
+                from sqlalchemy import select
+                existing = await db.execute(
+                    select(Achievement).where(Achievement.name == name)
+                )
+                existing_achievement = existing.scalar_one_or_none()
+
+                if existing_achievement:
+                    achievements.append(existing_achievement)
+                    print(f"   ⏭️  Achievement '{name}' already exists")
+                    continue
+
                 achievement = Achievement(
-                    id=generate_uuid(),
+                    id=str(generate_uuid()),
                     name=name,
                     description=description,
                     icon=icon,
                     category=category,
                     requirement_type=req_type,
                     requirement_value=req_value,
+                    points=10,
                     is_active=True,
                 )
                 db.add(achievement)
+                await db.commit()
+                await db.refresh(achievement)
                 achievements.append(achievement)
                 print(f"   ✅ Created achievement: {name}")
 
-            await db.flush()
+            await db.commit()
 
             # 14. Create user achievements
             print("\n🎖️  Creating user achievements...")
             for user in users[:3]:  # First 3 users
                 for achievement in achievements[:2]:  # First 2 achievements
                     user_achievement = UserAchievement(
-                        id=generate_uuid(),
+                        id=str(generate_uuid()),
                         user_id=user.id,
                         achievement_id=achievement.id,
-                        unlocked_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 10)),
+                        unlocked_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 30)),
+                        progress=achievement.requirement_value,
                     )
                     db.add(user_achievement)
-                print(f"   ✅ Created achievements for {user.username}")
+                    await db.commit()
+            print(f"   ✅ Created user achievements")
 
             await db.commit()
 
@@ -365,27 +424,35 @@ async def seed_comprehensive_data():
             print("✅ Comprehensive seed data creation completed!")
             print("="*60)
             print(f"\n📊 Summary:")
-            print(f"   - Users: {len(users)} (1 admin + {len(users)-1} test users)")
-            print(f"   - Goals: {len(users[:4])}")
-            print(f"   - Sessions: ~{len(users[:4]) * 5}")
+            print(f"   - Users: {len(users)} (2 admins + {len(users)-2} regular users)")
+            print(f"   - Goals: 4")
+            print(f"   - Manual Sessions: ~20")
+            print(f"   - Session History: {sessions_created}")
             print(f"   - Posts: {len(posts)}")
-            print(f"   - Comments: ~{len(posts[:3]) * 2}")
+            print(f"   - Comments: ~6")
+            print(f"   - Post Likes: ~10")
             print(f"   - Teams: {len(teams)}")
-            print(f"   - Team Members: ~{len(teams) * 3}")
+            print(f"   - Team Members: ~9")
             print(f"   - Invitations: 2")
-            print(f"   - Verifications: 3 (pending, approved, rejected)")
+            print(f"   - Verifications: 3")
             print(f"   - Chat Rooms: {len(chat_rooms)}")
-            print(f"   - Chat Messages: ~{len(chat_rooms[:2]) * 7}")
-            print(f"   - Achievements: {len(achievements)}")
-            print(f"   - User Achievements: ~{len(users[:3]) * 2}")
+            print(f"   - Chat Members: {members_created}")
+            print(f"   - Chat Messages: ~14")
+            print(f"   - Achievements: 5")
+            print(f"   - User Achievements: ~6")
 
             print(f"\n💡 Test Accounts:")
-            print(f"   Admin: {settings.ADMIN_EMAIL} / admin123")
-            print(f"   User1: user1@test.com / password123")
-            print(f"   User2: user2@test.com / password123")
-            print(f"   User3: user3@test.com / password123")
+            print(f"   Admins:")
+            print(f"   - junexi@naver.com / admin123 (juns)")
+            print(f"   - sc82.choi@pknu.ac.kr / admin123 (sc82)")
+            print(f"\n   Users:")
+            print(f"   - user1@test.com / password123 (김도윤)")
+            print(f"   - user2@test.com / password123 (김지운)")
+            print(f"   - user3@test.com / password123 (심동혁)")
+            print(f"   - user4@test.com / password123 (유재성)")
+            print(f"   - user5@test.com / password123 (김시은)")
 
-            print(f"\n🎯 You can now test all 15 implemented features!")
+            print(f"\n🎯 You can now test all features with realistic data!")
             print("="*60)
 
             return  # Exit successfully

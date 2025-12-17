@@ -20,7 +20,8 @@ export interface VerificationSubmit {
   student_id: string;
   university: string;
   department: string;
-  student_id_image_url?: string;
+  verification_file_url?: string;
+  notes?: string;
 }
 
 export interface MatchingPool {

@@ -1,8 +1,17 @@
 """Room Reservation domain schemas (Request/Response DTOs)."""
 
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class RecurrenceType(str, Enum):
+    """Recurrence type for reservations."""
+    NONE = "none"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
 
 
 class RoomReservationCreate(BaseModel):
@@ -18,6 +27,15 @@ class RoomReservationCreate(BaseModel):
         default=5 * 60, ge=60, le=1800, description="Break time in seconds"
     )
     description: str | None = Field(None, max_length=500, description="Optional description")
+    recurrence_type: RecurrenceType = Field(
+        default=RecurrenceType.NONE, description="Recurrence pattern"
+    )
+    recurrence_end_date: datetime | None = Field(
+        None, description="When to stop creating recurring reservations"
+    )
+    notification_minutes: int = Field(
+        default=5, ge=0, le=60, description="Minutes before scheduled time to send notification"
+    )
 
 
 class RoomReservationUpdate(BaseModel):
@@ -47,6 +65,10 @@ class RoomReservationResponse(BaseModel):
     description: str | None
     is_active: bool
     is_completed: bool
+    recurrence_type: str | None = None
+    recurrence_end_date: datetime | None = None
+    notification_minutes: int = 5
+    notification_sent: bool = False
     created_at: datetime
     updated_at: datetime
 

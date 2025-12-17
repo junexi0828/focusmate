@@ -59,8 +59,9 @@ function RankingComponent() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
-  const { data: teams = initialTeams, isLoading } = useQuery({
-    queryKey: ["ranking", "teams", user?.id],
+  // Fetch user's teams with auto-refresh
+  const { data: teams, isLoading } = useQuery({
+    queryKey: ["my-teams"],
     queryFn: async () => {
       const response = await rankingService.getMyTeams();
       if (response.status === "error") {
@@ -69,8 +70,9 @@ function RankingComponent() {
       return response.data || [];
     },
     initialData: initialTeams,
-    staleTime: 1000 * 30, // 30 seconds
-    refetchInterval: 30000, // Poll every 30 seconds for real-time ranking updates
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchOnWindowFocus: true, // Refresh when window gains focus
+    staleTime: 10000, // Consider data stale after 10 seconds
   });
 
   const createTeamMutation = useMutation({

@@ -32,6 +32,9 @@ export function RoomReservationSection() {
     work_duration: 25,
     break_duration: 5,
     description: "",
+    recurrence_type: "none" as "none" | "daily" | "weekly" | "monthly",
+    recurrence_end_date: "",
+    notification_minutes: 5,
   });
 
   useEffect(() => {
@@ -80,11 +83,28 @@ export function RoomReservationSection() {
         return;
       }
 
+      // Validate recurrence end date if recurrence is enabled
+      let recurrenceEndDate = null;
+      if (formData.recurrence_type !== "none" && formData.recurrence_end_date) {
+        recurrenceEndDate = new Date(formData.recurrence_end_date);
+        if (isNaN(recurrenceEndDate.getTime())) {
+          toast.error("올바른 반복 종료 날짜를 입력해주세요");
+          return;
+        }
+        if (recurrenceEndDate <= scheduledDate) {
+          toast.error("반복 종료 날짜는 예약 시간 이후여야 합니다");
+          return;
+        }
+      }
+
       const response = await roomReservationService.createReservation({
         scheduled_at: scheduledDate.toISOString(),
         work_duration: formData.work_duration * 60, // 분을 초로 변환
         break_duration: formData.break_duration * 60,
         description: formData.description || null,
+        recurrence_type: formData.recurrence_type,
+        recurrence_end_date: recurrenceEndDate ? recurrenceEndDate.toISOString() : null,
+        notification_minutes: formData.notification_minutes,
       });
 
       if (response.status === "success") {
@@ -95,6 +115,9 @@ export function RoomReservationSection() {
           work_duration: 25,
           break_duration: 5,
           description: "",
+          recurrence_type: "none",
+          recurrence_end_date: "",
+          notification_minutes: 5,
         });
         loadReservations();
       } else {
@@ -224,6 +247,71 @@ export function RoomReservationSection() {
                     placeholder="예약에 대한 메모를 입력하세요"
                   />
                 </div>
+
+                {/* Recurrence Settings */}
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <Label htmlFor="recurrence_type">반복 예약</Label>
+                    <select
+                      id="recurrence_type"
+                      className="w-full mt-1 px-3 py-2 border border-input bg-background rounded-md"
+                      value={formData.recurrence_type}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          recurrence_type: e.target.value as any,
+                        })
+                      }
+                    >
+                      <option value="none">반복 안 함</option>
+                      <option value="daily">매일</option>
+                      <option value="weekly">매주</option>
+                      <option value="monthly">매월</option>
+                    </select>
+                  </div>
+
+                  {formData.recurrence_type !== "none" && (
+                    <div>
+                      <Label htmlFor="recurrence_end_date">반복 종료일</Label>
+                      <Input
+                        id="recurrence_end_date"
+                        type="date"
+                        value={formData.recurrence_end_date}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            recurrence_end_date: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="notification_minutes">
+                      알림 (시작 전 몇 분)
+                    </Label>
+                    <select
+                      id="notification_minutes"
+                      className="w-full mt-1 px-3 py-2 border border-input bg-background rounded-md"
+                      value={formData.notification_minutes}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          notification_minutes: parseInt(e.target.value),
+                        })
+                      }
+                    >
+                      <option value="0">알림 없음</option>
+                      <option value="5">5분 전</option>
+                      <option value="10">10분 전</option>
+                      <option value="15">15분 전</option>
+                      <option value="30">30분 전</option>
+                      <option value="60">1시간 전</option>
+                    </select>
+                  </div>
+                </div>
+
                 <Button onClick={handleCreateReservation} className="w-full">
                   예약하기
                 </Button>

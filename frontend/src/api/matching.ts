@@ -27,6 +27,21 @@ export const matchingApi = {
     return response.data;
   },
 
+  uploadVerificationFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append("files", file);
+    const response = await api.post<{
+      uploaded_files: string[];
+      count: number;
+      encrypted: boolean;
+    }>("/verification/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
   // Matching Pools
   createPool: async (data: MatchingPoolCreate) => {
     const response = await api.post<MatchingPool>("/matching/pools", data);

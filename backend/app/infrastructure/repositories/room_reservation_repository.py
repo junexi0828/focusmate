@@ -119,3 +119,46 @@ class RoomReservationRepository:
         await self.session.commit()
         return True
 
+    async def get_due_reservations(
+        self, start_time: datetime, end_time: datetime
+    ) -> list[RoomReservation]:
+        """Get reservations due between start and end time.
+
+        Args:
+            start_time: Start of time range
+            end_time: End of time range
+
+        Returns:
+            List of reservations due in the time range
+        """
+        result = await self.session.execute(
+            select(RoomReservation)
+            .where(RoomReservation.is_active == True)
+            .where(RoomReservation.is_completed == False)
+            .where(RoomReservation.room_id.is_(None))  # Not yet processed
+            .where(RoomReservation.scheduled_at >= start_time)
+            .where(RoomReservation.scheduled_at <= end_time)
+            .order_by(RoomReservation.scheduled_at.asc())
+        )
+        return list(result.scalars().all())
+
+    async def get_reservations_needing_notification(
+        self
+    ) -> list[RoomReservation]:
+        """Get reservations that need notification sent.
+
+        Returns:
+            List of active reservations that haven't sent notification yet
+        """
+        now = datetime.now()
+        result = await self.session.execute(
+            select(RoomReservation)
+            .where(RoomReservation.is_active == True)
+            .where(RoomReservation.is_completed == False)
+            .where(RoomReservation.notification_sent == False)
+            .where(RoomReservation.notification_minutes > 0)
+            .where(RoomReservation.scheduled_at >= now)
+            .order_by(RoomReservation.scheduled_at.asc())
+        )
+        return list(result.scalars().all())
+

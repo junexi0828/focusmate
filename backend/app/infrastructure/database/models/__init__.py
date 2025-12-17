@@ -29,6 +29,17 @@ from app.infrastructure.database.models.matching import (
     MatchingChatMember,
     MatchingMessage,
 )
+from app.infrastructure.database.models.ranking import (
+    RankingTeam,
+    RankingTeamMember,
+    RankingTeamInvitation,
+    RankingVerificationRequest,
+    RankingLeaderboard,
+)
+from app.infrastructure.database.models.user_stats import (
+    UserGoal,
+    ManualSession,
+)
 
 __all__ = [
     "Room",
@@ -56,4 +67,11 @@ __all__ = [
     "MatchingChatRoom",
     "MatchingChatMember",
     "MatchingMessage",
+    "RankingTeam",
+    "RankingMember",
+    "RankingSession",
+    "RankingMiniGame",
+    "RankingLeaderboard",
+    "UserGoal",
+    "ManualSession",
 ]

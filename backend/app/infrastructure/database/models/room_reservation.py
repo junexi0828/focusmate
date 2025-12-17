@@ -91,6 +91,33 @@ class RoomReservation(Base, TimestampMixin):
         comment="Whether the session has been completed",
     )
 
+    recurrence_type: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        default="none",
+        comment="Recurrence pattern: none, daily, weekly, monthly",
+    )
+
+    recurrence_end_date: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When to stop creating recurring reservations",
+    )
+
+    notification_minutes: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=5,
+        comment="Minutes before scheduled time to send notification",
+    )
+
+    notification_sent: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Whether notification has been sent",
+    )
+
     def __repr__(self) -> str:
         """String representation of RoomReservation."""
         return (

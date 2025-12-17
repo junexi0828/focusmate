@@ -10,7 +10,10 @@ import {
   MessageCircle,
   Users,
   UserCircle,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { useTheme } from "../hooks/useTheme";
 
 export type NavPage = "home" | "room" | "stats" | "community" | "messages" | "profile";
 
@@ -21,6 +24,12 @@ interface NavigationProps {
 
 export function Navigation({ user, unreadMessages = 0 }: NavigationProps) {
   const location = useLocation();
+  const { theme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   const getInitials = (name: string) => {
     const words = name.trim().split(" ");
     if (words.length >= 2) {
@@ -76,6 +85,20 @@ export function Navigation({ user, unreadMessages = 0 }: NavigationProps) {
                 </Button>
               </Link>
             ))}
+
+            {/* Dark Mode Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="ml-2"
+            >
+              {theme === "dark" ? (
+                <Sun className="w-4 h-4" />
+              ) : (
+                <Moon className="w-4 h-4" />
+              )}
+            </Button>
 
             {/* Profile */}
             {user ? (
