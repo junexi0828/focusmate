@@ -33,7 +33,7 @@ export function VerificationStatus() {
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-blue-500" />
+            <Shield className="w-8 h-8 text-[#7ED6E8]" />
             <div>
               <h3 className="font-semibold text-lg">인증 상태</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -43,7 +43,7 @@ export function VerificationStatus() {
           </div>
           <Button
             onClick={() => setShowForm(true)}
-            className="bg-gradient-to-r from-blue-600 to-purple-600"
+            className="bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4]"
           >
             인증 시작하기
           </Button>
@@ -102,7 +102,7 @@ export function VerificationStatus() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-blue-500" />
+            <Shield className="w-8 h-8 text-[#7ED6E8]" />
             <div>
               <h3 className="font-semibold text-lg">인증 상태</h3>
               <div className={`flex items-center gap-2 ${statusDisplay.color}`}>

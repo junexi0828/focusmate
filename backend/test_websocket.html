@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .log {
+            background: #252526;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #007acc;
+        }
+        .error {
+            border-left-color: #f48771;
+        }
+        .success {
+            border-left-color: #89d185;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+            background: #3c3c3c;
+            color: #d4d4d4;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        button {
+            cursor: pointer;
+        }
+        button:hover {
+            background: #505050;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div>
+        <label>Token (paste from localStorage):</label><br>
+        <input type="text" id="token" style="width: 500px" placeholder="Paste your auth token here">
+        <button onclick="connectWebSocket()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+    <div>
+        <button onclick="sendPing()">Send Ping</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+    <div id="logs"></div>
+
+    <script>
+        let ws = null;
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.insertBefore(logEntry, logsDiv.firstChild);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        function connectWebSocket() {
+            const token = document.getElementById('token').value.trim();
+            if (!token) {
+                // Try to get token from localStorage
+                const storedToken = localStorage.getItem('token');
+                if (storedToken) {
+                    document.getElementById('token').value = storedToken;
+                    log(`Using token from localStorage: ${storedToken.substring(0, 20)}...`, 'info');
+                } else {
+                    log('Please enter a token', 'error');
+                    return;
+                }
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('Already connected', 'error');
+                return;
+            }
+
+            const wsUrl = `ws://localhost:8000/api/v1/chats/ws?token=${token || localStorage.getItem('token')}`;
+            log(`Connecting to: ${wsUrl.replace(/token=.*/, 'token=***')}`, 'info');
+
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    log('✅ WebSocket connected successfully!', 'success');
+                };
+
+                ws.onmessage = (event) => {
+                    log(`📨 Received: ${event.data}`, 'success');
+                };
+
+                ws.onerror = (error) => {
+                    log(`❌ WebSocket error: ${JSON.stringify(error)}`, 'error');
+                    console.error('WebSocket error:', error);
+                };
+
+                ws.onclose = (event) => {
+                    log(`🔌 WebSocket closed - Code: ${event.code}, Reason: ${event.reason || 'none'}, Clean: ${event.wasClean}`, 'error');
+                    console.log('Close event:', event);
+                };
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+                console.error('Exception:', error);
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                log('Disconnected', 'info');
+            }
+        }
+
+        function sendPing() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('Not connected', 'error');
+                return;
+            }
+            const message = JSON.stringify({ type: 'ping' });
+            ws.send(message);
+            log(`📤 Sent: ${message}`, 'info');
+        }
+
+        // Try to auto-fill token on load
+        window.onload = () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                document.getElementById('token').value = token;
+                log(`Found token in localStorage: ${token.substring(0, 20)}...`, 'info');
+            } else {
+                log('ℹ️ No token found. Please login at http://localhost:3000 first, then paste the token here.', 'info');
+                log('ℹ️ To get token: Open browser console on frontend, type: localStorage.getItem("token")', 'info');
+            }
+        };
+    </script>
+</body>
+</html>

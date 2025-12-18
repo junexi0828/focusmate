@@ -304,9 +304,17 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMessages]);
 
-  const filteredRooms = rooms.filter((room) =>
-    room.room_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredRooms = rooms.filter((room) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    // For direct chats, search by partner username
+    if (room.room_type === "direct") {
+      return room.partner_username?.toLowerCase().includes(query) ||
+             room.partner_email?.toLowerCase().includes(query) || false;
+    }
+    // For team/matching chats, search by room name
+    return room.room_name?.toLowerCase().includes(query) || false;
+  });
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,7 +381,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
           {/* Header */}
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] bg-clip-text text-transparent">
                 Messages
               </h1>
               <Button
@@ -406,7 +414,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                 onClick={() => setActiveTab(tab)}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 transition-colors ${
                   activeTab === tab
-                    ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+                    ? "border-b-2 border-[#7ED6E8] text-[#7ED6E8] dark:text-[#7ED6E8]"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
@@ -460,7 +468,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-medium">
+                        <AvatarFallback className="bg-gradient-to-br from-[#7ED6E8] to-[#F9A8D4] text-white font-medium">
                           {selectedRoom.room_type === "direct" && selectedRoom.partner_username
                             ? selectedRoom.partner_username.slice(0, 2).toUpperCase()
                             : selectedRoom.room_name?.slice(0, 2).toUpperCase() || "CH"}
@@ -635,7 +643,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                       !isConnected ||
                       isUploading
                     }
-                    className="bg-gradient-to-r from-blue-600 to-purple-600"
+                    className="bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4]"
                   >
                     {isUploading ? (
                       "업로드 중..."
@@ -703,7 +711,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                       className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
                     >
                       <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                        <AvatarFallback className="bg-gradient-to-br from-[#7ED6E8] to-[#F9A8D4] text-white">
                           {friend.friend_username.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -840,14 +848,14 @@ function ChatRoomItem({ room, isSelected, currentUserId, onClick }: ChatRoomItem
       onClick={onClick}
       className={`w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-l-2 ${
         isSelected
-          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+          ? "border-[#7ED6E8] bg-[#E0F7FD] dark:bg-[#7ED6E8]/20"
           : "border-transparent"
       }`}
     >
       <div className="flex items-start gap-3">
         <div className="relative">
           <Avatar className="w-12 h-12 flex-shrink-0">
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+            <AvatarFallback className="bg-gradient-to-br from-[#7ED6E8] to-[#F9A8D4] text-white">
               {getInitials(getRoomDisplayName())}
             </AvatarFallback>
           </Avatar>
@@ -871,7 +879,7 @@ function ChatRoomItem({ room, isSelected, currentUserId, onClick }: ChatRoomItem
               )}
             </div>
             {room.unread_count > 0 && (
-              <Badge className="ml-2 bg-blue-500 text-white min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0">
+              <Badge className="ml-2 bg-[#7ED6E8] text-white min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0">
                 {room.unread_count > 99 ? "99+" : room.unread_count}
               </Badge>
             )}
@@ -886,7 +894,7 @@ function ChatRoomItem({ room, isSelected, currentUserId, onClick }: ChatRoomItem
               </p>
             )}
             {room.unread_count === 0 && room.last_message_at && (
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <div className="w-2 h-2 rounded-full bg-[#7ED6E8]" />
             )}
           </div>
         </div>

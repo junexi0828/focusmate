@@ -34,15 +34,34 @@ export function SnakeGame({ onGameOver }: SnakeGameProps) {
     let gameScore = 0;
     let gameSpeed = 100;
 
-    // Handle keyboard
+    // Handle keyboard - document에 등록하여 모달 내부에서도 작동하도록
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' && direction.y === 0) nextDirection = { x: 0, y: -1 };
-      if (e.key === 'ArrowDown' && direction.y === 0) nextDirection = { x: 0, y: 1 };
-      if (e.key === 'ArrowLeft' && direction.x === 0) nextDirection = { x: -1, y: 0 };
-      if (e.key === 'ArrowRight' && direction.x === 0) nextDirection = { x: 1, y: 0 };
+      if (!isPlaying) return;
+
+      // 방향키 또는 WASD 지원
+      if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') && direction.y === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        nextDirection = { x: 0, y: -1 };
+      }
+      if ((e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') && direction.y === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        nextDirection = { x: 0, y: 1 };
+      }
+      if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && direction.x === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        nextDirection = { x: -1, y: 0 };
+      }
+      if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && direction.x === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        nextDirection = { x: 1, y: 0 };
+      }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
+    document.addEventListener('keydown', handleKeyPress, true);
 
     // Game loop
     const gameLoop = setInterval(() => {
@@ -94,8 +113,9 @@ export function SnakeGame({ onGameOver }: SnakeGameProps) {
         snake.pop();
       }
 
-      // Clear canvas
-      ctx.fillStyle = '#111827';
+      // Clear canvas - use theme-aware color
+      const bgColor = getComputedStyle(canvas).backgroundColor || '#111827';
+      ctx.fillStyle = bgColor === "rgba(0, 0, 0, 0)" ? '#111827' : bgColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Draw grid
@@ -142,7 +162,7 @@ export function SnakeGame({ onGameOver }: SnakeGameProps) {
     }, gameSpeed);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyPress);
+      document.removeEventListener('keydown', handleKeyPress, true);
       clearInterval(gameLoop);
     };
   }, [isPlaying, onGameOver]);
@@ -155,12 +175,13 @@ export function SnakeGame({ onGameOver }: SnakeGameProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4 w-full">
       <canvas
         ref={canvasRef}
         width={600}
         height={600}
-        className="border-2 border-gray-700 rounded-lg bg-gray-900"
+        className="border-2 border-border rounded-lg bg-background max-w-full h-auto"
+        style={{ maxWidth: '100%', height: 'auto' }}
       />
 
       {!isPlaying && !gameOver && (
@@ -193,7 +214,7 @@ export function SnakeGame({ onGameOver }: SnakeGameProps) {
         </motion.div>
       )}
 
-      <p className="text-sm text-gray-400">Use arrow keys to control the snake</p>
+      <p className="text-sm text-gray-400">Use arrow keys or WASD to control the snake</p>
     </div>
   );
 }

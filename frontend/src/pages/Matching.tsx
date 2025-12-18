@@ -99,15 +99,15 @@ export default function Matching() {
 
   return (
     <PageTransition>
-      <div className="min-h-full bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 py-8">
+      <div className="min-h-full bg-gradient-to-br from-[#FCE7F5] via-[#E0F7FD] to-[#E0F7FD] dark:from-slate-900 dark:to-slate-800 py-8">
         <div className="container mx-auto px-4 max-w-6xl">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#F9A8D4] to-[#7ED6E8] flex items-center justify-center">
                 <Heart className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-[#F9A8D4] to-[#7ED6E8] bg-clip-text text-transparent">
                 매칭 시스템
               </h1>
             </div>
@@ -148,7 +148,7 @@ export default function Matching() {
                 </div>
                 {!verification && (
                   <Button
-                    className="bg-gradient-to-r from-blue-600 to-purple-600"
+                    className="bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4]"
                     onClick={() => {
                       // Navigate to verification page
                       window.location.href = "/verification";
@@ -205,8 +205,8 @@ export default function Matching() {
               </Card>
               <Card className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-pink-100 dark:bg-pink-900 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                  <div className="w-10 h-10 rounded-lg bg-[#FCE7F5] dark:bg-[#F9A8D4]/20 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-[#F9A8D4] dark:text-[#F9A8D4]" />
                   </div>
                   <div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -247,7 +247,7 @@ export default function Matching() {
 
                 {myPool ? (
                   <div className="space-y-4">
-                    <div className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
+                    <div className="p-4 bg-gradient-to-br from-[#E0F7FD] to-[#FCE7F5] dark:from-[#7ED6E8]/20 dark:to-[#F9A8D4]/20 rounded-lg">
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <p className="font-medium text-lg">
@@ -308,7 +308,7 @@ export default function Matching() {
                       아직 매칭 풀이 없습니다
                     </p>
                     <Button
-                      className="bg-gradient-to-r from-blue-600 to-purple-600"
+                      className="bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4]"
                       onClick={() => setShowPoolForm(true)}
                     >
                       풀 생성하기

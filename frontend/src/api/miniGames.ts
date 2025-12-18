@@ -21,18 +21,27 @@ export interface MiniGameScoreResponse {
 }
 
 export interface LeaderboardEntry {
-  user_id: string;
-  username: string;
-  score: number;
-  rank: number;
-  completed_at: string;
+  team_id: string;
+  team_name: string;
+  best_score: number;
+  games_played: number;
 }
 
 // Submit mini game score
 export const submitMiniGameScore = async (
-  scoreData: MiniGameScore
+  teamId: string,
+  gameType: string,
+  score: number,
+  completionTime: number
 ): Promise<MiniGameScoreResponse> => {
-  const response = await api.post("/api/v1/ranking/mini-games/start", scoreData);
+  const response = await api.post("/api/v1/ranking/mini-games/submit", null, {
+    params: {
+      team_id: teamId,
+      game_type: gameType,
+      score: score,
+      completion_time: completionTime,
+    },
+  });
   return response.data;
 };
 
@@ -44,5 +53,6 @@ export const getMiniGameLeaderboard = async (
   const response = await api.get(`/api/v1/ranking/mini-games/leaderboard/${gameType}`, {
     params: { limit },
   });
-  return response.data.leaderboard || [];
+  // Backend returns array directly, not wrapped in leaderboard property
+  return Array.isArray(response.data) ? response.data : [];
 };

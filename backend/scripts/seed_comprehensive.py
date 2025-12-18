@@ -55,6 +55,7 @@ from app.infrastructure.repositories.room_reservation_repository import (
     RoomReservationRepository,
 )
 from app.shared.utils.uuid import generate_uuid
+from sqlalchemy import select
 
 
 async def seed_comprehensive_data():
@@ -453,19 +454,23 @@ async def seed_comprehensive_data():
             # 11. Create chat rooms
             print("\n💬 Creating chat rooms...")
             chat_rooms = []
+
+            # Create team/public chat rooms
             room_names = [
-                ("General", "public"),
-                ("Study Tips", "public"),
-                ("Q&A", "public"),
-                ("Team Chat", "private"),
+                ("General", "team"),
+                ("Study Tips", "team"),
+                ("Q&A", "team"),
+                ("Team Chat", "team"),
             ]
 
             for name, room_type in room_names:
                 room = ChatRoom(
+                    room_id=str(generate_uuid()),
                     room_type=room_type,
                     room_name=name,
                     description=f"{name} 채팅방",
                     is_active=True,
+                    room_metadata={"type": room_type},
                 )
                 db.add(room)
                 await db.commit()
@@ -473,11 +478,58 @@ async def seed_comprehensive_data():
                 chat_rooms.append(room)
                 print(f"   ✅ Created chat room: {name}")
 
-            # 11.5. Add chat members
-            print("\n👥 Adding chat members...")
+            # 11.2. Create direct chat rooms between friends
+            print("\n💬 Creating direct chat rooms...")
+            direct_rooms_created = 0
+            regular_users = [u for u in users if not u.is_admin]
+
+            # Create direct chats between pairs of regular users
+            for i in range(min(3, len(regular_users) - 1)):
+                user1 = regular_users[i]
+                user2 = regular_users[i + 1]
+
+                # Create direct chat room
+                direct_room = ChatRoom(
+                    room_id=str(generate_uuid()),
+                    room_type="direct",
+                    room_name=None,  # Direct chats don't have names
+                    description=None,
+                    is_active=True,
+                    room_metadata={
+                        "type": "direct",
+                        "user_ids": sorted([user1.id, user2.id]),
+                    },
+                )
+                db.add(direct_room)
+                await db.commit()
+                await db.refresh(direct_room)
+                chat_rooms.append(direct_room)
+                direct_rooms_created += 1
+
+                # Add both users as members
+                for user in [user1, user2]:
+                    member = ChatMember(
+                        room_id=direct_room.room_id,
+                        user_id=user.id,
+                        role="member",
+                        is_active=True,
+                        is_muted=False,
+                        unread_count=0,
+                    )
+                    db.add(member)
+                    await db.commit()
+
+                print(
+                    f"   ✅ Created direct chat between {user1.username} and {user2.username}"
+                )
+
+            print(f"   ✅ Created {direct_rooms_created} direct chat rooms")
+
+            # 11.5. Add chat members to team rooms
+            print("\n👥 Adding chat members to team rooms...")
             members_created = 0
 
-            for i, user in enumerate(users[:5]):  # First 5 users join first chat room
+            for i, user in enumerate(users[:5]):  # First 5 users join first team room
                 member = ChatMember(
                     room_id=chat_rooms[0].room_id,
                     user_id=user.id,
@@ -489,21 +541,37 @@ async def seed_comprehensive_data():
                 db.add(member)
                 await db.commit()
                 members_created += 1
-            print(f"   ✅ Added {members_created} chat members")
+            print(f"   ✅ Added {members_created} chat members to team rooms")
 
             # 12. Create chat messages
             print("\n💬 Creating chat messages...")
-            for room in chat_rooms[:2]:  # First 2 rooms
-                for i in range(random.randint(5, 10)):
+            for room in chat_rooms[:4]:  # First 4 rooms (including direct chats)
+                # Get room members to determine sender
+                result = await db.execute(
+                    select(ChatMember).where(ChatMember.room_id == room.room_id)
+                )
+                room_members = [m for m in result.scalars().all() if m.is_active]
+
+                if not room_members:
+                    continue
+
+                for i in range(random.randint(3, 8)):
+                    # Pick a random member from this room
+                    sender = random.choice(room_members)
                     message = ChatMessage(
+                        message_id=str(generate_uuid()),
                         room_id=room.room_id,
-                        sender_id=users[random.randint(0, len(users) - 1)].id,
+                        sender_id=sender.user_id,
                         message_type="text",
                         content=f"메시지 {i+1}: 안녕하세요!",
+                        created_at=datetime.now(timezone.utc)
+                        - timedelta(hours=random.randint(1, 48)),
                     )
                     db.add(message)
                     await db.commit()
-                print(f"   ✅ Created messages for room: {room.room_name}")
+
+                room_display = room.room_name or f"Direct Chat ({room.room_id[:8]})"
+                print(f"   ✅ Created messages for room: {room_display}")
 
             # 13. Create achievements
             print("\n🏅 Creating achievements...")

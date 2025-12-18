@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { cn } from "../utils";
+import logoFull from "../assets/logo-full.png";
 
 export function Sidebar() {
   const navigate = useNavigate();
@@ -66,23 +67,19 @@ export function Sidebar() {
       )}
     >
       <div className="p-6 flex items-center gap-2 border-b border-border/50 relative">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground flex-shrink-0">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-5 h-5"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6v6l4 2" />
-          </svg>
-        </div>
         {!isCollapsed && (
-          <span className="font-bold text-lg tracking-tight">FocusMate</span>
+          <img
+            src={logoFull}
+            alt="FocusMate"
+            className="h-15"
+          />
+        )}
+        {isCollapsed && (
+          <img
+            src={logoFull}
+            alt="FocusMate"
+            className="h-15 w-15 object-contain"
+          />
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}

@@ -1,12 +1,15 @@
 /**
  * Mini-Games Page - Arcade games for ranking competition
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { DinoJump } from '../components/games/DinoJump';
 import { DotCollector } from '../components/games/DotCollector';
 import { SnakeGame } from '../components/games/SnakeGame';
 import { PageTransition } from '../components/PageTransition';
+import { rankingService } from '../features/ranking/services/rankingService';
+import { toast } from 'sonner';
 
 type GameType = 'dino_jump' | 'dot_collector' | 'snake' | null;
 
@@ -38,25 +41,66 @@ export default function MiniGames() {
   const [selectedGame, setSelectedGame] = useState<GameType>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
+  // Get user's teams
+  const { data: teams = [] } = useQuery({
+    queryKey: ['my-teams'],
+    queryFn: async () => {
+      const response = await rankingService.getMyTeams();
+      if (response.status === 'error') {
+        throw new Error(response.error?.message || 'Failed to load teams');
+      }
+      return response.data || [];
+    },
+  });
+
+  // Get first team with mini_game_enabled
+  const activeTeam = teams.find((team) => team.mini_game_enabled);
+
+  // Load leaderboard when game is selected
+  useEffect(() => {
+    if (selectedGame) {
+      loadLeaderboard();
+    }
+  }, [selectedGame]);
+
+  const loadLeaderboard = async () => {
+    if (!selectedGame) return;
+    try {
+      const { getMiniGameLeaderboard } = await import('../api/miniGames');
+      const leaderboardData = await getMiniGameLeaderboard(selectedGame);
+      setLeaderboard(leaderboardData);
+    } catch (error) {
+      console.error('Failed to load leaderboard:', error);
+    }
+  };
+
   const handleGameOver = async (score: number, time: number) => {
     console.log('Game Over:', { score, time, game: selectedGame });
+
+    if (!activeTeam) {
+      toast.error('미니게임이 활성화된 팀에 가입해주세요');
+      return;
+    }
 
     // Submit score to backend
     try {
       const { submitMiniGameScore, getMiniGameLeaderboard } = await import('../api/miniGames');
       if (selectedGame) {
-        await submitMiniGameScore({
-          game_type: selectedGame,
+        await submitMiniGameScore(
+          activeTeam.team_id,
+          selectedGame,
           score,
-          completed_at: new Date().toISOString(),
-        });
+          time
+        );
+        toast.success('점수가 제출되었습니다!');
 
         // Refresh leaderboard after submission
         const leaderboardData = await getMiniGameLeaderboard(selectedGame);
         setLeaderboard(leaderboardData);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to submit score or refresh leaderboard:', error);
+      toast.error(error?.response?.data?.detail || '점수 제출에 실패했습니다');
     }
   };
 
@@ -115,6 +159,37 @@ export default function MiniGames() {
     );
   }
 
+  if (!activeTeam) {
+    return (
+      <PageTransition>
+        <div className="min-h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center"
+            >
+              <h1 className="text-5xl font-bold text-white mb-4">
+                🎮 Mini-Games
+              </h1>
+              <p className="text-xl text-gray-300 mb-8">
+                미니게임을 플레이하려면 미니게임이 활성화된 팀에 가입해야 합니다.
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => (window.location.href = '/ranking')}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold"
+              >
+                랭킹 페이지로 이동
+              </motion.button>
+            </motion.div>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
   return (
     <PageTransition>
       <div className="min-h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
@@ -129,6 +204,9 @@ export default function MiniGames() {
             </h1>
             <p className="text-xl text-gray-300">
               Play arcade games and compete with other teams!
+            </p>
+            <p className="text-sm text-gray-400 mt-2">
+              현재 팀: {activeTeam.team_name}
             </p>
           </motion.div>
 

@@ -3,7 +3,7 @@ import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
-import logoIcon from "../assets/logo.png";
+import logoFull from "../assets/logo-full.png";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -36,25 +36,15 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         */}
         <div className="text-center mb-12">
           {/*
-            로고 및 제목 영역
-            - gap-3: 로고와 제목 사이 간격 (변경: gap-2, gap-4 등)
-            - mb-4: 하단 여백 (변경: mb-2, mb-6 등)
+            전체 로고 이미지 (새 + FocusMate 텍스트)
+            - h-16: 로고 높이 (변경: h-12, h-20 등)
           */}
-          <div className="flex items-center justify-center gap-3 mb-4">
-            {/*
-              로고 이미지
-              - w-12 h-12: 로고 크기 (변경: w-10 h-10, w-14 h-14, w-16 h-16 등)
-            */}
+          <div className="flex items-center justify-center mb-4">
             <img
-              src={logoIcon}
-              alt="FocusMate Logo"
-              className="w-12 h-12"
+              src={logoFull}
+              alt="FocusMate"
+              className="h-30"
             />
-            {/*
-              메인 제목 크기
-              - text-4xl: 제목 크기 (변경: text-3xl, text-5xl, text-6xl 등)
-            */}
-            <h1 className="text-4xl">FocusMate</h1>
           </div>
           {/*
             설명 텍스트 설정

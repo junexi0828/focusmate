@@ -280,7 +280,7 @@ export default function VerificationPage() {
                   </Button>
                   <Button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600"
+                    className="flex-1 bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4]"
                     disabled={submitMutation.isPending}
                   >
                     {submitMutation.isPending ? "제출 중..." : "인증 제출"}

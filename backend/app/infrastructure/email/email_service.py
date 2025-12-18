@@ -73,8 +73,8 @@ FocusMate 시스템
 
     async def send_verification_approved_email(
         self,
-        team_name: str,
-        leader_email: str,
+        team_name: str = "",
+        leader_email: str = "",
         admin_note: Optional[str] = None,
     ) -> bool:
         """Send email notification when verification is approved."""
@@ -150,23 +150,44 @@ FocusMate 팀
             True if email was successfully sent, False otherwise.
             Note: Returns False if SMTP is disabled or misconfigured.
         """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         if not self.is_enabled:
-            print(f"[EMAIL DISABLED] 📧 To: {to_email}")
-            print(f"[EMAIL DISABLED] 📝 Subject: {subject}")
-            return False  # Changed: Don't auto-approve if email is disabled
+            logger.warning(f"[EMAIL DISABLED] 📧 To: {to_email}, Subject: {subject}")
+            return False
 
         if not (self.smtp_user and self.smtp_password):
-            print(f"[EMAIL MISCONFIGURED] 📧 To: {to_email}")
-            print(f"[EMAIL MISCONFIGURED] 📝 Subject: {subject}")
-            print("[EMAIL MISCONFIGURED] ❌ SMTP_USER or SMTP_PASSWORD not set.")
+            logger.error(
+                f"[EMAIL MISCONFIGURED] SMTP_USER or SMTP_PASSWORD not set. To: {to_email}, Subject: {subject}"
+            )
             return False
 
         try:
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
-            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            # Gmail requires From to match authenticated user or use authenticated user's email
+            # Use SMTP_USER as From if it's a Gmail account, otherwise use configured from_email
+            if "@gmail.com" in self.smtp_user.lower():
+                from_email = (
+                    self.smtp_user
+                )  # Gmail requires From to match authenticated user
+            else:
+                from_email = self.from_email
+            msg["From"] = f"{self.from_name} <{from_email}>"
             msg["To"] = to_email
             msg.attach(MIMEText(body, "plain", "utf-8"))
+
+            logger.info(
+                f"[EMAIL] Attempting to send email to {to_email} via {self.smtp_host}:{self.smtp_port}"
+            )
+            logger.info(
+                f"[EMAIL] From: {from_email}, To: {to_email}, Subject: {subject}"
+            )
+            logger.debug(
+                f"[EMAIL] SMTP Config: host={self.smtp_host}, port={self.smtp_port}, user={self.smtp_user[:10]}..., tls={self.use_tls}"
+            )
 
             await aiosmtplib.send(
                 msg,
@@ -175,11 +196,24 @@ FocusMate 팀
                 username=self.smtp_user,
                 password=self.smtp_password,
                 start_tls=self.use_tls,
+                timeout=30.0,  # Increased timeout to 30 seconds
             )
-            print(f"[EMAIL] ✅ Sent to {to_email}: {subject}")
+            logger.info(f"[EMAIL] ✅ Successfully sent to {to_email}: {subject}")
             return True
+        except aiosmtplib.SMTPException as e:
+            logger.error(
+                f"[EMAIL ERROR] SMTP Exception sending to {to_email}: {e}",
+                exc_info=True,
+            )
+            return False
+        except asyncio.TimeoutError as e:
+            logger.error(f"[EMAIL ERROR] Timeout sending to {to_email}: {e}")
+            return False
         except Exception as e:
-            print(f"[EMAIL ERROR] ❌ Failed to send to {to_email}: {e}")
+            logger.error(
+                f"[EMAIL ERROR] ❌ Failed to send to {to_email}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             return False
 
 

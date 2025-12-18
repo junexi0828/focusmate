@@ -1,4 +1,3 @@
-import React from "react";
 import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { Toaster } from "sonner";
@@ -6,6 +5,7 @@ import { Sidebar } from "../components/Sidebar";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { CommandPalette } from "../components/CommandPalette";
 import { NotificationBell } from "../components/notifications/NotificationBell";
+import { Footer } from "../components/footer";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -47,6 +47,9 @@ function RootComponent() {
           >
             <Outlet />
           </div>
+
+          {/* Footer - Hidden on Login */}
+          {!isLoginPage && <Footer />}
         </main>
 
         {/* Command Palette (⌘K) */}

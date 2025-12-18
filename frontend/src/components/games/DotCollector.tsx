@@ -55,28 +55,65 @@ export function DotCollector({ onGameOver }: DotCollectorProps) {
       });
     }
 
-    // Handle keyboard
+    // Handle keyboard - document에 등록하여 모달 내부에서도 작동하도록
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
-      if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
-      if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
-      if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+      if (!isPlaying) return;
+
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        e.preventDefault();
+        e.stopPropagation();
+        keys.up = true;
+      }
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        e.stopPropagation();
+        keys.down = true;
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        e.stopPropagation();
+        keys.left = true;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        e.stopPropagation();
+        keys.right = true;
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
-      if (e.key === 'ArrowDown' || e.key === 's') keys.down = false;
-      if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
-      if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+      if (!isPlaying) return;
+
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        e.preventDefault();
+        e.stopPropagation();
+        keys.up = false;
+      }
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        e.stopPropagation();
+        keys.down = false;
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        e.stopPropagation();
+        keys.left = false;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        e.stopPropagation();
+        keys.right = false;
+      }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('keyup', handleKeyUp, true);
 
     // Game loop
     const gameLoop = () => {
-      // Clear canvas
-      ctx.fillStyle = '#0f172a';
+      // Clear canvas - use theme-aware color
+      const bgColor = getComputedStyle(canvas).backgroundColor || '#0f172a';
+      ctx.fillStyle = bgColor === "rgba(0, 0, 0, 0)" ? '#0f172a' : bgColor;
       ctx.fillRect(0, 0, width, height);
 
       // Update player
@@ -167,8 +204,8 @@ export function DotCollector({ onGameOver }: DotCollectorProps) {
     gameLoop();
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keyup', handleKeyUp, true);
     };
   }, [isPlaying, onGameOver]);
 
@@ -180,12 +217,13 @@ export function DotCollector({ onGameOver }: DotCollectorProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4 w-full">
       <canvas
         ref={canvasRef}
         width={800}
         height={600}
-        className="border-2 border-gray-700 rounded-lg bg-gray-900"
+        className="border-2 border-border rounded-lg bg-background max-w-full h-auto"
+        style={{ maxWidth: '100%', height: 'auto' }}
       />
 
       {!isPlaying && !gameOver && (
