@@ -1,7 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Users, Heart, Search, Plus, Send, Mail } from "lucide-react";
-import { chatService, type ChatRoom, type MessageCreate, type Message } from "../features/chat/services/chatService";
+import {
+  MessageSquare,
+  Users,
+  Heart,
+  Search,
+  Plus,
+  Send,
+  Mail,
+} from "lucide-react";
+import {
+  chatService,
+  type ChatRoom,
+  type MessageCreate,
+  type Message,
+} from "../features/chat/services/chatService";
 import { friendService } from "../features/friends/services/friendService";
 import { PageTransition } from "../components/PageTransition";
 import { Card } from "../components/ui/card";
@@ -9,7 +22,13 @@ import { Button } from "../components/ui/button-enhanced";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { authService } from "../features/auth/services/authService";
@@ -21,7 +40,12 @@ import { Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
 
 interface MessagesPageProps {
   initialRoomId?: string;
@@ -47,7 +71,14 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // WebSocket connection for real-time messages
-  const { isConnected, messages: wsMessages, typingUsers, joinRoom, leaveRoom, sendTyping } = useChatWebSocket();
+  const {
+    isConnected,
+    messages: wsMessages,
+    typingUsers,
+    joinRoom,
+    leaveRoom,
+    sendTyping,
+  } = useChatWebSocket();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Fetch rooms
@@ -57,7 +88,9 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
       console.log("[Messages] Fetching rooms for tab:", activeTab);
       const response = await chatService.getRooms(activeTab);
       console.log("[Messages] Rooms API response:", response);
-      return response.status === "success" ? response.data : { rooms: [], total: 0 };
+      return response.status === "success"
+        ? response.data
+        : { rooms: [], total: 0 };
     },
     refetchInterval: 30000, // Refetch every 30 seconds to update unread counts
   });
@@ -67,7 +100,9 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     queryKey: ["friends"],
     queryFn: async () => {
       const response = await friendService.getFriends();
-      return response.status === "success" ? response.data : { friends: [], total: 0 };
+      return response.status === "success"
+        ? response.data
+        : { friends: [], total: 0 };
     },
     enabled: isNewChatDialogOpen, // Only fetch when dialog is open
   });
@@ -140,32 +175,45 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
 
   // Auto-select room when initialRoomId is provided
   useEffect(() => {
-    console.log("[Messages] Auto-select effect:", { initialRoomId, roomsCount: roomsData?.rooms?.length, selectedRoom: selectedRoom?.room_id, activeTab });
+    console.log("[Messages] Auto-select effect:", {
+      initialRoomId,
+      roomsCount: roomsData?.rooms?.length,
+      selectedRoom: selectedRoom?.room_id,
+      activeTab,
+    });
 
     if (initialRoomId && roomsData?.rooms) {
       // First, try to find the room in current tab
-      let targetRoom = roomsData.rooms.find(r => r.room_id === initialRoomId);
+      let targetRoom = roomsData.rooms.find((r) => r.room_id === initialRoomId);
 
       // If not found in current tab, it might be in a different tab
       // Fetch the specific room to determine its type
       if (!targetRoom && !selectedRoom) {
-        chatService.getRoom(initialRoomId).then(response => {
-          if (response.status === "success" && response.data) {
-            const room = response.data;
-            console.log("[Messages] Fetched room:", room);
+        chatService
+          .getRoom(initialRoomId)
+          .then((response) => {
+            if (response.status === "success" && response.data) {
+              const room = response.data;
+              console.log("[Messages] Fetched room:", room);
 
-            // Switch to the correct tab based on room type
-            if (room.room_type !== activeTab) {
-              console.log("[Messages] Switching tab from", activeTab, "to", room.room_type);
-              setActiveTab(room.room_type as "direct" | "team" | "matching");
+              // Switch to the correct tab based on room type
+              if (room.room_type !== activeTab) {
+                console.log(
+                  "[Messages] Switching tab from",
+                  activeTab,
+                  "to",
+                  room.room_type
+                );
+                setActiveTab(room.room_type as "direct" | "team" | "matching");
+              }
+
+              // Select the room
+              setSelectedRoom(room);
             }
-
-            // Select the room
-            setSelectedRoom(room);
-          }
-        }).catch(error => {
-          console.error("[Messages] Failed to fetch room:", error);
-        });
+          })
+          .catch((error) => {
+            console.error("[Messages] Failed to fetch room:", error);
+          });
       } else if (targetRoom && !selectedRoom) {
         console.log("[Messages] Auto-selecting room:", targetRoom.room_id);
         setSelectedRoom(targetRoom);
@@ -179,7 +227,9 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     queryFn: async () => {
       if (!selectedRoom) return null;
       const response = await chatService.getMessages(selectedRoom.room_id);
-      return response.status === "success" ? response.data : { messages: [], total: 0, has_more: false };
+      return response.status === "success"
+        ? response.data
+        : { messages: [], total: 0, has_more: false };
     },
     enabled: !!selectedRoom,
   });
@@ -231,8 +281,13 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
 
   // Update message mutation
   const updateMessageMutation = useMutation({
-    mutationFn: ({ messageId, content }: { messageId: string; content: string }) =>
-      chatService.updateMessage(selectedRoom!.room_id, messageId, content),
+    mutationFn: ({
+      messageId,
+      content,
+    }: {
+      messageId: string;
+      content: string;
+    }) => chatService.updateMessage(selectedRoom!.room_id, messageId, content),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["chat-messages", selectedRoom?.room_id],
@@ -260,9 +315,15 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
   });
 
   const rooms = roomsData?.rooms || [];
-  console.log("[Messages] Rooms data:", { total: roomsData?.total, count: rooms.length, rooms });
+  console.log("[Messages] Rooms data:", {
+    total: roomsData?.total,
+    count: rooms.length,
+    rooms,
+  });
   const apiMessages = messagesData?.messages || [];
-  const wsRoomMessages = selectedRoom ? wsMessages.get(selectedRoom.room_id) || [] : [];
+  const wsRoomMessages = selectedRoom
+    ? wsMessages.get(selectedRoom.room_id) || []
+    : [];
 
   // Merge API messages and WebSocket messages, removing duplicates
   const allMessages = React.useMemo(() => {
@@ -280,7 +341,8 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
 
     // Sort by created_at
     return Array.from(messageMap.values()).sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
   }, [apiMessages, wsRoomMessages]);
 
@@ -309,8 +371,11 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     const query = searchQuery.toLowerCase();
     // For direct chats, search by partner username
     if (room.room_type === "direct") {
-      return room.partner_username?.toLowerCase().includes(query) ||
-             room.partner_email?.toLowerCase().includes(query) || false;
+      return (
+        room.partner_username?.toLowerCase().includes(query) ||
+        room.partner_email?.toLowerCase().includes(query) ||
+        false
+      );
     }
     // For team/matching chats, search by room name
     return room.room_name?.toLowerCase().includes(query) || false;
@@ -318,10 +383,13 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!messageInput.trim() && selectedFiles.length === 0) || !selectedRoom) return;
+    if ((!messageInput.trim() && selectedFiles.length === 0) || !selectedRoom)
+      return;
 
     sendMessageMutation.mutate({
-      content: messageInput.trim() || (selectedFiles.length > 0 ? "파일을 공유했습니다" : ""),
+      content:
+        messageInput.trim() ||
+        (selectedFiles.length > 0 ? "파일을 공유했습니다" : ""),
       message_type: "text",
     });
   };
@@ -335,7 +403,9 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
         const isImage = file.type.startsWith("image/");
         const maxSize = isImage ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
         if (file.size > maxSize) {
-          toast.error(`${file.name}의 크기가 너무 큽니다 (최대 ${isImage ? "10MB" : "50MB"})`);
+          toast.error(
+            `${file.name}의 크기가 너무 큽니다 (최대 ${isImage ? "10MB" : "50MB"})`
+          );
           continue;
         }
         validFiles.push(file);
@@ -377,7 +447,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     <PageTransition>
       <div className="h-[calc(100vh-4rem)] flex bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
         {/* Sidebar */}
-        <div className="w-80 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col">
+        <div className="w-full sm:w-80 lg:w-96 xl:w-[420px] border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col flex-shrink-0">
           {/* Header */}
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-4">
@@ -452,14 +522,15 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
           <div className="p-3 border-t border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 dark:text-slate-400">
-                총 {rooms.reduce((sum, r) => sum + r.unread_count, 0)}개의 읽지 않은 메시지
+                총 {rooms.reduce((sum, r) => sum + r.unread_count, 0)}개의 읽지
+                않은 메시지
               </span>
             </div>
           </div>
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {selectedRoom ? (
             <>
               {/* Chat Header */}
@@ -469,19 +540,26 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                     <div className="relative">
                       <Avatar className="w-10 h-10">
                         <AvatarFallback className="bg-gradient-to-br from-[#7ED6E8] to-[#F9A8D4] text-white font-medium">
-                          {selectedRoom.room_type === "direct" && selectedRoom.partner_username
-                            ? selectedRoom.partner_username.slice(0, 2).toUpperCase()
-                            : selectedRoom.room_name?.slice(0, 2).toUpperCase() || "CH"}
+                          {selectedRoom.room_type === "direct" &&
+                          selectedRoom.partner_username
+                            ? selectedRoom.partner_username
+                                .slice(0, 2)
+                                .toUpperCase()
+                            : selectedRoom.room_name
+                                ?.slice(0, 2)
+                                .toUpperCase() || "CH"}
                         </AvatarFallback>
                       </Avatar>
                       {/* Online status indicator for direct chats */}
-                      {selectedRoom.room_type === "direct" && selectedRoom.partner_is_online && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
-                      )}
+                      {selectedRoom.room_type === "direct" &&
+                        selectedRoom.partner_is_online && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
+                        )}
                     </div>
                     <div>
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                        {selectedRoom.room_type === "direct" && selectedRoom.partner_username
+                        {selectedRoom.room_type === "direct" &&
+                        selectedRoom.partner_username
                           ? selectedRoom.partner_username
                           : selectedRoom.room_name || "Unnamed Room"}
                       </h2>
@@ -495,12 +573,13 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                               : "💬 Direct Message"}
                         </p>
                         {/* Online status text for direct chats */}
-                        {selectedRoom.room_type === "direct" && selectedRoom.partner_is_online && (
-                          <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                            활동중
-                          </span>
-                        )}
+                        {selectedRoom.room_type === "direct" &&
+                          selectedRoom.partner_is_online && (
+                            <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                              활동중
+                            </span>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -526,9 +605,14 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                     <>
                       {allMessages.map((message, index) => {
                         const isOwn = message.sender_id === user?.id;
-                        const prevMessage = index > 0 ? allMessages[index - 1] : null;
-                        const showAvatar = !prevMessage || prevMessage.sender_id !== message.sender_id;
-                        const showSenderName = !prevMessage || prevMessage.sender_id !== message.sender_id;
+                        const prevMessage =
+                          index > 0 ? allMessages[index - 1] : null;
+                        const showAvatar =
+                          !prevMessage ||
+                          prevMessage.sender_id !== message.sender_id;
+                        const showSenderName =
+                          !prevMessage ||
+                          prevMessage.sender_id !== message.sender_id;
 
                         return (
                           <MessageItem
@@ -544,21 +628,33 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                         );
                       })}
                       {/* Typing Indicator */}
-                      {selectedRoom && typingUsers.has(selectedRoom.room_id) && (
-                        <div className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground italic">
-                          <div className="flex gap-1">
-                            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      {selectedRoom &&
+                        typingUsers.has(selectedRoom.room_id) && (
+                          <div className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground italic">
+                            <div className="flex gap-1">
+                              <div
+                                className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"
+                                style={{ animationDelay: "0ms" }}
+                              />
+                              <div
+                                className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"
+                                style={{ animationDelay: "150ms" }}
+                              />
+                              <div
+                                className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"
+                                style={{ animationDelay: "300ms" }}
+                              />
+                            </div>
+                            <span>
+                              {Array.from(
+                                typingUsers.get(selectedRoom.room_id) || []
+                              )
+                                .filter((id) => id !== user?.id)
+                                .join(", ") || "누군가"}
+                              가 입력 중...
+                            </span>
                           </div>
-                          <span>
-                            {Array.from(typingUsers.get(selectedRoom.room_id) || [])
-                              .filter((id) => id !== user?.id)
-                              .join(", ") || "누군가"}
-                            가 입력 중...
-                          </span>
-                        </div>
-                      )}
+                        )}
                       <div ref={messagesEndRef} />
                     </>
                   )}
@@ -688,15 +784,17 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "direct" | "team")}>
+          <Tabs
+            value={dialogTab}
+            onValueChange={(v) => setDialogTab(v as "direct" | "team")}
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="direct" className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 1:1 채팅
               </TabsTrigger>
               <TabsTrigger value="team" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                팀 만들기
+                <Users className="w-4 h-4" />팀 만들기
               </TabsTrigger>
             </TabsList>
 
@@ -706,7 +804,9 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                   friendsData.friends.map((friend) => (
                     <button
                       key={friend.friend_id}
-                      onClick={() => createDirectChatMutation.mutate(friend.friend_id)}
+                      onClick={() =>
+                        createDirectChatMutation.mutate(friend.friend_id)
+                      }
                       disabled={createDirectChatMutation.isPending}
                       className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
                     >
@@ -718,9 +818,11 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
                       <div className="flex-1 text-left">
                         <p className="font-medium">{friend.friend_username}</p>
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${friend.friend_is_online ? 'bg-green-500' : 'bg-gray-400'}`} />
+                          <div
+                            className={`w-2 h-2 rounded-full ${friend.friend_is_online ? "bg-green-500" : "bg-gray-400"}`}
+                          />
                           <p className="text-sm text-slate-500">
-                            {friend.friend_is_online ? '온라인' : '오프라인'}
+                            {friend.friend_is_online ? "온라인" : "오프라인"}
                           </p>
                         </div>
                       </div>
@@ -784,10 +886,16 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
 
                 <Button
                   onClick={() => createTeamChatMutation.mutate()}
-                  disabled={!teamName.trim() || !teamEmails.trim() || createTeamChatMutation.isPending}
+                  disabled={
+                    !teamName.trim() ||
+                    !teamEmails.trim() ||
+                    createTeamChatMutation.isPending
+                  }
                   className="w-full"
                 >
-                  {createTeamChatMutation.isPending ? "생성 중..." : "팀 채팅 만들기"}
+                  {createTeamChatMutation.isPending
+                    ? "생성 중..."
+                    : "팀 채팅 만들기"}
                 </Button>
               </div>
             </TabsContent>
@@ -805,7 +913,12 @@ interface ChatRoomItemProps {
   onClick: () => void;
 }
 
-function ChatRoomItem({ room, isSelected, currentUserId, onClick }: ChatRoomItemProps) {
+function ChatRoomItem({
+  room,
+  isSelected,
+  currentUserId,
+  onClick,
+}: ChatRoomItemProps) {
   const getRoomDisplayName = () => {
     // For direct chats, show partner's name
     if (room.room_type === "direct" && room.partner_username) {

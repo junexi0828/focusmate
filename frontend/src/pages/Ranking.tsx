@@ -15,11 +15,21 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Button } from "../components/ui/button-enhanced";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { EmptyState } from "../components/EmptyState";
 import { PageTransition } from "../components/PageTransition";
-import { Team, rankingService, LeaderboardEntry } from "../features/ranking/services/rankingService";
+import {
+  Team,
+  rankingService,
+  LeaderboardEntry,
+} from "../features/ranking/services/rankingService";
 import { GameTrialDialog } from "../features/ranking/components/GameTrialDialog";
 import { GameTrial } from "../features/ranking/components/GameTrial";
 import { Switch } from "../components/ui/switch";
@@ -57,15 +67,22 @@ export function RankingPage({
   const [isTrialMode, setIsTrialMode] = useState(false);
   const [isGameDialogOpen, setIsGameDialogOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
-  const [leaderboardPeriod, setLeaderboardPeriod] = useState<'weekly' | 'monthly' | 'all_time'>('weekly');
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<
+    "weekly" | "monthly" | "all_time"
+  >("weekly");
 
   // Fetch leaderboard data
   const { data: leaderboardData, isLoading: isLeaderboardLoading } = useQuery({
-    queryKey: ['ranking', 'leaderboard', leaderboardPeriod],
+    queryKey: ["ranking", "leaderboard", leaderboardPeriod],
     queryFn: async () => {
-      const response = await rankingService.getLeaderboard(leaderboardPeriod, 50);
-      if (response.status === 'error') {
-        throw new Error(response.error?.message || 'Failed to load leaderboard');
+      const response = await rankingService.getLeaderboard(
+        leaderboardPeriod,
+        50
+      );
+      if (response.status === "error") {
+        throw new Error(
+          response.error?.message || "Failed to load leaderboard"
+        );
       }
       return response.data;
     },
@@ -94,7 +111,13 @@ export function RankingPage({
   };
 
   const getVerificationStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+    const variants: Record<
+      string,
+      {
+        label: string;
+        variant: "default" | "secondary" | "destructive" | "outline";
+      }
+    > = {
       none: { label: "인증 불필요", variant: "outline" },
       pending: { label: "인증 대기", variant: "secondary" },
       verified: { label: "인증 완료", variant: "default" },
@@ -112,7 +135,7 @@ export function RankingPage({
   };
 
   return (
-    <PageTransition className="space-y-6">
+    <PageTransition className="space-y-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -134,17 +157,13 @@ export function RankingPage({
             </Label>
           </div>
           {isTrialMode && (
-            <Button
-              variant="outline"
-              onClick={() => setIsGameDialogOpen(true)}
-            >
+            <Button variant="outline" onClick={() => setIsGameDialogOpen(true)}>
               <Gamepad2 className="w-4 h-4 mr-2" />
               게임 선택
             </Button>
           )}
           <Button variant="primary" onClick={onCreateTeam}>
-            <Plus className="w-4 h-4 mr-2" />
-            팀 만들기
+            <Plus className="w-4 h-4 mr-2" />팀 만들기
           </Button>
         </div>
       </div>
@@ -157,15 +176,16 @@ export function RankingPage({
           description="새로운 팀을 만들거나 초대를 받아 팀에 참여하세요"
           action={
             <Button variant="primary" onClick={onCreateTeam}>
-              <Plus className="w-4 h-4 mr-2" />
-              팀 만들기
+              <Plus className="w-4 h-4 mr-2" />팀 만들기
             </Button>
           }
         />
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {teams.map((team) => {
-            const statusBadge = getVerificationStatusBadge(team.verification_status);
+            const statusBadge = getVerificationStatusBadge(
+              team.verification_status
+            );
             const isLeader = currentUserId === team.leader_id;
 
             return (
@@ -180,10 +200,16 @@ export function RankingPage({
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-xl mb-2">{team.team_name}</CardTitle>
+                        <CardTitle className="text-xl mb-2">
+                          {team.team_name}
+                        </CardTitle>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline">{getTeamTypeLabel(team.team_type)}</Badge>
-                          <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+                          <Badge variant="outline">
+                            {getTeamTypeLabel(team.team_type)}
+                          </Badge>
+                          <Badge variant={statusBadge.variant}>
+                            {statusBadge.label}
+                          </Badge>
                           {team.mini_game_enabled && (
                             <Badge variant="secondary">🎮 미니게임</Badge>
                           )}
@@ -213,8 +239,12 @@ export function RankingPage({
                       <div className="mb-4 p-3 bg-muted rounded-lg">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs text-muted-foreground mb-1">초대 코드</p>
-                            <p className="font-mono text-sm font-semibold">{team.invite_code}</p>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              초대 코드
+                            </p>
+                            <p className="font-mono text-sm font-semibold">
+                              {team.invite_code}
+                            </p>
                           </div>
                           <Button
                             variant="ghost"
@@ -312,7 +342,8 @@ export function RankingPage({
               <div>
                 <p className="font-semibold">체험하기 모드</p>
                 <p className="text-sm text-muted-foreground">
-                  게임을 선택하여 체험해보세요. 체험하기 모드에서는 점수가 저장되지 않습니다.
+                  게임을 선택하여 체험해보세요. 체험하기 모드에서는 점수가
+                  저장되지 않습니다.
                 </p>
               </div>
             </div>
@@ -347,23 +378,27 @@ export function RankingPage({
             </div>
             <div className="flex gap-2">
               <Button
-                variant={leaderboardPeriod === 'weekly' ? 'default' : 'outline'}
+                variant={leaderboardPeriod === "weekly" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setLeaderboardPeriod('weekly')}
+                onClick={() => setLeaderboardPeriod("weekly")}
               >
                 주간
               </Button>
               <Button
-                variant={leaderboardPeriod === 'monthly' ? 'default' : 'outline'}
+                variant={
+                  leaderboardPeriod === "monthly" ? "default" : "outline"
+                }
                 size="sm"
-                onClick={() => setLeaderboardPeriod('monthly')}
+                onClick={() => setLeaderboardPeriod("monthly")}
               >
                 월간
               </Button>
               <Button
-                variant={leaderboardPeriod === 'all_time' ? 'default' : 'outline'}
+                variant={
+                  leaderboardPeriod === "all_time" ? "default" : "outline"
+                }
                 size="sm"
-                onClick={() => setLeaderboardPeriod('all_time')}
+                onClick={() => setLeaderboardPeriod("all_time")}
               >
                 전체
               </Button>
@@ -375,7 +410,8 @@ export function RankingPage({
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : leaderboardData?.leaderboard && leaderboardData.leaderboard.length > 0 ? (
+          ) : leaderboardData?.leaderboard &&
+            leaderboardData.leaderboard.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -385,55 +421,66 @@ export function RankingPage({
                     <TableHead className="w-24 text-center">팀 유형</TableHead>
                     <TableHead className="w-24 text-center">세션</TableHead>
                     <TableHead className="w-32 text-center">포인트</TableHead>
-                    <TableHead className="w-32 text-center">평균 포인트</TableHead>
+                    <TableHead className="w-32 text-center">
+                      평균 포인트
+                    </TableHead>
                     <TableHead className="w-24 text-center">멤버 수</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leaderboardData.leaderboard.map((entry: LeaderboardEntry) => {
-                    const getRankBadge = (rank: number) => {
-                      if (rank === 1) return '🥇';
-                      if (rank === 2) return '🥈';
-                      if (rank === 3) return '🥉';
-                      return rank;
-                    };
-
-                    const getTeamTypeLabel = (type: string) => {
-                      const labels: Record<string, string> = {
-                        general: '일반',
-                        department: '학과',
-                        lab: '연구실',
-                        club: '동아리',
+                  {leaderboardData.leaderboard.map(
+                    (entry: LeaderboardEntry) => {
+                      const getRankBadge = (rank: number) => {
+                        if (rank === 1) return "🥇";
+                        if (rank === 2) return "🥈";
+                        if (rank === 3) return "🥉";
+                        return rank;
                       };
-                      return labels[type] || type;
-                    };
 
-                    return (
-                      <TableRow key={entry.team_id} className="hover:bg-muted/50">
-                        <TableCell className="text-center font-semibold">
-                          {getRankBadge(entry.rank)}
-                        </TableCell>
-                        <TableCell className="font-medium">{entry.team_name}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">{getTeamTypeLabel(entry.team_type)}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {entry.total_sessions ?? 0}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold">
-                          {Math.round(entry.score).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-center text-muted-foreground">
-                          {entry.average_score
-                            ? Math.round(entry.average_score).toLocaleString()
-                            : '-'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {entry.member_count ?? 0}명
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      const getTeamTypeLabel = (type: string) => {
+                        const labels: Record<string, string> = {
+                          general: "일반",
+                          department: "학과",
+                          lab: "연구실",
+                          club: "동아리",
+                        };
+                        return labels[type] || type;
+                      };
+
+                      return (
+                        <TableRow
+                          key={entry.team_id}
+                          className="hover:bg-muted/50"
+                        >
+                          <TableCell className="text-center font-semibold">
+                            {getRankBadge(entry.rank)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {entry.team_name}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline">
+                              {getTeamTypeLabel(entry.team_type)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {entry.total_sessions ?? 0}
+                          </TableCell>
+                          <TableCell className="text-center font-semibold">
+                            {Math.round(entry.score).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-center text-muted-foreground">
+                            {entry.average_score
+                              ? Math.round(entry.average_score).toLocaleString()
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {entry.member_count ?? 0}명
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -448,4 +495,3 @@ export function RankingPage({
     </PageTransition>
   );
 }
-
