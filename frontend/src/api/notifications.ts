@@ -11,7 +11,7 @@ export const getNotifications = async (
   limit: number = 50,
   offset: number = 0
 ): Promise<Notification[]> => {
-  const response = await api.get("/notifications", {
+  const response = await api.get("/notifications/list", {
     params: { unread_only: unreadOnly, limit, offset },
   });
   return response.data;

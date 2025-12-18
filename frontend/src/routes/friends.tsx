@@ -180,7 +180,7 @@ function FriendsComponent() {
       <div className="container mx-auto p-6 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] bg-clip-text text-transparent">
               친구
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -232,7 +232,7 @@ function FriendsComponent() {
                       >
                         <div className="flex items-center gap-2">
                           <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs">
+                            <AvatarFallback className="bg-gradient-to-br from-[#7ED6E8] to-[#F9A8D4] text-white text-xs">
                               {user.username.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
@@ -316,7 +316,7 @@ function FriendsComponent() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Avatar className="w-12 h-12">
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                            <AvatarFallback className="bg-gradient-to-br from-[#7ED6E8] to-[#F9A8D4] text-white">
                               {friend.friend_username.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>

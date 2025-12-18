@@ -1,5 +1,6 @@
 """API endpoints for user verification."""
 
+import logging
 from pathlib import Path
 from typing import Annotated
 from uuid import UUID
@@ -21,6 +22,8 @@ from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/verification", tags=["verification"])
 
 
@@ -40,17 +43,42 @@ async def submit_verification(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[VerificationService, Depends(get_verification_service)],
 ) -> dict:
-    """Submit verification request."""
+    """Submit verification request.
+
+    Note: If SMTP email is sent successfully, verification is automatically approved.
+    SMTP email errors are logged but do not prevent verification submission.
+    """
     try:
         verification = await service.submit_verification(current_user["id"], data)
+
+        # Determine message based on status
+        if verification.verification_status == "approved":
+            message = "인증 신청이 제출되었고 SMTP 전송 성공으로 자동 승인되었습니다! ✅"
+            logger.info(f"Verification {verification.verification_id} auto-approved after successful SMTP")
+        else:
+            message = "인증 신청이 제출되었습니다. 관리자 검토 후 결과를 알려드립니다."
+            logger.info(f"Verification {verification.verification_id} submitted with status: {verification.verification_status}")
+
         return {
             "verification_id": verification.verification_id,
             "status": verification.verification_status,
             "submitted_at": verification.submitted_at,
-            "message": "인증 신청이 제출되었습니다. 관리자 검토 후 결과를 알려드립니다.",
+            "message": message,
         }
     except ValueError as e:
+        # Business logic errors (e.g., already verified, already pending)
+        logger.warning(f"Verification submission failed: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        # Log unexpected errors but don't fail the request
+        # SMTP errors should not prevent verification submission
+        logger.error(f"Unexpected error in submit_verification: {e}", exc_info=True)
+        # Re-raise only if it's a critical error that prevents verification creation
+        # Otherwise, verification should have been created successfully
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"인증 신청 처리 중 오류가 발생했습니다: {str(e)}"
+        )
 
 
 @router.get("/status")

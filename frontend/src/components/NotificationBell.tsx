@@ -48,7 +48,7 @@ export function NotificationBell() {
   const { data: apiNotifications = [], refetch } = useQuery<Notification[]>({
     queryKey: ["notifications"],
     queryFn: async () => {
-      const response = await api.get<Notification[]>("/notifications/");
+      const response = await api.get<Notification[]>("/notifications/list");
       return response.data;
     },
     refetchInterval: isOpen ? 5000 : 30000, // Refetch more frequently when open

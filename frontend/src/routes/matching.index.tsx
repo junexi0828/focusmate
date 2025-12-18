@@ -162,7 +162,7 @@ function MatchingComponent() {
         {/* Header */}
         <div>
           <h1 className="text-4xl font-bold tracking-tight flex items-center gap-3">
-            <Heart className="w-10 h-10 text-pink-500" />
+            <Heart className="w-10 h-10 text-[#F9A8D4]" />
             핑크캠퍼스
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -287,7 +287,7 @@ function MatchingComponent() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Heart className="w-5 h-5 text-pink-500" />
+              <Heart className="w-5 h-5 text-[#F9A8D4]" />
               매칭 제안
             </CardTitle>
             <CardDescription>
@@ -388,13 +388,13 @@ function MatchingComponent() {
         </Card>
 
                {/* Info */}
-               <Card className="border-pink-200 bg-pink-50 dark:bg-pink-950/20">
+               <Card className="border-[#F9A8D4]/30 bg-[#FCE7F5] dark:bg-[#F9A8D4]/20">
                  <CardHeader>
-                   <CardTitle className="text-pink-700 dark:text-pink-400">
+                   <CardTitle className="text-[#F9A8D4] dark:text-[#F9A8D4]">
                      핑크캠퍼스란?
                    </CardTitle>
                  </CardHeader>
-                 <CardContent className="text-sm text-pink-600 dark:text-pink-300 space-y-2">
+                 <CardContent className="text-sm text-[#F9A8D4] dark:text-[#F9A8D4] space-y-2">
                    <p>
                      • 같은 학교, 같은 학과 학생들끼리 그룹을 만들어 매칭할 수 있습니다
                    </p>

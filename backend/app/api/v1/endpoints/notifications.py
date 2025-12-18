@@ -51,7 +51,7 @@ def get_notification_service(
 
 
 # Endpoints
-@router.post("/", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/create", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
 async def create_notification(
     data: NotificationCreate,
     service: Annotated[NotificationService, Depends(get_notification_service)],
@@ -89,7 +89,7 @@ async def create_notification(
         )
 
 
-@router.get("/", response_model=list[NotificationResponse])
+@router.get("/list", response_model=list[NotificationResponse])
 async def get_my_notifications(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[NotificationService, Depends(get_notification_service)],

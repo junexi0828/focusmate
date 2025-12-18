@@ -37,7 +37,9 @@ def get_matching_pool_service(
 async def create_matching_pool(
     data: MatchingPoolCreate,
     current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[
+        OptimizedMatchingPoolService, Depends(get_matching_pool_service)
+    ],
 ) -> MatchingPoolResponse:
     """Create a new matching pool."""
     try:
@@ -49,14 +51,16 @@ async def create_matching_pool(
 @router.get("/pools/my")
 async def get_my_matching_pool(
     current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[
+        OptimizedMatchingPoolService, Depends(get_matching_pool_service)
+    ],
 ) -> Optional[MatchingPoolResponse]:
     """Get current user's active matching pool."""
     try:
         if not current_user or not current_user.get("id"):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required"
+                detail="Authentication required",
             )
         pool = await service.get_my_pool(current_user["id"])
         return pool
@@ -65,7 +69,23 @@ async def get_my_matching_pool(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get matching pool: {str(e)}"
+            detail=f"Failed to get matching pool: {str(e)}",
+        )
+
+
+@router.get("/pools/stats")
+async def get_pool_statistics(
+    service: Annotated[
+        OptimizedMatchingPoolService, Depends(get_matching_pool_service)
+    ],
+) -> MatchingPoolStats:
+    """Get matching pool statistics."""
+    try:
+        return await service.get_pool_statistics()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get pool statistics: {str(e)}",
         )
 
 
@@ -73,7 +93,9 @@ async def get_my_matching_pool(
 async def get_matching_pool(
     pool_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[
+        OptimizedMatchingPoolService, Depends(get_matching_pool_service)
+    ],
 ) -> MatchingPoolResponse:
     """Get matching pool by ID."""
     pool = await service.get_pool(pool_id, current_user["id"])
@@ -88,7 +110,9 @@ async def get_matching_pool(
 async def cancel_matching_pool(
     pool_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[
+        OptimizedMatchingPoolService, Depends(get_matching_pool_service)
+    ],
 ) -> dict:
     """Cancel a matching pool."""
     try:
@@ -102,23 +126,11 @@ async def cancel_matching_pool(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/pools/stats")
-async def get_pool_statistics(
-    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
-) -> MatchingPoolStats:
-    """Get matching pool statistics."""
-    try:
-        return await service.get_pool_statistics()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get pool statistics: {str(e)}"
-        )
-
-
 @router.get("/stats/comprehensive")
 async def get_comprehensive_statistics(
-    service: Annotated[OptimizedMatchingPoolService, Depends(get_matching_pool_service)],
+    service: Annotated[
+        OptimizedMatchingPoolService, Depends(get_matching_pool_service)
+    ],
 ) -> ComprehensiveMatchingStats:
     """Get comprehensive matching statistics including pools and proposals."""
     try:
@@ -126,5 +138,5 @@ async def get_comprehensive_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get comprehensive statistics: {str(e)}"
+            detail=f"Failed to get comprehensive statistics: {str(e)}",
         )

@@ -1,5 +1,6 @@
 """Service layer for user verification."""
 
+import logging
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
@@ -15,12 +16,16 @@ from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class VerificationService:
     """Service for user verification business logic."""
 
     def __init__(
-        self, repository: VerificationRepository, user_repository: UserRepository | None = None
+        self,
+        repository: VerificationRepository,
+        user_repository: UserRepository | None = None,
     ):
         self.repository = repository
         self.user_repository = user_repository
@@ -63,6 +68,7 @@ class VerificationService:
         # Send email notification to admin
         # If email is sent successfully, automatically approve verification
         email_sent_successfully = False
+        email_error = None
         try:
             from app.infrastructure.email.email_service import EmailService
             from app.core.config import settings
@@ -80,19 +86,66 @@ class VerificationService:
 
             # Send email to admin
             if settings.ADMIN_EMAIL and email_service.is_enabled:
-                email_sent_successfully = await email_service.send_verification_submitted_to_admin_email(
-                    admin_email=settings.ADMIN_EMAIL,
-                    user_email=user_email or f"user_{user_id}@example.com",
-                    username=username,
-                    school_name=data.school_name,
-                    department=data.department or "미지정",
-                    grade=data.grade or 0,
+                logger.info(
+                    f"[VERIFICATION] Attempting to send verification email to admin: {settings.ADMIN_EMAIL}"
+                )
+                logger.info(
+                    f"[VERIFICATION] User info: email={user_email}, username={username}, school={data.school_name}"
+                )
+                try:
+                    # Convert grade to int if it's a string
+                    grade_value = 0
+                    if data.grade:
+                        try:
+                            grade_value = (
+                                int(data.grade)
+                                if isinstance(data.grade, str)
+                                else data.grade
+                            )
+                        except (ValueError, TypeError):
+                            grade_value = 0
+
+                    email_sent_successfully = (
+                        await email_service.send_verification_submitted_to_admin_email(
+                            admin_email=settings.ADMIN_EMAIL,
+                            user_email=user_email or f"user_{user_id}@example.com",
+                            username=username,
+                            school_name=data.school_name,
+                            department=data.department or "미지정",
+                            grade=grade_value,
+                        )
+                    )
+                    if email_sent_successfully:
+                        logger.info(
+                            f"[VERIFICATION] ✅ SMTP email sent successfully to admin. Auto-approving verification {verification.verification_id}"
+                        )
+                    else:
+                        email_error = (
+                            "SMTP 전송 실패 (인증은 정상적으로 제출되었습니다)"
+                        )
+                        logger.warning(
+                            f"[VERIFICATION] ⚠️ SMTP email failed for verification {verification.verification_id}. Verification will remain pending."
+                        )
+                except Exception as email_exc:
+                    logger.error(
+                        f"[VERIFICATION] Exception during SMTP send: {email_exc}",
+                        exc_info=True,
+                    )
+                    email_sent_successfully = False
+                    email_error = f"SMTP 전송 중 예외 발생: {str(email_exc)} (인증은 정상적으로 제출되었습니다)"
+            else:
+                logger.warning(
+                    f"[VERIFICATION] SMTP not enabled or ADMIN_EMAIL not set. SMTP_ENABLED={email_service.is_enabled}, ADMIN_EMAIL={settings.ADMIN_EMAIL}"
+                )
+                email_error = (
+                    "SMTP가 비활성화되어 있습니다 (인증은 정상적으로 제출되었습니다)"
                 )
         except Exception as e:
             # Log error but don't fail verification submission
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to send admin notification email: {e}")
+            logger.error(f"Failed to send admin notification email: {e}", exc_info=True)
+            email_error = (
+                f"이메일 전송 중 오류 발생: {str(e)} (인증은 정상적으로 제출되었습니다)"
+            )
 
         # If email was sent successfully, automatically approve verification
         if email_sent_successfully:
@@ -103,14 +156,17 @@ class VerificationService:
                         "verification_status": "approved",
                         "verified_at": datetime.utcnow(),
                         "admin_note": "SMTP 전송 성공으로 자동 승인되었습니다.",
-                    }
+                    },
                 )
                 # Send approval email to user
                 if self.user_repository:
                     user = await self.user_repository.get_by_id(user_id)
                     if user and user.email:
                         try:
-                            from app.infrastructure.email.email_service import EmailService
+                            from app.infrastructure.email.email_service import (
+                                EmailService,
+                            )
+
                             email_service = EmailService()
                             await email_service.send_verification_approved_email(
                                 team_name=data.school_name,
@@ -118,18 +174,23 @@ class VerificationService:
                                 admin_note="SMTP 전송 성공으로 자동 승인되었습니다.",
                             )
                         except Exception as e:
-                            logger.warning(f"Failed to send approval email to user: {e}")
-                logger.info(f"Verification {verification.verification_id} auto-approved after successful SMTP send")
+                            logger.warning(
+                                f"Failed to send approval email to user: {e}"
+                            )
+                if verification:
+                    logger.info(
+                        f"Verification {verification.verification_id} auto-approved after successful SMTP send"
+                    )
             except Exception as e:
                 logger.error(f"Failed to auto-approve verification: {e}")
         else:
-            logger.warning(f"Verification {verification.verification_id} not auto-approved: SMTP send failed or disabled")
+            logger.warning(
+                f"Verification {verification.verification_id} not auto-approved: SMTP send failed or disabled"
+            )
 
         return VerificationResponse.model_validate(verification)
 
-    async def get_verification_status(
-        self, user_id: str
-    ) -> VerificationStatusResponse:
+    async def get_verification_status(self, user_id: str) -> VerificationStatusResponse:
         """Get user's verification status."""
         verification = await self.repository.get_verification_by_user(user_id)
 
@@ -137,7 +198,15 @@ class VerificationService:
             return VerificationStatusResponse(
                 verification_id=None,
                 status=None,
-                message="No verification request found",
+                school_name=None,
+                department=None,
+                major_category=None,
+                grade=None,
+                gender=None,
+                badge_visible=None,
+                department_visible=None,
+                verified_at=None,
+                message="인증 신청 내역이 없습니다.",
             )
 
         return VerificationStatusResponse(
@@ -218,16 +287,8 @@ class VerificationService:
 
         # Send email notification
         from app.infrastructure.email.email_service import EmailService
-        from app.core.config import settings
 
-        email_service = EmailService(
-            smtp_host=settings.SMTP_HOST,
-            smtp_port=settings.SMTP_PORT,
-            from_name=settings.SMTP_FROM_NAME,
-            from_email=settings.SMTP_FROM_EMAIL,
-            smtp_user=settings.SMTP_USER if settings.SMTP_ENABLED else None,
-            smtp_password=settings.SMTP_PASSWORD if settings.SMTP_ENABLED else None,
-        )
+        email_service = EmailService()
 
         # Get user email from user repository
         user_email = None
@@ -250,8 +311,8 @@ class VerificationService:
                 )
             else:
                 await email_service.send_verification_rejected_email(
-                    user_email=user_email,
                     team_name=verification.school_name,  # Use school_name as team_name
+                    leader_email=user_email,
                     admin_note=admin_note,
                 )
         except Exception as e:
@@ -274,7 +335,7 @@ class VerificationService:
 
         # Use encryption key from settings or generate one
         # In production, this should be stored securely (e.g., environment variable)
-        encryption_key = getattr(settings, 'FILE_ENCRYPTION_KEY', None)
+        encryption_key = getattr(settings, "FILE_ENCRYPTION_KEY", None)
 
         if not encryption_key:
             # Generate a key for development (NOT for production!)
@@ -299,7 +360,7 @@ class VerificationService:
         from cryptography.fernet import Fernet
         from app.core.config import settings
 
-        encryption_key = getattr(settings, 'FILE_ENCRYPTION_KEY', None)
+        encryption_key = getattr(settings, "FILE_ENCRYPTION_KEY", None)
 
         if not encryption_key:
             raise ValueError("Encryption key not configured")

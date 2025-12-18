@@ -14,6 +14,7 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const startTimeRef = useRef<number>(0);
+  const gameLoopRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isPlaying || !canvasRef.current) return;
@@ -42,6 +43,10 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
     let gameScore = 0;
     let gameSpeed = 5;
     let obstacleTimer = 0;
+    let animationFrameId: number | null = null;
+
+    // 게임 루프 ID를 ref에 저장하여 cleanup 시 사용
+    gameLoopRef.current = null;
 
     // Jump
     const jump = () => {
@@ -51,22 +56,43 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
       }
     };
 
-    // Handle keyboard
+    // Handle keyboard - document에 등록하여 모달 내부에서도 작동하도록
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
+      if (e.code === "Space" || e.key === " " || e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
         e.preventDefault();
-        jump();
+        e.stopPropagation();
+        if (isPlaying) {
+          jump();
+        }
       }
     };
 
     // Handle click/touch
-    const handleClick = () => jump();
+    const handleClick = () => {
+      if (isPlaying) {
+        jump();
+      }
+    };
 
-    window.addEventListener("keydown", handleKeyPress);
+    // document에 이벤트 리스너 등록 (모달 내부에서도 작동)
+    document.addEventListener("keydown", handleKeyPress, true);
     canvas.addEventListener("click", handleClick);
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      handleClick();
+    });
 
     // Game loop
     const gameLoop = () => {
+      // 게임이 중지되었으면 루프 종료
+      if (!isPlaying) {
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        return;
+      }
+
       // Clear canvas
       ctx.fillStyle = "#1a1a1a";
       ctx.fillRect(0, 0, width, height);
@@ -117,6 +143,10 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
             (Date.now() - startTimeRef.current) / 1000
           );
           onGameOver(gameScore, playTime);
+          if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+          }
           return;
         }
 
@@ -143,32 +173,66 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
       }
 
       if (isPlaying) {
-        requestAnimationFrame(gameLoop);
+        animationFrameId = requestAnimationFrame(gameLoop);
+        gameLoopRef.current = animationFrameId;
+      } else {
+        // 게임이 중지되면 애니메이션 프레임 취소
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+          gameLoopRef.current = null;
+        }
       }
     };
 
-    gameLoop();
+    // 게임 시작
+    if (isPlaying) {
+      animationFrameId = requestAnimationFrame(gameLoop);
+      gameLoopRef.current = animationFrameId;
+    }
 
     return () => {
-      window.removeEventListener("keydown", handleKeyPress);
+      // Cleanup: 애니메이션 프레임 취소
+      if (gameLoopRef.current !== null) {
+        cancelAnimationFrame(gameLoopRef.current);
+        gameLoopRef.current = null;
+      }
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      document.removeEventListener("keydown", handleKeyPress, true);
       canvas.removeEventListener("click", handleClick);
     };
   }, [isPlaying, onGameOver]);
 
   const startGame = () => {
+    // 이전 게임 루프가 있으면 정리
+    if (gameLoopRef.current !== null) {
+      cancelAnimationFrame(gameLoopRef.current);
+      gameLoopRef.current = null;
+    }
+
+    // 상태 초기화
     setScore(0);
     setGameOver(false);
-    setIsPlaying(true);
-    startTimeRef.current = Date.now();
+    setIsPlaying(false); // 먼저 false로 설정하여 이전 useEffect cleanup 실행
+
+    // 다음 프레임에서 게임 시작 (cleanup 완료 후)
+    setTimeout(() => {
+      setIsPlaying(true);
+      startTimeRef.current = Date.now();
+    }, 0);
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4 w-full">
       <canvas
         ref={canvasRef}
         width={800}
         height={400}
-        className="border-2 border-gray-700 rounded-lg bg-gray-900"
+        className="border-2 border-border rounded-lg bg-background max-w-full h-auto"
+        style={{ maxWidth: '100%', height: 'auto' }}
       />
 
       {!isPlaying && !gameOver && (
@@ -201,7 +265,7 @@ export function DinoJump({ onGameOver }: DinoJumpProps) {
         </motion.div>
       )}
 
-      <p className="text-sm text-gray-400">Press SPACE or click to jump</p>
+      <p className="text-sm text-gray-400">Press SPACE, W, ↑ or click to jump</p>
     </div>
   );
 }
