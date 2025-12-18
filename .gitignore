@@ -107,7 +107,6 @@ data/
 # Reports
 reports/
 *.xml
-*.html
 coverage/
 .nyc_output/
 
