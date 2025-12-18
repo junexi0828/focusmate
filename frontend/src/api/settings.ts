@@ -12,7 +12,7 @@ import {
 
 // Get my settings
 export const getSettings = async (): Promise<UserSettings> => {
-  const response = await api.get("/settings");
+  const response = await api.get("/settings/");
   return response.data;
 };
 
@@ -20,7 +20,7 @@ export const getSettings = async (): Promise<UserSettings> => {
 export const updateSettings = async (
   data: UserSettingsUpdate
 ): Promise<UserSettings> => {
-  const response = await api.put("/settings", data);
+  const response = await api.put("/settings/", data);
   return response.data;
 };
 

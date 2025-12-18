@@ -19,15 +19,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create post_read table
+    # Create post_read table with server_default for timestamps
     op.create_table(
         'post_read',
         sa.Column('id', sa.String(length=36), nullable=False),
         sa.Column('post_id', sa.String(length=36), nullable=False),
         sa.Column('user_id', sa.String(length=36), nullable=False),
         sa.Column('read_at', sa.DateTime(timezone=True), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_post_read_post_id'), 'post_read', ['post_id'], unique=False)

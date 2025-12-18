@@ -18,11 +18,12 @@ class RoomService:
         """
         self.repository = repository
 
-    async def create_room(self, data: RoomCreate) -> RoomResponse:
+    async def create_room(self, data: RoomCreate, user_id: str | None = None) -> RoomResponse:
         """Create a new room.
 
         Args:
             data: Room creation data
+            user_id: Optional user ID to set as host
 
         Returns:
             Created room response
@@ -36,13 +37,16 @@ class RoomService:
             raise RoomNameTakenException(data.name)
 
         # Create room
+        # Convert seconds to minutes (frontend sends in seconds, Room model stores in minutes)
         room = Room(
             id=generate_uuid(),
             name=data.name,
-            work_duration=data.work_duration,
-            break_duration=data.break_duration,
+            work_duration=data.work_duration // 60,  # Convert seconds to minutes
+            break_duration=data.break_duration // 60,  # Convert seconds to minutes
             auto_start_break=data.auto_start_break,
             is_active=True,
+            host_id=user_id,  # Set host_id if provided
+            remove_on_leave=getattr(data, 'remove_on_leave', False),  # Default to False (keep participants visible)
         )
 
         created_room = await self.repository.create(room)
@@ -82,13 +86,15 @@ class RoomService:
         if not room:
             raise RoomNotFoundException(room_id)
 
-        # Update fields
+        # Update fields (convert seconds to minutes)
         if data.work_duration is not None:
-            room.work_duration = data.work_duration
+            room.work_duration = data.work_duration // 60  # Convert seconds to minutes
         if data.break_duration is not None:
-            room.break_duration = data.break_duration
+            room.break_duration = data.break_duration // 60  # Convert seconds to minutes
         if data.auto_start_break is not None:
             room.auto_start_break = data.auto_start_break
+        if data.remove_on_leave is not None:
+            room.remove_on_leave = data.remove_on_leave
 
         updated_room = await self.repository.update(room)
         return RoomResponse.model_validate(updated_room)

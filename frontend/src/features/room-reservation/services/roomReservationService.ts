@@ -14,7 +14,7 @@ class RoomReservationService extends BaseApiClient {
   async createReservation(
     data: CreateRoomReservationRequest
   ): Promise<ApiResponse<RoomReservation>> {
-    return this.request("/room-reservations", {
+    return this.request("/room-reservations/", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -23,7 +23,7 @@ class RoomReservationService extends BaseApiClient {
   async getMyReservations(
     activeOnly: boolean = true
   ): Promise<ApiResponse<RoomReservation[]>> {
-    return this.request(`/room-reservations?active_only=${activeOnly}`);
+    return this.request(`/room-reservations/?active_only=${activeOnly}`);
   }
 
   async getUpcomingReservations(): Promise<ApiResponse<RoomReservation[]>> {

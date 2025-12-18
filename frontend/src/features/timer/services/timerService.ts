@@ -11,26 +11,26 @@ class TimerService extends BaseApiClient {
     roomId: string,
     sessionType: SessionType = "work"
   ): Promise<ApiResponse<TimerState>> {
-    return this.request(`/rooms/${roomId}/timer/start`, {
+    return this.request(`/timer/${roomId}/start`, {
       method: "POST",
       body: JSON.stringify({ session_type: sessionType }),
     });
   }
 
   async pauseTimer(roomId: string): Promise<ApiResponse<TimerState>> {
-    return this.request(`/rooms/${roomId}/timer/pause`, {
+    return this.request(`/timer/${roomId}/pause`, {
       method: "POST",
     });
   }
 
   async resumeTimer(roomId: string): Promise<ApiResponse<TimerState>> {
-    return this.request(`/rooms/${roomId}/timer/resume`, {
+    return this.request(`/timer/${roomId}/resume`, {
       method: "POST",
     });
   }
 
   async resetTimer(roomId: string): Promise<ApiResponse<TimerState>> {
-    return this.request(`/rooms/${roomId}/timer/reset`, {
+    return this.request(`/timer/${roomId}/reset`, {
       method: "POST",
     });
   }

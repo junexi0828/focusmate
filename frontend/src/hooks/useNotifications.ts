@@ -6,6 +6,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { authService } from "../features/auth/services/authService";
 import { toast } from "sonner";
+import { notificationService } from "../lib/notificationService";
 
 const WS_URL = import.meta.env.VITE_WS_BASE_URL || "ws://localhost:8000";
 
@@ -32,7 +33,9 @@ export interface NotificationMessage {
   user_id?: string;
 }
 
-export function useNotifications(onNewNotification?: (notification: NotificationData) => void) {
+export function useNotifications(
+  onNewNotification?: (notification: NotificationData) => void
+) {
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
@@ -56,22 +59,37 @@ export function useNotifications(onNewNotification?: (notification: Notification
 
     // Don't attempt if already at max reconnection attempts
     if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-      console.log("[Notifications] Max reconnection attempts already reached, skipping connection");
+      console.log(
+        "[Notifications] Max reconnection attempts already reached, skipping connection"
+      );
       return;
     }
 
     // Close existing connection
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      console.log("[Notifications] Already connected, skipping connection attempt");
-      return;
-    }
-
     if (wsRef.current) {
-      wsRef.current.close();
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        console.log(
+          "[Notifications] Already connected, skipping connection attempt"
+        );
+        return;
+      }
+      // 연결 중이거나 닫히는 중이면 정리
+      if (
+        wsRef.current.readyState === WebSocket.CONNECTING ||
+        wsRef.current.readyState === WebSocket.CLOSING
+      ) {
+        try {
+          wsRef.current.close();
+        } catch (e) {
+          // Ignore errors
+        }
+      }
     }
 
     try {
-      const ws = new WebSocket(`${WS_URL}/api/v1/notifications/ws?token=${token}`);
+      const ws = new WebSocket(
+        `${WS_URL}/api/v1/notifications/ws?token=${token}`
+      );
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -93,7 +111,10 @@ export function useNotifications(onNewNotification?: (notification: Notification
           console.log("[Notifications] Received:", message);
 
           if (message.type === "connected") {
-            console.log("[Notifications] Connection confirmed:", message.message);
+            console.log(
+              "[Notifications] Connection confirmed:",
+              message.message
+            );
           } else if (message.type === "notification" && message.data) {
             // Add to local state
             setNotifications((prev) => [message.data!, ...prev]);
@@ -103,6 +124,16 @@ export function useNotifications(onNewNotification?: (notification: Notification
               description: message.data.message,
               duration: 5000,
             });
+
+            // Show browser push notification if permission is granted
+            if (notificationService.isAllowed()) {
+              notificationService.show({
+                title: message.data.title,
+                body: message.data.message,
+                icon: "/favicon.ico",
+                tag: message.data.notification_id,
+              });
+            }
 
             // Call custom handler if provided
             if (onNewNotificationRef.current) {
@@ -121,18 +152,32 @@ export function useNotifications(onNewNotification?: (notification: Notification
         console.error("[Notifications] WebSocket error:", error);
       };
 
-      ws.onclose = () => {
-        console.log("[Notifications] WebSocket disconnected");
+      ws.onclose = (event) => {
+        console.log("[Notifications] WebSocket disconnected", {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+        });
         setIsConnected(false);
 
         // Clear ping interval
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = undefined;
+        }
+
+        // Clear existing reconnect timeout
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = undefined;
         }
 
         // Attempt to reconnect with exponential backoff
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+          const delay = Math.min(
+            1000 * Math.pow(2, reconnectAttemptsRef.current),
+            30000
+          );
           console.log(
             `[Notifications] Attempting to reconnect in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`
           );
@@ -174,10 +219,25 @@ export function useNotifications(onNewNotification?: (notification: Notification
 
   // Auto-connect when component mounts
   useEffect(() => {
-    connect();
+    let isMounted = true; // React StrictMode 대응
+
+    // React StrictMode 대응: cleanup이 완료될 때까지 짧은 대기
+    const connectWithDelay = () => {
+      setTimeout(() => {
+        if (isMounted) {
+          connect();
+        }
+      }, 10);
+    };
+
+    connectWithDelay();
 
     return () => {
-      disconnect();
+      isMounted = false;
+      // cleanup이 완료될 때까지 짧은 대기 후 disconnect
+      setTimeout(() => {
+        disconnect();
+      }, 0);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount

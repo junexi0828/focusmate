@@ -28,9 +28,17 @@ from app.domain.chat.schemas import (
     MessageResponse,
     MessageUpdate,
     TeamChatCreate,
+    TeamChatCreateByEmail,
+    InvitationCodeCreate,
+    InvitationCodeInfo,
+    InvitationJoinRequest,
+    FriendRoomCreate,
 )
 from app.domain.chat.service import ChatService
+from app.domain.chat.invitation_service import InvitationService
 from app.infrastructure.repositories.chat_repository import ChatRepository
+from app.infrastructure.repositories.friend_repository import FriendRepository
+from app.infrastructure.repositories.user_repository import UserRepository
 from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 from app.infrastructure.websocket.chat_manager import connection_manager
 from app.services.chat_file_upload import ChatFileUploadService
@@ -43,11 +51,30 @@ def get_chat_repository(db: DatabaseSession) -> ChatRepository:
     return ChatRepository(db)
 
 
+def get_user_repository(db: DatabaseSession) -> UserRepository:
+    """Get user repository."""
+    return UserRepository(db)
+
+
 def get_chat_service(
-    repository: Annotated[ChatRepository, Depends(get_chat_repository)]
+    repository: Annotated[ChatRepository, Depends(get_chat_repository)],
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> ChatService:
     """Get chat service dependency."""
-    return ChatService(repository)
+    return ChatService(repository, user_repository=user_repository)
+
+
+def get_friend_repository(db: DatabaseSession) -> FriendRepository:
+    """Get friend repository."""
+    return FriendRepository(db)
+
+
+def get_invitation_service(
+    chat_repo: Annotated[ChatRepository, Depends(get_chat_repository)],
+    friend_repo: Annotated[FriendRepository, Depends(get_friend_repository)],
+) -> InvitationService:
+    """Get invitation service dependency."""
+    return InvitationService(chat_repo, friend_repo)
 
 
 # Room Endpoints
@@ -103,6 +130,28 @@ async def create_team_chat(
     """Create team chat."""
     try:
         return await service.create_team_chat(current_user["id"], data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/rooms/team-email", status_code=status.HTTP_201_CREATED)
+async def create_team_chat_by_email(
+    data: TeamChatCreateByEmail,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
+) -> ChatRoomResponse:
+    """Create team chat by email addresses.
+
+    Users with matching emails are added directly to the team.
+    Non-existing emails receive invitation emails via SMTP.
+    No acceptance required - existing users are added immediately.
+    """
+    try:
+        return await service.create_team_chat_by_email(
+            current_user["id"],
+            current_user["username"],
+            data
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -584,3 +633,117 @@ async def websocket_chat(
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
         except:
             pass
+
+
+# Invitation Code Endpoints
+@router.post("/rooms/{room_id}/invitation", response_model=InvitationCodeInfo)
+async def generate_invitation_code(
+    room_id: UUID,
+    data: InvitationCodeCreate,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    service: Annotated[InvitationService, Depends(get_invitation_service)],
+) -> InvitationCodeInfo:
+    """Generate invitation code for a room.
+
+    Args:
+        room_id: Room ID
+        data: Invitation code creation data
+        current_user: Current authenticated user
+        service: Invitation service
+
+    Returns:
+        Invitation code information
+
+    Raises:
+        HTTPException: If room not found or error generating code
+    """
+    try:
+        return await service.generate_invitation_code(room_id, data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.get("/invitations/{code}", response_model=InvitationCodeInfo)
+async def get_invitation_info(
+    code: str,
+    service: Annotated[InvitationService, Depends(get_invitation_service)],
+) -> InvitationCodeInfo:
+    """Get invitation code information without joining.
+
+    Args:
+        code: Invitation code
+        service: Invitation service
+
+    Returns:
+        Invitation code information
+
+    Raises:
+        HTTPException: If code not found
+    """
+    try:
+        return await service.validate_invitation_code(code)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.post("/rooms/join", response_model=ChatRoomResponse)
+async def join_by_invitation(
+    data: InvitationJoinRequest,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    service: Annotated[InvitationService, Depends(get_invitation_service)],
+) -> ChatRoomResponse:
+    """Join room using invitation code.
+
+    Args:
+        data: Invitation join request
+        current_user: Current authenticated user
+        service: Invitation service
+
+    Returns:
+        Room information
+
+    Raises:
+        HTTPException: If code invalid or expired
+    """
+    try:
+        return await service.join_by_invitation_code(current_user["id"], data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+# Friend Room Endpoints
+@router.post("/rooms/friends", response_model=ChatRoomResponse)
+async def create_friend_room(
+    data: FriendRoomCreate,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    service: Annotated[InvitationService, Depends(get_invitation_service)],
+) -> ChatRoomResponse:
+    """Create chat room with friends.
+
+    Args:
+        data: Friend room creation data
+        current_user: Current authenticated user
+        service: Invitation service
+
+    Returns:
+        Created room information
+
+    Raises:
+        HTTPException: If friends not found or error creating room
+    """
+    try:
+        return await service.create_room_with_friends(current_user["id"], data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )

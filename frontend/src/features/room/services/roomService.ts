@@ -12,7 +12,7 @@ import {
 
 class RoomService extends BaseApiClient {
   async createRoom(data: CreateRoomRequest): Promise<ApiResponse<Room>> {
-    return this.request("/rooms", {
+    return this.request("/rooms/", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -33,7 +33,7 @@ class RoomService extends BaseApiClient {
     data: UpdateRoomSettingsRequest
   ): Promise<ApiResponse<Room>> {
     return this.request(`/rooms/${roomId}`, {
-      method: "PATCH",
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }

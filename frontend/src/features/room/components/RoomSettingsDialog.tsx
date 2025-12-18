@@ -30,10 +30,12 @@ interface RoomSettingsDialogProps {
   focusTime: number;
   breakTime: number;
   autoStart: boolean;
+  removeOnLeave: boolean;
   onUpdateSettings: (
     focusTime: number,
     breakTime: number,
-    autoStart: boolean
+    autoStart: boolean,
+    removeOnLeave: boolean
   ) => void;
   onDeleteRoom: () => void;
 }
@@ -43,6 +45,7 @@ export function RoomSettingsDialog({
   focusTime: initialFocusTime,
   breakTime: initialBreakTime,
   autoStart: initialAutoStart,
+  removeOnLeave: initialRemoveOnLeave,
   onUpdateSettings,
   onDeleteRoom,
 }: RoomSettingsDialogProps) {
@@ -50,9 +53,10 @@ export function RoomSettingsDialog({
   const [focusTime, setFocusTime] = useState(initialFocusTime);
   const [breakTime, setBreakTime] = useState(initialBreakTime);
   const [autoStart, setAutoStart] = useState(initialAutoStart);
+  const [removeOnLeave, setRemoveOnLeave] = useState(initialRemoveOnLeave);
 
   const handleSave = () => {
-    onUpdateSettings(focusTime, breakTime, autoStart);
+    onUpdateSettings(focusTime, breakTime, autoStart, removeOnLeave);
     setOpen(false);
   };
 
@@ -60,6 +64,7 @@ export function RoomSettingsDialog({
     setFocusTime(initialFocusTime);
     setBreakTime(initialBreakTime);
     setAutoStart(initialAutoStart);
+    setRemoveOnLeave(initialRemoveOnLeave);
     setOpen(false);
   };
 
@@ -124,6 +129,21 @@ export function RoomSettingsDialog({
               id="auto-start"
               checked={autoStart}
               onCheckedChange={setAutoStart}
+              disabled={!isHost}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="remove-on-leave" className="flex flex-col gap-1">
+              <span>나가면 방에서 제거</span>
+              <span className="text-xs text-muted-foreground">
+                활성화 시 참여자가 나가면 참여방 목록에서 사라집니다
+              </span>
+            </Label>
+            <Switch
+              id="remove-on-leave"
+              checked={removeOnLeave}
+              onCheckedChange={setRemoveOnLeave}
               disabled={!isHost}
             />
           </div>

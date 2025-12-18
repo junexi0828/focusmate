@@ -19,6 +19,7 @@ from app.api.v1.endpoints import (
     settings,
     stats,
     timer,
+    users,
     verification,
     websocket,
 )
@@ -27,6 +28,7 @@ api_router = APIRouter()
 
 # Include all endpoint routers
 api_router.include_router(auth.router)
+api_router.include_router(users.router)
 api_router.include_router(rooms.router)
 api_router.include_router(timer.router)
 api_router.include_router(participants.router)

@@ -12,15 +12,25 @@ from app.domain.chat.schemas import (
     MessageListResponse,
     MessageResponse,
     TeamChatCreate,
+    TeamChatCreateByEmail,
 )
 from app.infrastructure.repositories.chat_repository import ChatRepository
+from app.infrastructure.repositories.user_repository import UserRepository
+from app.services.email_service import EmailService
 
 
 class ChatService:
     """Service for unified chat business logic."""
 
-    def __init__(self, repository: ChatRepository):
+    def __init__(
+        self,
+        repository: ChatRepository,
+        user_repository: Optional[UserRepository] = None,
+        email_service: Optional[EmailService] = None,
+    ):
         self.repository = repository
+        self.user_repository = user_repository
+        self.email_service = email_service or EmailService()
 
     # Room creation
     async def create_direct_chat(
@@ -32,7 +42,8 @@ class ChatService:
             user_id, data.recipient_id
         )
         if existing_room:
-            return ChatRoomResponse.model_validate(existing_room)
+            # Return existing room with partner info
+            return await self.get_room(existing_room.room_id, user_id)
 
         # Create new direct chat
         room_data = {
@@ -57,7 +68,8 @@ class ChatService:
                 }
             )
 
-        return ChatRoomResponse.model_validate(room)
+        # Return room with partner info
+        return await self.get_room(room.room_id, user_id)
 
     async def create_team_chat(
         self, user_id: str, data: TeamChatCreate
@@ -86,6 +98,100 @@ class ChatService:
                 "is_active": True,
             }
         )
+
+        return ChatRoomResponse.model_validate(room)
+
+    async def create_team_chat_by_email(
+        self, creator_id: str, creator_username: str, data: TeamChatCreateByEmail
+    ) -> ChatRoomResponse:
+        """Create team chat by email addresses.
+
+        Args:
+            creator_id: ID of the user creating the team
+            creator_username: Username of the creator (for email)
+            data: Team chat creation data with email addresses
+
+        Returns:
+            Created chat room
+
+        Raises:
+            ValueError: If user repository is not available or users not found
+        """
+        if not self.user_repository:
+            raise ValueError("User repository required for email-based team creation")
+
+        # Create team chat room
+        room_data = {
+            "room_type": "team",
+            "room_name": data.room_name,
+            "description": data.description,
+            "room_metadata": {
+                "type": "team",
+                "created_by_email": True,
+            },
+            "display_mode": "open",
+            "is_active": True,
+        }
+
+        room = await self.repository.create_room(room_data)
+
+        # Add creator as owner
+        await self.repository.add_member(
+            {
+                "room_id": room.room_id,
+                "user_id": creator_id,
+                "role": "owner",
+                "is_active": True,
+            }
+        )
+
+        # Find users by email and add them, send invitations to those not found
+        added_users = []
+        invitation_emails = []
+
+        for email in data.member_emails:
+            # Skip creator's own email
+            if email == creator_username:  # Assuming username might be email
+                continue
+
+            # Try to find user by email
+            user = await self.user_repository.get_by_email(email)
+
+            if user:
+                # User exists - add to room directly
+                await self.repository.add_member(
+                    {
+                        "room_id": room.room_id,
+                        "user_id": user.id,
+                        "role": "member",
+                        "is_active": True,
+                    }
+                )
+                added_users.append(user.username)
+            else:
+                # User not found - will send invitation
+                invitation_emails.append(email)
+
+        # Send email invitations if requested
+        if data.send_invitations and invitation_emails:
+            # TODO: Generate invitation link (can be a room join link or signup link)
+            base_url = "http://localhost:3000"  # Should come from config
+            invitation_link = f"{base_url}/messages?roomId={room.room_id}"
+
+            for email in invitation_emails:
+                try:
+                    self.email_service.send_team_invitation(
+                        to_email=email,
+                        team_name=data.room_name,
+                        inviter_name=creator_username,
+                        invitation_link=invitation_link,
+                    )
+                except Exception as e:
+                    # Log but don't fail - room is already created
+                    import logging
+                    logging.getLogger(__name__).error(
+                        f"Failed to send invitation to {email}: {e}"
+                    )
 
         return ChatRoomResponse.model_validate(room)
 
@@ -152,6 +258,23 @@ class ChatService:
                 room_dict["last_message_content"] = last_message.content
                 room_dict["last_message_sender_id"] = str(last_message.sender_id)
 
+            # For direct chats, add partner information
+            if room.room_type == "direct" and self.user_repository:
+                # Get room members to find the partner
+                members = await self.repository.get_room_members(room.room_id)
+                partner = next((m for m in members if m.user_id != user_id), None)
+
+                if partner:
+                    # Get partner user details
+                    partner_user = await self.user_repository.get_by_id(partner.user_id)
+                    if partner_user:
+                        room_dict["partner_id"] = partner_user.id
+                        room_dict["partner_username"] = partner_user.username
+                        room_dict["partner_email"] = partner_user.email
+                        room_dict["partner_profile_image"] = partner_user.profile_image
+                        # TODO: Get online status from presence system
+                        room_dict["partner_is_online"] = False
+
             room_responses.append(ChatRoomResponse(**room_dict))
 
         return room_responses
@@ -172,10 +295,27 @@ class ChatService:
             raise ValueError("Not a member of this room")
 
         unread_count = await self.repository.get_room_unread_count(room_id, user_id)
-        room_response = ChatRoomResponse.model_validate(room)
-        room_response.unread_count = unread_count
+        room_dict = ChatRoomResponse.model_validate(room).model_dump()
+        room_dict["unread_count"] = unread_count
 
-        return room_response
+        # For direct chats, add partner information
+        if room.room_type == "direct" and self.user_repository:
+            # Get room members to find the partner
+            members = await self.repository.get_room_members(room_id)
+            partner = next((m for m in members if m.user_id != user_id), None)
+
+            if partner:
+                # Get partner user details
+                partner_user = await self.user_repository.get_by_id(partner.user_id)
+                if partner_user:
+                    room_dict["partner_id"] = partner_user.id
+                    room_dict["partner_username"] = partner_user.username
+                    room_dict["partner_email"] = partner_user.email
+                    room_dict["partner_profile_image"] = partner_user.profile_image
+                    # TODO: Get online status from presence system
+                    room_dict["partner_is_online"] = False
+
+        return ChatRoomResponse(**room_dict)
 
     # Message operations
     async def send_message(

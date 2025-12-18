@@ -59,6 +59,72 @@ class VerificationService:
         }
 
         verification = await self.repository.create_verification(verification_data)
+
+        # Send email notification to admin
+        # If email is sent successfully, automatically approve verification
+        email_sent_successfully = False
+        try:
+            from app.infrastructure.email.email_service import EmailService
+            from app.core.config import settings
+
+            email_service = EmailService()
+
+            # Get user info for admin email
+            user_email = None
+            username = "사용자"
+            if self.user_repository:
+                user = await self.user_repository.get_by_id(user_id)
+                if user:
+                    user_email = user.email
+                    username = user.username or user.email.split("@")[0]
+
+            # Send email to admin
+            if settings.ADMIN_EMAIL and email_service.is_enabled:
+                email_sent_successfully = await email_service.send_verification_submitted_to_admin_email(
+                    admin_email=settings.ADMIN_EMAIL,
+                    user_email=user_email or f"user_{user_id}@example.com",
+                    username=username,
+                    school_name=data.school_name,
+                    department=data.department or "미지정",
+                    grade=data.grade or 0,
+                )
+        except Exception as e:
+            # Log error but don't fail verification submission
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send admin notification email: {e}")
+
+        # If email was sent successfully, automatically approve verification
+        if email_sent_successfully:
+            try:
+                verification = await self.repository.update_verification(
+                    verification.verification_id,
+                    {
+                        "verification_status": "approved",
+                        "verified_at": datetime.utcnow(),
+                        "admin_note": "SMTP 전송 성공으로 자동 승인되었습니다.",
+                    }
+                )
+                # Send approval email to user
+                if self.user_repository:
+                    user = await self.user_repository.get_by_id(user_id)
+                    if user and user.email:
+                        try:
+                            from app.infrastructure.email.email_service import EmailService
+                            email_service = EmailService()
+                            await email_service.send_verification_approved_email(
+                                team_name=data.school_name,
+                                leader_email=user.email,
+                                admin_note="SMTP 전송 성공으로 자동 승인되었습니다.",
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to send approval email to user: {e}")
+                logger.info(f"Verification {verification.verification_id} auto-approved after successful SMTP send")
+            except Exception as e:
+                logger.error(f"Failed to auto-approve verification: {e}")
+        else:
+            logger.warning(f"Verification {verification.verification_id} not auto-approved: SMTP send failed or disabled")
+
         return VerificationResponse.model_validate(verification)
 
     async def get_verification_status(

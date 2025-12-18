@@ -4,6 +4,7 @@ from datetime import datetime
 
 from app.core.exceptions import NotFoundException
 from app.domain.room_reservation.schemas import (
+    RecurrenceType,
     RoomReservationCreate,
     RoomReservationResponse,
     RoomReservationUpdate,
@@ -44,6 +45,15 @@ class RoomReservationService:
         if data.scheduled_at <= datetime.now():
             raise ValueError("Scheduled time must be in the future")
 
+        # Normalize recurrence_type (handle both Enum and string)
+        recurrence_type_value = (
+            data.recurrence_type.value
+            if isinstance(data.recurrence_type, RecurrenceType)
+            else str(data.recurrence_type)
+            if data.recurrence_type
+            else "none"
+        )
+
         # Create main reservation
         reservation = RoomReservation(
             id=generate_uuid(),
@@ -54,9 +64,9 @@ class RoomReservationService:
             description=data.description,
             is_active=True,
             is_completed=False,
-            recurrence_type=data.recurrence_type.value if data.recurrence_type else "none",
+            recurrence_type=recurrence_type_value,
             recurrence_end_date=data.recurrence_end_date,
-            notification_minutes=data.notification_minutes,
+            notification_minutes=data.notification_minutes or 5,
             notification_sent=False,
         )
 
@@ -88,7 +98,16 @@ class RoomReservationService:
             "monthly": timedelta(days=30),  # Approximate
         }
 
-        delta = delta_map.get(data.recurrence_type.value)
+        # Normalize recurrence_type (handle both Enum and string)
+        recurrence_type_str = (
+            data.recurrence_type.value
+            if isinstance(data.recurrence_type, RecurrenceType)
+            else str(data.recurrence_type)
+            if data.recurrence_type
+            else "none"
+        )
+
+        delta = delta_map.get(recurrence_type_str)
         if not delta:
             return
 
@@ -96,6 +115,15 @@ class RoomReservationService:
             current_date += delta
             if current_date >= data.recurrence_end_date:
                 break
+
+            # Normalize recurrence_type for recurring reservations
+            recurrence_type_value = (
+                data.recurrence_type.value
+                if isinstance(data.recurrence_type, RecurrenceType)
+                else str(data.recurrence_type)
+                if data.recurrence_type
+                else "none"
+            )
 
             recurring_reservation = RoomReservation(
                 id=generate_uuid(),
@@ -106,9 +134,9 @@ class RoomReservationService:
                 description=data.description,
                 is_active=True,
                 is_completed=False,
-                recurrence_type=data.recurrence_type.value,
-                recurrence_end_date=data.recurrence_end_date,
-                notification_minutes=data.notification_minutes,
+                recurrence_type=recurrence_type_value,
+                recurrence_end_date=None,  # Only main reservation has end date
+                notification_minutes=data.notification_minutes or 5,
                 notification_sent=False,
             )
 

@@ -71,6 +71,13 @@ class Room(Base, TimestampMixin):
         comment="Room host user ID (optional)",
     )
 
+    remove_on_leave: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="If true, participants are removed from room list when they leave. If false, participants remain visible even after leaving.",
+    )
+
     def __repr__(self) -> str:
         """String representation of Room."""
         return f"<Room(id={self.id}, name={self.name})>"

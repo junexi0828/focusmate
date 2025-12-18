@@ -35,6 +35,10 @@ class RoomCreate(BaseModel):
         default=5 * 60,  # 5 minutes in seconds
     )
     auto_start_break: bool = True
+    remove_on_leave: bool = Field(
+        default=False,
+        description="If true, participants are removed from room list when they leave. If false, participants remain visible even after leaving.",
+    )
 
 
 class RoomUpdate(BaseModel):
@@ -53,6 +57,10 @@ class RoomUpdate(BaseModel):
         le=MAX_BREAK_DURATION * 60,  # Convert minutes to seconds
     )
     auto_start_break: bool | None = None
+    remove_on_leave: bool | None = Field(
+        None,
+        description="If true, participants are removed from room list when they leave. If false, participants remain visible even after leaving.",
+    )
 
 
 class RoomResponse(BaseModel):
@@ -67,5 +75,6 @@ class RoomResponse(BaseModel):
     auto_start_break: bool
     is_active: bool
     host_id: str | None
+    remove_on_leave: bool = False
     created_at: datetime
     updated_at: datetime

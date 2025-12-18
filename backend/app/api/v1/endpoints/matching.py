@@ -53,8 +53,15 @@ async def get_my_matching_pool(
 ) -> Optional[MatchingPoolResponse]:
     """Get current user's active matching pool."""
     try:
+        if not current_user or not current_user.get("id"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
         pool = await service.get_my_pool(current_user["id"])
         return pool
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

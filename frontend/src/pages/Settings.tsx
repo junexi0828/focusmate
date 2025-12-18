@@ -44,12 +44,41 @@ export default function Settings() {
     loadSettings();
   }, []);
 
+  // Apply theme when settings are loaded
+  useEffect(() => {
+    if (settings?.theme) {
+      applyTheme(settings.theme);
+    }
+  }, [settings?.theme]);
+
+  // Helper function to apply theme
+  const applyTheme = (theme: 'light' | 'dark' | 'system') => {
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+      root.classList.add(systemTheme);
+    } else {
+      root.classList.add(theme);
+    }
+  };
+
   const loadSettings = async () => {
     try {
+      setLoading(true);
       const data = await getSettings();
       setSettings(data);
-    } catch (error) {
-      toast.error("설정을 불러오는데 실패했습니다");
+    } catch (error: any) {
+      console.error("Failed to load settings:", error);
+      const errorMessage = error?.response?.data?.detail || error?.message || "설정을 불러오는데 실패했습니다";
+      toast.error(errorMessage);
+      // If unauthorized, redirect to login
+      if (error?.response?.status === 401) {
+        window.location.href = "/login";
+      }
     } finally {
       setLoading(false);
     }
@@ -62,6 +91,14 @@ export default function Settings() {
     try {
       const updated = await updateSettings(updates);
       setSettings(updated);
+
+      // Apply theme immediately if theme was updated
+      if (updates.theme !== undefined) {
+        applyTheme(updates.theme);
+        // Also update localStorage for consistency with sidebar
+        localStorage.setItem("theme", updates.theme === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : updates.theme);
+      }
+
       toast.success("설정이 저장되었습니다");
     } catch (error: any) {
       toast.error(error.response?.data?.detail || "설정 저장에 실패했습니다");

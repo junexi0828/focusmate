@@ -42,9 +42,18 @@ class MatchingPoolRepository:
 
     async def get_user_active_pool(self, user_id: str) -> Optional[MatchingPool]:
         """Get active pool where user is a member."""
+        # PostgreSQL ARRAY contains check: use ANY() operator
+        # Check if user_id is in member_ids array or if user is creator
+        from sqlalchemy import or_, text
+
         result = await self.session.execute(
             select(MatchingPool)
-            .where(MatchingPool.member_ids.contains([user_id]))
+            .where(
+                or_(
+                    MatchingPool.creator_id == user_id,
+                    text(f"'{user_id}' = ANY(member_ids)"),
+                )
+            )
             .where(MatchingPool.status == "waiting")
         )
         return result.scalar_one_or_none()

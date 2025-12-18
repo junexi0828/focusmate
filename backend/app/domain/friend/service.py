@@ -1,5 +1,6 @@
 """Friend service."""
 
+from typing import Optional
 from uuid import uuid4
 
 from app.core.exceptions import NotFoundException, ConflictException, UnauthorizedException
@@ -8,12 +9,14 @@ from app.domain.friend.schemas import (
     FriendRequestResponse,
     FriendResponse,
     FriendListResponse,
+    FriendSearchParams,
 )
 from app.infrastructure.database.models.friend import FriendRequestStatus
 from app.infrastructure.repositories.friend_repository import (
     FriendRequestRepository,
     FriendRepository,
 )
+from app.infrastructure.repositories.presence_repository import PresenceRepository
 
 
 class FriendService:
@@ -23,9 +26,11 @@ class FriendService:
         self,
         friend_request_repo: FriendRequestRepository,
         friend_repo: FriendRepository,
+        presence_repo: Optional[PresenceRepository] = None,
     ):
         self.friend_request_repo = friend_request_repo
         self.friend_repo = friend_repo
+        self.presence_repo = presence_repo
 
     async def send_friend_request(
         self, sender_id: str, data: FriendRequestCreate
@@ -216,13 +221,21 @@ class FriendService:
         return {"message": "Friend request cancelled"}
 
     async def get_friends(self, user_id: str) -> FriendListResponse:
-        """Get all friends of a user."""
+        """Get all friends of a user with presence information."""
         friendships = await self.friend_repo.get_user_friends(user_id)
+
+        # Get presence for all friends if repository is available
+        presence_map = {}
+        if self.presence_repo:
+            friend_ids = [f.friend_id for f in friendships]
+            presences = await self.presence_repo.get_multiple_presence(friend_ids)
+            presence_map = {p.id: p for p in presences}
 
         friends = []
         for friendship in friendships:
             friend_user = await self.friend_repo.get_user_by_id(friendship.friend_id)
             if friend_user:
+                presence = presence_map.get(friendship.friend_id)
                 friends.append(
                     FriendResponse(
                         id=friendship.id,
@@ -234,7 +247,9 @@ class FriendService:
                         friend_email=friend_user.email,
                         friend_profile_image=friend_user.profile_image,
                         friend_bio=friend_user.bio,
-                        friend_is_online=False,  # TODO: Implement online status
+                        friend_is_online=presence.is_online if presence else False,
+                        friend_last_seen_at=presence.last_seen_at if presence else None,
+                        friend_status_message=presence.status_message if presence else None,
                     )
                 )
 
@@ -267,3 +282,68 @@ class FriendService:
             raise NotFoundException("Friendship not found")
 
         return {"message": "Friend unblocked"}
+
+    async def search_friends(self, user_id: str, params: FriendSearchParams) -> FriendListResponse:
+        """Search and filter friends."""
+        # Handle different filter types
+        if params.filter_type == "online" and self.presence_repo:
+            friendships = await self.friend_repo.get_online_friends(user_id)
+        elif params.filter_type == "blocked":
+            all_friends = await self.friend_repo.get_user_friends(user_id)
+            friendships = [f for f in all_friends if f.is_blocked]
+        elif params.query:
+            friendships = await self.friend_repo.search_friends(user_id, params.query)
+        else:
+            friendships = await self.friend_repo.get_user_friends(user_id)
+
+        # Limit results
+        friendships = friendships[:params.limit]
+
+        # Get presence for all friends
+        presence_map = {}
+        if self.presence_repo:
+            friend_ids = [f.friend_id for f in friendships]
+            presences = await self.presence_repo.get_multiple_presence(friend_ids)
+            presence_map = {p.id: p for p in presences}
+
+        friends = []
+        for friendship in friendships:
+            friend_user = await self.friend_repo.get_user_by_id(friendship.friend_id)
+            if friend_user:
+                presence = presence_map.get(friendship.friend_id)
+                friends.append(
+                    FriendResponse(
+                        id=friendship.id,
+                        user_id=friendship.user_id,
+                        friend_id=friendship.friend_id,
+                        created_at=friendship.created_at,
+                        is_blocked=friendship.is_blocked,
+                        friend_username=friend_user.username,
+                        friend_email=friend_user.email,
+                        friend_profile_image=friend_user.profile_image,
+                        friend_bio=friend_user.bio,
+                        friend_is_online=presence.is_online if presence else False,
+                        friend_last_seen_at=presence.last_seen_at if presence else None,
+                        friend_status_message=presence.status_message if presence else None,
+                    )
+                )
+
+        return FriendListResponse(friends=friends, total=len(friends))
+
+    async def create_friend_chat(self, user_id: str, friend_id: str):
+        """Create or get direct chat with a friend.
+
+        Note: This method returns the ChatRoomResponse from chat service.
+        This is a placeholder that will be implemented when chat service is integrated.
+        """
+        # Verify friendship exists
+        friendship = await self.friend_repo.get_friendship(user_id, friend_id)
+        if not friendship:
+            raise NotFoundException("Friendship not found")
+
+        if friendship.is_blocked:
+            raise ConflictException("Cannot create chat with blocked friend")
+
+        # This will be implemented in the chat API endpoint
+        # by calling chat service's create_direct_chat method
+        return {"user_id": user_id, "friend_id": friend_id}

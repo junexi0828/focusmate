@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_required
 from app.core.security import decode_jwt_token
 from app.domain.notification.schemas import (
     NotificationCreate,
@@ -27,11 +27,27 @@ def get_notification_repository(db: DatabaseSession) -> NotificationRepository:
     return NotificationRepository(db)
 
 
+def get_user_settings_repository(db: DatabaseSession) -> "UserSettingsRepository":
+    """Get user settings repository."""
+    from app.infrastructure.repositories.user_settings_repository import (
+        UserSettingsRepository,
+    )
+    return UserSettingsRepository(db)
+
+
+def get_user_repository(db: DatabaseSession) -> "UserRepository":
+    """Get user repository."""
+    from app.infrastructure.repositories.user_repository import UserRepository
+    return UserRepository(db)
+
+
 def get_notification_service(
     repo: Annotated[NotificationRepository, Depends(get_notification_repository)],
+    settings_repo: Annotated["UserSettingsRepository", Depends(get_user_settings_repository)],
+    user_repo: Annotated["UserRepository", Depends(get_user_repository)],
 ) -> NotificationService:
-    """Get notification service."""
-    return NotificationService(repo)
+    """Get notification service with dependencies."""
+    return NotificationService(repo, settings_repo, user_repo)
 
 
 # Endpoints
@@ -55,23 +71,17 @@ async def create_notification(
     try:
         notification = await service.create_notification(data)
 
-        # Send real-time notification via WebSocket if user is online
-        await notification_ws_manager.send_notification(
-            {
-                "type": "notification",
-                "data": {
-                    "notification_id": notification.notification_id,
-                    "type": notification.type,
-                    "title": notification.title,
-                    "message": notification.message,
-                    "data": notification.data,
-                    "created_at": notification.created_at.isoformat(),
-                },
-            },
-            notification.user_id,
-        )
+        # If notification is None, it was blocked by user settings
+        if notification is None:
+            raise HTTPException(
+                status_code=status.HTTP_200_OK,
+                detail="Notification was not sent due to user settings",
+            )
 
+        # Note: Email and push notifications are now handled in NotificationService.create_notification
         return notification
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -81,7 +91,7 @@ async def create_notification(
 
 @router.get("/", response_model=list[NotificationResponse])
 async def get_my_notifications(
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
     unread_only: bool = Query(False, description="Return only unread notifications"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of notifications"),
@@ -105,7 +115,7 @@ async def get_my_notifications(
 
 @router.get("/unread-count", response_model=dict)
 async def get_unread_count(
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> dict:
     """Get count of unread notifications for the current user.
@@ -125,7 +135,7 @@ async def get_unread_count(
 @router.post("/mark-read", status_code=status.HTTP_200_OK)
 async def mark_notifications_as_read(
     data: NotificationMarkRead,
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> dict:
     """Mark notifications as read.
@@ -144,7 +154,7 @@ async def mark_notifications_as_read(
 
 @router.post("/mark-all-read", status_code=status.HTTP_200_OK)
 async def mark_all_as_read(
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> dict:
     """Mark all notifications for the current user as read.
@@ -164,7 +174,7 @@ async def mark_all_as_read(
 @router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_notification(
     notification_id: str,
-    current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> None:
     """Delete a notification.

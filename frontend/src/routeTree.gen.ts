@@ -22,7 +22,10 @@ import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RankingIndexRouteImport } from './routes/ranking.index'
+import { Route as MatchingIndexRouteImport } from './routes/matching.index'
 import { Route as CommunityIndexRouteImport } from './routes/community.index'
+import { Route as RoomsMyRoomsRouteImport } from './routes/rooms.my-rooms'
 import { Route as RoomRoomIdRouteImport } from './routes/room.$roomId'
 import { Route as RankingHallOfFameRouteImport } from './routes/ranking.hall-of-fame'
 import { Route as MatchingStatsRouteImport } from './routes/matching.stats'
@@ -31,6 +34,7 @@ import { Route as RankingTeamsTeamIdRouteImport } from './routes/ranking.teams.$
 import { Route as MatchingProposalsProposalIdRouteImport } from './routes/matching.proposals.$proposalId'
 import { Route as MatchingPoolsPoolIdRouteImport } from './routes/matching.pools.$poolId'
 import { Route as MatchingMatchedProposalIdRouteImport } from './routes/matching.matched.$proposalId'
+import { Route as RankingTeamsTeamIdManageRouteImport } from './routes/ranking.teams.$teamId.manage'
 
 const VerificationRoute = VerificationRouteImport.update({
   id: '/verification',
@@ -97,10 +101,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RankingIndexRoute = RankingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RankingRoute,
+} as any)
+const MatchingIndexRoute = MatchingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MatchingRoute,
+} as any)
 const CommunityIndexRoute = CommunityIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CommunityRoute,
+} as any)
+const RoomsMyRoomsRoute = RoomsMyRoomsRouteImport.update({
+  id: '/rooms/my-rooms',
+  path: '/rooms/my-rooms',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const RoomRoomIdRoute = RoomRoomIdRouteImport.update({
   id: '/room/$roomId',
@@ -144,6 +163,12 @@ const MatchingMatchedProposalIdRoute =
     path: '/matched/$proposalId',
     getParentRoute: () => MatchingRoute,
   } as any)
+const RankingTeamsTeamIdManageRoute =
+  RankingTeamsTeamIdManageRouteImport.update({
+    id: '/manage',
+    path: '/manage',
+    getParentRoute: () => RankingTeamsTeamIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -163,21 +188,23 @@ export interface FileRoutesByFullPath {
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
   '/room/$roomId': typeof RoomRoomIdRoute
+  '/rooms/my-rooms': typeof RoomsMyRoomsRoute
   '/community/': typeof CommunityIndexRoute
+  '/matching/': typeof MatchingIndexRoute
+  '/ranking/': typeof RankingIndexRoute
   '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
   '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
   '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
-  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRoute
+  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRouteWithChildren
+  '/ranking/teams/$teamId/manage': typeof RankingTeamsTeamIdManageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/friends': typeof FriendsRoute
   '/login': typeof LoginRoute
-  '/matching': typeof MatchingRouteWithChildren
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
-  '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
@@ -186,11 +213,15 @@ export interface FileRoutesByTo {
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
   '/room/$roomId': typeof RoomRoomIdRoute
+  '/rooms/my-rooms': typeof RoomsMyRoomsRoute
   '/community': typeof CommunityIndexRoute
+  '/matching': typeof MatchingIndexRoute
+  '/ranking': typeof RankingIndexRoute
   '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
   '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
   '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
-  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRoute
+  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRouteWithChildren
+  '/ranking/teams/$teamId/manage': typeof RankingTeamsTeamIdManageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -211,11 +242,15 @@ export interface FileRoutesById {
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
   '/room/$roomId': typeof RoomRoomIdRoute
+  '/rooms/my-rooms': typeof RoomsMyRoomsRoute
   '/community/': typeof CommunityIndexRoute
+  '/matching/': typeof MatchingIndexRoute
+  '/ranking/': typeof RankingIndexRoute
   '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
   '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
   '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
-  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRoute
+  '/ranking/teams/$teamId': typeof RankingTeamsTeamIdRouteWithChildren
+  '/ranking/teams/$teamId/manage': typeof RankingTeamsTeamIdManageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -237,21 +272,23 @@ export interface FileRouteTypes {
     | '/matching/stats'
     | '/ranking/hall-of-fame'
     | '/room/$roomId'
+    | '/rooms/my-rooms'
     | '/community/'
+    | '/matching/'
+    | '/ranking/'
     | '/matching/matched/$proposalId'
     | '/matching/pools/$poolId'
     | '/matching/proposals/$proposalId'
     | '/ranking/teams/$teamId'
+    | '/ranking/teams/$teamId/manage'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
     | '/friends'
     | '/login'
-    | '/matching'
     | '/messages'
     | '/profile'
-    | '/ranking'
     | '/reservations'
     | '/settings'
     | '/stats'
@@ -260,11 +297,15 @@ export interface FileRouteTypes {
     | '/matching/stats'
     | '/ranking/hall-of-fame'
     | '/room/$roomId'
+    | '/rooms/my-rooms'
     | '/community'
+    | '/matching'
+    | '/ranking'
     | '/matching/matched/$proposalId'
     | '/matching/pools/$poolId'
     | '/matching/proposals/$proposalId'
     | '/ranking/teams/$teamId'
+    | '/ranking/teams/$teamId/manage'
   id:
     | '__root__'
     | '/'
@@ -284,11 +325,15 @@ export interface FileRouteTypes {
     | '/matching/stats'
     | '/ranking/hall-of-fame'
     | '/room/$roomId'
+    | '/rooms/my-rooms'
     | '/community/'
+    | '/matching/'
+    | '/ranking/'
     | '/matching/matched/$proposalId'
     | '/matching/pools/$poolId'
     | '/matching/proposals/$proposalId'
     | '/ranking/teams/$teamId'
+    | '/ranking/teams/$teamId/manage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -306,6 +351,7 @@ export interface RootRouteChildren {
   StatsRoute: typeof StatsRoute
   VerificationRoute: typeof VerificationRoute
   RoomRoomIdRoute: typeof RoomRoomIdRoute
+  RoomsMyRoomsRoute: typeof RoomsMyRoomsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -401,12 +447,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ranking/': {
+      id: '/ranking/'
+      path: '/'
+      fullPath: '/ranking/'
+      preLoaderRoute: typeof RankingIndexRouteImport
+      parentRoute: typeof RankingRoute
+    }
+    '/matching/': {
+      id: '/matching/'
+      path: '/'
+      fullPath: '/matching/'
+      preLoaderRoute: typeof MatchingIndexRouteImport
+      parentRoute: typeof MatchingRoute
+    }
     '/community/': {
       id: '/community/'
       path: '/'
       fullPath: '/community/'
       preLoaderRoute: typeof CommunityIndexRouteImport
       parentRoute: typeof CommunityRoute
+    }
+    '/rooms/my-rooms': {
+      id: '/rooms/my-rooms'
+      path: '/rooms/my-rooms'
+      fullPath: '/rooms/my-rooms'
+      preLoaderRoute: typeof RoomsMyRoomsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/room/$roomId': {
       id: '/room/$roomId'
@@ -464,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MatchingMatchedProposalIdRouteImport
       parentRoute: typeof MatchingRoute
     }
+    '/ranking/teams/$teamId/manage': {
+      id: '/ranking/teams/$teamId/manage'
+      path: '/manage'
+      fullPath: '/ranking/teams/$teamId/manage'
+      preLoaderRoute: typeof RankingTeamsTeamIdManageRouteImport
+      parentRoute: typeof RankingTeamsTeamIdRoute
+    }
   }
 }
 
@@ -483,6 +557,7 @@ const CommunityRouteWithChildren = CommunityRoute._addFileChildren(
 
 interface MatchingRouteChildren {
   MatchingStatsRoute: typeof MatchingStatsRoute
+  MatchingIndexRoute: typeof MatchingIndexRoute
   MatchingMatchedProposalIdRoute: typeof MatchingMatchedProposalIdRoute
   MatchingPoolsPoolIdRoute: typeof MatchingPoolsPoolIdRoute
   MatchingProposalsProposalIdRoute: typeof MatchingProposalsProposalIdRoute
@@ -490,6 +565,7 @@ interface MatchingRouteChildren {
 
 const MatchingRouteChildren: MatchingRouteChildren = {
   MatchingStatsRoute: MatchingStatsRoute,
+  MatchingIndexRoute: MatchingIndexRoute,
   MatchingMatchedProposalIdRoute: MatchingMatchedProposalIdRoute,
   MatchingPoolsPoolIdRoute: MatchingPoolsPoolIdRoute,
   MatchingProposalsProposalIdRoute: MatchingProposalsProposalIdRoute,
@@ -499,14 +575,27 @@ const MatchingRouteWithChildren = MatchingRoute._addFileChildren(
   MatchingRouteChildren,
 )
 
+interface RankingTeamsTeamIdRouteChildren {
+  RankingTeamsTeamIdManageRoute: typeof RankingTeamsTeamIdManageRoute
+}
+
+const RankingTeamsTeamIdRouteChildren: RankingTeamsTeamIdRouteChildren = {
+  RankingTeamsTeamIdManageRoute: RankingTeamsTeamIdManageRoute,
+}
+
+const RankingTeamsTeamIdRouteWithChildren =
+  RankingTeamsTeamIdRoute._addFileChildren(RankingTeamsTeamIdRouteChildren)
+
 interface RankingRouteChildren {
   RankingHallOfFameRoute: typeof RankingHallOfFameRoute
-  RankingTeamsTeamIdRoute: typeof RankingTeamsTeamIdRoute
+  RankingIndexRoute: typeof RankingIndexRoute
+  RankingTeamsTeamIdRoute: typeof RankingTeamsTeamIdRouteWithChildren
 }
 
 const RankingRouteChildren: RankingRouteChildren = {
   RankingHallOfFameRoute: RankingHallOfFameRoute,
-  RankingTeamsTeamIdRoute: RankingTeamsTeamIdRoute,
+  RankingIndexRoute: RankingIndexRoute,
+  RankingTeamsTeamIdRoute: RankingTeamsTeamIdRouteWithChildren,
 }
 
 const RankingRouteWithChildren =
@@ -527,6 +616,7 @@ const rootRouteChildren: RootRouteChildren = {
   StatsRoute: StatsRoute,
   VerificationRoute: VerificationRoute,
   RoomRoomIdRoute: RoomRoomIdRoute,
+  RoomsMyRoomsRoute: RoomsMyRoomsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

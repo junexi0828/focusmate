@@ -10,6 +10,7 @@ from app.domain.participant.schemas import ParticipantJoin, ParticipantListRespo
 from app.domain.participant.service import ParticipantService
 from app.infrastructure.repositories.participant_repository import ParticipantRepository
 from app.infrastructure.repositories.room_repository import RoomRepository
+from app.infrastructure.repositories.user_repository import UserRepository
 from app.infrastructure.database.session import DatabaseSession
 
 router = APIRouter(prefix="/participants", tags=["participants"])
@@ -20,12 +21,18 @@ def get_participant_repository(db: DatabaseSession) -> ParticipantRepository:
     return ParticipantRepository(db)
 
 
+def get_user_repository(db: DatabaseSession) -> UserRepository:
+    """Get user repository."""
+    return UserRepository(db)
+
+
 def get_participant_service(
     participant_repo: Annotated[ParticipantRepository, Depends(get_participant_repository)],
     room_repo: Annotated[RoomRepository, Depends(get_room_repository)],
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> ParticipantService:
     """Get participant service."""
-    return ParticipantService(participant_repo, room_repo)
+    return ParticipantService(participant_repo, room_repo, user_repo)
 
 
 @router.post("/{room_id}/join", response_model=ParticipantResponse, status_code=status.HTTP_201_CREATED)
@@ -35,7 +42,7 @@ async def join_room(
     service: Annotated[ParticipantService, Depends(get_participant_service)],
 ) -> ParticipantResponse:
     """Join a room as a participant.
-    
+
     First participant becomes the room host.
     """
     try:

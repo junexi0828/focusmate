@@ -136,18 +136,21 @@ export function ProfilePage({
             <div className="space-y-6">
               <div className="grid gap-4">
                 <StatCard
+                  key="total-focus-time"
                   title="총 집중 시간"
                   value={`${Math.floor(user.totalFocusTime / 60)}시간 ${user.totalFocusTime % 60}분`}
                   icon={Target}
                   variant="primary"
                 />
                 <StatCard
+                  key="total-sessions"
                   title="완료한 세션"
                   value={`${user.totalSessions}개`}
                   icon={Award}
                   variant="secondary"
                 />
                 <StatCard
+                  key="avg-session-time"
                   title="평균 세션 시간"
                   value={`${
                     user.totalSessions > 0
@@ -276,12 +279,14 @@ export function ProfilePage({
             <CardContent>
               <div className="grid sm:grid-cols-2 gap-4">
                 <StatCard
+                  key="stats-total-focus-time"
                   title="총 집중 시간"
                   value={`${Math.floor(user.totalFocusTime / 60)}시간 ${user.totalFocusTime % 60}분`}
                   icon={Target}
                   variant="primary"
                 />
                 <StatCard
+                  key="stats-total-sessions"
                   title="완료한 세션"
                   value={`${user.totalSessions}개`}
                   icon={Award}

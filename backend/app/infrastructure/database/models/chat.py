@@ -57,6 +57,16 @@ class ChatRoom(Base):
         Boolean(), nullable=False, server_default=text("false")
     )
 
+    # Invitation codes
+    invitation_code: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    invitation_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    invitation_max_uses: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True)
+    invitation_use_count: Mapped[int] = mapped_column(
+        Integer(), nullable=False, server_default=text("0")
+    )
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

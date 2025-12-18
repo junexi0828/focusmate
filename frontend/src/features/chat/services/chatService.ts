@@ -14,6 +14,13 @@ export interface ChatRoom {
   last_message_content?: string | null;
   last_message_sender_id?: string | null;
   unread_count: number;
+
+  // Direct chat partner info
+  partner_id?: string | null;
+  partner_username?: string | null;
+  partner_email?: string | null;
+  partner_profile_image?: string | null;
+  partner_is_online?: boolean | null;
 }
 
 export interface ChatRoomListResponse {
@@ -140,6 +147,23 @@ class ChatService extends BaseApiClient {
         team_id: teamId,
         room_name: roomName,
         description,
+      }),
+    });
+  }
+
+  async createTeamChatByEmail(
+    roomName: string,
+    memberEmails: string[],
+    description?: string,
+    sendInvitations: boolean = true
+  ): Promise<ApiResponse<ChatRoom>> {
+    return this.request<ChatRoom>(`/chats/rooms/team-email`, {
+      method: "POST",
+      body: JSON.stringify({
+        room_name: roomName,
+        member_emails: memberEmails,
+        description,
+        send_invitations: sendInvitations,
       }),
     });
   }

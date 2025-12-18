@@ -75,7 +75,7 @@ export function MyRoomsSection() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => navigate({ to: "/reservations" })}
+              onClick={() => navigate({ to: "/rooms/my-rooms" })}
               className="text-xs"
             >
               전체 보기
@@ -115,7 +115,7 @@ export function MyRoomsSection() {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{room.name}</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {room.work_duration / 60}분 집중 · {room.break_duration / 60}분 휴식
+                    {room.work_duration}분 집중 · {room.break_duration}분 휴식
                   </div>
                 </div>
                 <Button

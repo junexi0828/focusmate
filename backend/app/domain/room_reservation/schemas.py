@@ -17,7 +17,7 @@ class RecurrenceType(str, Enum):
 class RoomReservationCreate(BaseModel):
     """Request schema for creating a room reservation."""
 
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(strict=False)  # Allow string to datetime conversion
 
     scheduled_at: datetime = Field(..., description="When the room session should start")
     work_duration: int = Field(
@@ -27,10 +27,10 @@ class RoomReservationCreate(BaseModel):
         default=5 * 60, ge=60, le=1800, description="Break time in seconds"
     )
     description: str | None = Field(None, max_length=500, description="Optional description")
-    recurrence_type: RecurrenceType = Field(
+    recurrence_type: RecurrenceType | str = Field(
         default=RecurrenceType.NONE, description="Recurrence pattern"
     )
-    recurrence_end_date: datetime | None = Field(
+    recurrence_end_date: datetime | str | None = Field(
         None, description="When to stop creating recurring reservations"
     )
     notification_minutes: int = Field(

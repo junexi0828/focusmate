@@ -35,9 +35,15 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
+      // Unauthorized - clear token
       localStorage.removeItem("access_token");
-      window.location.href = "/login";
+
+      // Only redirect to login if not on home page or login page
+      // Home page should be accessible without authentication
+      const currentPath = window.location.pathname;
+      if (currentPath !== "/" && currentPath !== "/login") {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

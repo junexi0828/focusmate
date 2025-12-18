@@ -186,6 +186,24 @@ function CommunityComponent() {
     });
   };
 
+  const handleCategoryChange = (category: string) => {
+    // Map UI category values to API category values
+    const categoryMap: Record<string, string | undefined> = {
+      all: undefined,
+      tips: "tips",
+      achievement: "achievement",
+      question: "question",
+    };
+
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        category: categoryMap[category],
+        page: 1, // Reset to first page when category changes
+      }),
+    });
+  };
+
   if (isLoading && !data) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center">
@@ -229,6 +247,8 @@ function CommunityComponent() {
         onCreatePost={handleCreatePost}
         onViewPost={handleViewPost}
         onLike={handleLike}
+        selectedCategory={category === "tips" ? "tips" : category === "achievement" ? "achievement" : category === "question" ? "question" : "all"}
+        onCategoryChange={handleCategoryChange}
         authorUsername={author_username || ""}
         dateFrom={date_from || ""}
         dateTo={date_to || ""}
