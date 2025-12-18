@@ -36,17 +36,32 @@ async def get_my_rooms(
         participant_repo = ParticipantRepository(db)
 
         # Get all participants for this user
-        participants = await participant_repo.get_by_user_id(current_user["id"], active_only=True)
+        # If room has remove_on_leave=True, only show active participants
+        # If room has remove_on_leave=False, show all participants (including disconnected)
+        all_participants = await participant_repo.get_by_user_id(current_user["id"], active_only=False)
 
         # Get unique room IDs
-        room_ids = list(set([p.room_id for p in participants]))
+        room_ids = list(set([p.room_id for p in all_participants]))
 
-        # Get rooms
+        # Get rooms and filter based on remove_on_leave setting
         rooms = []
         for room_id in room_ids:
             try:
                 room = await service.get_room(room_id)
-                if room:
+                if not room:
+                    continue
+
+                # If room has remove_on_leave=True, only include if participant is active
+                if room.remove_on_leave:
+                    # Check if user has an active participant in this room
+                    active_participant = next(
+                        (p for p in all_participants if p.room_id == room_id and p.is_connected),
+                        None
+                    )
+                    if active_participant:
+                        rooms.append(room)
+                else:
+                    # If remove_on_leave=False, include room regardless of connection status
                     rooms.append(room)
             except Exception:
                 continue
@@ -62,11 +77,46 @@ async def get_my_rooms(
 @router.post("/", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
 async def create_room(
     data: RoomCreate,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    db: DatabaseSession,
     service: Annotated[RoomService, Depends(get_room_service)],
 ) -> RoomResponse:
-    """Create a new room."""
+    """Create a new room and automatically add creator as participant."""
     try:
-        return await service.create_room(data)
+        # Create room with host_id
+        room = await service.create_room(data, user_id=current_user["id"])
+
+        # Automatically add creator as participant (host)
+        from app.infrastructure.repositories.participant_repository import (
+            ParticipantRepository,
+        )
+        from app.domain.participant.service import ParticipantService
+        from app.domain.participant.schemas import ParticipantJoin
+        from app.infrastructure.repositories.room_repository import RoomRepository
+        from app.infrastructure.repositories.user_repository import UserRepository
+        from app.infrastructure.repositories.timer_repository import TimerRepository
+        from app.domain.timer.service import TimerService
+
+        participant_repo = ParticipantRepository(db)
+        room_repo = RoomRepository(db)
+        user_repo = UserRepository(db)
+        participant_service = ParticipantService(participant_repo, room_repo, user_repo)
+
+        # Add creator as participant (will become host if first participant)
+        await participant_service.join_room(
+            room.id,
+            ParticipantJoin(
+                user_id=current_user["id"],
+                username=current_user.get("username", current_user.get("email", "User")),
+            ),
+        )
+
+        # Create timer for the room if it doesn't exist
+        timer_repo = TimerRepository(db)
+        timer_service = TimerService(timer_repo, room_repo)
+        await timer_service.get_or_create_timer(room.id)
+
+        return room
     except RoomNameTakenException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=e.message)
 

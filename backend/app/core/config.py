@@ -115,6 +115,7 @@ class Settings(BaseSettings):
             v = v.strip()
             if v.startswith("["):
                 import json
+
                 return json.loads(v)
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return ["http://localhost:3000", "http://localhost:5173"]
@@ -155,6 +156,24 @@ class Settings(BaseSettings):
     # ==========================================================================
     WS_HEARTBEAT_INTERVAL: int = 30
     WS_MAX_CONNECTIONS_PER_ROOM: int = 50
+
+    # ==========================================================================
+    # Presence (Online Status)
+    # ==========================================================================
+    PRESENCE_TIMEOUT_MINUTES: int = 5
+    PRESENCE_CLEANUP_INTERVAL_MINUTES: int = 5
+
+    # ==========================================================================
+    # Invitation Codes
+    # ==========================================================================
+    INVITATION_CODE_LENGTH: int = 8
+    INVITATION_DEFAULT_EXPIRY_HOURS: int = 24
+
+    # ==========================================================================
+    # Legacy Messaging Migration
+    # ==========================================================================
+    ENABLE_LEGACY_MESSAGING: bool = False
+    LEGACY_MIGRATION_BATCH_SIZE: int = 100
 
     # ==========================================================================
     # Email (SMTP)

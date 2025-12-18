@@ -153,3 +153,4 @@ playwright/.cache/
 # Development temporary files (삭제 예정)
 dev_tmp/
 
+.vercel

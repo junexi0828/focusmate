@@ -209,10 +209,17 @@ async def leave_team(
 @router.get("/leaderboard")
 async def get_leaderboard(
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    db: DatabaseSession,
+    db: Annotated[DatabaseSession, Depends()],
     period: str = Query("weekly", description="Period: weekly, monthly, all_time"),
     limit: int = Query(50, ge=1, le=100, description="Number of teams to return"),
 ) -> dict:
+    # Validate period parameter
+    valid_periods = ["weekly", "monthly", "all_time"]
+    if period not in valid_periods:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid period. Must be one of: {', '.join(valid_periods)}"
+        )
     """Get leaderboard rankings for teams.
 
     Args:
@@ -284,12 +291,14 @@ async def get_leaderboard(
                 score = 0.0
                 average_score = 0.0
                 total_minutes = 0
+                total_sessions = 0
 
             leaderboard_data.append({
                 "team": team,
                 "score": score,
                 "average_score": average_score,
                 "member_count": len(member_ids),
+                "total_sessions": total_sessions,
             })
 
         # Sort by score descending
@@ -307,6 +316,7 @@ async def get_leaderboard(
                 rank_change=0,  # TODO: Track rank changes
                 member_count=data["member_count"],
                 average_score=data["average_score"],
+                total_sessions=data["total_sessions"],
             )
             leaderboard_entries.append(entry)
 

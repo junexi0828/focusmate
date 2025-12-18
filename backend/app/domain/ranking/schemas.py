@@ -179,6 +179,7 @@ class LeaderboardEntry(BaseModel):
     rank_change: int
     member_count: Optional[int] = None
     average_score: Optional[float] = None
+    total_sessions: Optional[int] = None  # Total number of sessions
 
     class Config:
         from_attributes = True

@@ -468,14 +468,26 @@ export function useChatWebSocket() {
       return;
     }
 
+    const mountTime = Date.now();
     hasInitializedRef.current = true;
     shouldReconnectRef.current = true;
     connect();
 
     return () => {
+      // React StrictMode 대응: 마운트 후 200ms 이내 cleanup은 무시
+      const timeSinceMount = Date.now() - mountTime;
+      if (timeSinceMount < 200 && !isConnected) {
+        console.log(`[Chat WS] Skipping cleanup - React StrictMode double-mount detected (${timeSinceMount}ms)`);
+        hasInitializedRef.current = false;
+        return;
+      }
+
       shouldReconnectRef.current = false;
-      disconnect();
-      hasInitializedRef.current = false;
+      // cleanup이 완료될 때까지 짧은 대기 후 disconnect
+      setTimeout(() => {
+        disconnect();
+        hasInitializedRef.current = false;
+      }, 100);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount

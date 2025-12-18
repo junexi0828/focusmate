@@ -229,6 +229,17 @@ class RankingService extends BaseApiClient {
   ): Promise<ApiResponse<HallOfFameResponse>> {
     return this.request<HallOfFameResponse>(`/ranking/hall-of-fame?period=${period}`);
   }
+
+  // Leaderboard
+  async getLeaderboard(
+    period: 'weekly' | 'monthly' | 'all_time' = 'weekly',
+    limit: number = 50
+  ): Promise<ApiResponse<LeaderboardResponse>> {
+    const params = new URLSearchParams();
+    params.append('period', period);
+    params.append('limit', limit.toString());
+    return this.request<LeaderboardResponse>(`/ranking/leaderboard?${params.toString()}`);
+  }
 }
 
 export interface TeamStats {
@@ -293,6 +304,25 @@ export interface HallOfFameResponse {
   teams: HallOfFameEntry[];
   top_focus_teams: HallOfFameEntry[];
   top_game_teams: HallOfFameEntry[];
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  team_id: string;
+  team_name: string;
+  team_type: string;
+  score: number;
+  rank_change: number;
+  member_count?: number;
+  average_score?: number;
+  total_sessions?: number;
+}
+
+export interface LeaderboardResponse {
+  ranking_type: string;
+  period: string;
+  updated_at: string;
+  leaderboard: LeaderboardEntry[];
 }
 
 export const rankingService = new RankingService();

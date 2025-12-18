@@ -30,6 +30,17 @@ export interface Friend {
   friend_profile_image?: string | null;
   friend_bio?: string | null;
   friend_is_online: boolean;
+  friend_last_seen_at?: string | null;
+  friend_status_message?: string | null;
+}
+
+export interface FriendPresence {
+  user_id: string;
+  username: string;
+  is_online: boolean;
+  last_seen_at: string | null;
+  connection_count: number;
+  status_message: string | null;
 }
 
 export interface FriendListResponse {
@@ -217,6 +228,84 @@ class FriendService {
         error: {
           code: error.response?.status || 500,
           message: error.response?.data?.detail || "친구 차단 해제에 실패했습니다",
+        },
+      };
+    }
+  }
+
+  /**
+   * Get all friends' presence
+   */
+  async getFriendsPresence(): Promise<ApiResponse<FriendPresence[]>> {
+    try {
+      const response = await api.get<FriendPresence[]>("/friends/presence");
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          code: error.response?.status || 500,
+          message: error.response?.data?.detail || "친구 상태 불러오기 실패",
+        },
+      };
+    }
+  }
+
+  /**
+   * Get specific friend's presence
+   */
+  async getFriendPresence(friendId: string): Promise<ApiResponse<FriendPresence>> {
+    try {
+      const response = await api.get<FriendPresence>(`/friends/${friendId}/presence`);
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          code: error.response?.status || 500,
+          message: error.response?.data?.detail || "친구 상태 불러오기 실패",
+        },
+      };
+    }
+  }
+
+  /**
+   * Search and filter friends
+   */
+  async searchFriends(
+    query?: string,
+    filterType: "all" | "online" | "blocked" = "all",
+    limit: number = 50
+  ): Promise<ApiResponse<FriendListResponse>> {
+    try {
+      const response = await api.get<FriendListResponse>("/friends/search", {
+        params: { query, filter_type: filterType, limit },
+      });
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          code: error.response?.status || 500,
+          message: error.response?.data?.detail || "친구 검색 실패",
+        },
+      };
+    }
+  }
+
+  /**
+   * Create or get direct chat with friend
+   */
+  async createFriendChat(friendId: string): Promise<ApiResponse<{ user_id: string; friend_id: string }>> {
+    try {
+      const response = await api.post<{ user_id: string; friend_id: string }>(`/friends/${friendId}/chat`);
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          code: error.response?.status || 500,
+          message: error.response?.data?.detail || "채팅방 생성 실패",
         },
       };
     }

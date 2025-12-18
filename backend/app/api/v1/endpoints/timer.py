@@ -28,7 +28,7 @@ async def get_timer_state(
     service: Annotated[TimerService, Depends(get_timer_service)],
 ) -> TimerStateResponse:
     """Get current timer state for a room.
-    
+
     Returns real-time calculated state including remaining seconds.
     """
     try:
@@ -43,7 +43,7 @@ async def start_timer(
     service: Annotated[TimerService, Depends(get_timer_service)],
 ) -> TimerStateResponse:
     """Start the timer.
-    
+
     Transitions from IDLE or PAUSED to RUNNING.
     """
     try:
@@ -60,11 +60,28 @@ async def pause_timer(
     service: Annotated[TimerService, Depends(get_timer_service)],
 ) -> TimerStateResponse:
     """Pause the timer.
-    
+
     Transitions from RUNNING to PAUSED, saving remaining time.
     """
     try:
         return await service.pause_timer(room_id)
+    except TimerNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except InvalidTimerStateException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+
+
+@router.post("/{room_id}/resume", response_model=TimerStateResponse)
+async def resume_timer(
+    room_id: str,
+    service: Annotated[TimerService, Depends(get_timer_service)],
+) -> TimerStateResponse:
+    """Resume the paused timer.
+
+    Transitions from PAUSED to RUNNING, continuing from remaining time.
+    """
+    try:
+        return await service.resume_timer(room_id)
     except TimerNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
     except InvalidTimerStateException as e:

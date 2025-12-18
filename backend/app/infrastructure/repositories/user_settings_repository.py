@@ -66,6 +66,9 @@ class UserSettingsRepository:
         Returns:
             Updated user settings
         """
+        # Ensure the object is in the session
+        self.db.add(settings)
+        await self.db.flush()
         await self.db.commit()
         await self.db.refresh(settings)
         return settings

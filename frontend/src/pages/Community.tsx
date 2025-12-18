@@ -10,6 +10,8 @@ interface CommunityPageProps {
   onCreatePost: () => void;
   onViewPost: (postId: string) => void;
   onLike: (postId: string) => void;
+  selectedCategory?: string;
+  onCategoryChange?: (category: string) => void;
   authorUsername: string;
   dateFrom: string;
   dateTo: string;
@@ -24,6 +26,8 @@ export function CommunityPage({
   onCreatePost,
   onViewPost,
   onLike,
+  selectedCategory = "all",
+  onCategoryChange,
   authorUsername,
   dateFrom,
   dateTo,
@@ -33,7 +37,6 @@ export function CommunityPage({
   onClearAdvancedFilters,
 }: CommunityPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   return (
     <div className="min-h-full bg-muted/30 flex flex-col">
@@ -54,7 +57,7 @@ export function CommunityPage({
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
+        onCategoryChange={onCategoryChange || (() => {})}
         onCreatePost={onCreatePost}
         authorUsername={authorUsername || ""}
         dateFrom={dateFrom || ""}

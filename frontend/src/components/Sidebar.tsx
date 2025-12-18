@@ -82,7 +82,7 @@ export function Sidebar() {
           </svg>
         </div>
         {!isCollapsed && (
-          <span className="font-bold text-lg tracking-tight">Focus Mate</span>
+          <span className="font-bold text-lg tracking-tight">FocusMate</span>
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}

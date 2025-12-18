@@ -10,6 +10,8 @@ from app.domain.friend.schemas import (
     FriendRequestCreate,
     FriendRequestResponse,
     FriendListResponse,
+    FriendSearchParams,
+    FriendPresence,
 )
 from app.domain.friend.service import FriendService
 from app.infrastructure.database.session import DatabaseSession
@@ -17,6 +19,8 @@ from app.infrastructure.repositories.friend_repository import (
     FriendRequestRepository,
     FriendRepository,
 )
+from app.infrastructure.repositories.presence_repository import PresenceRepository
+from app.domain.friend.presence_service import PresenceService
 
 router = APIRouter(prefix="/friends", tags=["friends"])
 
@@ -32,14 +36,28 @@ def get_friend_repository(db: DatabaseSession) -> FriendRepository:
     return FriendRepository(db)
 
 
+def get_presence_repository(db: DatabaseSession) -> PresenceRepository:
+    """Get presence repository."""
+    return PresenceRepository(db)
+
+
 def get_friend_service(
     friend_request_repo: Annotated[
         FriendRequestRepository, Depends(get_friend_request_repository)
     ],
     friend_repo: Annotated[FriendRepository, Depends(get_friend_repository)],
+    presence_repo: Annotated[PresenceRepository, Depends(get_presence_repository)],
 ) -> FriendService:
     """Get friend service."""
-    return FriendService(friend_request_repo, friend_repo)
+    return FriendService(friend_request_repo, friend_repo, presence_repo)
+
+
+def get_presence_service(
+    presence_repo: Annotated[PresenceRepository, Depends(get_presence_repository)],
+    friend_repo: Annotated[FriendRepository, Depends(get_friend_repository)],
+) -> PresenceService:
+    """Get presence service."""
+    return PresenceService(presence_repo, friend_repo)
 
 
 # Friend Request Endpoints
@@ -278,3 +296,103 @@ async def unblock_friend(
         return await service.unblock_friend(current_user["id"], friend_id)
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+
+
+# Presence Endpoints
+@router.get("/presence", response_model=list[FriendPresence])
+async def get_friends_presence(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[PresenceService, Depends(get_presence_service)],
+) -> list[FriendPresence]:
+    """Get presence information for all friends.
+
+    Returns:
+        List of friend presence information
+    """
+    return await service.get_friends_presence(current_user["id"])
+
+
+@router.get("/{friend_id}/presence", response_model=FriendPresence)
+async def get_friend_presence(
+    friend_id: str,
+    service: Annotated[PresenceService, Depends(get_presence_service)],
+) -> FriendPresence:
+    """Get presence for a specific friend.
+
+    Args:
+        friend_id: Friend's user ID
+        service: Presence service
+
+    Returns:
+        Friend presence information
+
+    Raises:
+        HTTPException: If friend not found
+    """
+    presence = await service.get_user_presence(friend_id)
+    if not presence:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Presence information not found"
+        )
+    return presence
+
+
+# Search and Filter Endpoints
+@router.get("/search", response_model=FriendListResponse)
+async def search_friends(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[FriendService, Depends(get_friend_service)],
+    query: str = Query(None, description="Search query for friend username"),
+    filter_type: str = Query("all", description="Filter type: all, online, blocked"),
+    limit: int = Query(50, ge=1, le=100, description="Max results"),
+) -> FriendListResponse:
+    """Search and filter friends.
+
+    Args:
+        current_user: Current authenticated user
+        service: Friend service
+        query: Search query
+        filter_type: Filter type
+        limit: Max results
+
+    Returns:
+        List of matching friends
+    """
+    params = FriendSearchParams(
+        query=query,
+        filter_type=filter_type,
+        limit=limit,
+    )
+    return await service.search_friends(current_user["id"], params)
+
+
+# Quick Chat Endpoint
+@router.post("/{friend_id}/chat")
+async def create_friend_chat(
+    friend_id: str,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[FriendService, Depends(get_friend_service)],
+) -> dict:
+    """Create or get direct chat with a friend.
+
+    This endpoint validates friendship and returns friend/user IDs.
+    The actual chat room creation is handled by the chat service.
+
+    Args:
+        friend_id: Friend's user ID
+        current_user: Current authenticated user
+        service: Friend service
+
+    Returns:
+        Friend chat information
+
+    Raises:
+        HTTPException: If friendship not found or blocked
+    """
+    try:
+        return await service.create_friend_chat(current_user["id"], friend_id)
+    except NotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except ConflictException as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=e.message)

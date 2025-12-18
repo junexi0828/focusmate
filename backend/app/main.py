@@ -63,6 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 # Create FastAPI application
+# redirect_slashes=False prevents automatic redirects that can cause CORS issues
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -71,16 +72,19 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json",
     lifespan=lifespan,
+    redirect_slashes=False,  # Disable automatic trailing slash redirects to prevent CORS issues
 )
 
-# CORS middleware
+# CORS middleware - must be added before routes
+# This ensures OPTIONS preflight requests are handled correctly
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # Explicitly include OPTIONS
+    allow_headers=["*"],  # Allow all headers including Authorization
     expose_headers=["*"],  # Expose all headers
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 

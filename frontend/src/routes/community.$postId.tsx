@@ -227,11 +227,11 @@ function PostDetailComponent() {
   });
 
   const handleCommentSubmit = () => {
-    if (!commentContent.trim()) {
-      toast.error("댓글 내용을 입력해주세요");
-      return;
-    }
     if (replyingToCommentId) {
+      if (!replyContent.trim()) {
+        toast.error("답글 내용을 입력해주세요");
+        return;
+      }
       createCommentMutation.mutate({
         content: replyContent,
         parent_comment_id: replyingToCommentId,
@@ -239,7 +239,14 @@ function PostDetailComponent() {
       setReplyingToCommentId(null);
       setReplyContent("");
     } else {
-      createCommentMutation.mutate(commentContent);
+      if (!commentContent.trim()) {
+        toast.error("댓글 내용을 입력해주세요");
+        return;
+      }
+      createCommentMutation.mutate({
+        content: commentContent,
+      });
+      setCommentContent("");
     }
   };
 

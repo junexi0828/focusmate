@@ -5,11 +5,12 @@
 export interface Room {
   id: string; // 백엔드 응답은 'id'를 사용
   name: string; // 백엔드 응답은 'name'을 사용
-  work_duration: number; // seconds
-  break_duration: number; // seconds
+  work_duration: number; // minutes (백엔드에서 분 단위로 저장/반환)
+  break_duration: number; // minutes (백엔드에서 분 단위로 저장/반환)
   auto_start_break: boolean;
   is_active: boolean;
   host_id?: string | null;
+  remove_on_leave?: boolean; // If true, participants are removed from room list when they leave
   created_at: string;
   updated_at?: string;
   // 하위 호환성을 위한 필드
@@ -33,10 +34,12 @@ export interface CreateRoomRequest {
   work_duration: number; // 초 단위 (백엔드 API 스펙)
   break_duration: number; // 초 단위 (백엔드 API 스펙)
   auto_start_break?: boolean;
+  remove_on_leave?: boolean; // If true, participants are removed from room list when they leave
 }
 
 export interface UpdateRoomSettingsRequest {
   work_duration?: number; // 초 단위 (백엔드 API 스펙)
   break_duration?: number; // 초 단위 (백엔드 API 스펙)
   auto_start_break?: boolean;
+  remove_on_leave?: boolean; // If true, participants are removed from room list when they leave
 }

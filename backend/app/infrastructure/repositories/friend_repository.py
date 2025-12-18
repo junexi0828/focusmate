@@ -196,3 +196,56 @@ class FriendRepository:
         """Get user by ID."""
         result = await self.session.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
+
+    async def search_friends(self, user_id: str, query: str) -> list[Friend]:
+        """Search friends by username."""
+        from app.infrastructure.database.models.user import User
+
+        result = await self.session.execute(
+            select(Friend)
+            .join(User, Friend.friend_id == User.id)
+            .where(
+                and_(
+                    Friend.user_id == user_id,
+                    User.username.ilike(f"%{query}%"),
+                )
+            )
+            .order_by(Friend.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_online_friends(self, user_id: str) -> list[Friend]:
+        """Get friends who are currently online."""
+        from app.infrastructure.database.models.presence import UserPresence
+
+        result = await self.session.execute(
+            select(Friend)
+            .join(UserPresence, Friend.friend_id == UserPresence.id)
+            .where(
+                and_(
+                    Friend.user_id == user_id,
+                    UserPresence.is_online == True,
+                )
+            )
+            .order_by(Friend.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_friends_with_presence(self, user_id: str) -> list[tuple[Friend, User, object]]:
+        """Get friends with their user info and presence.
+
+        Returns list of tuples: (Friend, User, UserPresence or None)
+        """
+        from app.infrastructure.database.models.user import User
+        from app.infrastructure.database.models.presence import UserPresence
+        from sqlalchemy.orm import joinedload
+        from sqlalchemy import outerjoin
+
+        result = await self.session.execute(
+            select(Friend, User, UserPresence)
+            .join(User, Friend.friend_id == User.id)
+            .outerjoin(UserPresence, Friend.friend_id == UserPresence.id)
+            .where(Friend.user_id == user_id)
+            .order_by(Friend.created_at.desc())
+        )
+        return list(result.all())

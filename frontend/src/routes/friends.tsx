@@ -1,8 +1,10 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { authService } from "../features/auth/services/authService";
 import { friendService } from "../features/friends/services/friendService";
+import { chatService } from "../features/chat/services/chatService";
+import { userService, type UserSearchResult } from "../features/users/services/userService";
 import { PageTransition } from "../components/PageTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -45,10 +47,21 @@ export const Route = createFileRoute("/friends")({
 
 function FriendsComponent() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [friendIdInput, setFriendIdInput] = useState("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Helper function to extract error message from API response
+  const getErrorMessage = (error: any, defaultMessage: string): string => {
+    if (typeof error?.message === 'string') return error.message;
+    if (typeof error === 'string') return error;
+    return defaultMessage;
+  };
 
   // Fetch friends
   const { data: friendsData } = useQuery({
@@ -87,7 +100,7 @@ function FriendsComponent() {
         setIsAddDialogOpen(false);
         setFriendIdInput("");
       } else {
-        toast.error(response.error?.message || "친구 요청 전송 실패");
+        toast.error(getErrorMessage(response.error, "친구 요청 전송 실패"));
       }
     },
   });
@@ -101,7 +114,7 @@ function FriendsComponent() {
         queryClient.invalidateQueries({ queryKey: ["friends"] });
         toast.success("친구 요청을 수락했습니다");
       } else {
-        toast.error(response.error?.message || "요청 수락 실패");
+        toast.error(getErrorMessage(response.error, "요청 수락 실패"));
       }
     },
   });
@@ -114,7 +127,7 @@ function FriendsComponent() {
         queryClient.invalidateQueries({ queryKey: ["friend-requests", "received"] });
         toast.success("친구 요청을 거절했습니다");
       } else {
-        toast.error(response.error?.message || "요청 거절 실패");
+        toast.error(getErrorMessage(response.error, "요청 거절 실패"));
       }
     },
   });
@@ -128,10 +141,33 @@ function FriendsComponent() {
         toast.success("친구를 삭제했습니다");
         setRemovingFriendId(null);
       } else {
-        toast.error(response.error?.message || "친구 삭제 실패");
+        toast.error(getErrorMessage(response.error, "친구 삭제 실패"));
       }
     },
   });
+
+  // Search users
+  const handleUserSearch = async () => {
+    if (!userSearchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await userService.searchUsers(userSearchQuery);
+      if (response.status === "success") {
+        setSearchResults(response.data.users);
+      } else {
+        toast.error(getErrorMessage(response.error, "사용자 검색 실패"));
+      }
+    } catch (error) {
+      console.error("[Friends] Search error:", error);
+      toast.error("검색 중 오류가 발생했습니다");
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const friends = friendsData?.friends || [];
   const filteredFriends = friends.filter((friend) =>
@@ -158,33 +194,75 @@ function FriendsComponent() {
                 친구 추가
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>친구 추가</DialogTitle>
                 <DialogDescription>
-                  사용자 ID를 입력하여 친구 요청을 보내세요
+                  사용자 이름이나 이메일로 검색하세요
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <Input
-                  placeholder="사용자 ID 입력"
-                  value={friendIdInput}
-                  onChange={(e) => setFriendIdInput(e.target.value)}
-                />
-                <div className="flex justify-end gap-2">
+                {/* Search Input */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="이름 또는 이메일 검색"
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleUserSearch();
+                      }
+                    }}
+                  />
                   <Button
-                    variant="outline"
-                    onClick={() => setIsAddDialogOpen(false)}
+                    onClick={handleUserSearch}
+                    disabled={isSearching || !userSearchQuery.trim()}
                   >
-                    취소
-                  </Button>
-                  <Button
-                    onClick={() => sendRequestMutation.mutate(friendIdInput)}
-                    disabled={!friendIdInput.trim() || sendRequestMutation.isPending}
-                  >
-                    요청 보내기
+                    {isSearching ? "검색중..." : "검색"}
                   </Button>
                 </div>
+
+                {/* Search Results */}
+                {searchResults.length > 0 && (
+                  <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-2">
+                    {searchResults.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-2 hover:bg-slate-50 rounded"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs">
+                              {user.username.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">{user.username}</p>
+                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            sendRequestMutation.mutate(user.id);
+                            setSearchResults([]);
+                            setUserSearchQuery("");
+                          }}
+                          disabled={sendRequestMutation.isPending}
+                        >
+                          <UserPlus className="w-4 h-4 mr-1" />
+                          추가
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {userSearchQuery && searchResults.length === 0 && !isSearching && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    검색 결과가 없습니다
+                  </p>
+                )}
               </div>
             </DialogContent>
           </Dialog>
@@ -244,9 +322,9 @@ function FriendsComponent() {
                           </Avatar>
                           <div>
                             <h3 className="font-semibold">{friend.friend_username}</h3>
-                            {friend.friend_bio && (
+                            {friend.friend_status_message && (
                               <p className="text-sm text-muted-foreground">
-                                {friend.friend_bio}
+                                {friend.friend_status_message}
                               </p>
                             )}
                             <div className="flex items-center gap-2 mt-1">
@@ -256,13 +334,60 @@ function FriendsComponent() {
                                 }`}
                               />
                               <span className="text-xs text-muted-foreground">
-                                {friend.friend_is_online ? "온라인" : "오프라인"}
+                                {friend.friend_is_online
+                                  ? "온라인"
+                                  : friend.friend_last_seen_at
+                                    ? `마지막 접속: ${formatDistanceToNow(new Date(friend.friend_last_seen_at), {
+                                        addSuffix: true,
+                                        locale: ko,
+                                      })}`
+                                    : "오프라인"
+                                }
                               </span>
                             </div>
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={async () => {
+                              console.log("[Friends] 메시지 버튼 클릭, friend_id:", friend.friend_id);
+                              try {
+                                // Create direct chat room via chatService
+                                console.log("[Friends] API 호출 시작: createDirectChat");
+                                const chatResult = await chatService.createDirectChat(friend.friend_id);
+                                console.log("[Friends] API 응답:", chatResult);
+
+                                if (chatResult.status === "success") {
+                                  console.log("[Friends] 성공! 채팅방 ID:", chatResult.data.room_id);
+
+                                  // Invalidate all chat rooms queries to ensure refetch
+                                  queryClient.invalidateQueries({
+                                    queryKey: ["chat-rooms"],
+                                    refetchType: "all"
+                                  });
+
+                                  toast.success("채팅방으로 이동합니다");
+
+                                  // Navigate to messages page with room_id
+                                  console.log("[Friends] Navigate 호출: /messages");
+                                  navigate({
+                                    to: "/messages",
+                                    search: { roomId: chatResult.data.room_id }
+                                  });
+                                  console.log("[Friends] Navigate 완료");
+                                } else {
+                                  console.error("[Friends] API 실패:", chatResult.error);
+                                  toast.error(chatResult.error?.message || "채팅방 생성 실패");
+                                }
+                              } catch (error) {
+                                console.error("[Friends] Exception:", error);
+                                toast.error("채팅방 생성 중 오류가 발생했습니다");
+                              }
+                            }}
+                          >
                             <MessageSquare className="w-4 h-4" />
                             메시지
                           </Button>

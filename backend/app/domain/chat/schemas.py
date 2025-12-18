@@ -37,6 +37,13 @@ class ChatRoomResponse(BaseModel):
     last_message_sender_id: Optional[str] = None  # Last message sender
     unread_count: int = 0  # Calculated field
 
+    # Direct chat partner info (for direct chats only)
+    partner_id: Optional[str] = None
+    partner_username: Optional[str] = None
+    partner_email: Optional[str] = None
+    partner_profile_image: Optional[str] = None
+    partner_is_online: Optional[bool] = None
+
     class Config:
         from_attributes = True
         populate_by_name = True  # Allow both metadata and room_metadata
@@ -131,6 +138,15 @@ class TeamChatCreate(BaseModel):
     description: Optional[str] = None
 
 
+class TeamChatCreateByEmail(BaseModel):
+    """Schema for creating a team chat by email addresses."""
+
+    room_name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = None
+    member_emails: list[str] = Field(..., min_items=1, max_items=50)
+    send_invitations: bool = True  # Whether to send email invitations
+
+
 # Matching Chat Schemas (created automatically from proposals)
 class MatchingChatInfo(BaseModel):
     """Schema for matching chat information."""
@@ -146,3 +162,41 @@ class ReadStatusUpdate(BaseModel):
     """Schema for updating read status."""
 
     last_message_id: Optional[UUID] = None
+
+
+# Invitation Code Schemas
+class InvitationCodeInfo(BaseModel):
+    """Schema for invitation code information."""
+
+    code: str
+    room_id: UUID
+    expires_at: Optional[datetime]
+    max_uses: Optional[int]
+    current_uses: int
+    is_valid: bool
+
+    class Config:
+        from_attributes = True
+
+
+class InvitationCodeCreate(BaseModel):
+    """Schema for creating invitation code."""
+
+    expires_hours: int = Field(24, ge=1, le=168)  # 1 hour to 7 days
+    max_uses: Optional[int] = Field(None, ge=1, le=100)
+
+
+class InvitationJoinRequest(BaseModel):
+    """Schema for joining room via invitation code."""
+
+    invitation_code: str = Field(..., min_length=8, max_length=8)
+
+
+class FriendRoomCreate(BaseModel):
+    """Schema for creating room with friends."""
+
+    friend_ids: list[str] = Field(..., min_length=1, max_length=10)
+    room_name: Optional[str] = Field(None, max_length=200)
+    description: Optional[str] = None
+    generate_invitation: bool = False
+    invitation_expires_hours: int = Field(24, ge=1, le=168)

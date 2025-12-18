@@ -330,3 +330,74 @@ class ChatRepository:
         )
         messages = list(result.scalars().all())
         return list(reversed(messages))  # Return in chronological order
+
+    # Invitation code operations
+    async def update_room_invitation(
+        self,
+        room_id: UUID,
+        code: str,
+        expires_at: Optional[datetime],
+        max_uses: Optional[int],
+    ) -> ChatRoom:
+        """Update room invitation code."""
+        room = await self.get_room_by_id(room_id)
+        if not room:
+            raise ValueError("Room not found")
+
+        room.invitation_code = code
+        room.invitation_expires_at = expires_at
+        room.invitation_max_uses = max_uses
+        room.invitation_use_count = 0
+
+        await self.session.commit()
+        await self.session.refresh(room)
+        return room
+
+    async def get_room_by_invitation_code(self, code: str) -> Optional[ChatRoom]:
+        """Get room by invitation code."""
+        result = await self.session.execute(
+            select(ChatRoom).where(ChatRoom.invitation_code == code)
+        )
+        return result.scalar_one_or_none()
+
+    async def increment_invitation_usage(self, room_id: UUID) -> int:
+        """Increment invitation code usage count."""
+        room = await self.get_room_by_id(room_id)
+        if not room:
+            raise ValueError("Room not found")
+
+        room.invitation_use_count += 1
+        await self.session.commit()
+        await self.session.refresh(room)
+        return room.invitation_use_count
+
+    async def get_direct_room(self, user_id: str, recipient_id: str) -> Optional[ChatRoom]:
+        """Get existing direct chat room between two users."""
+        result = await self.session.execute(
+            select(ChatRoom)
+            .join(ChatMember, ChatRoom.room_id == ChatMember.room_id)
+            .where(
+                and_(
+                    ChatRoom.room_type == "direct",
+                    ChatMember.user_id == user_id,
+                    ChatMember.is_active == True,
+                )
+            )
+        )
+        rooms = list(result.scalars().all())
+
+        # Check if any room has the recipient as a member
+        for room in rooms:
+            members_result = await self.session.execute(
+                select(ChatMember).where(
+                    and_(
+                        ChatMember.room_id == room.room_id,
+                        ChatMember.user_id == recipient_id,
+                        ChatMember.is_active == True,
+                    )
+                )
+            )
+            if members_result.scalar_one_or_none():
+                return room
+
+        return None

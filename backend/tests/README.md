@@ -39,21 +39,25 @@ tests/
 ## 테스트 실행
 
 ### 전체 테스트
+
 ```bash
 pytest
 ```
 
 ### 단위 테스트만
+
 ```bash
 pytest tests/unit/
 ```
 
 ### 통합 테스트만
+
 ```bash
 pytest tests/integration/
 ```
 
 ### 성능 테스트만
+
 ```bash
 pytest tests/performance/
 
@@ -62,6 +66,7 @@ pytest -m benchmark
 ```
 
 ### 특정 파일
+
 ```bash
 pytest tests/unit/test_chat_service.py
 pytest tests/unit/test_encryption.py
@@ -69,11 +74,13 @@ pytest tests/performance/test_matching_performance.py
 ```
 
 ### Coverage 포함
+
 ```bash
 pytest --cov=app --cov-report=html
 ```
 
 ### Standalone 벤치마크
+
 ```bash
 # pytest 없이 매칭 알고리즘 벤치마크 실행
 python3 tests/performance/benchmark_matching.py
@@ -82,11 +89,13 @@ python3 tests/performance/benchmark_matching.py
 ## 테스트 데이터베이스 설정
 
 테스트용 PostgreSQL 데이터베이스 생성:
+
 ```bash
 createdb focusmate_test
 ```
 
 또는 Docker 사용:
+
 ```bash
 docker run -d \
   --name focusmate-test-db \
@@ -101,14 +110,15 @@ docker run -d \
 
 ### 현재 커버리지
 
-| 모듈 | 커버리지 |
-|------|---------|
-| ChatRepository | 90%+ |
-| ChatService | 85%+ |
-| RBAC | 95%+ |
-| Chat API | 80%+ |
+| 모듈           | 커버리지 |
+| -------------- | -------- |
+| ChatRepository | 90%+     |
+| ChatService    | 85%+     |
+| RBAC           | 95%+     |
+| Chat API       | 80%+     |
 
 ### 목표 커버리지
+
 - Unit Tests: 90%+
 - Integration Tests: 80%+
 - Overall: 85%+
@@ -118,6 +128,7 @@ docker run -d \
 ### Unit Tests (39 tests)
 
 #### test_chat_repository.py (14 tests)
+
 - ✅ test_create_room
 - ✅ test_get_room_by_id
 - ✅ test_get_user_rooms
@@ -134,6 +145,7 @@ docker run -d \
 - ✅ test_get_unread_count
 
 #### test_chat_service.py (10 tests)
+
 - ✅ test_create_direct_chat_new
 - ✅ test_create_direct_chat_existing
 - ✅ test_create_team_chat
@@ -146,6 +158,7 @@ docker run -d \
 - ✅ test_get_rooms
 
 #### test_rbac.py (15 tests)
+
 - ✅ test_get_user_role_user
 - ✅ test_get_user_role_admin
 - ✅ test_get_user_role_super_admin
@@ -163,6 +176,7 @@ docker run -d \
 - ✅ test_invalid_role
 
 #### test_encryption.py (15 tests) ✨ NEW
+
 - ✅ test_encrypt_decrypt_bytes
 - ✅ test_encrypt_decrypt_string
 - ✅ test_encryption_is_non_deterministic
@@ -180,6 +194,7 @@ docker run -d \
 - ⚡ test_decryption_performance (benchmark)
 
 #### test_encrypted_file_upload.py (13 tests) ✨ NEW
+
 - ✅ test_upload_file_encrypts_content
 - ✅ test_download_file_decrypts_content
 - ✅ test_upload_download_roundtrip
@@ -196,6 +211,7 @@ docker run -d \
 ### Integration Tests
 
 #### test_chat_api.py (11 tests)
+
 - ✅ test_get_user_rooms
 - ✅ test_create_direct_chat
 - ✅ test_create_team_chat
@@ -210,23 +226,29 @@ docker run -d \
 - ✅ test_remove_reaction
 
 #### test_api_endpoints.py
+
 - ✅ API 엔드포인트 통합 테스트
 
 #### test_friend_features.py
+
 - ✅ 친구 기능 통합 테스트
 
 #### test_db_connection.py
+
 - ✅ 데이터베이스 연결 테스트
 
 #### test_migrations.py
+
 - ✅ 마이그레이션 검증 테스트
 
-#### test_websocket_*.py
+#### test*websocket*\*.py
+
 - ✅ WebSocket 연결 및 통신 테스트
 
 ### Performance Tests (6 tests)
 
 #### test_matching_performance.py (6 tests)
+
 - ✅ test_optimized_finds_more_matches
 - ✅ test_matching_quality
 - ✅ test_performance_scales
@@ -266,7 +288,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -283,17 +305,20 @@ jobs:
 ## 추가 테스트 필요
 
 ### 우선순위 높음
+
 - [ ] WebSocket 연결 테스트
 - [ ] Redis Pub/Sub 테스트
 - [x] File upload 테스트 ✅ (암호화 포함)
 - [ ] Proposal service 테스트
 
 ### 우선순위 중간
+
 - [ ] Email service 테스트
 - [ ] S3 storage 테스트
 - [ ] Notification service 테스트
 
 ### 우선순위 낮음
+
 - [x] Performance 테스트 ✅ (매칭 알고리즘)
 - [ ] Load 테스트
 - [x] Security 테스트 ✅ (암호화)
@@ -307,12 +332,14 @@ jobs:
 ## 테스트 파일 정리 (2025-12-25)
 
 모든 테스트 파일을 적절한 폴더로 정리했습니다:
+
 - API 통합 테스트 → `integration/api/`
 - 데이터베이스/마이그레이션 테스트 → `integration/`
 - WebSocket 테스트 → `integration/`
 - 성능 벤치마크 → `performance/`
 
 ### 테스트 커버리지 개선
+
 - ✅ 암호화 서비스: 100% 커버리지
 - ✅ 파일 업로드 암호화: 90%+ 커버리지
 - ✅ 매칭 알고리즘: 성능 벤치마크 포함

@@ -1,9 +1,9 @@
 import React from "react";
-import { Timer } from "lucide-react";
 import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
+import logoIcon from "../assets/logo.png";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -42,21 +42,19 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
           */}
           <div className="flex items-center justify-center gap-3 mb-4">
             {/*
-              로고 아이콘 컨테이너
-              - w-12 h-12: 로고 원 크기 (변경: w-10 h-10, w-14 h-14, w-16 h-16 등)
+              로고 이미지
+              - w-12 h-12: 로고 크기 (변경: w-10 h-10, w-14 h-14, w-16 h-16 등)
             */}
-            <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-              {/*
-                로고 아이콘 크기
-                - w-7 h-7: 아이콘 크기 (변경: w-5 h-5, w-6 h-6, w-8 h-8 등)
-              */}
-              <Timer className="w-7 h-7 text-primary-foreground" />
-            </div>
+            <img
+              src={logoIcon}
+              alt="FocusMate Logo"
+              className="w-12 h-12"
+            />
             {/*
               메인 제목 크기
               - text-4xl: 제목 크기 (변경: text-3xl, text-5xl, text-6xl 등)
             */}
-            <h1 className="text-4xl">Focus Mate</h1>
+            <h1 className="text-4xl">FocusMate</h1>
           </div>
           {/*
             설명 텍스트 설정

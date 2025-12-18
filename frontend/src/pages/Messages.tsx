@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Users, Heart, Search, Plus, Send } from "lucide-react";
+import { MessageSquare, Users, Heart, Search, Plus, Send, Mail } from "lucide-react";
 import { chatService, type ChatRoom, type MessageCreate, type Message } from "../features/chat/services/chatService";
+import { friendService } from "../features/friends/services/friendService";
 import { PageTransition } from "../components/PageTransition";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button-enhanced";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { authService } from "../features/auth/services/authService";
@@ -17,8 +19,15 @@ import { MessageItem } from "../features/chat/components/MessageItem";
 import { FilePreview } from "../features/chat/components/FilePreview";
 import { Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
+import { Textarea } from "../components/ui/textarea";
+import { Label } from "../components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
-export function MessagesPage() {
+interface MessagesPageProps {
+  initialRoomId?: string;
+}
+
+export function MessagesPage({ initialRoomId }: MessagesPageProps) {
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [activeTab, setActiveTab] = useState<"direct" | "team" | "matching">(
     "direct"
@@ -27,6 +36,11 @@ export function MessagesPage() {
   const [messageInput, setMessageInput] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isNewChatDialogOpen, setIsNewChatDialogOpen] = useState(false);
+  const [dialogTab, setDialogTab] = useState<"direct" | "team">("direct");
+  const [teamName, setTeamName] = useState("");
+  const [teamDescription, setTeamDescription] = useState("");
+  const [teamEmails, setTeamEmails] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const user = authService.getCurrentUser();
@@ -40,11 +54,124 @@ export function MessagesPage() {
   const { data: roomsData, isLoading } = useQuery({
     queryKey: ["chat-rooms", activeTab],
     queryFn: async () => {
+      console.log("[Messages] Fetching rooms for tab:", activeTab);
       const response = await chatService.getRooms(activeTab);
+      console.log("[Messages] Rooms API response:", response);
       return response.status === "success" ? response.data : { rooms: [], total: 0 };
     },
     refetchInterval: 30000, // Refetch every 30 seconds to update unread counts
   });
+
+  // Fetch friends for new chat dialog
+  const { data: friendsData } = useQuery({
+    queryKey: ["friends"],
+    queryFn: async () => {
+      const response = await friendService.getFriends();
+      return response.status === "success" ? response.data : { friends: [], total: 0 };
+    },
+    enabled: isNewChatDialogOpen, // Only fetch when dialog is open
+  });
+
+  // Create direct chat mutation
+  const createDirectChatMutation = useMutation({
+    mutationFn: async (friendId: string) => {
+      const response = await chatService.createDirectChat(friendId);
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "채팅방 생성 실패");
+      }
+      return response.data;
+    },
+    onSuccess: (room) => {
+      queryClient.invalidateQueries({ queryKey: ["chat-rooms"] });
+      setSelectedRoom(room);
+      setIsNewChatDialogOpen(false);
+      toast.success("채팅방이 생성되었습니다");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "채팅방 생성 실패");
+    },
+  });
+
+  // Create team chat mutation
+  const createTeamChatMutation = useMutation({
+    mutationFn: async () => {
+      // Parse and validate emails
+      const emails = teamEmails
+        .split(/[,\n]/)
+        .map((e) => e.trim())
+        .filter((e) => e.length > 0);
+
+      if (emails.length === 0) {
+        throw new Error("최소 1명의 이메일을 입력해주세요");
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const invalidEmails = emails.filter((e) => !emailRegex.test(e));
+      if (invalidEmails.length > 0) {
+        throw new Error(`잘못된 이메일 형식: ${invalidEmails.join(", ")}`);
+      }
+
+      const response = await chatService.createTeamChatByEmail(
+        teamName,
+        emails,
+        teamDescription || undefined,
+        true
+      );
+
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "팀 채팅 생성 실패");
+      }
+      return response.data;
+    },
+    onSuccess: (room) => {
+      queryClient.invalidateQueries({ queryKey: ["chat-rooms"] });
+      setSelectedRoom(room);
+      setIsNewChatDialogOpen(false);
+      setTeamName("");
+      setTeamDescription("");
+      setTeamEmails("");
+      toast.success("팀 채팅이 생성되었습니다");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "팀 채팅 생성 실패");
+    },
+  });
+
+  // Auto-select room when initialRoomId is provided
+  useEffect(() => {
+    console.log("[Messages] Auto-select effect:", { initialRoomId, roomsCount: roomsData?.rooms?.length, selectedRoom: selectedRoom?.room_id, activeTab });
+
+    if (initialRoomId && roomsData?.rooms) {
+      // First, try to find the room in current tab
+      let targetRoom = roomsData.rooms.find(r => r.room_id === initialRoomId);
+
+      // If not found in current tab, it might be in a different tab
+      // Fetch the specific room to determine its type
+      if (!targetRoom && !selectedRoom) {
+        chatService.getRoom(initialRoomId).then(response => {
+          if (response.status === "success" && response.data) {
+            const room = response.data;
+            console.log("[Messages] Fetched room:", room);
+
+            // Switch to the correct tab based on room type
+            if (room.room_type !== activeTab) {
+              console.log("[Messages] Switching tab from", activeTab, "to", room.room_type);
+              setActiveTab(room.room_type as "direct" | "team" | "matching");
+            }
+
+            // Select the room
+            setSelectedRoom(room);
+          }
+        }).catch(error => {
+          console.error("[Messages] Failed to fetch room:", error);
+        });
+      } else if (targetRoom && !selectedRoom) {
+        console.log("[Messages] Auto-selecting room:", targetRoom.room_id);
+        setSelectedRoom(targetRoom);
+      }
+    }
+  }, [initialRoomId, roomsData, selectedRoom, activeTab]);
 
   // Fetch messages for selected room
   const { data: messagesData } = useQuery({
@@ -133,6 +260,7 @@ export function MessagesPage() {
   });
 
   const rooms = roomsData?.rooms || [];
+  console.log("[Messages] Rooms data:", { total: roomsData?.total, count: rooms.length, rooms });
   const apiMessages = messagesData?.messages || [];
   const wsRoomMessages = selectedRoom ? wsMessages.get(selectedRoom.room_id) || [] : [];
 
@@ -248,7 +376,11 @@ export function MessagesPage() {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Messages
               </h1>
-              <Button size="icon" variant="ghost">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setIsNewChatDialogOpen(true)}
+              >
                 <Plus className="w-5 h-5" />
               </Button>
             </div>
@@ -326,28 +458,47 @@ export function MessagesPage() {
               <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-medium">
-                        {selectedRoom.room_name?.slice(0, 2).toUpperCase() || "CH"}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-medium">
+                          {selectedRoom.room_type === "direct" && selectedRoom.partner_username
+                            ? selectedRoom.partner_username.slice(0, 2).toUpperCase()
+                            : selectedRoom.room_name?.slice(0, 2).toUpperCase() || "CH"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* Online status indicator for direct chats */}
+                      {selectedRoom.room_type === "direct" && selectedRoom.partner_is_online && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
+                      )}
+                    </div>
                     <div>
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                        {selectedRoom.room_name || "Unnamed Room"}
+                        {selectedRoom.room_type === "direct" && selectedRoom.partner_username
+                          ? selectedRoom.partner_username
+                          : selectedRoom.room_name || "Unnamed Room"}
                       </h2>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {selectedRoom.room_type === "matching" &&
-                        selectedRoom.display_mode === "blind"
-                          ? "🎭 Blind Mode"
-                          : selectedRoom.room_type === "team"
-                            ? "👥 Team Channel"
-                            : "💬 Direct Message"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {selectedRoom.room_type === "matching" &&
+                          selectedRoom.display_mode === "blind"
+                            ? "🎭 Blind Mode"
+                            : selectedRoom.room_type === "team"
+                              ? "👥 Team Channel"
+                              : "💬 Direct Message"}
+                        </p>
+                        {/* Online status text for direct chats */}
+                        {selectedRoom.room_type === "direct" && selectedRoom.partner_is_online && (
+                          <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                            활동중
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-2 h-2 rounded-full ${
+                      className={`w-3 h-3 rounded-full ${
                         isConnected ? "bg-green-500" : "bg-red-500"
                       }`}
                       title={isConnected ? "연결됨" : "연결 끊김"}
@@ -518,6 +669,123 @@ export function MessagesPage() {
           )}
         </div>
       </div>
+
+      {/* New Chat Dialog */}
+      <Dialog open={isNewChatDialogOpen} onOpenChange={setIsNewChatDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>새 채팅 시작</DialogTitle>
+            <DialogDescription>
+              1:1 채팅 또는 팀 채팅을 생성하세요
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "direct" | "team")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="direct" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                1:1 채팅
+              </TabsTrigger>
+              <TabsTrigger value="team" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                팀 만들기
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="direct" className="mt-4">
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {friendsData?.friends && friendsData.friends.length > 0 ? (
+                  friendsData.friends.map((friend) => (
+                    <button
+                      key={friend.friend_id}
+                      onClick={() => createDirectChatMutation.mutate(friend.friend_id)}
+                      disabled={createDirectChatMutation.isPending}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+                    >
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                          {friend.friend_username.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">{friend.friend_username}</p>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${friend.friend_is_online ? 'bg-green-500' : 'bg-gray-400'}`} />
+                          <p className="text-sm text-slate-500">
+                            {friend.friend_is_online ? '온라인' : '오프라인'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>친구가 없습니다</p>
+                    <p className="text-sm mt-1">먼저 친구를 추가해주세요</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="team" className="mt-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="team-name">팀 이름 *</Label>
+                  <Input
+                    id="team-name"
+                    placeholder="예: 프로젝트 팀"
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
+                    maxLength={200}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="team-description">설명 (선택)</Label>
+                  <Textarea
+                    id="team-description"
+                    placeholder="팀에 대한 설명을 입력하세요"
+                    value={teamDescription}
+                    onChange={(e) => setTeamDescription(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="team-emails">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      팀원 이메일 *
+                    </div>
+                  </Label>
+                  <Textarea
+                    id="team-emails"
+                    placeholder="이메일을 쉼표(,) 또는 줄바꿈으로 구분하여 입력하세요&#10;예: user1@example.com, user2@example.com"
+                    value={teamEmails}
+                    onChange={(e) => setTeamEmails(e.target.value)}
+                    rows={6}
+                  />
+                  <p className="text-sm text-slate-500">
+                    • 등록된 사용자는 자동으로 팀에 추가됩니다
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    • 미등록 이메일에는 초대장이 발송됩니다
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => createTeamChatMutation.mutate()}
+                  disabled={!teamName.trim() || !teamEmails.trim() || createTeamChatMutation.isPending}
+                  className="w-full"
+                >
+                  {createTeamChatMutation.isPending ? "생성 중..." : "팀 채팅 만들기"}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </PageTransition>
   );
 }
@@ -531,11 +799,15 @@ interface ChatRoomItemProps {
 
 function ChatRoomItem({ room, isSelected, currentUserId, onClick }: ChatRoomItemProps) {
   const getRoomDisplayName = () => {
+    // For direct chats, show partner's name
+    if (room.room_type === "direct" && room.partner_username) {
+      return room.partner_username;
+    }
     if (room.room_name) return room.room_name;
-    if (room.room_type === "direct") return "1:1 대화";
+    if (room.room_type === "direct") return "Direct Chat";
     if (room.room_type === "team") return "팀 채팅";
     if (room.room_type === "matching") return "매칭 채팅";
-    return "이름 없음";
+    return "Unnamed Room";
   };
 
   const getInitials = (name: string) => {
@@ -573,18 +845,33 @@ function ChatRoomItem({ room, isSelected, currentUserId, onClick }: ChatRoomItem
       }`}
     >
       <div className="flex items-start gap-3">
-        <Avatar className="w-12 h-12 flex-shrink-0">
-          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-            {getInitials(getRoomDisplayName())}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="w-12 h-12 flex-shrink-0">
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+              {getInitials(getRoomDisplayName())}
+            </AvatarFallback>
+          </Avatar>
+          {/* Online status indicator for direct chats */}
+          {room.room_type === "direct" && room.partner_is_online && (
+            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between mb-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-              {getRoomDisplayName()}
-            </h3>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                {getRoomDisplayName()}
+              </h3>
+              {/* Online status text for direct chats */}
+              {room.room_type === "direct" && room.partner_is_online && (
+                <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 whitespace-nowrap">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  활동중
+                </span>
+              )}
+            </div>
             {room.unread_count > 0 && (
-              <Badge className="ml-2 bg-blue-500 text-white min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+              <Badge className="ml-2 bg-blue-500 text-white min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0">
                 {room.unread_count > 99 ? "99+" : room.unread_count}
               </Badge>
             )}
