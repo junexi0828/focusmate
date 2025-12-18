@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Clock,
@@ -188,22 +188,22 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
       {
         name: "포모도로 (25분)",
         value: distribution["포모도로 (25분)"],
-        color: "hsl(var(--chart-1))",
+        color: "hsl(0, 70%, 75%)", // 레드 - 포모도로
       },
       {
         name: "단기 집중 (15분)",
         value: distribution["단기 집중 (15분)"],
-        color: "hsl(var(--chart-2))",
+        color: "hsl(45, 85%, 75%)", // 옐로우 - 단기
       },
       {
         name: "장기 집중 (50분)",
         value: distribution["장기 집중 (50분)"],
-        color: "hsl(var(--chart-3))",
+        color: "hsl(142, 65%, 70%)", // 그린 - 장기 (성공)
       },
       {
         name: "휴식",
         value: breakCount,
-        color: "hsl(var(--chart-4))",
+        color: "hsl(210, 70%, 75%)", // 블루 - 휴식
       },
     ].filter((item) => item.value > 0);
 
@@ -234,15 +234,15 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
 
     const exportData = {
       sessions: stats.sessions.map((s) => ({
-        date: new Date(s.completed_at).toLocaleDateString("ko-KR"),
-        duration: s.duration_minutes,
-        type: s.session_type,
-        roomName: s.room_name,
+        date: new Date(s.completedAt).toLocaleDateString("ko-KR"),
+        duration: s.durationMinutes,
+        type: s.sessionType,
+        roomName: s.roomName ?? undefined,
       })),
       stats: {
-        totalFocusTime: stats.total_focus_time,
-        totalSessions: stats.total_sessions,
-        averageSession: stats.average_session,
+        totalFocusTime: stats.totalFocusTime,
+        totalSessions: stats.totalSessions,
+        averageSession: stats.averageSession,
       },
     };
 
@@ -254,15 +254,15 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
 
     const exportData = {
       sessions: stats.sessions.map((s) => ({
-        date: new Date(s.completed_at).toLocaleDateString("ko-KR"),
-        duration: s.duration_minutes,
-        type: s.session_type,
-        roomName: s.room_name,
+        date: new Date(s.completedAt).toLocaleDateString("ko-KR"),
+        duration: s.durationMinutes,
+        type: s.sessionType,
+        roomName: s.roomName ?? undefined,
       })),
       stats: {
-        totalFocusTime: stats.total_focus_time,
-        totalSessions: stats.total_sessions,
-        averageSession: stats.average_session,
+        totalFocusTime: stats.totalFocusTime,
+        totalSessions: stats.totalSessions,
+        averageSession: stats.averageSession,
       },
     };
 
@@ -554,7 +554,6 @@ function StatCard({
   change,
   trend,
   icon: Icon,
-  index,
 }: StatCardProps) {
   return (
     <motion.div

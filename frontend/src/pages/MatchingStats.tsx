@@ -116,7 +116,7 @@ export function MatchingStatsPage({ stats }: MatchingStatsPageProps) {
     .slice(0, 10);
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-full bg-muted/30">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6">

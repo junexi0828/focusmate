@@ -99,7 +99,7 @@ export default function Matching() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 py-8">
+      <div className="min-h-full bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 py-8">
         <div className="container mx-auto px-4 max-w-6xl">
           {/* Header */}
           <div className="mb-8">

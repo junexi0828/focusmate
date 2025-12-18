@@ -18,7 +18,7 @@ function RootComponent() {
 
   return (
     <ErrorBoundary>
-      <div className="flex h-screen bg-background text-foreground font-sans antialiased overflow-hidden selection:bg-primary/20">
+      <div className="flex h-screen bg-background text-foreground font-sans antialiased selection:bg-primary/20">
         {/* Persistent Sidebar - Hidden on Login */}
         {!isLoginPage && <Sidebar />}
 

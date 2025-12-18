@@ -2,9 +2,10 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect
 
 from app.api.deps import get_current_user
+from app.core.security import decode_jwt_token
 from app.domain.notification.schemas import (
     NotificationCreate,
     NotificationMarkRead,
@@ -15,6 +16,7 @@ from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.notification_repository import (
     NotificationRepository,
 )
+from app.infrastructure.websocket.notification_manager import notification_ws_manager
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -51,7 +53,25 @@ async def create_notification(
         HTTPException: If validation fails
     """
     try:
-        return await service.create_notification(data)
+        notification = await service.create_notification(data)
+
+        # Send real-time notification via WebSocket if user is online
+        await notification_ws_manager.send_notification(
+            {
+                "type": "notification",
+                "data": {
+                    "notification_id": notification.notification_id,
+                    "type": notification.type,
+                    "title": notification.title,
+                    "message": notification.message,
+                    "data": notification.data,
+                    "created_at": notification.created_at.isoformat(),
+                },
+            },
+            notification.user_id,
+        )
+
+        return notification
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -163,3 +183,67 @@ async def delete_notification(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notification not found",
         )
+
+
+@router.websocket("/ws")
+async def websocket_notifications(
+    websocket: WebSocket,
+    token: str = Query(...),
+):
+    """WebSocket endpoint for real-time notifications.
+
+    Args:
+        websocket: WebSocket connection
+        token: JWT authentication token
+
+    The WebSocket will receive notifications in real-time with the following format:
+    {
+        "type": "notification",
+        "data": {
+            "notification_id": "...",
+            "type": "...",
+            "title": "...",
+            "message": "...",
+            "data": {...},
+            "created_at": "..."
+        }
+    }
+    """
+    # Verify token and get user
+    try:
+        payload = decode_jwt_token(token)
+        user_id: str = payload.get("sub")
+        if not user_id:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    except Exception:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    # Connect user
+    await notification_ws_manager.connect(websocket, user_id)
+
+    try:
+        # Send connection confirmation
+        await websocket.send_json({
+            "type": "connected",
+            "message": "Connected to notification stream",
+            "user_id": user_id,
+        })
+
+        # Keep connection alive and handle incoming messages (e.g., ping/pong)
+        while True:
+            try:
+                data = await websocket.receive_json()
+
+                # Handle ping
+                if data.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+
+            except Exception:
+                break
+
+    except WebSocketDisconnect:
+        notification_ws_manager.disconnect(websocket, user_id)
+    except Exception:
+        notification_ws_manager.disconnect(websocket, user_id)

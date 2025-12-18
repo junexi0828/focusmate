@@ -6,13 +6,18 @@ import { authService } from "../features/auth/services/authService";
 import { statsService } from "../features/stats/services/statsService";
 import { PageTransition } from "../components/PageTransition";
 import { StatsPageSkeleton } from "../components/ui/stats-skeleton";
+import { ErrorDisplay } from "../components/ErrorDisplay";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/stats")({
   beforeLoad: () => {
     const user = authService.getCurrentUser();
     if (!user) {
+      console.log("[Stats] No user found, redirecting to login");
+      toast.error("로그인이 필요한 서비스입니다");
       throw redirect({ to: "/login" });
     }
+    console.log("[Stats] User authenticated:", user.id);
   },
   component: StatsComponent,
 });
@@ -20,36 +25,28 @@ export const Route = createFileRoute("/stats")({
 function StatsComponent() {
   const user = authService.getCurrentUser();
 
-  if (!user?.id) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-destructive">로그인이 필요합니다</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <PageTransition>
-      <StatsPageWithData userId={user.id} />
+      <StatsPageWithData userId={user!.id} />
     </PageTransition>
   );
 }
 
 function StatsPageWithData({ userId }: { userId: string }) {
-  const user = authService.getCurrentUser();
   const isAdmin = authService.isAdmin();
 
   // 기본 통계 데이터 (최근 7일)
   // Admin can access even with no data
-  const { data: basicStats, isLoading: isLoadingBasic } = useQuery({
+  const { data: basicStats, isLoading: isLoadingBasic, error: basicError } = useQuery({
     queryKey: ["stats", "basic", userId, 7],
     queryFn: async () => {
+      console.log("[Stats] Loading basic stats for user:", userId);
       const response = await statsService.getUserStats(userId, 7);
       if (response.status === "error") {
+        console.error("[Stats] Basic stats error:", response.error);
         // Admin can proceed with empty data
         if (isAdmin) {
+          console.log("[Stats] Admin user, returning empty data");
           return {
             totalFocusTime: 0,
             totalSessions: 0,
@@ -59,6 +56,7 @@ function StatsPageWithData({ userId }: { userId: string }) {
         }
         throw new Error(response.error?.message || "Failed to load stats");
       }
+      console.log("[Stats] Basic stats loaded:", response.data);
       return response.data!;
     },
     staleTime: 1000 * 60, // 1 minute
@@ -192,6 +190,21 @@ function StatsPageWithData({ userId }: { userId: string }) {
     return (
       <PageTransition>
         <StatsPageSkeleton />
+      </PageTransition>
+    );
+  }
+
+  // Show error if basic stats failed and user is not admin
+  if (basicError && !isAdmin) {
+    return (
+      <PageTransition>
+        <div className="container mx-auto p-6">
+          <ErrorDisplay
+            error={basicError as Error}
+            title="통계 데이터 로드 실패"
+            onRetry={() => window.location.reload()}
+          />
+        </div>
       </PageTransition>
     );
   }

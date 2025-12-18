@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { staggerContainer, staggerItem } from "../PageTransition";
+import { getIntensityColor } from "../../utils/chart-colors";
 
 interface ActivityHeatMapProps {
   data: Array<{
@@ -12,14 +13,6 @@ interface ActivityHeatMapProps {
 }
 
 export function ActivityHeatMap({ data }: ActivityHeatMapProps) {
-  const getColor = (hours: number) => {
-    if (hours === 0) return "bg-muted";
-    if (hours < 2) return "bg-primary/20";
-    if (hours < 4) return "bg-primary/40";
-    if (hours < 6) return "bg-primary/60";
-    return "bg-primary";
-  };
-
   const getLabel = (hours: number) => {
     if (hours === 0) return "활동 없음";
     if (hours < 2) return "낮음";
@@ -60,9 +53,8 @@ export function ActivityHeatMap({ data }: ActivityHeatMapProps) {
                     key={`${weekIndex}-${dayIndex}`}
                     variants={staggerItem}
                     whileHover={{ scale: 1.2, zIndex: 10 }}
-                    className={`w-4 h-4 rounded-sm ${getColor(
-                      dayData.hours
-                    )} cursor-pointer relative group transition-all`}
+                    className="w-4 h-4 rounded-sm cursor-pointer relative group transition-all"
+                    style={{ backgroundColor: getIntensityColor(dayData.hours) }}
                   >
                     {/* Tooltip */}
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
@@ -85,11 +77,11 @@ export function ActivityHeatMap({ data }: ActivityHeatMapProps) {
       <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
         <span>적음</span>
         <div className="flex gap-1">
-          <div className="w-3 h-3 rounded-sm bg-muted" />
-          <div className="w-3 h-3 rounded-sm bg-primary/20" />
-          <div className="w-3 h-3 rounded-sm bg-primary/40" />
-          <div className="w-3 h-3 rounded-sm bg-primary/60" />
-          <div className="w-3 h-3 rounded-sm bg-primary" />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getIntensityColor(0) }} />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getIntensityColor(1) }} />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getIntensityColor(3) }} />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getIntensityColor(5) }} />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getIntensityColor(7) }} />
         </div>
         <span>많음</span>
       </div>

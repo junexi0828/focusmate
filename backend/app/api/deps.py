@@ -16,7 +16,7 @@ from app.infrastructure.repositories.user_repository import UserRepository
 
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(

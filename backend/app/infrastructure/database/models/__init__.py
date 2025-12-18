@@ -41,6 +41,7 @@ from app.infrastructure.database.models.user_stats import (
     ManualSession,
 )
 from app.infrastructure.database.models.user_settings import UserSettings
+from app.infrastructure.database.models.friend import Friend, FriendRequest
 
 __all__ = [
     "Room",
@@ -76,4 +77,6 @@ __all__ = [
     "UserGoal",
     "ManualSession",
     "UserSettings",
+    "Friend",
+    "FriendRequest",
 ]

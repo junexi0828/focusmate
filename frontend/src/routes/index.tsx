@@ -5,9 +5,7 @@ import { PageTransition } from "../components/PageTransition";
 import { roomService } from "../features/room/services/roomService";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/")(
-
-{
+export const Route = createFileRoute("/")({
   component: IndexComponent,
 });
 

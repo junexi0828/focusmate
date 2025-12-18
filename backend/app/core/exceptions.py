@@ -222,3 +222,18 @@ class NotFoundException(AppException):
             message=message,
             code="NOT_FOUND",
         )
+
+
+class ConflictException(AppException):
+    """Raised when a resource conflict occurs."""
+
+    def __init__(self, message: str) -> None:
+        """Initialize exception.
+
+        Args:
+            message: Error message describing the conflict
+        """
+        super().__init__(
+            message=message,
+            code="CONFLICT",
+        )

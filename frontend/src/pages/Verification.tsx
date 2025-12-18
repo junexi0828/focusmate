@@ -102,7 +102,7 @@ export default function VerificationPage() {
   if (isLoading) {
     return (
       <PageTransition>
-        <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <div className="min-h-full bg-muted/30 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </PageTransition>
@@ -113,7 +113,7 @@ export default function VerificationPage() {
   if (verification?.status === "approved") {
     return (
       <PageTransition>
-        <div className="min-h-screen bg-muted/30 p-6">
+        <div className="min-h-full bg-muted/30 p-6">
           <div className="max-w-2xl mx-auto">
             <Card>
               <CardHeader>
@@ -149,7 +149,7 @@ export default function VerificationPage() {
   if (verification?.status === "pending") {
     return (
       <PageTransition>
-        <div className="min-h-screen bg-muted/30 p-6">
+        <div className="min-h-full bg-muted/30 p-6">
           <div className="max-w-2xl mx-auto">
             <Card>
               <CardHeader>
@@ -179,7 +179,7 @@ export default function VerificationPage() {
   // Show verification form
   return (
     <PageTransition>
-      <div className="min-h-screen bg-muted/30 p-6">
+      <div className="min-h-full bg-muted/30 p-6">
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>

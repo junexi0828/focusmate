@@ -47,6 +47,7 @@ function MatchingPoolDetailComponent() {
       return response;
     },
     initialData: initialData.pool,
+    staleTime: 1000 * 60, // 1 minute
     enabled: !!poolId,
   });
 

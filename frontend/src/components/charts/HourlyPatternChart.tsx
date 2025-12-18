@@ -54,8 +54,8 @@ export function HourlyPatternChart({ data, focusTime }: HourlyPatternChartProps)
           <Radar
             name={focusTime ? "집중 시간 (분)" : "세션 수"}
             dataKey={focusTime ? "focusTime" : "sessions"}
-            stroke="hsl(var(--primary))"
-            fill="hsl(var(--primary))"
+            stroke="hsl(25, 80%, 72%)"
+            fill="hsl(25, 80%, 72%)"
             fillOpacity={0.3}
             animationDuration={1000}
             animationEasing="ease-out"

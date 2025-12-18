@@ -36,7 +36,7 @@ export function CommunityPage({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
+    <div className="min-h-full bg-muted/30 flex flex-col">
       {/* Header (Discourse 스타일) */}
       <div className="bg-background border-b">
         <div className="container mx-auto px-4 py-6 max-w-6xl">

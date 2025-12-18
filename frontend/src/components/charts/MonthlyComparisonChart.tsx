@@ -67,9 +67,9 @@ export function MonthlyComparisonChart({
             type="monotone"
             dataKey="thisYear"
             name="올해"
-            stroke="hsl(var(--primary))"
+            stroke="hsl(142, 65%, 70%)"
             strokeWidth={2}
-            dot={{ fill: "hsl(var(--primary))", r: 4 }}
+            dot={{ fill: "hsl(142, 65%, 70%)", r: 4 }}
             activeDot={{ r: 6 }}
             animationDuration={1000}
             animationEasing="ease-in-out"
@@ -78,10 +78,10 @@ export function MonthlyComparisonChart({
             type="monotone"
             dataKey="lastYear"
             name="작년"
-            stroke="hsl(var(--muted-foreground))"
+            stroke="hsl(210, 70%, 75%)"
             strokeWidth={2}
             strokeDasharray="5 5"
-            dot={{ fill: "hsl(var(--muted-foreground))", r: 4 }}
+            dot={{ fill: "hsl(210, 70%, 75%)", r: 4 }}
             activeDot={{ r: 6 }}
             animationDuration={1000}
             animationEasing="ease-in-out"

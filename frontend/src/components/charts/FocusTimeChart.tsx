@@ -32,8 +32,8 @@ export function FocusTimeChart({ data }: FocusTimeChartProps) {
         >
           <defs>
             <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              <stop offset="5%" stopColor="hsl(25, 80%, 72%)" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="hsl(25, 80%, 72%)" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -62,7 +62,7 @@ export function FocusTimeChart({ data }: FocusTimeChartProps) {
           <Area
             type="monotone"
             dataKey="hours"
-            stroke="hsl(var(--primary))"
+            stroke="hsl(25, 80%, 72%)"
             strokeWidth={2}
             fill="url(#colorHours)"
             animationDuration={1000}

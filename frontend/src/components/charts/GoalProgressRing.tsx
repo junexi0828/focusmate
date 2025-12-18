@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { getProgressColor } from "../../utils/chart-colors";
 
 interface GoalProgressRingProps {
   current: number;
@@ -21,13 +22,6 @@ export function GoalProgressRing({
     { name: "완료", value: current },
     { name: "남음", value: remaining },
   ];
-
-  const getColor = (percentage: number) => {
-    if (percentage >= 100) return "hsl(var(--chart-2))"; // Green
-    if (percentage >= 75) return "hsl(var(--primary))"; // Primary
-    if (percentage >= 50) return "hsl(var(--chart-4))"; // Yellow
-    return "hsl(var(--chart-5))"; // Orange
-  };
 
   return (
     <motion.div
@@ -52,8 +46,8 @@ export function GoalProgressRing({
               animationDuration={1000}
               animationEasing="ease-out"
             >
-              <Cell fill={getColor(percentage)} />
-              <Cell fill="hsl(var(--muted))" />
+              <Cell fill={getProgressColor(percentage)} />
+              <Cell fill="hsl(0, 0%, 90%)" />
             </Pie>
           </PieChart>
         </ResponsiveContainer>

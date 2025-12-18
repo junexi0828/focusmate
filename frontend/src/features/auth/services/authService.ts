@@ -111,7 +111,18 @@ class AuthService extends BaseApiClient {
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+
+    // 토큰이 만료되었는지 확인
+    if (this.isTokenExpired()) {
+      // 만료된 토큰은 자동으로 삭제
+      console.log("[AuthService] Token expired, logging out");
+      this.logout();
+      return false;
+    }
+
+    return true;
   }
 
   isAdmin(): boolean {

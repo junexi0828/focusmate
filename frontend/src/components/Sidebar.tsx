@@ -15,6 +15,7 @@ import {
   Trophy,
   Heart,
   Settings,
+  UserPlus,
 } from "lucide-react";
 import { authService } from "../features/auth/services/authService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,6 +39,7 @@ export function Sidebar() {
     },
     refetchInterval: 30000, // 30초마다 갱신
     retry: 1,
+    enabled: !!user, // Only fetch when user is logged in
   });
 
   const handleLogout = () => {
@@ -138,6 +140,31 @@ export function Sidebar() {
         </div>
       )}
 
+      {/* Login Button for Unauthenticated Users */}
+      {!user && !isCollapsed && (
+        <div className="p-4 border-b border-border/50">
+          <Link
+            to="/login"
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+          >
+            <User size={18} />
+            <span>로그인</span>
+          </Link>
+        </div>
+      )}
+
+      {!user && isCollapsed && (
+        <div className="p-4 border-b border-border/50 flex justify-center">
+          <Link
+            to="/login"
+            className="flex items-center justify-center w-10 h-10 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            title="로그인"
+          >
+            <User size={18} />
+          </Link>
+        </div>
+      )}
+
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <NavItem
           to="/"
@@ -180,6 +207,12 @@ export function Sidebar() {
           icon={<MessageSquare size={18} />}
           label="메시지"
           badge={unreadCount > 0 ? unreadCount : undefined}
+          isCollapsed={isCollapsed}
+        />
+        <NavItem
+          to="/friends"
+          icon={<UserPlus size={18} />}
+          label="친구"
           isCollapsed={isCollapsed}
         />
         <NavItem

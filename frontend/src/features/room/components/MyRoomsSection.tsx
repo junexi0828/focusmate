@@ -88,6 +88,18 @@ export function MyRoomsSection() {
           <div className="text-sm text-muted-foreground text-center py-4">
             로딩 중...
           </div>
+        ) : !authService.isAuthenticated() ? (
+          <div className="text-center py-6 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              참여방 기능을 사용하려면 로그인이 필요합니다
+            </p>
+            <Button
+              size="sm"
+              onClick={() => navigate({ to: "/login" })}
+            >
+              로그인하기
+            </Button>
+          </div>
         ) : rooms.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-4">
             참여 중인 방이 없습니다

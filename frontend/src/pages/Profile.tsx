@@ -88,7 +88,7 @@ export function ProfilePage({
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
+    <div className="min-h-full bg-muted/30 flex flex-col">
       {/* Profile Header (Discourse 스타일) */}
       <ProfileHeader
         user={user}

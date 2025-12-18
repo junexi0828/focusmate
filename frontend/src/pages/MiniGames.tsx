@@ -63,7 +63,7 @@ export default function MiniGames() {
   if (selectedGame) {
     return (
       <PageTransition>
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
+        <div className="min-h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
           <div className="max-w-6xl mx-auto">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -117,7 +117,7 @@ export default function MiniGames() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
+      <div className="min-h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -20 }}

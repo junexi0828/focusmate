@@ -209,6 +209,7 @@ async def leave_team(
 @router.get("/leaderboard")
 async def get_leaderboard(
     service: Annotated[RankingService, Depends(get_ranking_service)],
+    db: DatabaseSession,
     period: str = Query("weekly", description="Period: weekly, monthly, all_time"),
     limit: int = Query(50, ge=1, le=100, description="Number of teams to return"),
 ) -> dict:
@@ -223,6 +224,10 @@ async def get_leaderboard(
     """
 
     try:
+        from sqlalchemy import select, func
+        from app.infrastructure.database.models.session_history import SessionHistory
+        from app.infrastructure.database.models.ranking import RankingTeamMember
+
         # Get all teams
         teams = await service.get_all_teams()
 
@@ -236,18 +241,72 @@ async def get_leaderboard(
             )
             return response.model_dump()
 
+        # Calculate date range based on period
+        now = datetime.now(timezone.utc)
+        if period == "weekly":
+            start_date = now - timedelta(days=7)
+        elif period == "monthly":
+            start_date = now - timedelta(days=30)
+        else:  # all_time
+            start_date = datetime.min.replace(tzinfo=timezone.utc)
+
+        # Calculate scores for each team
+        leaderboard_data = []
+        for team in teams:
+            # Get team members
+            members_result = await db.execute(
+                select(RankingTeamMember).where(
+                    RankingTeamMember.team_id == team.team_id
+                )
+            )
+            members = members_result.scalars().all()
+            member_ids = [m.user_id for m in members]
+
+            # Calculate total score from session history
+            if member_ids:
+                sessions_result = await db.execute(
+                    select(
+                        func.sum(SessionHistory.duration_minutes).label("total_minutes"),
+                        func.count(SessionHistory.id).label("total_sessions"),
+                    )
+                    .where(SessionHistory.user_id.in_(member_ids))
+                    .where(SessionHistory.completed_at >= start_date)
+                )
+                stats = sessions_result.first()
+
+                total_minutes = float(stats.total_minutes or 0)
+                total_sessions = int(stats.total_sessions or 0)
+
+                # Calculate score (minutes + bonus for sessions)
+                score = total_minutes + (total_sessions * 5)  # 5 bonus points per session
+                average_score = score / len(member_ids) if member_ids else 0.0
+            else:
+                score = 0.0
+                average_score = 0.0
+                total_minutes = 0
+
+            leaderboard_data.append({
+                "team": team,
+                "score": score,
+                "average_score": average_score,
+                "member_count": len(member_ids),
+            })
+
+        # Sort by score descending
+        leaderboard_data.sort(key=lambda x: x["score"], reverse=True)
+
         # Create leaderboard entries
         leaderboard_entries = []
-        for idx, team in enumerate(teams[:limit]):
+        for idx, data in enumerate(leaderboard_data[:limit]):
             entry = LeaderboardEntry(
                 rank=idx + 1,
-                team_id=team.team_id,
-                team_name=team.team_name,
-                team_type=team.team_type,
-                score=0.0,  # TODO: Calculate from sessions
-                rank_change=0,
-                member_count=None,
-                average_score=0.0,
+                team_id=data["team"].team_id,
+                team_name=data["team"].team_name,
+                team_type=data["team"].team_type,
+                score=data["score"],
+                rank_change=0,  # TODO: Track rank changes
+                member_count=data["member_count"],
+                average_score=data["average_score"],
             )
             leaderboard_entries.append(entry)
 

@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     auth,
     chat,
     community,
+    friends,
     matching,
     messaging,
     notifications,
@@ -33,6 +34,7 @@ api_router.include_router(stats.router)
 api_router.include_router(achievements.router)
 api_router.include_router(community.router)
 api_router.include_router(messaging.router)
+api_router.include_router(friends.router)
 api_router.include_router(websocket.router)
 api_router.include_router(ranking.router)
 api_router.include_router(room_reservations.router)

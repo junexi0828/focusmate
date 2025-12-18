@@ -15,7 +15,7 @@ export function AuthPage({ onLogin, onSignup, isLoading = false }: AuthPageProps
   const [view, setView] = useState<AuthView>("login");
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-muted/30">
+    <div className="h-full flex flex-col items-center justify-center p-4 bg-muted/30">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">

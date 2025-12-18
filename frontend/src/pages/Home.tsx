@@ -19,10 +19,10 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
     <div
       /*
         전체 레이아웃 설정
-        - p-4: 전체 패딩 (변경: p-2, p-6, p-8 등)
+        - py-4: 세로 패딩만 적용 (가로 패딩은 __root.tsx에서 처리)
         - bg-muted/30: 배경색 투명도 (변경: bg-muted, bg-background 등)
       */
-      className="min-h-screen flex flex-col items-center justify-center p-4 bg-muted/30"
+      className="flex flex-col items-center justify-center py-4 bg-muted/30 min-h-full"
     >
       {/*
         컨테이너 최대 너비 설정

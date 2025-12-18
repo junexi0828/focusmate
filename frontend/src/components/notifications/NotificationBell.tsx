@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 import {
   Popover,
   PopoverContent,
@@ -8,10 +9,17 @@ import {
 } from "../ui/popover";
 import { getUnreadCount } from "../../api/notifications";
 import { NotificationList } from "./NotificationList";
+import { useNotifications } from "../../hooks/useNotifications";
 
 export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+
+  // WebSocket connection for real-time updates
+  const { isConnected } = useNotifications(() => {
+    // Reload count when new notification arrives
+    loadUnreadCount();
+  });
 
   useEffect(() => {
     loadUnreadCount();
@@ -39,9 +47,15 @@ export function NotificationBell() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+            <Badge
+              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 bg-red-500 border-none"
+              variant="destructive"
+            >
               {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+            </Badge>
+          )}
+          {isConnected && (
+            <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-background" />
           )}
         </Button>
       </PopoverTrigger>

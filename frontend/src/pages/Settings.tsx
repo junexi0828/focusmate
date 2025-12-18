@@ -117,7 +117,7 @@ export default function Settings() {
   if (loading || !settings) {
     return (
       <PageTransition>
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-full flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </PageTransition>
@@ -126,7 +126,7 @@ export default function Settings() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background p-8">
+      <div className="min-h-full bg-background p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <SettingsIcon className="h-8 w-8" />

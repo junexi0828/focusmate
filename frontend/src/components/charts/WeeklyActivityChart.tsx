@@ -76,8 +76,8 @@ export function WeeklyActivityChart({ data }: WeeklyActivityChartProps) {
                 key={`cell-${index}`}
                 fill={
                   activeIndex === index
-                    ? "hsl(var(--primary))"
-                    : "hsl(var(--primary) / 0.6)"
+                    ? "hsl(25, 80%, 65%)" // 진한 오렌지 (hover)
+                    : "hsl(25, 80%, 72%)" // 밝은 파스텔 오렌지
                 }
                 style={{
                   transition: "fill 0.2s ease",

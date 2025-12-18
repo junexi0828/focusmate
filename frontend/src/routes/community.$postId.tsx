@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { communityService } from "../features/community/services/communityService";
@@ -32,19 +32,55 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 
 export const Route = createFileRoute("/community/$postId")({
+  beforeLoad: () => {
+    if (!authService.isAuthenticated()) {
+      toast.error("로그인이 필요한 서비스입니다");
+      throw redirect({ to: "/login" });
+    }
+  },
   loader: async ({ params }) => {
-    const response = await communityService.getPost(params.postId);
-    const commentsResponse = await communityService.getComments(params.postId);
+    try {
+      const response = await communityService.getPost(params.postId);
+      const commentsResponse = await communityService.getComments(params.postId);
 
-    if (response.status === "success" && commentsResponse.status === "success") {
+      if (response.status === "success" && commentsResponse.status === "success") {
+        return {
+          post: response.data,
+          comments: commentsResponse.data,
+        };
+      }
+      // Return null instead of throwing error
       return {
-        post: response.data,
-        comments: commentsResponse.data,
+        post: null,
+        comments: [],
+      };
+    } catch (error) {
+      console.error("Failed to load post:", error);
+      return {
+        post: null,
+        comments: [],
       };
     }
-    throw new Error("Failed to load post");
   },
   component: PostDetailComponent,
+  pendingComponent: () => (
+    <PageTransition>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+      </div>
+    </PageTransition>
+  ),
+  errorComponent: () => (
+    <PageTransition>
+      <div className="text-center py-12">
+        <p className="text-destructive text-lg mb-4">게시글을 불러오는데 실패했습니다</p>
+        <Button onClick={() => window.history.back()}>뒤로가기</Button>
+      </div>
+    </PageTransition>
+  ),
 });
 
 function PostDetailComponent() {
@@ -70,6 +106,8 @@ function PostDetailComponent() {
       return response.status === "success" ? response.data : null;
     },
     initialData: initialData.post,
+    staleTime: 1000 * 60, // 1 minute
+    enabled: !!postId,
   });
 
   const { data: comments = [] } = useQuery({
@@ -79,6 +117,8 @@ function PostDetailComponent() {
       return response.status === "success" ? response.data : [];
     },
     initialData: initialData.comments,
+    staleTime: 1000 * 60, // 1 minute
+    enabled: !!postId,
   });
 
   const likeMutation = useMutation({
@@ -260,8 +300,23 @@ function PostDetailComponent() {
   if (!post) {
     return (
       <PageTransition>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">게시글을 찾을 수 없습니다</p>
+        <div className="max-w-4xl mx-auto py-12">
+          <Card>
+            <CardContent className="text-center py-12">
+              <MessageSquare className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h2 className="text-xl font-semibold mb-2">게시글을 찾을 수 없습니다</h2>
+              <p className="text-muted-foreground mb-6">
+                삭제되었거나 존재하지 않는 게시글입니다.
+              </p>
+              <Button
+                onClick={() => navigate({ to: "/community" })}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                커뮤니티로 돌아가기
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </PageTransition>
     );

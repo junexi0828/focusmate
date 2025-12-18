@@ -50,6 +50,7 @@ function ProposalDetailComponent() {
       return response;
     },
     initialData: initialData.proposal,
+    staleTime: 1000 * 60, // 1 minute
     enabled: !!proposalId,
   });
 
@@ -85,6 +86,7 @@ function ProposalDetailComponent() {
   const myPool = useQuery({
     queryKey: ["matching", "myPool"],
     queryFn: () => matchingApi.getMyPool().catch(() => null),
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const userPoolId = myPool.data?.pool_id;

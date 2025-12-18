@@ -60,6 +60,7 @@ function MatchedGroupComponent() {
       return response;
     },
     initialData: initialData.proposal,
+    staleTime: 1000 * 60, // 1 minute
     enabled: !!proposalId,
   });
 
@@ -70,6 +71,7 @@ function MatchedGroupComponent() {
       return await chatService.getRoom(proposal.chat_room_id);
     },
     initialData: initialData.chatRoom,
+    staleTime: 1000 * 60, // 1 minute
     enabled: !!proposal?.chat_room_id,
   });
 
@@ -80,6 +82,7 @@ function MatchedGroupComponent() {
       return await chatService.getRoomMembers(proposal.chat_room_id);
     },
     initialData: initialData.members,
+    staleTime: 1000 * 60, // 1 minute
     enabled: !!proposal?.chat_room_id,
   });
 
@@ -91,6 +94,7 @@ function MatchedGroupComponent() {
   const myPool = useQuery({
     queryKey: ["matching", "myPool"],
     queryFn: () => matchingApi.getMyPool().catch(() => null),
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const userPoolId = myPool.data?.pool_id;
