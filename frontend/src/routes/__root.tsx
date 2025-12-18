@@ -40,9 +40,7 @@ function RootComponent() {
 
           <div
             className={
-              isLoginPage
-                ? "h-full w-full"
-                : "flex-1 p-8 max-w-7xl mx-auto w-full"
+              isLoginPage ? "h-full w-full" : "flex-1 p-4 sm:p-6 lg:p-8 w-full"
             }
           >
             <Outlet />

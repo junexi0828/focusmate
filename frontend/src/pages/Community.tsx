@@ -42,7 +42,7 @@ export function CommunityPage({
     <div className="min-h-full bg-muted/30 flex flex-col">
       {/* Header (Discourse 스타일) */}
       <div className="bg-background border-b">
-        <div className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="w-full px-4 py-6">
           <div className="mb-2">
             <h1 className="text-2xl font-bold">커뮤니티</h1>
             <p className="text-muted-foreground mt-1">
@@ -69,7 +69,7 @@ export function CommunityPage({
       />
 
       {/* 게시글 목록 (Discourse 스타일) */}
-      <div className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
+      <div className="flex-1 w-full px-4 py-6">
         {posts.length === 0 ? (
           <EmptyState
             icon={Users}
@@ -82,11 +82,7 @@ export function CommunityPage({
             }
           />
         ) : (
-          <PostList
-            posts={posts}
-            onViewPost={onViewPost}
-            onLike={onLike}
-          />
+          <PostList posts={posts} onViewPost={onViewPost} onLike={onLike} />
         )}
       </div>
     </div>

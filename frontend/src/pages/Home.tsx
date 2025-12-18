@@ -28,7 +28,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         컨테이너 최대 너비 설정
         - max-w-6xl: 최대 너비 (변경: max-w-4xl, max-w-5xl, max-w-7xl 등)
       */}
-      <div className="w-full max-w-5xl mx-auto">
+      <div className="w-full">
         {/* Header */}
         {/*
           헤더 섹션 간격 설정
@@ -40,11 +40,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             - h-16: 로고 높이 (변경: h-12, h-20 등)
           */}
           <div className="flex items-center justify-center mb-4">
-            <img
-              src={logoFull}
-              alt="FocusMate"
-              className="h-30"
-            />
+            <img src={logoFull} alt="FocusMate" className="h-30" />
           </div>
           {/*
             설명 텍스트 설정

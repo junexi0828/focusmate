@@ -8,51 +8,51 @@
 
   /* Neutral System (유지) */
   --background: #ffffff;
-  --foreground: #111827;        /* Ink Dark - 본문 텍스트 */
+  --foreground: #111827; /* Ink Dark - 본문 텍스트 */
   --card: #ffffff;
   --card-foreground: #111827;
   --popover: #ffffff;
   --popover-foreground: #111827;
 
   /* Main Colors - Air Mint & Campus Pink */
-  --primary: #7ED6E8;           /* Air Mint Sky - 메인 Primary */
+  --primary: #7ed6e8; /* Air Mint Sky - 메인 Primary */
   --primary-foreground: #111827;
-  --secondary: #F9A8D4;         /* Light Campus Pink - 메인 Secondary */
+  --secondary: #f9a8d4; /* Light Campus Pink - 메인 Secondary */
   --secondary-foreground: #111827;
 
   /* Supporting Colors */
-  --success: #2DD4BF;           /* Mint/Teal - 성공/완료 */
+  --success: #2dd4bf; /* Mint/Teal - 성공/완료 */
   --success-foreground: #111827;
-  --warning: #FBBF24;           /* Warm Amber - 경고 */
+  --warning: #fbbf24; /* Warm Amber - 경고 */
   --warning-foreground: #111827;
-  --destructive: #F87171;       /* Soft Red - 에러 */
+  --destructive: #f87171; /* Soft Red - 에러 */
   --destructive-foreground: #ffffff;
 
   /* Neutral Grays */
-  --muted: #F9FAFB;             /* Soft Light - 라이트 배경 */
-  --muted-foreground: #6B7280;  /* Muted Gray - 서브 텍스트 */
-  --accent: #E0F7FD;            /* Soft Sky - 라이트 블루 배경 */
+  --muted: #f9fafb; /* Soft Light - 라이트 배경 */
+  --muted-foreground: #6b7280; /* Muted Gray - 서브 텍스트 */
+  --accent: #e0f7fd; /* Soft Sky - 라이트 블루 배경 */
   --accent-foreground: #111827;
 
   /* Borders & Inputs */
-  --border: #E5E7EB;            /* Divider Gray - 라인/보더 */
+  --border: #e5e7eb; /* Divider Gray - 라인/보더 */
   --input: transparent;
-  --input-background: #F9FAFB;
-  --switch-background: #E5E7EB;
+  --input-background: #f9fafb;
+  --switch-background: #e5e7eb;
 
   /* Typography */
   --font-weight-medium: 600;
   --font-weight-normal: 400;
 
   /* Focus Ring */
-  --ring: #7ED6E8;              /* Air Mint Sky */
+  --ring: #7ed6e8; /* Air Mint Sky */
 
   /* Chart Colors - 새 팔레트 기반 */
-  --chart-1: #7ED6E8;           /* Air Mint Sky */
-  --chart-2: #F9A8D4;           /* Light Campus Pink */
-  --chart-3: #2DD4BF;           /* Mint/Teal */
-  --chart-4: #FBBF24;           /* Warm Amber */
-  --chart-5: #FCE7F5;           /* Soft Pink */
+  --chart-1: #7ed6e8; /* Air Mint Sky */
+  --chart-2: #f9a8d4; /* Light Campus Pink */
+  --chart-3: #2dd4bf; /* Mint/Teal */
+  --chart-4: #fbbf24; /* Warm Amber */
+  --chart-5: #fce7f5; /* Soft Pink */
 
   /* Border Radius */
   --radius: 0.5rem;
@@ -60,12 +60,12 @@
   /* Sidebar */
   --sidebar: #ffffff;
   --sidebar-foreground: #111827;
-  --sidebar-primary: #7ED6E8;
+  --sidebar-primary: #7ed6e8;
   --sidebar-primary-foreground: #111827;
-  --sidebar-accent: #E0F7FD;
+  --sidebar-accent: #e0f7fd;
   --sidebar-accent-foreground: #111827;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #7ED6E8;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #7ed6e8;
 }
 
 @theme {
@@ -123,58 +123,58 @@
 /* Dark mode overrides - class-based strategy */
 .dark {
   /* Neutral System - Deep Night */
-  --background: #020617;        /* Deep Night - 다크 배경 */
-  --foreground: #F9FAFB;
-  --card: #0B1120;
-  --card-foreground: #F9FAFB;
-  --popover: #0B1120;
-  --popover-foreground: #F9FAFB;
+  --background: #020617; /* Deep Night - 다크 배경 */
+  --foreground: #f9fafb;
+  --card: #0b1120;
+  --card-foreground: #f9fafb;
+  --popover: #0b1120;
+  --popover-foreground: #f9fafb;
 
   /* Main Colors - 다크모드용 조정 */
-  --primary: #7ED6E8;           /* Air Mint Sky - 다크에서도 선명 */
+  --primary: #7ed6e8; /* Air Mint Sky - 다크에서도 선명 */
   --primary-foreground: #020617;
-  --secondary: #F9A8D4;         /* Light Campus Pink */
+  --secondary: #f9a8d4; /* Light Campus Pink */
   --secondary-foreground: #020617;
 
   /* Supporting Colors */
-  --success: #2DD4BF;           /* Mint/Teal */
+  --success: #2dd4bf; /* Mint/Teal */
   --success-foreground: #020617;
-  --warning: #FBBF24;           /* Warm Amber */
+  --warning: #fbbf24; /* Warm Amber */
   --warning-foreground: #020617;
-  --destructive: #F87171;       /* Soft Red */
+  --destructive: #f87171; /* Soft Red */
   --destructive-foreground: #020617;
 
   /* Neutral Grays - 다크 */
-  --muted: #0B1120;
-  --muted-foreground: #9CA3AF;
-  --accent: #1E3A4C;            /* 다크 Soft Sky */
-  --accent-foreground: #F9FAFB;
+  --muted: #0b1120;
+  --muted-foreground: #9ca3af;
+  --accent: #1e3a4c; /* 다크 Soft Sky */
+  --accent-foreground: #f9fafb;
 
   /* Borders & Inputs */
-  --border: #1E293B;
-  --input: #0B1120;
-  --input-background: #0B1120;
-  --switch-background: #1E293B;
+  --border: #1e293b;
+  --input: #0b1120;
+  --input-background: #0b1120;
+  --switch-background: #1e293b;
 
   /* Focus Ring */
-  --ring: #7ED6E8;
+  --ring: #7ed6e8;
 
   /* Chart Colors - 다크모드 */
-  --chart-1: #7ED6E8;
-  --chart-2: #F9A8D4;
-  --chart-3: #2DD4BF;
-  --chart-4: #FBBF24;
-  --chart-5: #FCE7F5;
+  --chart-1: #7ed6e8;
+  --chart-2: #f9a8d4;
+  --chart-3: #2dd4bf;
+  --chart-4: #fbbf24;
+  --chart-5: #fce7f5;
 
   /* Sidebar - 다크 */
   --sidebar: #020617;
-  --sidebar-foreground: #F9FAFB;
-  --sidebar-primary: #7ED6E8;
+  --sidebar-foreground: #f9fafb;
+  --sidebar-primary: #7ed6e8;
   --sidebar-primary-foreground: #020617;
-  --sidebar-accent: #0B1120;
-  --sidebar-accent-foreground: #F9FAFB;
-  --sidebar-border: #1E293B;
-  --sidebar-ring: #7ED6E8;
+  --sidebar-accent: #0b1120;
+  --sidebar-accent-foreground: #f9fafb;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #7ed6e8;
 }
 
 /* Base layer styles */
@@ -197,7 +197,7 @@
 
 /* Typography base styles */
 @layer base {
-  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
     h1 {
       font-size: 2rem;
       font-weight: 700;
@@ -252,42 +252,42 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --background: #020617;
-    --foreground: #F9FAFB;
-    --card: #0B1120;
-    --card-foreground: #F9FAFB;
-    --popover: #0B1120;
-    --popover-foreground: #F9FAFB;
-    --primary: #7ED6E8;
+    --foreground: #f9fafb;
+    --card: #0b1120;
+    --card-foreground: #f9fafb;
+    --popover: #0b1120;
+    --popover-foreground: #f9fafb;
+    --primary: #7ed6e8;
     --primary-foreground: #020617;
-    --secondary: #F9A8D4;
+    --secondary: #f9a8d4;
     --secondary-foreground: #020617;
-    --success: #2DD4BF;
+    --success: #2dd4bf;
     --success-foreground: #020617;
-    --warning: #FBBF24;
+    --warning: #fbbf24;
     --warning-foreground: #020617;
-    --destructive: #F87171;
+    --destructive: #f87171;
     --destructive-foreground: #020617;
-    --muted: #0B1120;
-    --muted-foreground: #9CA3AF;
-    --accent: #1E3A4C;
-    --accent-foreground: #F9FAFB;
-    --border: #1E293B;
-    --input: #0B1120;
-    --input-background: #0B1120;
-    --switch-background: #1E293B;
-    --ring: #7ED6E8;
-    --chart-1: #7ED6E8;
-    --chart-2: #F9A8D4;
-    --chart-3: #2DD4BF;
-    --chart-4: #FBBF24;
-    --chart-5: #FCE7F5;
+    --muted: #0b1120;
+    --muted-foreground: #9ca3af;
+    --accent: #1e3a4c;
+    --accent-foreground: #f9fafb;
+    --border: #1e293b;
+    --input: #0b1120;
+    --input-background: #0b1120;
+    --switch-background: #1e293b;
+    --ring: #7ed6e8;
+    --chart-1: #7ed6e8;
+    --chart-2: #f9a8d4;
+    --chart-3: #2dd4bf;
+    --chart-4: #fbbf24;
+    --chart-5: #fce7f5;
     --sidebar: #020617;
-    --sidebar-foreground: #F9FAFB;
-    --sidebar-primary: #7ED6E8;
+    --sidebar-foreground: #f9fafb;
+    --sidebar-primary: #7ed6e8;
     --sidebar-primary-foreground: #020617;
-    --sidebar-accent: #0B1120;
-    --sidebar-accent-foreground: #F9FAFB;
-    --sidebar-border: #1E293B;
-    --sidebar-ring: #7ED6E8;
+    --sidebar-accent: #0b1120;
+    --sidebar-accent-foreground: #f9fafb;
+    --sidebar-border: #1e293b;
+    --sidebar-ring: #7ed6e8;
   }
 }

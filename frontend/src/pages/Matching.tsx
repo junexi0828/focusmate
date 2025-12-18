@@ -100,7 +100,7 @@ export default function Matching() {
   return (
     <PageTransition>
       <div className="min-h-full bg-gradient-to-br from-[#FCE7F5] via-[#E0F7FD] to-[#E0F7FD] dark:from-slate-900 dark:to-slate-800 py-8">
-        <div className="container mx-auto px-4 max-w-6xl">
+        <div className="w-full px-4">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
@@ -173,7 +173,9 @@ export default function Matching() {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       대기 중
                     </p>
-                    <p className="text-2xl font-bold">{stats.total_waiting || 0}</p>
+                    <p className="text-2xl font-bold">
+                      {stats.total_waiting || 0}
+                    </p>
                   </div>
                 </div>
               </Card>
@@ -186,7 +188,9 @@ export default function Matching() {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       오늘 매칭
                     </p>
-                    <p className="text-2xl font-bold">{stats.total_matched || 0}</p>
+                    <p className="text-2xl font-bold">
+                      {stats.total_matched || 0}
+                    </p>
                   </div>
                 </div>
               </Card>
