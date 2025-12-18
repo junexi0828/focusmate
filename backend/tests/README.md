@@ -9,12 +9,31 @@ tests/
 │   ├── test_chat_repository.py
 │   ├── test_chat_service.py
 │   ├── test_rbac.py
-│   ├── test_encryption.py              # ✨ NEW: 암호화 서비스 테스트
-│   └── test_encrypted_file_upload.py   # ✨ NEW: 파일 암호화 업로드 테스트
+│   ├── test_encryption.py              # 암호화 서비스 테스트
+│   ├── test_encrypted_file_upload.py   # 파일 암호화 업로드 테스트
+│   ├── test_achievement_service.py
+│   ├── test_community_service.py
+│   ├── test_matching_service.py
+│   ├── test_ranking_service.py
+│   ├── test_room_service.py
+│   └── test_verification_service.py
 ├── integration/             # 통합 테스트
-│   └── test_chat_api.py
-└── performance/             # ✨ NEW: 성능 테스트
-    └── test_matching_performance.py    # 매칭 알고리즘 성능 테스트
+│   ├── api/
+│   │   ├── test_api_endpoints.py       # API 엔드포인트 통합 테스트
+│   │   └── test_chat_api.py
+│   ├── repositories/
+│   ├── test_chat_api.py
+│   ├── test_db_connection.py           # 데이터베이스 연결 테스트
+│   ├── test_friend_features.py         # 친구 기능 통합 테스트
+│   ├── test_migrations.py               # 마이그레이션 테스트
+│   ├── test_simple_friend_request.py   # 친구 요청 간단 테스트
+│   ├── test_websocket_quick.py         # WebSocket 빠른 테스트
+│   └── test_websocket_simple.py        # WebSocket 간단 테스트
+├── e2e/                     # E2E 테스트
+├── performance/             # 성능 테스트
+│   ├── test_matching_performance.py    # 매칭 알고리즘 성능 테스트
+│   └── benchmark_matching.py           # 매칭 알고리즘 벤치마크
+└── fixtures/                # 테스트 픽스처
 ```
 
 ## 테스트 실행
@@ -57,7 +76,7 @@ pytest --cov=app --cov-report=html
 ### Standalone 벤치마크
 ```bash
 # pytest 없이 매칭 알고리즘 벤치마크 실행
-python3 scripts/benchmark_matching.py
+python3 tests/performance/benchmark_matching.py
 ```
 
 ## 테스트 데이터베이스 설정
@@ -174,7 +193,7 @@ docker run -d \
 - ✅ test_encryption_service_integration
 - ✅ test_file_metadata_preservation
 
-### Integration Tests (11 tests)
+### Integration Tests
 
 #### test_chat_api.py (11 tests)
 - ✅ test_get_user_rooms
@@ -190,7 +209,22 @@ docker run -d \
 - ✅ test_add_reaction
 - ✅ test_remove_reaction
 
-### Performance Tests (6 tests) ✨ NEW
+#### test_api_endpoints.py
+- ✅ API 엔드포인트 통합 테스트
+
+#### test_friend_features.py
+- ✅ 친구 기능 통합 테스트
+
+#### test_db_connection.py
+- ✅ 데이터베이스 연결 테스트
+
+#### test_migrations.py
+- ✅ 마이그레이션 검증 테스트
+
+#### test_websocket_*.py
+- ✅ WebSocket 연결 및 통신 테스트
+
+### Performance Tests (6 tests)
 
 #### test_matching_performance.py (6 tests)
 - ✅ test_optimized_finds_more_matches
@@ -266,10 +300,17 @@ jobs:
 
 ---
 
-**마지막 업데이트**: 2025-12-18
-**총 테스트 수**: 84개 (Unit: 67, Integration: 11, Performance: 6)
-**새로 추가된 테스트**: 34개 (암호화: 28, 성능: 6)
+**마지막 업데이트**: 2025-12-25
+**총 테스트 수**: 100+ (Unit: 67+, Integration: 20+, Performance: 6)
 **상태**: 진행 중 ✅
+
+## 테스트 파일 정리 (2025-12-25)
+
+모든 테스트 파일을 적절한 폴더로 정리했습니다:
+- API 통합 테스트 → `integration/api/`
+- 데이터베이스/마이그레이션 테스트 → `integration/`
+- WebSocket 테스트 → `integration/`
+- 성능 벤치마크 → `performance/`
 
 ### 테스트 커버리지 개선
 - ✅ 암호화 서비스: 100% 커버리지
