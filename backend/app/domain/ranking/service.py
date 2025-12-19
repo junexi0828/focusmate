@@ -19,7 +19,9 @@ class RankingService:
     """Service for ranking business logic."""
 
     def __init__(
-        self, repository: RankingRepository, user_repository: UserRepository | None = None
+        self,
+        repository: RankingRepository,
+        user_repository: UserRepository | None = None,
     ):
         """Initialize service with repository."""
         self.repository = repository
@@ -64,11 +66,11 @@ class RankingService:
             return None
         return TeamResponse.model_validate(team)
 
-    async def get_team_members(self, team_id: str, user_id: str) -> list:
+    async def get_team_members(self, team_id: UUID, user_id: str) -> list:
         """Get all members of a team.
 
         Args:
-            team_id: Team identifier
+            team_id: Team identifier (UUID)
             user_id: Current user identifier (for permission check)
 
         Returns:
@@ -78,31 +80,45 @@ class RankingService:
             ValueError: If team not found
             PermissionError: If user is not a team member
         """
-        from uuid import UUID
-        team_uuid = UUID(team_id)
-
         # Check if team exists
-        team = await self.repository.get_team_by_id(team_uuid)
+        team = await self.repository.get_team_by_id(team_id)
         if not team:
             raise ValueError("Team not found")
 
         # Check if user is a member of the team
-        member = await self.repository.get_member_by_user_and_team(user_id, team_uuid)
+        member = await self.repository.get_member_by_user_and_team(user_id, team_id)
         if not member:
             raise PermissionError("You are not a member of this team")
 
         # Get all team members
-        members = await self.repository.get_team_members(team_uuid)
-        return [
-            {
-                "user_id": m.user_id,
-                "role": m.role,
-                "joined_at": m.joined_at.isoformat(),
-                "total_sessions": m.total_sessions,
-                "total_focus_time": m.total_focus_time,
-            }
-            for m in members
-        ]
+        members = await self.repository.get_team_members(team_id)
+
+        # Calculate stats for each member from session history
+        result = []
+        for m in members:
+            # Get user sessions for this team
+            user_sessions = await self.repository.get_user_sessions(
+                m.user_id, team_id, limit=10000
+            )
+
+            # Calculate total sessions and focus time
+            work_sessions = [
+                s for s in user_sessions if s.session_type == "work" and s.success
+            ]
+            total_sessions = len(work_sessions)
+            total_focus_time = sum(s.duration_minutes for s in work_sessions)
+
+            result.append(
+                {
+                    "user_id": m.user_id,
+                    "role": m.role,
+                    "joined_at": m.joined_at.isoformat(),
+                    "total_sessions": total_sessions,
+                    "total_focus_time": total_focus_time,
+                }
+            )
+
+        return result
 
     async def get_user_invitations(
         self, user_id: str, status_filter: Optional[str] = None
@@ -121,7 +137,7 @@ class RankingService:
             {
                 "invitation_id": str(inv.invitation_id),
                 "team_id": str(inv.team_id),
-                "team_name": inv.team.name if hasattr(inv, 'team') else "Unknown",
+                "team_name": inv.team.name if hasattr(inv, "team") else "Unknown",
                 "status": inv.status,
                 "created_at": inv.created_at.isoformat(),
                 "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,

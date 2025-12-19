@@ -85,12 +85,16 @@ class VerificationService:
                     username = user.username or user.email.split("@")[0]
 
             # Send email to admin
+            logger.info(
+                f"[VERIFICATION] 📧 Email configuration check - SMTP_ENABLED={email_service.is_enabled}, ADMIN_EMAIL={settings.ADMIN_EMAIL}"
+            )
+
             if settings.ADMIN_EMAIL and email_service.is_enabled:
                 logger.info(
-                    f"[VERIFICATION] Attempting to send verification email to admin: {settings.ADMIN_EMAIL}"
+                    f"[VERIFICATION] ✅ Attempting to send verification email to admin: {settings.ADMIN_EMAIL}"
                 )
                 logger.info(
-                    f"[VERIFICATION] User info: email={user_email}, username={username}, school={data.school_name}"
+                    f"[VERIFICATION] User info: email={user_email}, username={username}, school={data.school_name}, department={data.department}, grade={data.grade}"
                 )
                 try:
                     # Convert grade to int if it's a string
@@ -105,6 +109,12 @@ class VerificationService:
                         except (ValueError, TypeError):
                             grade_value = 0
 
+                    logger.info(
+                        f"[VERIFICATION] 📤 Calling send_verification_submitted_to_admin_email with: "
+                        f"admin_email={settings.ADMIN_EMAIL}, user_email={user_email or f'user_{user_id}@example.com'}, "
+                        f"username={username}, school_name={data.school_name}, department={data.department or '미지정'}, grade={grade_value}"
+                    )
+
                     email_sent_successfully = (
                         await email_service.send_verification_submitted_to_admin_email(
                             admin_email=settings.ADMIN_EMAIL,
@@ -115,6 +125,11 @@ class VerificationService:
                             grade=grade_value,
                         )
                     )
+
+                    logger.info(
+                        f"[VERIFICATION] 📬 Email send result: {email_sent_successfully} for verification {verification.verification_id}"
+                    )
+
                     if email_sent_successfully:
                         logger.info(
                             f"[VERIFICATION] ✅ SMTP email sent successfully to admin. Auto-approving verification {verification.verification_id}"
@@ -124,18 +139,20 @@ class VerificationService:
                             "SMTP 전송 실패 (인증은 정상적으로 제출되었습니다)"
                         )
                         logger.warning(
-                            f"[VERIFICATION] ⚠️ SMTP email failed for verification {verification.verification_id}. Verification will remain pending."
+                            f"[VERIFICATION] ⚠️ SMTP email failed for verification {verification.verification_id}. "
+                            f"Verification will remain pending. Check email service logs for details."
                         )
                 except Exception as email_exc:
                     logger.error(
-                        f"[VERIFICATION] Exception during SMTP send: {email_exc}",
+                        f"[VERIFICATION] ❌ Exception during SMTP send: {type(email_exc).__name__}: {email_exc}",
                         exc_info=True,
                     )
                     email_sent_successfully = False
                     email_error = f"SMTP 전송 중 예외 발생: {str(email_exc)} (인증은 정상적으로 제출되었습니다)"
             else:
                 logger.warning(
-                    f"[VERIFICATION] SMTP not enabled or ADMIN_EMAIL not set. SMTP_ENABLED={email_service.is_enabled}, ADMIN_EMAIL={settings.ADMIN_EMAIL}"
+                    f"[VERIFICATION] ⚠️ SMTP not enabled or ADMIN_EMAIL not set. "
+                    f"SMTP_ENABLED={email_service.is_enabled}, ADMIN_EMAIL={settings.ADMIN_EMAIL}"
                 )
                 email_error = (
                     "SMTP가 비활성화되어 있습니다 (인증은 정상적으로 제출되었습니다)"
@@ -209,13 +226,16 @@ class VerificationService:
                 message="인증 신청 내역이 없습니다.",
             )
 
+        # Convert grade to string if it's not already
+        grade_str = str(verification.grade) if verification.grade is not None else None
+
         return VerificationStatusResponse(
             verification_id=verification.verification_id,
             status=verification.verification_status,
             school_name=verification.school_name,
             department=verification.department,
             major_category=verification.major_category,
-            grade=verification.grade,
+            grade=grade_str,
             gender=verification.gender,
             badge_visible=verification.badge_visible,
             department_visible=verification.department_visible,

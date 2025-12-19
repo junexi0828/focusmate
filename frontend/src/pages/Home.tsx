@@ -28,13 +28,13 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         컨테이너 최대 너비 설정
         - max-w-6xl: 최대 너비 (변경: max-w-4xl, max-w-5xl, max-w-7xl 등)
       */}
-      <div className="w-full">
+      <div className="w-full max-w-6xl mx-auto">
         {/* Header */}
         {/*
           헤더 섹션 간격 설정
           - mb-12: 하단 여백 (변경: mb-8, mb-16 등)
         */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           {/*
             전체 로고 이미지 (새 + FocusMate 텍스트)
             - h-16: 로고 높이 (변경: h-12, h-20 등)
@@ -59,7 +59,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
           - gap-8: 카드 간 간격 (변경: gap-4, gap-6, gap-12 등)
           - mb-8: 하단 여백 (변경: mb-8, mb-12, mb-20 등)
         */}
-        <div className="grid md:grid-cols-2 gap-8 mb-8">
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
           <CreateRoomCard onCreateRoom={onCreateRoom} />
           <JoinRoomCard onJoinRoom={onJoinRoom} />
         </div>

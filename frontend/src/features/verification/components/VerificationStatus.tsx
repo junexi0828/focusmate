@@ -12,10 +12,19 @@ import { useState } from "react";
 
 export function VerificationStatus() {
   const [showForm, setShowForm] = useState(false);
-  const { data: status, isLoading } = useQuery({
+  const { data: statusResponse, isLoading } = useQuery({
     queryKey: ["verification-status"],
-    queryFn: verificationService.getStatus,
+    queryFn: async () => {
+      const response = await verificationService.getStatus();
+      if (response.status === "error") {
+        // If error, return null to show "not verified" state
+        return null;
+      }
+      return response.data || null;
+    },
   });
+
+  const status = statusResponse;
 
   if (isLoading) {
     return (

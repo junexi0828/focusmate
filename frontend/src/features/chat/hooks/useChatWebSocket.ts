@@ -300,11 +300,10 @@ export function useChatWebSocket() {
       }
 
       // Code 1005: No Status Received - server closed connection without close frame
-      // This often happens when server rejects connection or closes immediately
+      // This is often a normal closure (browser tab closed, navigation, etc.)
+      // Only treat as error if it happens repeatedly or with expired token
       if (event.code === 1005) {
-        consecutive1005ErrorsRef.current++;
-
-        // Check if token is expired
+        // Check if token is expired first
         if (authService.isTokenExpired()) {
           console.warn("Chat WebSocket: Token expired (code 1005), stopping reconnection");
           shouldReconnectRef.current = false;
@@ -313,20 +312,23 @@ export function useChatWebSocket() {
           return;
         }
 
-        // If 1005 errors occur consecutively 3+ times, likely server issue - stop reconnecting
-        if (consecutive1005ErrorsRef.current >= 3) {
-          console.error(
-            `Chat WebSocket: ${consecutive1005ErrorsRef.current} consecutive 1005 errors, stopping reconnection. ` +
-            "This usually indicates a server-side issue. Please check backend logs."
-          );
-          shouldReconnectRef.current = false;
-          return;
-        }
+        // Code 1005 can be normal (tab closed, navigation, etc.)
+        // Only log as warning if it happens multiple times consecutively
+        consecutive1005ErrorsRef.current++;
 
-        // If not expired, might be server issue - wait longer before reconnecting
-        console.warn(
-          `Chat WebSocket: Connection closed with code 1005 (${consecutive1005ErrorsRef.current}/3), may be server issue`
-        );
+        // If 1005 errors occur consecutively 3+ times, might be server issue
+        if (consecutive1005ErrorsRef.current >= 3) {
+          console.warn(
+            `Chat WebSocket: ${consecutive1005ErrorsRef.current} consecutive 1005 closures. ` +
+            "This might indicate a server-side issue. Will attempt reconnection."
+          );
+          // Don't stop reconnecting, just log the warning
+        } else {
+          // Normal closure - just log debug info
+          console.log(
+            `Chat WebSocket: Connection closed normally (code 1005). Duration: ${connectionDuration}ms`
+          );
+        }
       } else {
         // Reset counter if different error code
         consecutive1005ErrorsRef.current = 0;

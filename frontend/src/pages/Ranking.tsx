@@ -64,7 +64,7 @@ export function RankingPage({
   onManageTeam,
 }: RankingPageProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [isTrialMode, setIsTrialMode] = useState(false);
+  const [isGameTrialMode, setIsGameTrialMode] = useState(false); // 랭킹전 게임 체험하기
   const [isGameDialogOpen, setIsGameDialogOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<
@@ -135,7 +135,7 @@ export function RankingPage({
   };
 
   return (
-    <PageTransition className="space-y-6 w-full">
+    <PageTransition className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -145,18 +145,19 @@ export function RankingPage({
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {/* 체험하기 토글 */}
-          <div className="flex items-center gap-2">
+          {/* 랭킹전 게임 체험하기 토글 */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
             <Switch
-              id="trial-mode"
-              checked={isTrialMode}
-              onCheckedChange={setIsTrialMode}
+              id="game-trial-mode"
+              checked={isGameTrialMode}
+              onCheckedChange={setIsGameTrialMode}
             />
-            <Label htmlFor="trial-mode" className="cursor-pointer">
-              체험하기
+            <Label htmlFor="game-trial-mode" className="cursor-pointer font-medium">
+              랭킹전 체험하기
             </Label>
           </div>
-          {isTrialMode && (
+
+          {isGameTrialMode && (
             <Button variant="outline" onClick={() => setIsGameDialogOpen(true)}>
               <Gamepad2 className="w-4 h-4 mr-2" />
               게임 선택
@@ -333,15 +334,19 @@ export function RankingPage({
         </div>
       )}
 
-      {/* 체험하기 모드 안내 */}
-      {isTrialMode && (
-        <Card className="border-primary/50 bg-primary/5">
+      {/* 랭킹전 게임 체험하기 모드 안내 */}
+      {isGameTrialMode && (
+        <Card className="border-primary/20 bg-muted/50">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <Gamepad2 className="w-5 h-5 text-primary" />
-              <div>
-                <p className="font-semibold">체험하기 모드</p>
-                <p className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Gamepad2 className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold">
+                  랭킹전 게임 체험하기 모드
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
                   게임을 선택하여 체험해보세요. 체험하기 모드에서는 점수가
                   저장되지 않습니다.
                 </p>
@@ -350,6 +355,7 @@ export function RankingPage({
           </CardContent>
         </Card>
       )}
+
 
       {/* 게임 선택 다이얼로그 */}
       <GameTrialDialog

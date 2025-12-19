@@ -5,23 +5,26 @@
 export interface UserVerification {
   verification_id: string;
   user_id: string;
-  student_id: string;
-  university: string;
+  student_id?: string;
+  university?: string;
+  school_name?: string;
   department: string;
-  student_id_image_url: string | null;
+  student_id_image_url?: string | null;
   status: "pending" | "approved" | "rejected";
-  rejection_reason: string | null;
-  verified_at: string | null;
-  created_at: string;
-  updated_at: string;
+  rejection_reason?: string | null;
+  verified_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface VerificationSubmit {
-  student_id: string;
-  university: string;
+  school_name: string;
   department: string;
-  verification_file_url?: string;
-  notes?: string;
+  major_category?: string;
+  grade: string;
+  student_id?: string;
+  gender: "male" | "female" | "other";
+  documents: string[];
 }
 
 export interface MatchingPool {
