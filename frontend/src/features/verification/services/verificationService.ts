@@ -55,7 +55,14 @@ class VerificationService extends BaseApiClient {
    * Get current user's verification status.
    */
   async getStatus(): Promise<ApiResponse<VerificationStatus>> {
-    return this.request<VerificationStatus>("/verification/status");
+    const response = await this.request<VerificationStatus>("/verification/status");
+    // FastAPI returns data directly, but BaseApiClient wraps it
+    // If response has data field, use it; otherwise use response itself
+    if (response.status === "success" && response.data) {
+      return response;
+    }
+    // If error, return as is
+    return response;
   }
 
   /**

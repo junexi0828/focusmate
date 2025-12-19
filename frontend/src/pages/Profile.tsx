@@ -117,12 +117,12 @@ export function ProfilePage({
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                    <div className="flex items-center gap-2 text-sm">
+                    <div key="email-info" className="flex items-center gap-2 text-sm">
                       <Mail className="w-4 h-4 text-muted-foreground" />
                       <span className="text-muted-foreground">이메일:</span>
                       <span>{user.email}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div key="join-date-info" className="flex items-center gap-2 text-sm">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span className="text-muted-foreground">가입일:</span>
                       <span>{formatDate(user.createdAt)}</span>
@@ -135,31 +135,41 @@ export function ProfilePage({
             {/* Stats Summary (Discourse 스타일) */}
             <div className="space-y-6">
               <div className="grid gap-4">
-                <StatCard
-                  key="total-focus-time"
-                  title="총 집중 시간"
-                  value={`${Math.floor(user.totalFocusTime / 60)}시간 ${user.totalFocusTime % 60}분`}
-                  icon={Target}
-                  variant="primary"
-                />
-                <StatCard
-                  key="total-sessions"
-                  title="완료한 세션"
-                  value={`${user.totalSessions}개`}
-                  icon={Award}
-                  variant="secondary"
-                />
-                <StatCard
-                  key="avg-session-time"
-                  title="평균 세션 시간"
-                  value={`${
-                    user.totalSessions > 0
-                      ? Math.round(user.totalFocusTime / user.totalSessions)
-                      : 0
-                  }분`}
-                  icon={UserIcon}
-                  variant="default"
-                />
+                {[
+                  {
+                    key: "total-focus-time",
+                    title: "총 집중 시간",
+                    value: `${Math.floor(user.totalFocusTime / 60)}시간 ${user.totalFocusTime % 60}분`,
+                    icon: Target,
+                    variant: "primary" as const,
+                  },
+                  {
+                    key: "total-sessions",
+                    title: "완료한 세션",
+                    value: `${user.totalSessions}개`,
+                    icon: Award,
+                    variant: "secondary" as const,
+                  },
+                  {
+                    key: "avg-session-time",
+                    title: "평균 세션 시간",
+                    value: `${
+                      user.totalSessions > 0
+                        ? Math.round(user.totalFocusTime / user.totalSessions)
+                        : 0
+                    }분`,
+                    icon: UserIcon,
+                    variant: "default" as const,
+                  },
+                ].map((stat) => (
+                  <StatCard
+                    key={stat.key}
+                    title={stat.title}
+                    value={stat.value}
+                    icon={stat.icon}
+                    variant={stat.variant}
+                  />
+                ))}
               </div>
 
               <Card>
@@ -278,20 +288,30 @@ export function ProfilePage({
             </CardHeader>
             <CardContent>
               <div className="grid sm:grid-cols-2 gap-4">
-                <StatCard
-                  key="stats-total-focus-time"
-                  title="총 집중 시간"
-                  value={`${Math.floor(user.totalFocusTime / 60)}시간 ${user.totalFocusTime % 60}분`}
-                  icon={Target}
-                  variant="primary"
-                />
-                <StatCard
-                  key="stats-total-sessions"
-                  title="완료한 세션"
-                  value={`${user.totalSessions}개`}
-                  icon={Award}
-                  variant="secondary"
-                />
+                {[
+                  {
+                    key: "stats-total-focus-time",
+                    title: "총 집중 시간",
+                    value: `${Math.floor(user.totalFocusTime / 60)}시간 ${user.totalFocusTime % 60}분`,
+                    icon: Target,
+                    variant: "primary" as const,
+                  },
+                  {
+                    key: "stats-total-sessions",
+                    title: "완료한 세션",
+                    value: `${user.totalSessions}개`,
+                    icon: Award,
+                    variant: "secondary" as const,
+                  },
+                ].map((stat) => (
+                  <StatCard
+                    key={stat.key}
+                    title={stat.title}
+                    value={stat.value}
+                    icon={stat.icon}
+                    variant={stat.variant}
+                  />
+                ))}
               </div>
             </CardContent>
           </Card>

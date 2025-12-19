@@ -119,20 +119,69 @@ export function useNotifications(
             // Add to local state
             setNotifications((prev) => [message.data!, ...prev]);
 
-            // Show toast
-            toast.info(message.data.title, {
-              description: message.data.message,
-              duration: 5000,
-            });
+            // Filter out high-frequency notifications that shouldn't show toast
+            const silentNotificationTypes = [
+              "timer_update",
+              "timer_tick",
+              "timer_countdown",
+              "participant_heartbeat",
+              "room_sync",
+              "sync",
+              "heartbeat",
+              "ping",
+              "pong",
+            ];
 
-            // Show browser push notification if permission is granted
-            if (notificationService.isAllowed()) {
-              notificationService.show({
-                title: message.data.title,
-                body: message.data.message,
-                icon: "/favicon.ico",
-                tag: message.data.notification_id,
+            // Check multiple fields for notification type
+            const notificationType =
+              message.data?.notification_type?.toLowerCase() ||
+              message.data?.type?.toLowerCase() ||
+              "";
+
+            const title = message.data?.title?.toLowerCase() || "";
+            const messageText = message.data?.message?.toLowerCase() || "";
+
+            // Check if it's a silent notification type
+            const isSilentType = silentNotificationTypes.some((type) =>
+              notificationType.includes(type) ||
+              title.includes(type) ||
+              messageText.includes(type)
+            );
+
+            // Filter out common system messages
+            const silentMessages = [
+              "실시간 동기화",
+              "동기화",
+              "연결",
+              "connected",
+              "sync",
+              "heartbeat",
+              "ping",
+              "pong",
+            ];
+
+            const isSilentMessage = silentMessages.some((msg) =>
+              title.includes(msg) || messageText.includes(msg)
+            );
+
+            const shouldShowToast = !isSilentType && !isSilentMessage;
+
+            // Show toast only for important notifications
+            if (shouldShowToast) {
+              toast.info(message.data.title, {
+                description: message.data.message,
+                duration: 5000,
               });
+
+              // Show browser push notification if permission is granted
+              if (notificationService.isAllowed()) {
+                notificationService.show({
+                  title: message.data.title,
+                  body: message.data.message,
+                  icon: "/favicon.ico",
+                  tag: message.data.notification_id,
+                });
+              }
             }
 
             // Call custom handler if provided

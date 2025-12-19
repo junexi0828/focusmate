@@ -100,7 +100,7 @@ export default function Matching() {
   return (
     <PageTransition>
       <div className="min-h-full bg-gradient-to-br from-[#FCE7F5] via-[#E0F7FD] to-[#E0F7FD] dark:from-slate-900 dark:to-slate-800 py-8">
-        <div className="w-full px-4">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">

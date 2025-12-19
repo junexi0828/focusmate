@@ -49,15 +49,23 @@ async def submit_verification(
     SMTP email errors are logged but do not prevent verification submission.
     """
     try:
+        logger.info(f"[VERIFICATION API] 📝 Submitting verification for user {current_user['id']}")
+        logger.info(f"[VERIFICATION API] Data: school_name={data.school_name}, department={data.department}, grade={data.grade}")
+
         verification = await service.submit_verification(current_user["id"], data)
+
+        logger.info(
+            f"[VERIFICATION API] ✅ Verification submitted: id={verification.verification_id}, "
+            f"status={verification.verification_status}, submitted_at={verification.submitted_at}"
+        )
 
         # Determine message based on status
         if verification.verification_status == "approved":
             message = "인증 신청이 제출되었고 SMTP 전송 성공으로 자동 승인되었습니다! ✅"
-            logger.info(f"Verification {verification.verification_id} auto-approved after successful SMTP")
+            logger.info(f"[VERIFICATION API] ✅ Verification {verification.verification_id} auto-approved after successful SMTP")
         else:
             message = "인증 신청이 제출되었습니다. 관리자 검토 후 결과를 알려드립니다."
-            logger.info(f"Verification {verification.verification_id} submitted with status: {verification.verification_status}")
+            logger.info(f"[VERIFICATION API] ⏳ Verification {verification.verification_id} submitted with status: {verification.verification_status}")
 
         return {
             "verification_id": verification.verification_id,

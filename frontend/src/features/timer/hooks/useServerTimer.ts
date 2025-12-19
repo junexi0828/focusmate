@@ -106,6 +106,12 @@ export function useServerTimer({
   // Timer control functions
   const startTimer = useCallback(
     async (sessionType: SessionType = "work") => {
+      // 현재 상태 확인 - RUNNING이면 시작하지 않음
+      if (timerState?.status === "running") {
+        toast.error("타이머가 이미 실행 중입니다");
+        return;
+      }
+
       setIsLoading(true);
       try {
         const response = await timerService.startTimer(roomId, sessionType);
@@ -128,7 +134,7 @@ export function useServerTimer({
         setIsLoading(false);
       }
     },
-    [roomId, updateTimerState]
+    [roomId, updateTimerState, timerState?.status]
   );
 
   const pauseTimer = useCallback(async () => {

@@ -18,7 +18,10 @@ import { wsClient } from "../lib/websocket";
 import { participantService } from "../features/participants/services/participantService";
 import { Participant as ParticipantType } from "../features/participants/types/participant.types";
 import { RoomPageSkeleton } from "../components/ui/room-skeleton";
-import { WebSocketStatus, useWebSocketStatus } from "../components/WebSocketStatus";
+import {
+  WebSocketStatus,
+  useWebSocketStatus,
+} from "../components/WebSocketStatus";
 import { WebSocketConnectionBanner } from "../components/WebSocketConnectionBanner";
 import { authService } from "../features/auth/services/authService";
 
@@ -27,7 +30,7 @@ interface RoomPageProps {
 }
 
 export function RoomPage({ onLeaveRoom }: RoomPageProps) {
-  const { roomId } = useParams({ from: '/room/$roomId' });
+  const { roomId } = useParams({ from: "/room/$roomId" });
   const [room, setRoom] = useState<Room | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [focusTime, setFocusTime] = useState(25);
@@ -37,13 +40,22 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const [copied, setCopied] = useState(false);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [listParticipants, setListParticipants] = useState<{ id: string; name: string; isHost: boolean }[]>([]);
+  const [listParticipants, setListParticipants] = useState<
+    { id: string; name: string; isHost: boolean }[]
+  >([]);
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
-  const [currentParticipantId, setCurrentParticipantId] = useState<string | null>(null);
+  const [currentParticipantId, setCurrentParticipantId] = useState<
+    string | null
+  >(null);
   const [participantName, setParticipantName] = useState<string>("");
 
   // WebSocket 연결 상태
-  const { isConnected: wsConnected, isConnecting: wsConnecting, connectionError: wsError, reconnectAttempts } = useWebSocketStatus(roomId || null);
+  const {
+    isConnected: wsConnected,
+    isConnecting: wsConnecting,
+    connectionError: wsError,
+    reconnectAttempts,
+  } = useWebSocketStatus(roomId || null);
 
   // WebSocket 에러 메시지 표시
   useEffect(() => {
@@ -82,7 +94,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           if (response.error?.code === "ROOM_NOT_FOUND") {
             toast.error("방을 찾을 수 없습니다");
           } else {
-            toast.error(response.error?.message || "방 정보를 불러오는데 실패했습니다");
+            toast.error(
+              response.error?.message || "방 정보를 불러오는데 실패했습니다"
+            );
           }
           onLeaveRoom();
         }
@@ -159,8 +173,14 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           user_id: userId,
         });
         if (response.status === "success" && response.data) {
-          setCurrentParticipantId(response.data.id || response.data.participant_id || storedParticipantId);
-          setParticipantName(response.data.username || response.data.name || name);
+          setCurrentParticipantId(
+            response.data.id ||
+              response.data.participant_id ||
+              storedParticipantId
+          );
+          setParticipantName(
+            response.data.username || response.data.name || name
+          );
           // Reload participants list to show updated name
           await loadParticipants(roomId);
         }
@@ -202,20 +222,16 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         user_id: userId, // Pass user_id if authenticated
       });
       if (response.status === "success" && response.data) {
-        const participantId = response.data.id || response.data.participant_id || "";
+        const participantId =
+          response.data.id || response.data.participant_id || "";
         setCurrentParticipantId(participantId);
-        localStorage.setItem(
-          `participant_${roomId}`,
-          participantId
-        );
+        localStorage.setItem(`participant_${roomId}`, participantId);
         setParticipantName(response.data.username || response.data.name || "");
         // Reload participants list
         await loadParticipants(roomId);
         toast.success("방에 참여했습니다!");
       } else {
-        toast.error(
-          response.error?.message || "방 참여에 실패했습니다"
-        );
+        toast.error(response.error?.message || "방 참여에 실패했습니다");
       }
     } catch (error) {
       console.error("Failed to join room:", error);
@@ -248,10 +264,12 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
   // Check if current user is host
   const currentAuthUser = authService.getCurrentUser();
-  const currentUser = participants.find(
-    (p) => p.user_id === currentAuthUser?.id && p.is_host
-  ) || participants.find((p) => p.is_host) || participants[0];
-  const isCurrentUserHost = currentUser?.user_id === currentAuthUser?.id && currentUser?.is_host;
+  const currentUser =
+    participants.find((p) => p.user_id === currentAuthUser?.id && p.is_host) ||
+    participants.find((p) => p.is_host) ||
+    participants[0];
+  const isCurrentUserHost =
+    currentUser?.user_id === currentAuthUser?.id && currentUser?.is_host;
 
   // Use server-side timer hook
   const {
@@ -274,7 +292,8 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     initialTimerState: room?.timer_state,
     onSessionComplete: async (completedSessionType) => {
       // Show notification using notification service
-      const { notificationService } = await import("../lib/notificationService");
+      const { notificationService } =
+        await import("../lib/notificationService");
       notificationService.notify(
         completedSessionType === "work" ? "집중 시간 완료!" : "휴식 종료!",
         completedSessionType === "work"
@@ -300,6 +319,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const connectionEstablishedRef = useRef(false);
   const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionToastShownRef = useRef(false); // 연결 성공 토스트 한 번만 표시
 
   useEffect(() => {
     if (!roomId) return;
@@ -309,6 +329,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     const currentMountTime = Date.now();
     mountTimeRef.current = currentMountTime;
     connectionEstablishedRef.current = false;
+    // connectionToastShownRef는 컴포넌트 레벨에서 한 번만 초기화되므로 여기서 초기화하지 않음
 
     // 이전 cleanup timeout 정리
     if (cleanupTimeoutRef.current) {
@@ -319,13 +340,15 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     const connectWebSocket = async () => {
       try {
         // React StrictMode 대응: cleanup이 완료될 때까지 짧은 대기
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
 
         if (!isMounted) return; // 컴포넌트가 언마운트되었으면 연결하지 않음
 
         // 마운트 시간이 변경되었으면 StrictMode 이중 마운트로 간주
         if (mountTimeRef.current !== currentMountTime) {
-          console.log(`[Room] Skipping connection - mount time changed (StrictMode)`);
+          console.log(
+            `[Room] Skipping connection - mount time changed (StrictMode)`
+          );
           return;
         }
 
@@ -339,13 +362,22 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
         // 마운트 시간이 변경되었으면 연결 취소
         if (mountTimeRef.current !== currentMountTime) {
-          console.log(`[Room] Canceling connection - mount time changed during connection`);
+          console.log(
+            `[Room] Canceling connection - mount time changed during connection`
+          );
           wsClient.disconnect();
           return;
         }
 
         connectionEstablishedRef.current = true; // 연결 성공 표시
-        toast.success("실시간 동기화가 연결되었습니다");
+
+        // 연결 성공 토스트를 한 번만 표시
+        if (!connectionToastShownRef.current) {
+          connectionToastShownRef.current = true;
+          toast.success("실시간 동기화가 연결되었습니다", {
+            duration: 3000,
+          });
+        }
 
         // Set up message handler
         unsubscribe = wsClient.onMessage((message) => {
@@ -358,8 +390,14 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 id: message.data.participant.id || "",
                 participant_id: message.data.participant.id,
                 room_id: roomId || "",
-                username: message.data.participant.username || message.data.participant.name || "",
-                name: message.data.participant.name || message.data.participant.username || "",
+                username:
+                  message.data.participant.username ||
+                  message.data.participant.name ||
+                  "",
+                name:
+                  message.data.participant.name ||
+                  message.data.participant.username ||
+                  "",
                 is_host: false,
                 joined_at: new Date().toISOString(),
               };
@@ -376,9 +414,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
               }
             } else if (message.data.action === "left") {
               setParticipants((prev) =>
-                prev.filter(
-                  (p) => p.id !== message.data.participant_id
-                )
+                prev.filter((p) => p.id !== message.data.participant_id)
               );
             }
           } else if (message.event === "timer_complete") {
@@ -447,7 +483,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
       // StrictMode 이중 마운트 감지: 300ms 이내이고 연결이 성공하지 않았으면 무시
       if (timeSinceMount < 300 && !connectionEstablishedRef.current) {
-        console.log(`[Room] Skipping cleanup - React StrictMode double-mount detected (${timeSinceMount}ms)`);
+        console.log(
+          `[Room] Skipping cleanup - React StrictMode double-mount detected (${timeSinceMount}ms)`
+        );
         if (unsubscribe) {
           unsubscribe();
         }
@@ -480,7 +518,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           console.log(`[Room] Cleanup: Disconnecting from room ${roomId}`);
           wsClient.disconnect();
         } else {
-          console.log(`[Room] Cleanup: Skipping disconnect (roomId mismatch or not connected)`);
+          console.log(
+            `[Room] Cleanup: Skipping disconnect (roomId mismatch or not connected)`
+          );
         }
 
         // 리셋
@@ -567,7 +607,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   // Request notification permission on mount (using notification service)
   useEffect(() => {
     import("../lib/notificationService").then(({ notificationService }) => {
-      if (notificationService.isSupported() && notificationService.getPermission() === "default") {
+      if (
+        notificationService.isSupported() &&
+        notificationService.getPermission() === "default"
+      ) {
         notificationService.requestPermission().catch(console.error);
       }
     });
@@ -593,7 +636,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 <WebSocketStatus showLabel={false} />
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-sm text-muted-foreground">방 ID: {room.room_id}</p>
+                <p className="text-sm text-muted-foreground">
+                  방 ID: {room.room_id}
+                </p>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -625,8 +670,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                   onClick={handleDeleteRoom}
                   className="hidden sm:flex"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  방 삭제
+                  <Trash2 className="w-4 h-4 mr-2" />방 삭제
                 </Button>
               )}
               <Button variant="outline" onClick={onLeaveRoom}>
@@ -673,6 +717,11 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
             <TimerControls
               status={status}
               onStart={() => {
+                // RUNNING 상태에서는 시작하지 않음
+                if (status === "running") {
+                  toast.error("타이머가 이미 실행 중입니다");
+                  return;
+                }
                 const nextSessionType =
                   sessionType === "work" ? "break" : "work";
                 startTimer(nextSessionType);
@@ -722,13 +771,19 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
           {/* Participant List */}
           <div className="lg:block hidden">
-            <ParticipantList participants={participants} isLoading={isLoadingParticipants} />
+            <ParticipantList
+              participants={participants}
+              isLoading={isLoadingParticipants}
+            />
           </div>
         </div>
 
         {/* Mobile Participant List */}
         <div className="lg:hidden mt-8">
-          <ParticipantList participants={participants} isLoading={isLoadingParticipants} />
+          <ParticipantList
+            participants={participants}
+            isLoading={isLoadingParticipants}
+          />
         </div>
       </main>
     </div>

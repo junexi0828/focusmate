@@ -7,10 +7,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Upload, FileText, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button-enhanced";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { PageTransition } from "@/components/PageTransition";
 import { matchingApi } from "@/api/matching";
 import { toast } from "sonner";
@@ -19,10 +24,12 @@ export default function VerificationPage() {
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
-    university: "",
+    school_name: "",
     department: "",
+    major_category: "",
+    grade: "",
     student_id: "",
-    notes: "",
+    gender: "male" as "male" | "female" | "other",
   });
 
   // Fetch current verification status
@@ -39,22 +46,36 @@ export default function VerificationPage() {
       }
 
       // 1. Upload file first
-      const uploadResponse = await matchingApi.uploadVerificationFile(selectedFile);
+      const uploadResponse =
+        await matchingApi.uploadVerificationFile(selectedFile);
 
-      if (!uploadResponse.uploaded_files || uploadResponse.uploaded_files.length === 0) {
+      if (
+        !uploadResponse.uploaded_files ||
+        uploadResponse.uploaded_files.length === 0
+      ) {
         throw new Error("파일 업로드에 실패했습니다");
       }
 
       const fileUrl = uploadResponse.uploaded_files[0];
 
       // 2. Submit verification with file URL
-      return matchingApi.submitVerification({
-        university: formData.university,
+      const submitData: any = {
+        school_name: formData.school_name,
         department: formData.department,
-        student_id: formData.student_id,
-        verification_file_url: fileUrl,
-        notes: formData.notes,
-      });
+        grade: formData.grade,
+        gender: formData.gender,
+        documents: [fileUrl],
+      };
+
+      if (formData.major_category) {
+        submitData.major_category = formData.major_category;
+      }
+
+      if (formData.student_id) {
+        submitData.student_id = formData.student_id;
+      }
+
+      return matchingApi.submitVerification(submitData);
     },
     onSuccess: () => {
       toast.success("인증이 제출되었습니다. 검토까지 1-2일 소요됩니다.");
@@ -69,7 +90,12 @@ export default function VerificationPage() {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
-      const validTypes = ["image/jpeg", "image/png", "image/jpg", "application/pdf"];
+      const validTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "application/pdf",
+      ];
       if (!validTypes.includes(file.type)) {
         toast.error("JPG, PNG, PDF 파일만 업로드 가능합니다");
         return;
@@ -91,7 +117,7 @@ export default function VerificationPage() {
       toast.error("학생증 또는 재학증명서를 업로드해주세요");
       return;
     }
-    if (!formData.university || !formData.department || !formData.student_id) {
+    if (!formData.school_name || !formData.department || !formData.grade) {
       toast.error("모든 필수 항목을 입력해주세요");
       return;
     }
@@ -121,20 +147,28 @@ export default function VerificationPage() {
                   <CheckCircle className="w-8 h-8 text-green-600" />
                   <div>
                     <CardTitle>인증 완료</CardTitle>
-                    <CardDescription>학교 인증이 완료되었습니다</CardDescription>
+                    <CardDescription>
+                      학교 인증이 완료되었습니다
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm text-muted-foreground">대학교</p>
-                  <p className="font-medium">{verification.university}</p>
+                  <p className="font-medium">
+                    {(verification as any).school_name ||
+                      verification.university}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">학과</p>
                   <p className="font-medium">{verification.department}</p>
                 </div>
-                <Button onClick={() => navigate({ to: "/matching" })} className="w-full">
+                <Button
+                  onClick={() => navigate({ to: "/matching" })}
+                  className="w-full"
+                >
                   매칭 시작하기
                 </Button>
               </CardContent>
@@ -157,7 +191,9 @@ export default function VerificationPage() {
                   <Clock className="w-8 h-8 text-yellow-600" />
                   <div>
                     <CardTitle>인증 검토 중</CardTitle>
-                    <CardDescription>제출하신 인증이 검토 중입니다</CardDescription>
+                    <CardDescription>
+                      제출하신 인증이 검토 중입니다
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -165,7 +201,11 @@ export default function VerificationPage() {
                 <p className="text-sm text-muted-foreground mb-4">
                   일반적으로 1-2일 내에 검토가 완료됩니다.
                 </p>
-                <Button variant="outline" onClick={() => navigate({ to: "/matching" })} className="w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate({ to: "/matching" })}
+                  className="w-full"
+                >
                   돌아가기
                 </Button>
               </CardContent>
@@ -205,7 +245,9 @@ export default function VerificationPage() {
                       {selectedFile ? (
                         <div className="flex items-center justify-center gap-2">
                           <FileText className="w-5 h-5 text-primary" />
-                          <span className="text-sm font-medium">{selectedFile.name}</span>
+                          <span className="text-sm font-medium">
+                            {selectedFile.name}
+                          </span>
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -213,21 +255,25 @@ export default function VerificationPage() {
                           <p className="text-sm text-muted-foreground">
                             클릭하여 파일 선택 (JPG, PNG, PDF)
                           </p>
-                          <p className="text-xs text-muted-foreground">최대 5MB</p>
+                          <p className="text-xs text-muted-foreground">
+                            최대 5MB
+                          </p>
                         </div>
                       )}
                     </label>
                   </div>
                 </div>
 
-                {/* University */}
+                {/* School Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="university">대학교 *</Label>
+                  <Label htmlFor="school_name">대학교 *</Label>
                   <Input
-                    id="university"
+                    id="school_name"
                     placeholder="예: 서울대학교"
-                    value={formData.university}
-                    onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+                    value={formData.school_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, school_name: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -239,33 +285,75 @@ export default function VerificationPage() {
                     id="department"
                     placeholder="예: 컴퓨터공학과"
                     value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, department: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                {/* Major Category */}
+                <div className="space-y-2">
+                  <Label htmlFor="major_category">전공 분야 (선택)</Label>
+                  <Input
+                    id="major_category"
+                    placeholder="예: 공학"
+                    value={formData.major_category}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        major_category: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Grade */}
+                <div className="space-y-2">
+                  <Label htmlFor="grade">학년 *</Label>
+                  <Input
+                    id="grade"
+                    placeholder="예: 1, 2, 3, 4"
+                    value={formData.grade}
+                    onChange={(e) =>
+                      setFormData({ ...formData, grade: e.target.value })
+                    }
                     required
                   />
                 </div>
 
                 {/* Student ID */}
                 <div className="space-y-2">
-                  <Label htmlFor="student_id">학번 *</Label>
+                  <Label htmlFor="student_id">학번 (선택)</Label>
                   <Input
                     id="student_id"
                     placeholder="예: 2021123456"
                     value={formData.student_id}
-                    onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                    required
+                    onChange={(e) =>
+                      setFormData({ ...formData, student_id: e.target.value })
+                    }
                   />
                 </div>
 
-                {/* Notes */}
+                {/* Gender */}
                 <div className="space-y-2">
-                  <Label htmlFor="notes">추가 메모 (선택)</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="추가로 전달하실 내용이 있다면 작성해주세요"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={3}
-                  />
+                  <Label htmlFor="gender">성별 *</Label>
+                  <select
+                    id="gender"
+                    value={formData.gender}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        gender: e.target.value as "male" | "female" | "other",
+                      })
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  >
+                    <option value="male">남성</option>
+                    <option value="female">여성</option>
+                    <option value="other">기타</option>
+                  </select>
                 </div>
 
                 {/* Submit Buttons */}

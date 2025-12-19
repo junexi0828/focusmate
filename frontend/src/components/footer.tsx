@@ -12,7 +12,7 @@ import {
 export function Footer() {
   return (
     <footer className="border-t border-[#E0F7FD] bg-gradient-to-b from-[#FCE7F5]/30 to-[#E0F7FD]/30 dark:from-slate-900 dark:to-slate-800">
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           {/* Brand Section */}
           <div className="space-y-4">

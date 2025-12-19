@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from app.api.deps import get_current_user
 from app.core.exceptions import UnauthorizedException
@@ -48,7 +49,9 @@ class UserStatsResponse(BaseModel):
     total_focus_time: int
     total_sessions: int
     average_session: int
-    sessions: list[dict]  # List of session records with session_id, user_id, room_id, session_type, duration_minutes, completed_at
+    sessions: list[
+        dict
+    ]  # List of session records with session_id, user_id, room_id, session_type, duration_minutes, completed_at
 
 
 class HourlyPatternResponse(BaseModel):
@@ -127,8 +130,12 @@ async def get_user_stats(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
     days: int = Query(7, ge=1, le=365),
-    start_date: Optional[str] = Query(None, description="Start date (ISO format: YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="End date (ISO format: YYYY-MM-DD)"),
+    start_date: Optional[str] = Query(
+        None, description="Start date (ISO format: YYYY-MM-DD)"
+    ),
+    end_date: Optional[str] = Query(
+        None, description="End date (ISO format: YYYY-MM-DD)"
+    ),
 ) -> UserStatsResponse:
     """Get user statistics for the last N days or date range.
 
@@ -203,7 +210,9 @@ async def get_hourly_pattern(
         )
 
 
-@router.get("/user/{user_id}/monthly-comparison", response_model=MonthlyComparisonResponse)
+@router.get(
+    "/user/{user_id}/monthly-comparison", response_model=MonthlyComparisonResponse
+)
 async def get_monthly_comparison(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
@@ -238,9 +247,13 @@ async def get_monthly_comparison(
 async def get_goal_achievement(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
-    goal_type: str = Query(..., pattern="^(focus_time|sessions)$", description="Type of goal"),
+    goal_type: str = Query(
+        ..., pattern="^(focus_time|sessions)$", description="Type of goal"
+    ),
     goal_value: int = Query(..., gt=0, description="Target value for the goal"),
-    period: str = Query("week", pattern="^(day|week|month)$", description="Time period"),
+    period: str = Query(
+        "week", pattern="^(day|week|month)$", description="Time period"
+    ),
 ) -> GoalAchievementResponse:
     """Get goal achievement rate for progress ring.
 
@@ -258,7 +271,9 @@ async def get_goal_achievement(
         HTTPException: If user not found or invalid parameters
     """
     try:
-        achievement = await service.get_goal_achievement(user_id, goal_type, goal_value, period)
+        achievement = await service.get_goal_achievement(
+            user_id, goal_type, goal_value, period
+        )
         return GoalAchievementResponse(**achievement)
     except UnauthorizedException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
@@ -270,24 +285,34 @@ async def get_goal_achievement(
 
 
 # User Goals Endpoints
-@router.post("/goals", response_model=UserGoalResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/goals", response_model=UserGoalResponse, status_code=status.HTTP_201_CREATED
+)
 async def save_user_goal(
     goal_data: UserGoalCreate,
     current_user: Annotated[dict, Depends(get_current_user)],
     db: DatabaseSession,
 ) -> UserGoalResponse:
     """Save or update user's goals."""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
     user_id = current_user["id"]
 
     # Check if user already has goals
-    existing_goal = db.query(UserGoal).filter(UserGoal.user_id == user_id).first()
+    stmt = select(UserGoal).where(UserGoal.user_id == user_id)
+    result = await db.execute(stmt)
+    existing_goal = result.scalar_one_or_none()
 
     if existing_goal:
         # Update existing
         existing_goal.daily_goal_minutes = goal_data.daily_goal_minutes
         existing_goal.weekly_goal_sessions = goal_data.weekly_goal_sessions
-        db.commit()
-        db.refresh(existing_goal)
+        await db.commit()
+        await db.refresh(existing_goal)
         return UserGoalResponse.model_validate(existing_goal)
     else:
         # Create new
@@ -298,8 +323,8 @@ async def save_user_goal(
             weekly_goal_sessions=goal_data.weekly_goal_sessions,
         )
         db.add(new_goal)
-        db.commit()
-        db.refresh(new_goal)
+        await db.commit()
+        await db.refresh(new_goal)
         return UserGoalResponse.model_validate(new_goal)
 
 
@@ -309,27 +334,54 @@ async def get_user_goal(
     db: DatabaseSession,
 ) -> UserGoalResponse:
     """Get user's current goals."""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
     user_id = current_user["id"]
 
-    goal = db.query(UserGoal).filter(UserGoal.user_id == user_id).first()
+    stmt = (
+        select(UserGoal)
+        .where(UserGoal.user_id == user_id)
+        .order_by(UserGoal.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    goals = result.scalars().all()
 
-    if not goal:
+    # If multiple goals exist, use the most recent one
+    # TODO: Consider cleaning up duplicate goals
+    if not goals:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No goals set yet",
         )
 
+    # Use the most recent goal (first one after ordering by created_at desc)
+    goal = goals[0]
+
     return UserGoalResponse.model_validate(goal)
 
 
 # Manual Session Endpoints
-@router.post("/sessions", response_model=ManualSessionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/sessions",
+    response_model=ManualSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def save_manual_session(
     session_data: ManualSessionCreate,
     current_user: Annotated[dict, Depends(get_current_user)],
     db: DatabaseSession,
 ) -> ManualSessionResponse:
     """Save a manually logged session."""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
     user_id = current_user["id"]
 
     new_session = ManualSession(
@@ -341,8 +393,8 @@ async def save_manual_session(
     )
 
     db.add(new_session)
-    db.commit()
-    db.refresh(new_session)
+    await db.commit()
+    await db.refresh(new_session)
 
     return ManualSessionResponse.model_validate(new_session)
 
@@ -354,14 +406,23 @@ async def get_manual_sessions(
     limit: int = 100,
 ) -> list[ManualSessionResponse]:
     """Get user's manual sessions."""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
     user_id = current_user["id"]
 
-    sessions = (
-        db.query(ManualSession)
-        .filter(ManualSession.user_id == user_id)
-        .order_by(ManualSession.completed_at.desc())
+    from sqlalchemy import desc
+
+    stmt = (
+        select(ManualSession)
+        .where(ManualSession.user_id == user_id)
+        .order_by(desc(ManualSession.completed_at))
         .limit(limit)
-        .all()
     )
+    result = await db.execute(stmt)
+    sessions = result.scalars().all()
 
     return [ManualSessionResponse.model_validate(s) for s in sessions]

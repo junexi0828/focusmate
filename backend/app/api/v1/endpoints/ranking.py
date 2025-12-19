@@ -1,7 +1,7 @@
 """Ranking API endpoints."""
 
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile
@@ -73,7 +73,7 @@ async def get_my_teams(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get teams: {str(e)}"
+            detail=f"Failed to get teams: {str(e)}",
         )
 
 
@@ -119,13 +119,19 @@ async def invite_member(
 ) -> dict:
     """Invite a new member to the team (leader only)."""
     try:
-        result = await service.invite_member(team_id, invitation_data, current_user["id"])
+        result = await service.invite_member(
+            team_id, invitation_data, current_user["id"]
+        )
 
         # Send invitation email
         try:
             from app.services.email_service import email_service
-            from app.infrastructure.database.repositories.ranking_repository import RankingRepository
-            from app.infrastructure.database.repositories.user_repository import UserRepository
+            from app.infrastructure.database.repositories.ranking_repository import (
+                RankingRepository,
+            )
+            from app.infrastructure.database.repositories.user_repository import (
+                UserRepository,
+            )
             from app.infrastructure.database.session import get_db
 
             async for db in get_db():
@@ -148,6 +154,7 @@ async def invite_member(
                 break
         except Exception as e:
             import logging
+
             logging.error(f"Failed to send invitation email: {str(e)}")
 
         return result
@@ -198,9 +205,16 @@ async def leave_team(
     """Leave a team."""
     success = await service.leave_team(team_id, current_user["id"])
     if not success:
+        # Check if user is team leader
+        team = await service.get_team(team_id)
+        if team and team.leader_id == current_user["id"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="팀 리더는 팀을 나갈 수 없습니다. 팀을 삭제하거나 리더를 양도해주세요.",
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot leave team (leader must delete team or transfer leadership)",
+            detail="팀에서 나갈 수 없습니다.",
         )
     return {"message": "Left team successfully"}
 
@@ -209,17 +223,12 @@ async def leave_team(
 @router.get("/leaderboard")
 async def get_leaderboard(
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    db: Annotated[DatabaseSession, Depends()],
-    period: str = Query("weekly", description="Period: weekly, monthly, all_time"),
+    db: DatabaseSession,
+    period: Literal["weekly", "monthly", "all_time"] = Query(
+        "weekly", description="Period: weekly, monthly, all_time"
+    ),
     limit: int = Query(50, ge=1, le=100, description="Number of teams to return"),
 ) -> dict:
-    # Validate period parameter
-    valid_periods = ["weekly", "monthly", "all_time"]
-    if period not in valid_periods:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Invalid period. Must be one of: {', '.join(valid_periods)}"
-        )
     """Get leaderboard rankings for teams.
 
     Args:
@@ -273,7 +282,9 @@ async def get_leaderboard(
             if member_ids:
                 sessions_result = await db.execute(
                     select(
-                        func.sum(SessionHistory.duration_minutes).label("total_minutes"),
+                        func.sum(SessionHistory.duration_minutes).label(
+                            "total_minutes"
+                        ),
                         func.count(SessionHistory.id).label("total_sessions"),
                     )
                     .where(SessionHistory.user_id.in_(member_ids))
@@ -285,7 +296,9 @@ async def get_leaderboard(
                 total_sessions = int(stats.total_sessions or 0)
 
                 # Calculate score (minutes + bonus for sessions)
-                score = total_minutes + (total_sessions * 5)  # 5 bonus points per session
+                score = total_minutes + (
+                    total_sessions * 5
+                )  # 5 bonus points per session
                 average_score = score / len(member_ids) if member_ids else 0.0
             else:
                 score = 0.0
@@ -293,13 +306,15 @@ async def get_leaderboard(
                 total_minutes = 0
                 total_sessions = 0
 
-            leaderboard_data.append({
-                "team": team,
-                "score": score,
-                "average_score": average_score,
-                "member_count": len(member_ids),
-                "total_sessions": total_sessions,
-            })
+            leaderboard_data.append(
+                {
+                    "team": team,
+                    "score": score,
+                    "average_score": average_score,
+                    "member_count": len(member_ids),
+                    "total_sessions": total_sessions,
+                }
+            )
 
         # Sort by score descending
         leaderboard_data.sort(key=lambda x: x["score"], reverse=True)
@@ -332,9 +347,8 @@ async def get_leaderboard(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get leaderboard: {str(e)}"
+            detail=f"Failed to get leaderboard: {str(e)}",
         )
-
 
 
 @router.delete(
@@ -399,7 +413,9 @@ async def get_pending_verifications(
     return await service.get_pending_verifications()
 
 
-@router.post("/verifications/{verification_id}/review", response_model=VerificationResponse)
+@router.post(
+    "/verifications/{verification_id}/review", response_model=VerificationResponse
+)
 async def review_verification(
     verification_id: UUID,
     review: VerificationReview,
@@ -414,7 +430,9 @@ async def review_verification(
     # Send email notification
     try:
         from app.services.email_service import email_service
-        from app.infrastructure.database.repositories.ranking_repository import RankingRepository
+        from app.infrastructure.database.repositories.ranking_repository import (
+            RankingRepository,
+        )
         from app.infrastructure.database.session import get_db
 
         # Get team and leader info
@@ -442,6 +460,7 @@ async def review_verification(
     except Exception as e:
         # Log error but don't fail the request
         import logging
+
         logging.error(f"Failed to send verification email: {str(e)}")
 
     return result
@@ -572,7 +591,7 @@ async def get_user_invitations(
 
 @router.get("/teams/{team_id}/members")
 async def get_team_members(
-    team_id: str,
+    team_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
 ) -> dict:
@@ -592,7 +611,9 @@ async def start_mini_game(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
     team_id: UUID = Query(..., description="Team ID"),
-    game_type: str = Query(..., description="Game type: dino_jump, dot_collector, snake"),
+    game_type: str = Query(
+        ..., description="Game type: dino_jump, dot_collector, snake"
+    ),
 ) -> dict:
     """Start a mini-game session."""
     try:
@@ -606,9 +627,13 @@ async def submit_mini_game_score(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
     team_id: UUID = Query(..., description="Team ID"),
-    game_type: str = Query(..., description="Game type: dino_jump, dot_collector, snake"),
+    game_type: str = Query(
+        ..., description="Game type: dino_jump, dot_collector, snake"
+    ),
     score: int = Query(..., ge=0, le=999999, description="Game score"),
-    completion_time: float = Query(..., gt=0, le=3600, description="Completion time in seconds"),
+    completion_time: float = Query(
+        ..., gt=0, le=3600, description="Completion time in seconds"
+    ),
 ) -> dict:
     """Submit mini-game score."""
     try:

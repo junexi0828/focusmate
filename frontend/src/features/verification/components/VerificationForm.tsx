@@ -38,19 +38,31 @@ export function VerificationForm({ onSuccess }: VerificationFormProps) {
   const [uploading, setUploading] = useState(false);
 
   const submitMutation = useMutation({
-    mutationFn: verificationService.submitVerification,
+    mutationFn: async (data: VerificationSubmit) => {
+      const response = await verificationService.submitVerification(data);
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "인증 신청에 실패했습니다.");
+      }
+      return response.data!;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["verification-status"] });
       toast.success("인증 신청이 제출되었습니다.");
       onSuccess?.();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.detail || "인증 신청에 실패했습니다.");
+      toast.error(error?.message || "인증 신청에 실패했습니다.");
     },
   });
 
   const uploadMutation = useMutation({
-    mutationFn: verificationService.uploadDocuments,
+    mutationFn: async (files: File[]) => {
+      const response = await verificationService.uploadDocuments(files);
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "파일 업로드에 실패했습니다.");
+      }
+      return response.data!;
+    },
     onSuccess: (data) => {
       setFormData((prev) => ({
         ...prev,
@@ -59,7 +71,7 @@ export function VerificationForm({ onSuccess }: VerificationFormProps) {
       toast.success(`${data.count}개의 파일이 업로드되었습니다.`);
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.detail || "파일 업로드에 실패했습니다.");
+      toast.error(error?.message || "파일 업로드에 실패했습니다.");
     },
   });
 

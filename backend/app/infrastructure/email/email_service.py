@@ -154,13 +154,20 @@ FocusMate 팀
 
         logger = logging.getLogger(__name__)
 
+        # Log SMTP configuration status
+        logger.info(f"[EMAIL] 📧 Email send attempt - To: {to_email}, Subject: {subject}")
+        logger.info(f"[EMAIL] SMTP Status - Enabled: {self.is_enabled}, Host: {self.smtp_host}, Port: {self.smtp_port}")
+        logger.info(f"[EMAIL] SMTP Auth - User: {self.smtp_user[:10] + '...' if self.smtp_user else 'NOT SET'}, Password: {'SET' if self.smtp_password else 'NOT SET'}")
+
         if not self.is_enabled:
-            logger.warning(f"[EMAIL DISABLED] 📧 To: {to_email}, Subject: {subject}")
+            logger.warning(f"[EMAIL DISABLED] 📧 SMTP is disabled. Email not sent to {to_email}, Subject: {subject}")
             return False
 
         if not (self.smtp_user and self.smtp_password):
             logger.error(
-                f"[EMAIL MISCONFIGURED] SMTP_USER or SMTP_PASSWORD not set. To: {to_email}, Subject: {subject}"
+                f"[EMAIL MISCONFIGURED] ❌ SMTP_USER or SMTP_PASSWORD not set. "
+                f"SMTP_USER={bool(self.smtp_user)}, SMTP_PASSWORD={bool(self.smtp_password)}. "
+                f"To: {to_email}, Subject: {subject}"
             )
             return False
 
@@ -180,7 +187,7 @@ FocusMate 팀
             msg.attach(MIMEText(body, "plain", "utf-8"))
 
             logger.info(
-                f"[EMAIL] Attempting to send email to {to_email} via {self.smtp_host}:{self.smtp_port}"
+                f"[EMAIL] 📤 Attempting to send email to {to_email} via {self.smtp_host}:{self.smtp_port}"
             )
             logger.info(
                 f"[EMAIL] From: {from_email}, To: {to_email}, Subject: {subject}"
@@ -200,14 +207,21 @@ FocusMate 팀
             )
             logger.info(f"[EMAIL] ✅ Successfully sent to {to_email}: {subject}")
             return True
+        except aiosmtplib.SMTPAuthenticationError as e:
+            logger.error(
+                f"[EMAIL ERROR] 🔐 SMTP Authentication failed sending to {to_email}: {e}",
+                exc_info=True,
+            )
+            logger.error(f"[EMAIL ERROR] Check SMTP_USER and SMTP_PASSWORD are correct")
+            return False
         except aiosmtplib.SMTPException as e:
             logger.error(
-                f"[EMAIL ERROR] SMTP Exception sending to {to_email}: {e}",
+                f"[EMAIL ERROR] 📧 SMTP Exception sending to {to_email}: {type(e).__name__}: {e}",
                 exc_info=True,
             )
             return False
         except asyncio.TimeoutError as e:
-            logger.error(f"[EMAIL ERROR] Timeout sending to {to_email}: {e}")
+            logger.error(f"[EMAIL ERROR] ⏱️ Timeout sending to {to_email}: {e}")
             return False
         except Exception as e:
             logger.error(

@@ -66,7 +66,7 @@ export function Sidebar() {
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="p-6 flex items-center gap-2 border-b border-border/50 relative">
+      <div className="p-4 flex items-center gap-2 border-b border-border/50 relative">
         {!isCollapsed && (
           <img
             src={logoFull}

@@ -118,16 +118,27 @@ function RankingComponent() {
     mutationFn: (teamId: string) => rankingService.leaveTeam(teamId),
     onSuccess: (response) => {
       if (response.status === "success") {
+        queryClient.invalidateQueries({ queryKey: ["my-teams"] });
         queryClient.invalidateQueries({ queryKey: ["ranking", "teams"] });
         toast.success("팀에서 탈퇴했습니다");
       } else {
-        toast.error(response.error?.message || "팀 탈퇴에 실패했습니다");
+        const errorMessage = response.error?.message || "팀 탈퇴에 실패했습니다";
+        // 리더는 팀을 나갈 수 없다는 명확한 메시지
+        if (errorMessage.includes("leader") || errorMessage.includes("리더")) {
+          toast.error("팀 리더는 팀을 나갈 수 없습니다. 팀을 삭제하거나 리더를 양도해주세요.");
+        } else {
+          toast.error(errorMessage);
+        }
       }
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "팀 탈퇴에 실패했습니다"
-      );
+      const errorMessage = error instanceof Error ? error.message : "팀 탈퇴에 실패했습니다";
+      // 리더는 팀을 나갈 수 없다는 명확한 메시지
+      if (errorMessage.includes("leader") || errorMessage.includes("리더") || errorMessage.includes("Cannot leave")) {
+        toast.error("팀 리더는 팀을 나갈 수 없습니다. 팀을 삭제하거나 리더를 양도해주세요.");
+      } else {
+        toast.error(errorMessage);
+      }
     },
   });
 

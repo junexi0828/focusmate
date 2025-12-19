@@ -26,7 +26,7 @@ function RootComponent() {
         <main className="flex-1 overflow-auto relative flex flex-col">
           {/* Top Header Placeholder (optional) - Hidden on Login */}
           {!isLoginPage && (
-            <header className="h-14 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10 flex items-center px-6">
+            <header className="h-14 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10 flex items-center px-4">
               <div className="flex-1" />
               <div className="text-sm text-muted-foreground flex items-center gap-4">
                 <NotificationBell />
@@ -40,7 +40,9 @@ function RootComponent() {
 
           <div
             className={
-              isLoginPage ? "h-full w-full" : "flex-1 p-4 sm:p-6 lg:p-8 w-full"
+              isLoginPage
+                ? "h-full w-full"
+                : "flex-1 p-8 max-w-7xl mx-auto w-full"
             }
           >
             <Outlet />

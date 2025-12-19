@@ -13,19 +13,33 @@ import { toast } from "sonner";
 
 export function VerificationSettings() {
   const queryClient = useQueryClient();
-  const { data: status } = useQuery({
+  const { data: statusResponse } = useQuery({
     queryKey: ["verification-status"],
-    queryFn: verificationService.getStatus,
+    queryFn: async () => {
+      const response = await verificationService.getStatus();
+      if (response.status === "error") {
+        return null;
+      }
+      return response.data || null;
+    },
   });
 
+  const status = statusResponse;
+
   const updateMutation = useMutation({
-    mutationFn: verificationService.updateSettings,
+    mutationFn: async (settings: { badge_visible?: boolean; department_visible?: boolean }) => {
+      const response = await verificationService.updateSettings(settings);
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "설정 변경에 실패했습니다.");
+      }
+      return response.data!;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["verification-status"] });
       toast.success("설정이 변경되었습니다.");
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.detail || "설정 변경에 실패했습니다.");
+      toast.error(error?.message || "설정 변경에 실패했습니다.");
     },
   });
 
