@@ -20,7 +20,7 @@ import {
 } from "../api/settings";
 import { UserSettings } from "../types/settings";
 import { toast } from "sonner";
-import { Loader2, Settings as SettingsIcon, Lock, Mail, Bell, Palette } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Lock, Bell, Palette } from "lucide-react";
 
 export default function Settings() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -51,7 +51,7 @@ export default function Settings() {
     }
   }, [settings?.theme]);
 
-  // Helper function to apply theme
+  // Helper function to apply theme (consistent with __root.tsx)
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
     const root = document.documentElement;
     root.classList.remove("light", "dark");
@@ -61,8 +61,10 @@ export default function Settings() {
         ? "dark"
         : "light";
       root.classList.add(systemTheme);
+      localStorage.removeItem("theme"); // Remove explicit theme to follow system
     } else {
       root.classList.add(theme);
+      localStorage.setItem("theme", theme);
     }
   };
 
@@ -203,6 +205,7 @@ export default function Settings() {
                       <Input
                         id="current-password"
                         type="password"
+                        autoComplete="current-password"
                         value={passwordForm.current_password}
                         onChange={(e) =>
                           setPasswordForm({
@@ -218,6 +221,7 @@ export default function Settings() {
                       <Input
                         id="new-password"
                         type="password"
+                        autoComplete="new-password"
                         value={passwordForm.new_password}
                         onChange={(e) =>
                           setPasswordForm({
@@ -233,6 +237,7 @@ export default function Settings() {
                       <Input
                         id="confirm-password"
                         type="password"
+                        autoComplete="new-password"
                         value={passwordForm.confirm_password}
                         onChange={(e) =>
                           setPasswordForm({
@@ -278,6 +283,7 @@ export default function Settings() {
                       <Input
                         id="email-password"
                         type="password"
+                        autoComplete="current-password"
                         value={emailForm.password}
                         onChange={(e) =>
                           setEmailForm({
@@ -314,7 +320,7 @@ export default function Settings() {
                     <Switch
                       id="notification-email"
                       checked={settings.notification_email}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         handleUpdateSettings({ notification_email: checked })
                       }
                       disabled={saving}
@@ -331,7 +337,7 @@ export default function Settings() {
                     <Switch
                       id="notification-push"
                       checked={settings.notification_push}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         handleUpdateSettings({ notification_push: checked })
                       }
                       disabled={saving}
@@ -348,7 +354,7 @@ export default function Settings() {
                     <Switch
                       id="notification-session"
                       checked={settings.notification_session}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         handleUpdateSettings({ notification_session: checked })
                       }
                       disabled={saving}
@@ -365,7 +371,7 @@ export default function Settings() {
                     <Switch
                       id="notification-achievement"
                       checked={settings.notification_achievement}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         handleUpdateSettings({ notification_achievement: checked })
                       }
                       disabled={saving}
@@ -382,7 +388,7 @@ export default function Settings() {
                     <Switch
                       id="notification-message"
                       checked={settings.notification_message}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         handleUpdateSettings({ notification_message: checked })
                       }
                       disabled={saving}
