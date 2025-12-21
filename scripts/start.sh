@@ -258,25 +258,28 @@ setup_backend() {
         rm -f /tmp/db_connection_test.log
     fi
 
-    # 마이그레이션 실행
+    # 마이그레이션 실행 (스마트 마이그레이션 스크립트 사용)
     print_section "$YELLOW" "🔄 Database Migrations"
     if [ -f "venv/bin/alembic" ]; then
-        # Check if alembic_version table exists (first-time setup)
-        if ! venv/bin/alembic current > /dev/null 2>&1; then
-            echo -e "${YELLOW}⚠️  Alembic version table not found. Initializing...${NC}"
-            if venv/bin/alembic stamp head; then
-                echo -e "${GREEN}✅ Alembic version table initialized${NC}"
+        # Use smart migration script if available
+        if [ -f "scripts/smart_migrate.py" ]; then
+            if venv/bin/python scripts/smart_migrate.py; then
+                echo -e "${GREEN}✅ Database migrations completed successfully${NC}"
             else
-                echo -e "${YELLOW}⚠️  Warning: Failed to initialize Alembic version table${NC}"
-                echo -e "${YELLOW}   This may be normal if tables already exist. Continuing...${NC}"
+                echo -e "${YELLOW}⚠️  Warning: Database migration completed with warnings${NC}"
+                echo -e "${YELLOW}   This may be normal if tables already exist.${NC}"
             fi
-        fi
-        
-        # Run migrations
-        if venv/bin/alembic upgrade head; then
-            echo -e "${GREEN}✅ Database migrations completed successfully${NC}"
         else
-            echo -e "${YELLOW}⚠️  Warning: Database migration failed or already up to date${NC}"
+            # Fallback to basic migration
+            if ! venv/bin/alembic current > /dev/null 2>&1; then
+                echo -e "${YELLOW}⚠️  Alembic version table not found. Initializing...${NC}"
+                venv/bin/alembic stamp head > /dev/null 2>&1 || true
+            fi
+            if venv/bin/alembic upgrade head; then
+                echo -e "${GREEN}✅ Database migrations completed successfully${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Warning: Database migration failed or already up to date${NC}"
+            fi
         fi
     else
         echo -e "${YELLOW}⚠️  Alembic not found, skipping migrations${NC}"

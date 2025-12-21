@@ -2,14 +2,15 @@
 
 ## 프로젝트 정보
 
-- **Project Reference**: `xevhqwaxxlcsqzhmawjr`
-- **MCP URL**: `https://mcp.supabase.com/mcp?project_ref=xevhqwaxxlcsqzhmawjr`
+- **Project Reference**: `YOUR_PROJECT_REF` (Supabase 대시보드에서 확인)
+- **MCP URL**: `https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_REF`
 
 ## Supabase 연결 설정 방법
 
 ### 1. Supabase 대시보드에서 연결 정보 가져오기
 
-1. [Supabase 대시보드](https://supabase.com/dashboard/project/xevhqwaxxlcsqzhmawjr) 접속
+1. [Supabase 대시보드](https://supabase.com/dashboard/project/YOUR_PROJECT_REF) 접속
+   - `YOUR_PROJECT_REF`를 실제 프로젝트 참조 ID로 교체하세요
 2. **Settings** > **Database** 이동
 3. **Connection string** 섹션에서 연결 문자열 복사
    - **URI** 또는 **Connection pooling** 사용 권장
@@ -34,10 +35,10 @@ python scripts/setup_supabase.py
 # DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/focus_mate
 
 # Supabase (Connection Pooling 권장)
-DATABASE_URL=postgresql+asyncpg://postgres.xevhqwaxxlcsqzhmawjr:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql+asyncpg://postgres.YOUR_PROJECT_REF:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
 
 # 또는 Direct Connection
-DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.xevhqwaxxlcsqzhmawjr.supabase.co:5432/postgres
+DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.YOUR_PROJECT_REF.supabase.co:5432/postgres
 ```
 
 **중요**:
@@ -73,7 +74,7 @@ alembic upgrade head
 {
   "mcpServers": {
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=xevhqwaxxlcsqzhmawjr"
+      "url": "https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_REF"
     }
   }
 }
@@ -87,7 +88,7 @@ alembic upgrade head
 {
   "mcpServers": {
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=xevhqwaxxlcsqzhmawjr&read_only=true"
+      "url": "https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_REF&read_only=true"
     }
   }
 }

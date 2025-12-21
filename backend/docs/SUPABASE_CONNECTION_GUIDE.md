@@ -12,7 +12,8 @@
 
 1. **Supabase 대시보드 접속**
 
-   - https://supabase.com/dashboard/project/xevhqwaxxlcsqzhmawjr
+   - https://supabase.com/dashboard/project/YOUR_PROJECT_REF
+   - `YOUR_PROJECT_REF`를 실제 프로젝트 참조 ID로 교체하세요
 
 2. **Settings > Database 이동**
 
@@ -29,22 +30,22 @@
 5. **연결 문자열 형식**
 
    ```
-   postgresql://postgres.xevhqwaxxlcsqzhmawjr:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+   postgresql://postgres.YOUR_PROJECT_REF:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
    ```
 
 6. **asyncpg 형식으로 변환**
    ```
-   postgresql+asyncpg://postgres.xevhqwaxxlcsqzhmawjr:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+   postgresql+asyncpg://postgres.YOUR_PROJECT_REF:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
    ```
 
 ## .env 파일 업데이트
 
 ```bash
 # 기존 (Direct Connection - IPv4에서 작동 안 함)
-# DATABASE_URL=postgresql+asyncpg://postgres:focusmate202230262@db.xevhqwaxxlcsqzhmawjr.supabase.co:5432/postgres
+# DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.YOUR_PROJECT_REF.supabase.co:5432/postgres
 
 # Session Pooler (IPv4 호환)
-DATABASE_URL=postgresql+asyncpg://postgres.xevhqwaxxlcsqzhmawjr:focusmate202230262@aws-0-[REGION].pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql+asyncpg://postgres.YOUR_PROJECT_REF:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
 ```
 
 **중요**: `[REGION]`을 Supabase 대시보드에서 확인한 실제 리전으로 교체하세요.
