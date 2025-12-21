@@ -136,7 +136,7 @@ curl http://localhost:8000/health
 #### 1. 대시보드 데이터 확인
 ```
 1. http://localhost:3000 접속
-2. 로그인: junexi@naver.com / admin123
+2. 로그인: admin@focusmate.dev / admin123 (또는 .env의 ADMIN_EMAIL 값)
 3. 대시보드 확인:
    - Today's focus time
    - Sessions completed
