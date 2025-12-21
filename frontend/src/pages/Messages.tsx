@@ -237,8 +237,12 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (data: MessageCreate) => {
+      if (!selectedRoom) {
+        throw new Error("방이 선택되지 않았습니다");
+      }
+
       // If there are files, upload them first
-      if (selectedFiles.length > 0 && selectedRoom) {
+      if (selectedFiles.length > 0) {
         setIsUploading(true);
         try {
           const uploadResponse = await chatService.uploadFiles(
@@ -252,8 +256,12 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
               /\.(jpg|jpeg|png|gif|webp)$/i.test(f.url)
             );
             data.message_type = hasImages ? "image" : "file";
+          } else {
+            throw new Error(uploadResponse.error?.message || "파일 업로드 실패");
           }
         } catch (error) {
+          setIsUploading(false);
+          setSelectedFiles([]);
           toast.error("파일 업로드에 실패했습니다");
           throw error;
         } finally {
@@ -261,20 +269,59 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
           setSelectedFiles([]);
         }
       }
-      return chatService.sendMessage(selectedRoom!.room_id, data);
+
+      // Send message via API
+      const response = await chatService.sendMessage(selectedRoom.room_id, data);
+
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "메시지 전송 실패");
+      }
+
+      return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (message) => {
+      // Optimistically update the UI
+      queryClient.setQueryData(
+        ["chat-messages", selectedRoom?.room_id],
+        (old: any) => {
+          if (!old) {
+            return { messages: [message], total: 1, has_more: false };
+          }
+          const existingMessages = old.messages || [];
+          // Check if message already exists (from WebSocket)
+          const exists = existingMessages.some(
+            (m: Message) => m.message_id === message.message_id
+          );
+          if (exists) {
+            return old;
+          }
+          return {
+            ...old,
+            messages: [...existingMessages, message],
+            total: old.total + 1,
+          };
+        }
+      );
+
+      // Invalidate to ensure fresh data
       queryClient.invalidateQueries({
         queryKey: ["chat-messages", selectedRoom?.room_id],
       });
       queryClient.invalidateQueries({
         queryKey: ["chat-rooms", activeTab],
       });
+
       setMessageInput("");
       setSelectedFiles([]);
+
+      // Scroll to bottom after sending
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     },
-    onError: (error) => {
-      toast.error("메시지 전송에 실패했습니다");
+    onError: (error: any) => {
+      const errorMessage = error?.message || "메시지 전송에 실패했습니다";
+      toast.error(errorMessage);
       console.error("Send message error:", error);
     },
   });

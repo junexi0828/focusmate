@@ -1,8 +1,18 @@
 """Community domain schemas."""
 
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class PostSortBy(str, Enum):
+    """Post sorting options."""
+
+    RECENT = "recent"  # Sort by created_at DESC (default)
+    POPULAR = "popular"  # Sort by likes DESC
+    TRENDING = "trending"  # Sort by weighted score (likes + comments)
+    MOST_COMMENTED = "most_commented"  # Sort by comment_count DESC
 
 
 # Post Schemas
@@ -113,6 +123,7 @@ class PostFilters(BaseModel):
     author_username: str | None = None  # Search by author username
     date_from: datetime | None = None  # Filter posts from this date
     date_to: datetime | None = None  # Filter posts until this date
+    sort_by: PostSortBy = Field(default=PostSortBy.RECENT)  # Sorting option
     limit: int = Field(default=20, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
 

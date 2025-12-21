@@ -99,16 +99,51 @@ function ReservationsComponent() {
   });
 
   const handleCreateReservation = () => {
-    if (!formData.scheduled_at) {
+    if (!formData.scheduled_at || !formData.scheduled_at.trim()) {
       toast.error("예약 시간을 선택해주세요");
       return;
     }
-    createMutation.mutate({
-      scheduled_at: new Date(formData.scheduled_at).toISOString(),
-      work_duration: formData.work_duration * 60,
-      break_duration: formData.break_duration * 60,
-      description: formData.description || null,
-    });
+
+    try {
+      // datetime-local input returns format: "YYYY-MM-DDTHH:mm"
+      // Convert to ISO 8601 format properly
+      const localDateTime = formData.scheduled_at;
+
+      // Validate format
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localDateTime)) {
+        toast.error("올바른 날짜와 시간 형식을 입력해주세요");
+        return;
+      }
+
+      // Create date object from local datetime string
+      // This preserves the local timezone
+      const scheduledDate = new Date(localDateTime);
+
+      // Validate date
+      if (isNaN(scheduledDate.getTime())) {
+        toast.error("올바른 날짜와 시간을 입력해주세요");
+        return;
+      }
+
+      // Check if date is in the future
+      if (scheduledDate <= new Date()) {
+        toast.error("미래 시간으로 예약해주세요");
+        return;
+      }
+
+      // Convert to ISO string (UTC)
+      const isoString = scheduledDate.toISOString();
+
+      createMutation.mutate({
+        scheduled_at: isoString,
+        work_duration: formData.work_duration * 60,
+        break_duration: formData.break_duration * 60,
+        description: formData.description || null,
+      });
+    } catch (error) {
+      console.error("Failed to create reservation:", error);
+      toast.error("예약 생성 중 오류가 발생했습니다");
+    }
   };
 
   const activeReservations = reservations.filter(

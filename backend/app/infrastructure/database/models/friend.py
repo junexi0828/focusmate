@@ -1,9 +1,11 @@
 """Friend ORM Models - friend relationships and requests."""
 
-from datetime import datetime
-from sqlalchemy import Boolean, DateTime, String, Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column
 import enum
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
 

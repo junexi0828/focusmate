@@ -5,22 +5,23 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import get_current_user
-from app.core.exceptions import NotFoundException, ConflictException, UnauthorizedException
+from app.core.exceptions import ConflictException, NotFoundException, UnauthorizedException
+from app.domain.friend.presence_service import PresenceService
 from app.domain.friend.schemas import (
+    FriendListResponse,
+    FriendPresence,
     FriendRequestCreate,
     FriendRequestResponse,
-    FriendListResponse,
     FriendSearchParams,
-    FriendPresence,
 )
 from app.domain.friend.service import FriendService
 from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.friend_repository import (
-    FriendRequestRepository,
     FriendRepository,
+    FriendRequestRepository,
 )
 from app.infrastructure.repositories.presence_repository import PresenceRepository
-from app.domain.friend.presence_service import PresenceService
+
 
 router = APIRouter(prefix="/friends", tags=["friends"])
 

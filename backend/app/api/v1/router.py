@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     participants,
     proposals,
     ranking,
+    reports,
     room_reservations,
     rooms,
     settings,
@@ -23,6 +24,7 @@ from app.api.v1.endpoints import (
     verification,
     websocket,
 )
+
 
 api_router = APIRouter()
 
@@ -46,3 +48,4 @@ api_router.include_router(proposals.router)
 api_router.include_router(chat.router)
 api_router.include_router(notifications.router)
 api_router.include_router(settings.router)
+api_router.include_router(reports.router)

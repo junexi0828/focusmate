@@ -1,7 +1,6 @@
 """Service layer for unified chat system."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.chat.schemas import (
@@ -25,8 +24,8 @@ class ChatService:
     def __init__(
         self,
         repository: ChatRepository,
-        user_repository: Optional[UserRepository] = None,
-        email_service: Optional[EmailService] = None,
+        user_repository: UserRepository | None = None,
+        email_service: EmailService | None = None,
     ):
         self.repository = repository
         self.user_repository = user_repository
@@ -174,8 +173,8 @@ class ChatService:
 
         # Send email invitations if requested
         if data.send_invitations and invitation_emails:
-            # TODO: Generate invitation link (can be a room join link or signup link)
-            base_url = "http://localhost:3000"  # Should come from config
+            from app.core.config import settings
+            base_url = settings.FRONTEND_URL
             invitation_link = f"{base_url}/messages?roomId={room.room_id}"
 
             for email in invitation_emails:
@@ -238,7 +237,7 @@ class ChatService:
 
     # Room operations
     async def get_user_rooms(
-        self, user_id: str, room_type: Optional[str] = None
+        self, user_id: str, room_type: str | None = None
     ) -> list[ChatRoomResponse]:
         """Get all chat rooms for a user."""
         rooms = await self.repository.get_user_rooms(user_id, room_type)
@@ -344,7 +343,7 @@ class ChatService:
         room_id: UUID,
         user_id: str,
         limit: int = 50,
-        before_message_id: Optional[UUID] = None,
+        before_message_id: UUID | None = None,
     ) -> MessageListResponse:
         """Get messages from room."""
         # Verify user is member
@@ -389,5 +388,5 @@ class ChatService:
     async def mark_as_read(self, room_id: UUID, user_id: str) -> None:
         """Mark all messages as read."""
         await self.repository.update_member_read_status(
-            room_id, user_id, datetime.now(timezone.utc)
+            room_id, user_id, datetime.now(UTC)
         )

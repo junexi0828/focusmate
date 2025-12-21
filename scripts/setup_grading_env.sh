@@ -96,9 +96,9 @@ elif [ "$MODE" = "--local" ]; then
     log_info "Node.js 버전: $NODE_VERSION"
 
     # 백엔드 설정
-    if [ -d "src/backend" ]; then
+    if [ -d "backend" ]; then
         log_info "백엔드 환경 설정 중..."
-        cd src/backend
+        cd backend
 
         # 가상환경 생성
         if [ ! -d "venv" ]; then
@@ -129,7 +129,7 @@ elif [ "$MODE" = "--local" ]; then
         log_info "✅ 백엔드 환경 설정 완료"
         cd "$PROJECT_ROOT"
     else
-        log_warn "src/backend 디렉토리가 없습니다."
+        log_warn "backend 디렉토리가 없습니다."
     fi
 
     # 프론트엔드 설정
@@ -154,7 +154,7 @@ elif [ "$MODE" = "--local" ]; then
     log_info "✅ 로컬 환경 설정 완료"
     log_info "다음 명령어로 서비스를 시작할 수 있습니다:"
     log_info "  # 백엔드"
-    log_info "  cd src/backend && source venv/bin/activate && uvicorn app.main:app --reload"
+    log_info "  cd backend && source venv/bin/activate && uvicorn app.main:app --reload"
     log_info "  # 프론트엔드"
     log_info "  cd frontend && npm run dev"
 
@@ -173,7 +173,7 @@ if [ "$MODE" = "--docker" ]; then
     log_info "  2. http://localhost:3000 (프론트엔드)"
     log_info "  3. http://localhost:8000/docs (백엔드 API 문서)"
 else
-    log_info "  1. 백엔드: cd src/backend && source venv/bin/activate && uvicorn app.main:app --reload"
+    log_info "  1. 백엔드: cd backend && source venv/bin/activate && uvicorn app.main:app --reload"
     log_info "  2. 프론트엔드: cd frontend && npm run dev"
     log_info "  3. http://localhost:3000 (프론트엔드)"
     log_info "  4. http://localhost:8000/docs (백엔드 API 문서)"

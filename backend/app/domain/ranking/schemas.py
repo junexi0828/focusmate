@@ -1,7 +1,6 @@
 """Ranking domain schemas."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -14,14 +13,14 @@ class TeamCreate(BaseModel):
     team_name: str = Field(..., min_length=2, max_length=100, description="Team name")
     team_type: str = Field(..., description="Team type: general, department, lab, club")
     mini_game_enabled: bool = Field(default=True, description="Enable mini-games")
-    affiliation_info: Optional[dict] = Field(None, description="School/department information")
+    affiliation_info: dict | None = Field(None, description="School/department information")
 
 
 class TeamUpdate(BaseModel):
     """Schema for updating team information."""
 
-    team_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    mini_game_enabled: Optional[bool] = None
+    team_name: str | None = Field(None, min_length=2, max_length=100)
+    mini_game_enabled: bool | None = None
 
 
 class TeamResponse(BaseModel):
@@ -33,8 +32,8 @@ class TeamResponse(BaseModel):
     verification_status: str
     leader_id: str
     mini_game_enabled: bool
-    invite_code: Optional[str]
-    affiliation_info: Optional[dict]
+    invite_code: str | None
+    affiliation_info: dict | None
     created_at: datetime
     updated_at: datetime
 
@@ -73,7 +72,7 @@ class TeamInvitationResponse(BaseModel):
     status: str
     created_at: datetime
     expires_at: datetime
-    accepted_at: Optional[datetime]
+    accepted_at: datetime | None
 
     class Config:
         from_attributes = True
@@ -121,7 +120,7 @@ class MiniGameStart(BaseModel):
 class MiniGameSubmit(BaseModel):
     """Schema for submitting mini-game result."""
 
-    answer: Optional[str] = None
+    answer: str | None = None
     completion_time: float = Field(..., gt=0, description="Completion time in seconds")
 
 
@@ -134,8 +133,8 @@ class MiniGameResponse(BaseModel):
     game_type: str
     score: int
     success: bool
-    completion_time: Optional[float]
-    game_data: Optional[dict]
+    completion_time: float | None
+    game_data: dict | None
     played_at: datetime
 
     class Config:
@@ -158,10 +157,10 @@ class VerificationRequestResponse(BaseModel):
     team_id: UUID
     documents: dict
     status: str
-    admin_note: Optional[str]
+    admin_note: str | None
     submitted_at: datetime
-    reviewed_at: Optional[datetime]
-    reviewed_by: Optional[str]
+    reviewed_at: datetime | None
+    reviewed_by: str | None
 
     class Config:
         from_attributes = True
@@ -177,9 +176,9 @@ class LeaderboardEntry(BaseModel):
     team_type: str
     score: float
     rank_change: int
-    member_count: Optional[int] = None
-    average_score: Optional[float] = None
-    total_sessions: Optional[int] = None  # Total number of sessions
+    member_count: int | None = None
+    average_score: float | None = None
+    total_sessions: int | None = None  # Total number of sessions
 
     class Config:
         from_attributes = True
@@ -203,7 +202,7 @@ class TeamStatsResponse(BaseModel):
     total_sessions: int
     current_streak: int
     mini_game_score: int
-    member_breakdown: Optional[list[dict]] = None
+    member_breakdown: list[dict] | None = None
 
     class Config:
         from_attributes = True

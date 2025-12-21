@@ -1,11 +1,10 @@
 """Email notification service using aiosmtplib for asynchronous operations."""
 
-import asyncio
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Optional
 
 import aiosmtplib
+
 from app.core.config import settings
 
 
@@ -75,7 +74,7 @@ FocusMate 시스템
         self,
         team_name: str = "",
         leader_email: str = "",
-        admin_note: Optional[str] = None,
+        admin_note: str | None = None,
     ) -> bool:
         """Send email notification when verification is approved."""
         subject = f"[FocusMate] {team_name} 인증이 승인되었습니다 ✅"
@@ -97,7 +96,7 @@ FocusMate 팀
         self,
         team_name: str,
         leader_email: str,
-        admin_note: Optional[str] = None,
+        admin_note: str | None = None,
     ) -> bool:
         """Send email notification when verification is rejected."""
         subject = f"[FocusMate] {team_name} 인증이 반려되었습니다"
@@ -212,7 +211,7 @@ FocusMate 팀
                 f"[EMAIL ERROR] 🔐 SMTP Authentication failed sending to {to_email}: {e}",
                 exc_info=True,
             )
-            logger.error(f"[EMAIL ERROR] Check SMTP_USER and SMTP_PASSWORD are correct")
+            logger.error("[EMAIL ERROR] Check SMTP_USER and SMTP_PASSWORD are correct")
             return False
         except aiosmtplib.SMTPException as e:
             logger.error(
@@ -220,7 +219,7 @@ FocusMate 팀
                 exc_info=True,
             )
             return False
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             logger.error(f"[EMAIL ERROR] ⏱️ Timeout sending to {to_email}: {e}")
             return False
         except Exception as e:

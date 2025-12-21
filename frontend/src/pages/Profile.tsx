@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -7,34 +7,32 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Button } from "../components/ui/button-enhanced";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Textarea } from "../components/ui/textarea";
 import { TabsContent } from "../components/ui/tabs";
+import { Label } from "../components/ui/label";
 import { User } from "../types/user";
 import {
   User as UserIcon,
   Mail,
   Calendar,
-  TrendingUp,
   Target,
   Award,
   MessageSquare,
-  Clock,
   CheckCircle2,
   Circle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ProfileHeader, ProfileTabs } from "../features/profile/components";
+import {
+  ProfileHeader,
+  ProfileTabs,
+  ProfileEditDialog,
+} from "../features/profile/components";
 import { StatCard } from "../features/stats/components";
 import { useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Badge } from "../components/ui/badge";
 import { Progress } from "../components/ui/progress";
-import type {
-  AchievementProgress,
-} from "../features/achievements/services/achievementService";
+import type { AchievementProgress } from "../features/achievements/services/achievementService";
 import type { Post } from "../features/community/services/communityService";
 import { NotificationSettings } from "../features/notification/components/NotificationSettings";
 
@@ -54,29 +52,14 @@ export function ProfilePage({
   onLogout,
 }: ProfilePageProps) {
   const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(user.name);
-  const [bio, setBio] = useState(user.bio || "");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(user);
   const [activeTab, setActiveTab] = useState("overview");
 
-  const handleSave = () => {
-    onUpdateProfile({ name, bio });
-    setIsEditing(false);
+  const handleUpdateProfile = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    onUpdateProfile(updatedUser);
     toast.success("프로필이 업데이트되었습니다");
-  };
-
-  const handleCancel = () => {
-    setName(user.name);
-    setBio(user.bio || "");
-    setIsEditing(false);
-  };
-
-  const getInitials = (name: string) => {
-    const words = name.trim().split(" ");
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
   };
 
   const formatDate = (date: Date) => {
@@ -87,13 +70,22 @@ export function ProfilePage({
     });
   };
 
+  const getInitials = (name: string) => {
+    const words = name.trim().split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <div className="min-h-full bg-muted/30 flex flex-col">
       {/* Profile Header (Discourse 스타일) */}
       <ProfileHeader
-        user={user}
+        user={currentUser}
         isOwnProfile={true}
-        onEdit={() => setIsEditing(true)}
+        onEdit={() => setIsEditDialogOpen(true)}
+        onUpdate={handleUpdateProfile}
       />
 
       {/* Profile Tabs (Discourse 스타일) */}
@@ -112,20 +104,33 @@ export function ProfilePage({
                   <div>
                     <Label className="text-muted-foreground">소개</Label>
                     <p className="mt-1">
-                      {user.bio || "아직 소개를 작성하지 않았습니다."}
+                      {currentUser.bio || "아직 소개를 작성하지 않았습니다."}
                     </p>
                   </div>
 
+                  {currentUser.school && (
+                    <div>
+                      <Label className="text-muted-foreground">학교</Label>
+                      <p className="mt-1">{currentUser.school}</p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                    <div key="email-info" className="flex items-center gap-2 text-sm">
+                    <div
+                      key="email-info"
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <Mail className="w-4 h-4 text-muted-foreground" />
                       <span className="text-muted-foreground">이메일:</span>
-                      <span>{user.email}</span>
+                      <span>{currentUser.email}</span>
                     </div>
-                    <div key="join-date-info" className="flex items-center gap-2 text-sm">
+                    <div
+                      key="join-date-info"
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span className="text-muted-foreground">가입일:</span>
-                      <span>{formatDate(user.createdAt)}</span>
+                      <span>{formatDate(currentUser.createdAt)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -139,14 +144,14 @@ export function ProfilePage({
                   {
                     key: "total-focus-time",
                     title: "총 집중 시간",
-                    value: `${Math.floor(user.totalFocusTime / 60)}시간 ${user.totalFocusTime % 60}분`,
+                    value: `${Math.floor(currentUser.totalFocusTime / 60)}시간 ${currentUser.totalFocusTime % 60}분`,
                     icon: Target,
                     variant: "primary" as const,
                   },
                   {
                     key: "total-sessions",
                     title: "완료한 세션",
-                    value: `${user.totalSessions}개`,
+                    value: `${currentUser.totalSessions}개`,
                     icon: Award,
                     variant: "secondary" as const,
                   },
@@ -154,8 +159,11 @@ export function ProfilePage({
                     key: "avg-session-time",
                     title: "평균 세션 시간",
                     value: `${
-                      user.totalSessions > 0
-                        ? Math.round(user.totalFocusTime / user.totalSessions)
+                      currentUser.totalSessions > 0
+                        ? Math.round(
+                            currentUser.totalFocusTime /
+                              currentUser.totalSessions
+                          )
                         : 0
                     }분`,
                     icon: UserIcon,
@@ -180,9 +188,11 @@ export function ProfilePage({
                   {achievements
                     .filter((a) => a.is_unlocked)
                     .slice(0, 3)
-                    .map((achievement) => (
+                    .map((achievement, index) => (
                       <div
-                        key={achievement.achievement_id}
+                        key={
+                          achievement.achievement_id || `achievement-${index}`
+                        }
                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
                       >
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -292,14 +302,14 @@ export function ProfilePage({
                   {
                     key: "stats-total-focus-time",
                     title: "총 집중 시간",
-                    value: `${Math.floor(user.totalFocusTime / 60)}시간 ${user.totalFocusTime % 60}분`,
+                    value: `${Math.floor(currentUser.totalFocusTime / 60)}시간 ${currentUser.totalFocusTime % 60}분`,
                     icon: Target,
                     variant: "primary" as const,
                   },
                   {
                     key: "stats-total-sessions",
                     title: "완료한 세션",
-                    value: `${user.totalSessions}개`,
+                    value: `${currentUser.totalSessions}개`,
                     icon: Award,
                     variant: "secondary" as const,
                   },
@@ -325,15 +335,19 @@ export function ProfilePage({
               <CardHeader>
                 <CardTitle>획득한 업적</CardTitle>
                 <CardDescription>
-                  {achievements.filter((a) => a.is_unlocked).length}개의 업적을 획득했습니다
+                  {achievements.filter((a) => a.is_unlocked).length}개의 업적을
+                  획득했습니다
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {achievements
                   .filter((a) => a.is_unlocked)
-                  .map((achievement) => (
+                  .map((achievement, index) => (
                     <div
-                      key={achievement.achievement_id}
+                      key={
+                        achievement.achievement_id ||
+                        `unlocked-achievement-${index}`
+                      }
                       className="flex items-center gap-4 p-4 rounded-lg bg-primary/5 border border-primary/20"
                     >
                       <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
@@ -380,15 +394,19 @@ export function ProfilePage({
               <CardHeader>
                 <CardTitle>진행 중인 업적</CardTitle>
                 <CardDescription>
-                  {achievements.filter((a) => !a.is_unlocked).length}개의 업적을 진행 중입니다
+                  {achievements.filter((a) => !a.is_unlocked).length}개의 업적을
+                  진행 중입니다
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {achievements
                   .filter((a) => !a.is_unlocked)
-                  .map((achievement) => (
+                  .map((achievement, index) => (
                     <div
-                      key={achievement.achievement_id}
+                      key={
+                        achievement.achievement_id ||
+                        `locked-achievement-${index}`
+                      }
                       className="flex items-start gap-4 p-4 rounded-lg bg-muted/50 border"
                     >
                       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
@@ -437,7 +455,6 @@ export function ProfilePage({
         {/* Settings Tab */}
         <TabsContent value="settings" className="mt-6">
           <div className="space-y-6">
-
             {/* Profile Edit Card */}
             <Card>
               <CardHeader>
@@ -445,40 +462,15 @@ export function ProfilePage({
                 <CardDescription>개인 정보를 관리하세요</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {isEditing ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="profile-name">이름</Label>
-                      <Input
-                        id="profile-name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="profile-bio">소개</Label>
-                      <Textarea
-                        id="profile-bio"
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        placeholder="자신을 소개해주세요"
-                        rows={4}
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button onClick={handleSave}>저장</Button>
-                      <Button variant="outline" onClick={handleCancel}>
-                        취소
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button onClick={() => setIsEditing(true)}>
-                    프로필 수정
-                  </Button>
-                )}
+                <Button onClick={() => setIsEditDialogOpen(true)}>
+                  프로필 수정
+                </Button>
+                <ProfileEditDialog
+                  user={currentUser}
+                  open={isEditDialogOpen}
+                  onOpenChange={setIsEditDialogOpen}
+                  onUpdate={handleUpdateProfile}
+                />
               </CardContent>
             </Card>
 

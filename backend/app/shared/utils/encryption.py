@@ -6,7 +6,6 @@ Fernet is built on top of AES 128 in CBC mode with HMAC authentication.
 
 import base64
 import binascii
-from typing import Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
@@ -18,7 +17,7 @@ from app.core.config import settings
 class EncryptionService:
     """Service for encrypting and decrypting sensitive data."""
 
-    def __init__(self, encryption_key: Optional[str] = None):
+    def __init__(self, encryption_key: str | None = None):
         """Initialize encryption service.
 
         Args:
@@ -121,7 +120,7 @@ class EncryptionService:
 
 
 # Global encryption service instance
-_encryption_service: Optional[EncryptionService] = None
+_encryption_service: EncryptionService | None = None
 
 
 def get_encryption_service() -> EncryptionService:

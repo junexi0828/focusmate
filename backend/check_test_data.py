@@ -1,6 +1,7 @@
 """Check what test data exists in the database."""
 
 import asyncio
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 

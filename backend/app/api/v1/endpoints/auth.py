@@ -2,14 +2,25 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.api.deps import get_current_user
 from app.core.exceptions import UnauthorizedException, ValidationException
-from app.domain.user.schemas import TokenResponse, UserLogin, UserProfileUpdate, UserRegister, UserResponse
+from app.domain.user.schemas import (
+    NaverOAuthCallback,
+    PasswordResetComplete,
+    PasswordResetRequest,
+    PasswordResetVerify,
+    TokenResponse,
+    UserLogin,
+    UserProfileUpdate,
+    UserRegister,
+    UserResponse,
+)
 from app.domain.user.service import UserService
 from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.user_repository import UserRepository
+
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,7 +48,7 @@ async def register(
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Registration error: {str(e)}", exc_info=True)
+        logger.error(f"Registration error: {e!s}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed. Please try again later.",
@@ -57,7 +68,7 @@ async def login(
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Login error: {str(e)}", exc_info=True)
+        logger.error(f"Login error: {e!s}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed. Please try again later.",
@@ -163,3 +174,109 @@ async def upload_profile_image(
         return {"profile_image": file_url}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/password-reset/request")
+async def request_password_reset(
+    data: PasswordResetRequest,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> dict:
+    """Request password reset.
+
+    Args:
+        data: Password reset request with email
+        service: User service
+
+    Returns:
+        Success message (always returns success to prevent email enumeration)
+    """
+    try:
+        return await service.request_password_reset(data)
+    except ValidationException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+
+
+@router.post("/password-reset/verify")
+async def verify_password_reset_token(
+    data: PasswordResetVerify,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> dict:
+    """Verify password reset token.
+
+    Args:
+        data: Token verification data
+        service: User service
+
+    Returns:
+        Token validity status
+    """
+    try:
+        return await service.verify_password_reset_token(data)
+    except ValidationException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+
+
+@router.post("/password-reset/complete")
+async def complete_password_reset(
+    data: PasswordResetComplete,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> dict:
+    """Complete password reset.
+
+    Args:
+        data: Password reset completion data
+        service: User service
+
+    Returns:
+        Success message
+    """
+    try:
+        return await service.complete_password_reset(data)
+    except ValidationException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+
+
+@router.get("/naver/login")
+async def naver_login_url() -> dict:
+    """Get Naver OAuth login URL.
+
+    Returns:
+        Naver OAuth authorization URL
+    """
+    import secrets
+
+    from app.core.config import settings
+
+    state = secrets.token_urlsafe(32)
+    naver_auth_url = (
+        f"https://nid.naver.com/oauth2.0/authorize?"
+        f"response_type=code&"
+        f"client_id={settings.NAVER_CLIENT_ID}&"
+        f"redirect_uri={settings.NAVER_REDIRECT_URI}&"
+        f"state={state}"
+    )
+
+    return {
+        "auth_url": naver_auth_url,
+        "state": state,
+    }
+
+
+@router.post("/naver/callback", response_model=TokenResponse)
+async def naver_oauth_callback(
+    data: NaverOAuthCallback,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> TokenResponse:
+    """Handle Naver OAuth callback.
+
+    Args:
+        data: Naver OAuth callback data
+        service: User service
+
+    Returns:
+        Token response with user data
+    """
+    try:
+        return await service.naver_oauth_login(data)
+    except ValidationException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)

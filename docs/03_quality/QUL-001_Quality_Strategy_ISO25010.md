@@ -8,6 +8,12 @@ author: Focus Mate Team
 iso_standard: ISO/IEC 25010 Product Quality
 ---
 
+# Quality Strategy
+
+## [Home](../README.md) > [Quality](./README.md) > QUL-001
+
+---
+
 # ISO/IEC 25010 제품 품질 모델 전략
 
 This document outlines how **Focus Mate** adheres to the ISO/IEC 25010 software quality standards, specifically tailored to our **Vite + TanStack SPA** architecture.

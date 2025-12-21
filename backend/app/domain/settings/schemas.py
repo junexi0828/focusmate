@@ -1,6 +1,5 @@
 """User settings domain schemas."""
 
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,10 +18,10 @@ class UserSettingsResponse(BaseModel):
     notification_session: bool
     notification_achievement: bool
     notification_message: bool
-    do_not_disturb_start: Optional[str] = None
-    do_not_disturb_end: Optional[str] = None
+    do_not_disturb_start: str | None = None
+    do_not_disturb_end: str | None = None
     session_reminder: bool
-    custom_settings: Optional[dict] = None
+    custom_settings: dict | None = None
 
 
 class UserSettingsUpdate(BaseModel):
@@ -30,17 +29,17 @@ class UserSettingsUpdate(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    theme: Optional[str] = Field(None, pattern="^(light|dark|system)$")
-    language: Optional[str] = Field(None, min_length=2, max_length=10)
-    notification_email: Optional[bool] = None
-    notification_push: Optional[bool] = None
-    notification_session: Optional[bool] = None
-    notification_achievement: Optional[bool] = None
-    notification_message: Optional[bool] = None
-    do_not_disturb_start: Optional[str] = Field(None, pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$")
-    do_not_disturb_end: Optional[str] = Field(None, pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$")
-    session_reminder: Optional[bool] = None
-    custom_settings: Optional[dict] = None
+    theme: str | None = Field(None, pattern="^(light|dark|system)$")
+    language: str | None = Field(None, min_length=2, max_length=10)
+    notification_email: bool | None = None
+    notification_push: bool | None = None
+    notification_session: bool | None = None
+    notification_achievement: bool | None = None
+    notification_message: bool | None = None
+    do_not_disturb_start: str | None = Field(None, pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$")
+    do_not_disturb_end: str | None = Field(None, pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$")
+    session_reminder: bool | None = None
+    custom_settings: dict | None = None
 
 
 class PasswordChangeRequest(BaseModel):

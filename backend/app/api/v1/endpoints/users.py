@@ -1,11 +1,13 @@
 """User search and profile API endpoints."""
 
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, or_
+from sqlalchemy import or_, select
 
 from app.api.deps import DatabaseSession, get_current_user_required
 from app.infrastructure.database.models.user import User
+
 
 router = APIRouter(prefix="/users", tags=["users"])
 

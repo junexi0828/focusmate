@@ -1,6 +1,5 @@
 """User settings domain service."""
 
-from typing import Optional
 
 from app.core.exceptions import UnauthorizedException, ValidationException
 from app.core.security import hash_password, verify_password

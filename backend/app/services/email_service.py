@@ -6,13 +6,13 @@ Handles email sending via SMTP with support for:
 - HTML templates with inline CSS
 """
 
+import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Optional
-import logging
 
 from app.core.config import settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class EmailService:
         to_email: str,
         subject: str,
         html_content: str,
-        text_content: Optional[str] = None,
+        text_content: str | None = None,
     ) -> bool:
         """Send an email via SMTP.
 
@@ -84,7 +84,7 @@ class EmailService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {str(e)}")
+            logger.error(f"Failed to send email to {to_email}: {e!s}")
             return False
 
     def send_verification_approved(
@@ -209,7 +209,7 @@ class EmailService:
         to_email: str,
         team_name: str,
         username: str,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> bool:
         """Send verification rejection email.
 

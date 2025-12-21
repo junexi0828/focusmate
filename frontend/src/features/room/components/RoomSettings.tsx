@@ -64,9 +64,12 @@ export default function RoomSettings({
       });
 
       if (response.status === "error") {
-        setErrors({
-          general: response.error?.message || "Failed to update room settings",
-        });
+        const errorMessage =
+          response.error?.code === "FORBIDDEN" || response.error?.code === "ROOM_HOST_REQUIRED"
+            ? "방장만 방 설정을 변경할 수 있습니다"
+            : response.error?.message || "방 설정 업데이트에 실패했습니다";
+        setErrors({ general: errorMessage });
+        toast.error(errorMessage);
         return;
       }
 
@@ -88,9 +91,12 @@ export default function RoomSettings({
       const response = await roomService.deleteRoom(room.room_id);
 
       if (response.status === "error") {
-        setErrors({
-          general: response.error?.message || "Failed to delete room",
-        });
+        const errorMessage =
+          response.error?.code === "FORBIDDEN" || response.error?.code === "ROOM_HOST_REQUIRED"
+            ? "방장만 방을 삭제할 수 있습니다"
+            : response.error?.message || "방 삭제에 실패했습니다";
+        setErrors({ general: errorMessage });
+        toast.error(errorMessage);
         return;
       }
 

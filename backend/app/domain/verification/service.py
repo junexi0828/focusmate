@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from app.domain.verification.schemas import (
@@ -15,6 +14,7 @@ from app.infrastructure.repositories.user_repository import UserRepository
 from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class VerificationService:
         if existing:
             if existing.verification_status == "pending":
                 raise ValueError("Verification request already submitted and pending")
-            elif existing.verification_status == "approved":
+            if existing.verification_status == "approved":
                 raise ValueError("User is already verified")
 
         # Encrypt student ID if provided
@@ -70,8 +70,8 @@ class VerificationService:
         email_sent_successfully = False
         email_error = None
         try:
-            from app.infrastructure.email.email_service import EmailService
             from app.core.config import settings
+            from app.infrastructure.email.email_service import EmailService
 
             email_service = EmailService()
 
@@ -148,7 +148,7 @@ class VerificationService:
                         exc_info=True,
                     )
                     email_sent_successfully = False
-                    email_error = f"SMTP 전송 중 예외 발생: {str(email_exc)} (인증은 정상적으로 제출되었습니다)"
+                    email_error = f"SMTP 전송 중 예외 발생: {email_exc!s} (인증은 정상적으로 제출되었습니다)"
             else:
                 logger.warning(
                     f"[VERIFICATION] ⚠️ SMTP not enabled or ADMIN_EMAIL not set. "
@@ -161,7 +161,7 @@ class VerificationService:
             # Log error but don't fail verification submission
             logger.error(f"Failed to send admin notification email: {e}", exc_info=True)
             email_error = (
-                f"이메일 전송 중 오류 발생: {str(e)} (인증은 정상적으로 제출되었습니다)"
+                f"이메일 전송 중 오류 발생: {e!s} (인증은 정상적으로 제출되었습니다)"
             )
 
         # If email was sent successfully, automatically approve verification
@@ -289,7 +289,7 @@ class VerificationService:
         }
 
     async def review_verification(
-        self, verification_id: UUID, approved: bool, admin_note: Optional[str] = None
+        self, verification_id: UUID, approved: bool, admin_note: str | None = None
     ) -> VerificationResponse:
         """Review verification request (admin)."""
         update_data = {
@@ -351,6 +351,7 @@ class VerificationService:
             Encrypted content
         """
         from cryptography.fernet import Fernet
+
         from app.core.config import settings
 
         # Use encryption key from settings or generate one
@@ -378,6 +379,7 @@ class VerificationService:
             Decrypted content
         """
         from cryptography.fernet import Fernet
+
         from app.core.config import settings
 
         encryption_key = getattr(settings, "FILE_ENCRYPTION_KEY", None)

@@ -5,10 +5,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import get_current_user_required, get_room_service
-from app.core.exceptions import RoomNameTakenException, RoomNotFoundException
+from app.core.exceptions import (
+    RoomHostRequiredException,
+    RoomNameTakenException,
+    RoomNotFoundException,
+)
 from app.domain.room.schemas import RoomCreate, RoomResponse, RoomUpdate
 from app.domain.room.service import RoomService
 from app.infrastructure.database.session import DatabaseSession
+
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -70,7 +75,7 @@ async def get_my_rooms(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get rooms: {str(e)}"
+            detail=f"Failed to get rooms: {e!s}"
         )
 
 
@@ -87,15 +92,15 @@ async def create_room(
         room = await service.create_room(data, user_id=current_user["id"])
 
         # Automatically add creator as participant (host)
+        from app.domain.participant.schemas import ParticipantJoin
+        from app.domain.participant.service import ParticipantService
+        from app.domain.timer.service import TimerService
         from app.infrastructure.repositories.participant_repository import (
             ParticipantRepository,
         )
-        from app.domain.participant.service import ParticipantService
-        from app.domain.participant.schemas import ParticipantJoin
         from app.infrastructure.repositories.room_repository import RoomRepository
-        from app.infrastructure.repositories.user_repository import UserRepository
         from app.infrastructure.repositories.timer_repository import TimerRepository
-        from app.domain.timer.service import TimerService
+        from app.infrastructure.repositories.user_repository import UserRepository
 
         participant_repo = ParticipantRepository(db)
         room_repo = RoomRepository(db)
@@ -137,22 +142,120 @@ async def get_room(
 async def update_room(
     room_id: str,
     data: RoomUpdate,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    db: DatabaseSession,
     service: Annotated[RoomService, Depends(get_room_service)],
 ) -> RoomResponse:
-    """Update room settings."""
+    """Update room settings. Only the room host can update settings."""
     try:
-        return await service.update_room(room_id, data)
+        # Get current room to check if durations changed
+        from app.infrastructure.repositories.room_repository import RoomRepository
+        room_repo = RoomRepository(db)
+        current_room = await room_repo.get_by_id(room_id)
+        if not current_room:
+            raise RoomNotFoundException(room_id)
+
+        old_work_duration = current_room.work_duration
+        old_break_duration = current_room.break_duration
+
+        # Update room
+        updated_room = await service.update_room(room_id, data, user_id=current_user["id"])
+
+        # Check if durations changed
+        work_duration_changed = (
+            data.work_duration is not None and
+            (data.work_duration // 60) != old_work_duration
+        )
+        break_duration_changed = (
+            data.break_duration is not None and
+            (data.break_duration // 60) != old_break_duration
+        )
+
+        # Update timer if durations changed
+        if work_duration_changed or break_duration_changed:
+            try:
+                from app.domain.timer.service import TimerService
+                from app.infrastructure.repositories.timer_repository import TimerRepository
+
+                timer_repo = TimerRepository(db)
+                timer_service = TimerService(timer_repo, room_repo)
+
+                # Get timer
+                timer = await timer_repo.get_by_room_id(room_id)
+                if timer:
+                    # Get updated room to get new durations
+                    updated_room_model = await room_repo.get_by_id(room_id)
+                    if updated_room_model:
+                        # Update timer duration based on current phase
+                        if timer.phase == "work" and work_duration_changed:
+                            new_duration = updated_room_model.work_duration * 60
+                            # If timer is running, adjust remaining_seconds proportionally
+                            if timer.status == "running" and timer.duration > 0:
+                                ratio = new_duration / timer.duration
+                                timer.remaining_seconds = int(timer.remaining_seconds * ratio)
+                                # Ensure remaining_seconds doesn't exceed new duration
+                                timer.remaining_seconds = min(timer.remaining_seconds, new_duration)
+                            timer.duration = new_duration
+                            # If idle, also update remaining_seconds
+                            if timer.status == "idle":
+                                timer.remaining_seconds = new_duration
+                        elif timer.phase == "break" and break_duration_changed:
+                            new_duration = updated_room_model.break_duration * 60
+                            # If timer is running, adjust remaining_seconds proportionally
+                            if timer.status == "running" and timer.duration > 0:
+                                ratio = new_duration / timer.duration
+                                timer.remaining_seconds = int(timer.remaining_seconds * ratio)
+                                # Ensure remaining_seconds doesn't exceed new duration
+                                timer.remaining_seconds = min(timer.remaining_seconds, new_duration)
+                            timer.duration = new_duration
+                            # If idle, also update remaining_seconds
+                            if timer.status == "idle":
+                                timer.remaining_seconds = new_duration
+
+                        await timer_repo.update(timer)
+
+                        # Broadcast timer update via WebSocket
+                        try:
+                            from app.infrastructure.websocket.manager import connection_manager
+                            await connection_manager.broadcast_to_room(
+                                room_id,
+                                {
+                                    "type": "timer_updated",
+                                    "data": {
+                                        "room_id": room_id,
+                                        "work_duration": updated_room_model.work_duration * 60,
+                                        "break_duration": updated_room_model.break_duration * 60,
+                                    },
+                                },
+                            )
+                        except Exception as ws_error:
+                            # Log but don't fail
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"Failed to broadcast timer update: {ws_error}")
+            except Exception as timer_error:
+                # Log but don't fail room update
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to update timer after room duration change: {timer_error}")
+
+        return updated_room
     except RoomNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except RoomHostRequiredException as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
 
 
 @router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_room(
     room_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[RoomService, Depends(get_room_service)],
 ) -> None:
-    """Delete (deactivate) a room."""
+    """Delete (deactivate) a room. Only the room host can delete the room."""
     try:
-        await service.delete_room(room_id)
+        await service.delete_room(room_id, user_id=current_user["id"])
     except RoomNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except RoomHostRequiredException as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)

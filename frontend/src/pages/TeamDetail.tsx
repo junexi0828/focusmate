@@ -9,13 +9,24 @@ import {
 import { Button } from "../components/ui/button-enhanced";
 import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { ArrowLeft, Users, Clock, Target, Trophy, Award, Calendar, Shield, History, CheckCircle2, XCircle, Gamepad2, Medal, TrendingUp } from "lucide-react";
+import { ArrowLeft, Users, Clock, Target, Trophy, Award, Calendar, Shield, History, CheckCircle2, XCircle, Gamepad2, Medal, TrendingUp, Play, Square } from "lucide-react";
 import { Team, TeamMember, TeamStats, SessionHistory, MiniGameRecord, MiniGameLeaderboardEntry } from "../features/ranking/services/rankingService";
 import { formatDistanceToNow, format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { StatCard } from "../features/stats/components";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { rankingService } from "../features/ranking/services/rankingService";
+import { toast } from "sonner";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 
 interface TeamDetailPageProps {
   team: Team;
@@ -41,6 +52,12 @@ export function TeamDetailPage({
   const [viewFilter, setViewFilter] = useState<ViewFilter>("team");
   const [activeTab, setActiveTab] = useState("overview");
   const [gameTypeFilter, setGameTypeFilter] = useState<GameType>("all");
+  const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
+  const [sessionDuration, setSessionDuration] = useState(25);
+  const [sessionType, setSessionType] = useState<"work" | "break">("work");
+  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const queryClient = useQueryClient();
   const teamTypeLabels: { [key: string]: string } = {
     general: "일반",
     department: "학과",
@@ -87,6 +104,77 @@ export function TeamDetailPage({
     },
     enabled: activeTab === "sessions",
   });
+
+  // Start session mutation
+  const startSessionMutation = useMutation({
+    mutationFn: async (type: "work" | "break") => {
+      const response = await rankingService.startSession(team.team_id, type);
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "세션 시작에 실패했습니다");
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      setIsSessionActive(true);
+      setSessionStartTime(new Date());
+      toast.success("세션이 시작되었습니다");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Complete session mutation
+  const completeSessionMutation = useMutation({
+    mutationFn: async (data: { duration: number; type: "work" | "break"; success: boolean }) => {
+      const response = await rankingService.completeSession(
+        team.team_id,
+        data.duration,
+        data.type,
+        data.success
+      );
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "세션 완료에 실패했습니다");
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      setIsSessionActive(false);
+      setSessionStartTime(null);
+      setIsSessionDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["ranking", "team", team.team_id, "sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["ranking", "team", team.team_id, "stats"] });
+      toast.success("세션이 기록되었습니다");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleStartSession = () => {
+    if (!currentUserId) {
+      toast.error("로그인이 필요합니다");
+      return;
+    }
+    startSessionMutation.mutate(sessionType);
+  };
+
+  const handleCompleteSession = () => {
+    if (!sessionStartTime) {
+      toast.error("세션이 시작되지 않았습니다");
+      return;
+    }
+    const duration = Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 60000);
+    if (duration < 1) {
+      toast.error("세션 시간이 너무 짧습니다");
+      return;
+    }
+    completeSessionMutation.mutate({
+      duration,
+      type: sessionType,
+      success: true,
+    });
+  };
 
   // Filter sessions by period
   const filteredSessions = React.useMemo(() => {
@@ -375,11 +463,33 @@ export function TeamDetailPage({
           <TabsContent value="sessions" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <History className="w-5 h-5" />
-                  세션 히스토리
-                </CardTitle>
-                <CardDescription>팀 또는 개인의 세션 기록을 확인하세요</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <History className="w-5 h-5" />
+                      세션 히스토리
+                    </CardTitle>
+                    <CardDescription>팀 또는 개인의 세션 기록을 확인하세요</CardDescription>
+                  </div>
+                  {currentUserId && (
+                    <Button
+                      onClick={() => setIsSessionDialogOpen(true)}
+                      disabled={isSessionActive}
+                    >
+                      {isSessionActive ? (
+                        <>
+                          <Square className="w-4 h-4 mr-2" />
+                          세션 진행 중
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          세션 시작
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {/* Filters */}
@@ -742,6 +852,100 @@ export function TeamDetailPage({
           )}
         </Tabs>
       </div>
+
+      {/* Session Recording Dialog */}
+      <Dialog open={isSessionDialogOpen} onOpenChange={setIsSessionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>랭킹전 세션 기록</DialogTitle>
+            <DialogDescription>
+              세션을 시작하고 완료하여 랭킹에 반영하세요
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {!isSessionActive ? (
+              <>
+                <div className="space-y-2">
+                  <Label>세션 유형</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={sessionType === "work" ? "default" : "outline"}
+                      onClick={() => setSessionType("work")}
+                      className="flex-1"
+                    >
+                      <Target className="w-4 h-4 mr-2" />
+                      집중 세션
+                    </Button>
+                    <Button
+                      variant={sessionType === "break" ? "default" : "outline"}
+                      onClick={() => setSessionType("break")}
+                      className="flex-1"
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      휴식 세션
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="duration">예상 시간 (분)</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    min="1"
+                    max="180"
+                    value={sessionDuration}
+                    onChange={(e) => setSessionDuration(parseInt(e.target.value) || 25)}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-8 h-8 text-primary animate-spin" />
+                </div>
+                <p className="text-lg font-semibold mb-2">
+                  {sessionType === "work" ? "집중 세션" : "휴식 세션"} 진행 중
+                </p>
+                {sessionStartTime && (
+                  <p className="text-sm text-muted-foreground">
+                    시작 시간: {format(sessionStartTime, "HH:mm:ss", { locale: ko })}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground mt-2">
+                  경과 시간: {sessionStartTime ? Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 60000) : 0}분
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            {!isSessionActive ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSessionDialogOpen(false)}
+                >
+                  취소
+                </Button>
+                <Button
+                  onClick={handleStartSession}
+                  disabled={startSessionMutation.isPending}
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  세션 시작
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={handleCompleteSession}
+                disabled={completeSessionMutation.isPending}
+              >
+                <Square className="w-4 h-4 mr-2" />
+                세션 완료
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

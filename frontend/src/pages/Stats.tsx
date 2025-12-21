@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Clock, Target, TrendingUp, Award, Flame, Settings } from "lucide-react";
+import { Clock, Target, TrendingUp, Award, Flame, Settings } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { PageTransition, staggerContainer, staggerItem } from "../components/PageTransition";
 import { Button } from "../components/ui/button-enhanced";
@@ -12,7 +12,8 @@ import { GoalProgressRing } from "../components/charts/GoalProgressRing";
 import { ChartFilters } from "../components/ChartFilters";
 import { GoalSettingModal } from "../components/GoalSettingModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { statsService, UserGoalResponse } from "../features/stats/services/statsService";
+import { statsService } from "../features/stats/services/statsService";
+import { achievementService } from "../features/achievements/services/achievementService";
 import { calculateDailyStats } from "../utils/stats-calculator";
 import { transformSessionRecordsForStats } from "../utils/api-transformers";
 import { toast } from "sonner";
@@ -53,8 +54,44 @@ export function StatsPage({
   const { data: userGoal } = useQuery({
     queryKey: ["user-goal", userId],
     queryFn: () => statsService.getGoal(),
-    enabled: !!userId,
+    enabled: !!userId && !!localStorage.getItem("access_token"), // Only fetch when authenticated
     retry: false, // Don't retry if 404 (no goals set yet)
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch user achievements progress
+  const { data: achievementsData, isLoading: achievementsLoading } = useQuery({
+    queryKey: ["user-achievements", userId],
+    queryFn: async () => {
+      try {
+        const response = await achievementService.getUserAchievementProgress(userId);
+        if (response.status === "error") {
+          console.error("Achievement progress error:", response.error);
+          return [];
+        }
+        // Transform backend response to match frontend interface
+        const data = response.data || [];
+        return data.map((item: any) => ({
+          achievement_id: item.achievement?.id || item.achievement_id,
+          achievement_name: item.achievement?.name || item.achievement_name,
+          achievement_description: item.achievement?.description || item.achievement_description,
+          achievement_icon: item.achievement?.icon || item.achievement_icon,
+          achievement_category: item.achievement?.category || item.achievement_category,
+          requirement_type: item.achievement?.requirement_type || item.requirement_type,
+          requirement_value: item.achievement?.requirement_value || item.requirement_value,
+          current_progress: item.progress || item.current_progress,
+          is_unlocked: item.is_unlocked,
+          progress_percentage: item.progress_percentage,
+        }));
+      } catch (error) {
+        console.error("Failed to fetch achievements:", error);
+        return [];
+      }
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Save goal mutation
@@ -67,13 +104,13 @@ export function StatsPage({
       toast.success("목표가 저장되었습니다");
       setIsGoalModalOpen(false);
     },
-    onError: (error: unknown) => {
+    onError: (error: any) => {
       toast.error(error?.message || "목표 저장에 실패했습니다");
     },
   });
 
   // 필터에 따른 통계 데이터 조회
-  const { data: filteredStats, isLoading: isLoadingFiltered } = useQuery({
+  const { data: filteredStats } = useQuery({
     queryKey: [
       "stats",
       "filtered",
@@ -99,7 +136,8 @@ export function StatsPage({
       return basicStats;
     },
     enabled: !!basicStats,
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false,
   });
 
   const stats = filteredStats || basicStats;
@@ -147,7 +185,7 @@ export function StatsPage({
     const recentDays = dailyStats.slice(-7);
     const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
-    return recentDays.map((day, index) => {
+    return recentDays.map((day) => {
       const date = new Date(day.date);
       const dayName = dayNames[date.getDay()];
       const daySessions = filteredSessions.filter((s) => {
@@ -179,7 +217,7 @@ export function StatsPage({
       weekStart.setDate(weekStart.getDate() - (12 - weekIndex) * 7);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
 
-      const weekDays = dayNames.map((dayName, dayIndex) => {
+      const weekDays = dayNames.map((_, dayIndex) => {
         const dayDate = new Date(weekStart);
         dayDate.setDate(dayDate.getDate() + dayIndex);
         const dateKey = dayDate.toISOString().split("T")[0];
@@ -209,7 +247,7 @@ export function StatsPage({
       }));
     }
 
-    return hourlyPattern.hourly_focus_time.map((focusTime, hour) => {
+    return hourlyPattern.hourly_focus_time.map((_, hour) => {
       // 해당 시간대의 세션 수 계산
       const hourSessions = filteredSessions.filter((s) => {
         const sessionDate = new Date(s.completedAt);
@@ -286,26 +324,54 @@ export function StatsPage({
     return Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
   }
 
-  const achievements = [
-    {
-      icon: Flame,
-      title: "7일 연속 기록",
-      description: "일주일 내내 집중했어요!",
-      unlocked: true,
-    },
-    {
-      icon: Target,
-      title: "100시간 달성",
-      description: "총 100시간 집중 완료",
-      unlocked: true,
-    },
-    {
-      icon: Award,
-      title: "완벽한 한 주",
-      description: "주간 목표 100% 달성",
-      unlocked: false,
-    },
-  ];
+  // 아이콘 매핑 함수
+  const getAchievementIcon = (iconName: string | null | undefined) => {
+    if (!iconName || typeof iconName !== 'string') {
+      return Award; // 기본값 반환
+    }
+
+    switch (iconName.toLowerCase()) {
+      case "flame":
+      case "streak":
+        return Flame;
+      case "target":
+      case "focus":
+        return Target;
+      case "award":
+      case "trophy":
+      case "medal":
+        return Award;
+      case "trending-up":
+      case "growth":
+        return TrendingUp;
+      case "clock":
+      case "time":
+        return Clock;
+      default:
+        return Award;
+    }
+  };
+
+  const achievements = useMemo(() => {
+    if (!achievementsData || achievementsData.length === 0) {
+      // 데이터가 없는 경우 기본값 표시 (가이드용)
+      return [
+        {
+          icon: Flame,
+          title: "첫 걸음",
+          description: "첫 집중 세션을 완료하세요",
+          unlocked: false,
+        },
+      ];
+    }
+
+    return achievementsData.map((a: any) => ({
+      icon: getAchievementIcon(a.achievement_icon),
+      title: a.achievement_name || "업적",
+      description: a.achievement_description || "설명 없음",
+      unlocked: a.is_unlocked || false,
+    }));
+  }, [achievementsData]);
 
   return (
     <PageTransition className="space-y-6">
@@ -499,7 +565,6 @@ export function StatsPage({
           {hourlyPattern?.hourly_focus_time ? (
             <HourlyPatternChart
               data={hourlyData}
-              focusTime={hourlyPattern.hourly_focus_time}
             />
           ) : hourlyData.length > 0 && hourlyData.some((h) => h.sessions > 0) ? (
             <HourlyPatternChart data={hourlyData} />
@@ -554,16 +619,26 @@ export function StatsPage({
         className="rounded-xl border border-border bg-card p-6"
       >
         <h3 className="text-lg font-semibold mb-4">업적</h3>
-        <motion.div
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-          className="grid gap-4 md:grid-cols-3"
-        >
-          {achievements.map((achievement, index) => (
-            <AchievementCard key={index} {...achievement} />
-          ))}
-        </motion.div>
+        {achievementsLoading ? (
+          <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+            업적을 불러오는 중...
+          </div>
+        ) : achievements.length === 0 ? (
+          <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+            아직 업적이 없습니다
+          </div>
+        ) : (
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="grid gap-4 md:grid-cols-3"
+          >
+            {achievements.map((achievement, index) => (
+              <AchievementCard key={index} {...achievement} />
+            ))}
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Goal Setting Modal */}

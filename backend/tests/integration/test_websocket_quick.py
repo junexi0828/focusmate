@@ -1,8 +1,10 @@
 """Quick WebSocket presence test."""
 
 import asyncio
-import websockets
 import json
+
+import websockets
+
 
 async def test_websocket():
     """Test WebSocket presence connection."""
@@ -26,7 +28,7 @@ async def test_websocket():
                 message = await asyncio.wait_for(websocket.recv(), timeout=2)
                 data = json.loads(message)
                 print(f"✅ Received: {data.get('type')}")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 print("✅ Connection stable (no immediate messages)")
 
             print("✅ WebSocket presence working")

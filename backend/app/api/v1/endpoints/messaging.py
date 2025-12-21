@@ -21,6 +21,7 @@ from app.infrastructure.repositories.messaging_repository import (
 )
 from app.infrastructure.repositories.user_repository import UserRepository
 
+
 router = APIRouter(prefix="/messages", tags=["messaging"])
 
 

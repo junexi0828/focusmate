@@ -61,15 +61,24 @@ export function RoomReservationSection() {
   };
 
   const handleCreateReservation = async () => {
-    if (!formData.scheduled_at) {
+    if (!formData.scheduled_at || !formData.scheduled_at.trim()) {
       toast.error("예약 시간을 선택해주세요");
       return;
     }
 
     try {
       // datetime-local input returns format: "YYYY-MM-DDTHH:mm"
-      // Convert to ISO 8601 format with timezone
-      const scheduledDate = new Date(formData.scheduled_at);
+      // Convert to ISO 8601 format properly
+      const localDateTime = formData.scheduled_at;
+
+      // Validate format
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localDateTime)) {
+        toast.error("올바른 날짜와 시간 형식을 입력해주세요");
+        return;
+      }
+
+      // Create date object from local datetime string
+      const scheduledDate = new Date(localDateTime);
 
       // Validate date
       if (isNaN(scheduledDate.getTime())) {

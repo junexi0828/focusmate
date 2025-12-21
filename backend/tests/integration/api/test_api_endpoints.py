@@ -1,8 +1,9 @@
 """Test script for new friend and chat API endpoints."""
 
 import asyncio
+
 import httpx
-from datetime import datetime, timedelta
+
 
 # Base URL - adjust if needed
 BASE_URL = "http://localhost:8000/api/v1"

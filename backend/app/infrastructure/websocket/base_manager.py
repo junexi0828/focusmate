@@ -7,6 +7,7 @@ from typing import Any, Generic, TypeVar
 
 from fastapi import WebSocket
 
+
 # Configure logger
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
             websocket: WebSocket connection to accept
         """
         await websocket.accept()
-        logger.debug(f"WebSocket connection accepted")
+        logger.debug("WebSocket connection accepted")
 
     def _add_connection(self, websocket: WebSocket, key: KeyType) -> None:
         """Add a connection to the active connections.
@@ -124,7 +125,6 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
             websocket: WebSocket connection
             *args, **kwargs: Additional arguments specific to implementation
         """
-        pass
 
     @abstractmethod
     def disconnect(self, websocket: WebSocket, *args, **kwargs) -> None:
@@ -134,4 +134,3 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
             websocket: WebSocket connection
             *args, **kwargs: Additional arguments specific to implementation
         """
-        pass

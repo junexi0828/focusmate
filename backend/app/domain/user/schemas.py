@@ -63,3 +63,37 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class PasswordResetRequest(BaseModel):
+    """Password reset request."""
+
+    model_config = ConfigDict(strict=True)
+
+    email: EmailStr
+
+
+class PasswordResetVerify(BaseModel):
+    """Password reset token verification."""
+
+    model_config = ConfigDict(strict=True)
+
+    token: str
+
+
+class PasswordResetComplete(BaseModel):
+    """Password reset completion."""
+
+    model_config = ConfigDict(strict=True)
+
+    token: str
+    new_password: str = Field(min_length=8, max_length=100)
+
+
+class NaverOAuthCallback(BaseModel):
+    """Naver OAuth callback data."""
+
+    model_config = ConfigDict(strict=True)
+
+    code: str
+    state: str | None = None

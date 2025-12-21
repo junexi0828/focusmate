@@ -2,9 +2,11 @@
 """Test database connection and show status."""
 
 import asyncio
-from app.infrastructure.database.session import engine
+
 from sqlalchemy import text
+
 from app.core.config import settings
+from app.infrastructure.database.session import engine
 
 
 async def test_connection():
@@ -68,7 +70,7 @@ async def test_connection():
                 print("\n⚠️  Alembic version table not found")
 
     except Exception as e:
-        print(f"❌ Database connection failed!")
+        print("❌ Database connection failed!")
         print(f"   Error: {e}")
         print()
         print("💡 Troubleshooting:")

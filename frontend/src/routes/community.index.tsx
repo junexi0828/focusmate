@@ -15,6 +15,7 @@ const communitySearchSchema = z.object({
   author_username: z.string().optional(),
   date_from: z.string().optional(),
   date_to: z.string().optional(),
+  sort_by: z.enum(["recent", "popular", "trending", "most_commented"]).optional().default("recent"),
   page: z.number().int().min(1).optional().default(1),
 });
 
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/community/")({
     author_username: search.author_username,
     date_from: search.date_from,
     date_to: search.date_to,
+    sort_by: search.sort_by,
     page: search.page,
   }),
   loader: async ({ deps }) => {
@@ -45,6 +47,7 @@ export const Route = createFileRoute("/community/")({
       author_username: deps.author_username,
       date_from: deps.date_from,
       date_to: deps.date_to,
+      sort_by: deps.sort_by,
     });
     if (response.status === "error") {
       throw new Error(response.error?.message || "Failed to load posts");
@@ -56,13 +59,13 @@ export const Route = createFileRoute("/community/")({
 
 function CommunityComponent() {
   const navigate = useNavigate();
-  const { category, search: searchQuery, author_username, date_from, date_to, page } = Route.useSearch();
+  const { category, search: searchQuery, author_username, date_from, date_to, sort_by, page } = Route.useSearch();
   const initialData = Route.useLoaderData();
   const queryClient = useQueryClient();
   const user = authService.getCurrentUser();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["community", "posts", category, searchQuery, author_username, date_from, date_to, page],
+    queryKey: ["community", "posts", category, searchQuery, author_username, date_from, date_to, sort_by, page],
     queryFn: async () => {
       const limit = 20;
       const offset = (page - 1) * limit;
@@ -74,6 +77,7 @@ function CommunityComponent() {
         author_username,
         date_from,
         date_to,
+        sort_by,
       });
       if (response.status === "error") {
         throw new Error(response.error?.message || "Failed to load posts");
@@ -181,7 +185,18 @@ function CommunityComponent() {
         author_username: undefined,
         date_from: undefined,
         date_to: undefined,
+        search: undefined,
         page: 1,
+      }),
+    });
+  };
+
+  const handleSearchChange = (query: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        search: query || undefined,
+        page: 1, // Reset to first page when search changes
       }),
     });
   };
@@ -200,6 +215,16 @@ function CommunityComponent() {
         ...prev,
         category: categoryMap[category],
         page: 1, // Reset to first page when category changes
+      }),
+    });
+  };
+
+  const handleSortByChange = (sortBy: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        sort_by: sortBy as "recent" | "popular" | "trending" | "most_commented",
+        page: 1, // Reset to first page when sorting changes
       }),
     });
   };
@@ -249,6 +274,8 @@ function CommunityComponent() {
         onLike={handleLike}
         selectedCategory={category === "tips" ? "tips" : category === "achievement" ? "achievement" : category === "question" ? "question" : "all"}
         onCategoryChange={handleCategoryChange}
+        sortBy={sort_by}
+        onSortByChange={handleSortByChange}
         authorUsername={author_username || ""}
         dateFrom={date_from || ""}
         dateTo={date_to || ""}
@@ -256,6 +283,8 @@ function CommunityComponent() {
         onDateFromChange={handleDateFromChange}
         onDateToChange={handleDateToChange}
         onClearAdvancedFilters={handleClearAdvancedFilters}
+        searchQuery={searchQuery || ""}
+        onSearchChange={handleSearchChange}
       />
       <CreatePostDialog
         open={isCreateDialogOpen}

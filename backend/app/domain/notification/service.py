@@ -2,24 +2,23 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
 
-from app.core.exceptions import ValidationException
 from app.domain.notification.schemas import (
     NotificationCreate,
     NotificationResponse,
 )
 from app.infrastructure.database.models.notification import Notification
+from app.infrastructure.email.email_service import EmailService
 from app.infrastructure.repositories.notification_repository import (
     NotificationRepository,
 )
+from app.infrastructure.repositories.user_repository import UserRepository
 from app.infrastructure.repositories.user_settings_repository import (
     UserSettingsRepository,
 )
-from app.infrastructure.repositories.user_repository import UserRepository
-from app.infrastructure.email.email_service import EmailService
 from app.infrastructure.websocket.notification_manager import notification_ws_manager
 from app.shared.utils.uuid import generate_uuid
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +29,9 @@ class NotificationService:
     def __init__(
         self,
         repository: NotificationRepository,
-        settings_repository: Optional[UserSettingsRepository] = None,
-        user_repository: Optional[UserRepository] = None,
-        email_service: Optional[EmailService] = None,
+        settings_repository: UserSettingsRepository | None = None,
+        user_repository: UserRepository | None = None,
+        email_service: EmailService | None = None,
     ) -> None:
         """Initialize service.
 
@@ -101,7 +100,7 @@ class NotificationService:
 
     async def create_notification(
         self, data: NotificationCreate
-    ) -> Optional[NotificationResponse]:
+    ) -> NotificationResponse | None:
         """Create a new notification with user settings check.
 
         Args:

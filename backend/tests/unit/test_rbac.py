@@ -4,8 +4,8 @@ import pytest
 from fastapi import HTTPException
 
 from app.core.rbac import (
-    UserRole,
     Permission,
+    UserRole,
     get_user_role,
     has_permission,
     require_admin,

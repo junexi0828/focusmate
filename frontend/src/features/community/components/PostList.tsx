@@ -1,13 +1,16 @@
 import { Post } from "../../../types/community";
 import { PostCard } from "./PostCard";
 import { Card, CardContent } from "../../../components/ui/card";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, SearchX } from "lucide-react";
+import { Button } from "../../../components/ui/button-enhanced";
 
 interface PostListProps {
   posts: Post[];
   onViewPost: (postId: string) => void;
   onLike: (postId: string) => void;
   currentUserId?: string;
+  hasSearchOrFilters?: boolean;
+  onClearFilters?: () => void;
 }
 
 export function PostList({
@@ -15,8 +18,33 @@ export function PostList({
   onViewPost,
   onLike,
   currentUserId,
+  hasSearchOrFilters = false,
+  onClearFilters,
 }: PostListProps) {
   if (posts.length === 0) {
+    if (hasSearchOrFilters) {
+      // Empty state for search/filter results
+      return (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <SearchX className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-lg font-medium text-muted-foreground mb-2">
+              검색 결과가 없습니다
+            </p>
+            <p className="text-sm text-muted-foreground mb-4">
+              다른 검색어를 시도하거나 필터를 변경해보세요
+            </p>
+            {onClearFilters && (
+              <Button variant="outline" onClick={onClearFilters}>
+                검색 초기화
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Default empty state (no posts at all)
     return (
       <Card>
         <CardContent className="py-16 text-center">

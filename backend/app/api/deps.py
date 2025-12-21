@@ -14,6 +14,7 @@ from app.infrastructure.repositories.room_repository import RoomRepository
 from app.infrastructure.repositories.timer_repository import TimerRepository
 from app.infrastructure.repositories.user_repository import UserRepository
 
+
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
 security = HTTPBearer(auto_error=False)

@@ -39,3 +39,17 @@ class UserRepository:
         """Delete user."""
         await self.db.delete(user)
         await self.db.flush()
+
+    async def get_by_password_reset_token(self, token: str) -> User | None:
+        """Get user by password reset token."""
+        result = await self.db.execute(
+            select(User).where(User.password_reset_token == token)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_naver_id(self, naver_id: str) -> User | None:
+        """Get user by Naver OAuth ID."""
+        result = await self.db.execute(
+            select(User).where(User.naver_id == naver_id)
+        )
+        return result.scalar_one_or_none()

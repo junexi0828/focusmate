@@ -13,6 +13,7 @@ from app.infrastructure.repositories.matching_pool_repository import (
     MatchingPoolRepository,
 )
 
+
 router = APIRouter(prefix="/matching/proposals", tags=["matching-proposals"])
 
 
@@ -37,7 +38,7 @@ async def get_my_proposals(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get proposals: {str(e)}"
+            detail=f"Failed to get proposals: {e!s}"
         )
 
 
@@ -70,7 +71,7 @@ async def respond_to_proposal(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to respond to proposal: {str(e)}"
+            detail=f"Failed to respond to proposal: {e!s}"
         )
 
 
@@ -110,5 +111,5 @@ async def get_proposal(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get proposal: {str(e)}"
+            detail=f"Failed to get proposal: {e!s}"
         )

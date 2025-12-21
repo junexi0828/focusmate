@@ -20,7 +20,6 @@ class AchievementBase(BaseModel):
 class AchievementCreate(AchievementBase):
     """Schema for creating a new achievement."""
 
-    pass
 
 
 class AchievementResponse(AchievementBase):

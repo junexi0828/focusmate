@@ -71,6 +71,22 @@ class RoomNameTakenException(AppException):
         )
 
 
+class RoomHostRequiredException(AppException):
+    """Raised when room host permission is required."""
+
+    def __init__(self, room_id: str) -> None:
+        """Initialize exception.
+
+        Args:
+            room_id: Room identifier
+        """
+        super().__init__(
+            message="Only the room host can perform this action",
+            code="ROOM_HOST_REQUIRED",
+            details={"room_id": room_id},
+        )
+
+
 class RoomFullException(AppException):
     """Raised when a room is at maximum capacity."""
 

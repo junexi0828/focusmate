@@ -1,7 +1,7 @@
 """Community API endpoints - posts, comments, likes."""
 
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -16,6 +16,7 @@ from app.domain.community.schemas import (
     PostFilters,
     PostListResult,
     PostResponse,
+    PostSortBy,
     PostUpdate,
 )
 from app.domain.community.service import CommunityService
@@ -28,6 +29,7 @@ from app.infrastructure.repositories.community_repository import (
     PostRepository,
 )
 from app.infrastructure.repositories.user_repository import UserRepository
+
 
 router = APIRouter(prefix="/community", tags=["community"])
 
@@ -75,7 +77,12 @@ def get_community_service(
 ) -> CommunityService:
     """Get community service."""
     return CommunityService(
-        post_repo, comment_repo, post_like_repo, comment_like_repo, post_read_repo, user_repo
+        post_repo,
+        comment_repo,
+        post_like_repo,
+        comment_like_repo,
+        post_read_repo,
+        user_repo,
     )
 
 
@@ -83,8 +90,9 @@ def get_community_service(
 @router.post("/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 async def create_post(
     data: PostCreate,
+    db: DatabaseSession,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID creating the post"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> PostResponse:
     """Create a new community post.
 
@@ -92,26 +100,76 @@ async def create_post(
         data: Post details (title, content, category)
         user_id: ID of the user creating the post
         service: Community service
+        db: Database session
 
     Returns:
         Created post with author info
     """
-    return await service.create_post(user_id, data)
+    post = await service.create_post(user_id, data)
+
+    # Check and unlock achievements after post creation
+    try:
+        from app.domain.achievement.service import AchievementService
+        from app.infrastructure.repositories.achievement_repository import (
+            AchievementRepository,
+            UserAchievementRepository,
+        )
+        from app.infrastructure.repositories.community_repository import PostRepository
+        from app.infrastructure.repositories.session_history_repository import (
+            SessionHistoryRepository,
+        )
+        from app.infrastructure.repositories.user_repository import UserRepository
+
+        achievement_repo = AchievementRepository(db)
+        user_achievement_repo = UserAchievementRepository(db)
+        user_repo = UserRepository(db)
+        post_repo = PostRepository(db)
+        session_repo = SessionHistoryRepository(db)
+
+        achievement_service = AchievementService(
+            achievement_repo,
+            user_achievement_repo,
+            user_repo,
+            post_repo,
+            session_repo,
+        )
+
+        # Check achievements in background (don't wait for result)
+        await achievement_service.check_and_unlock_achievements(user_id)
+    except Exception as e:
+        # Log error but don't fail the post creation
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to check achievements after post creation: {e}")
+
+    return post
 
 
 @router.get("/posts", response_model=PostListResult)
 async def get_posts(
+    db: DatabaseSession,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    category: Optional[str] = Query(None, description="Filter by category"),
-    search: Optional[str] = Query(None, description="Search in title and content"),
-    author_username: Optional[str] = Query(None, description="Filter by author username"),
-    date_from: Optional[str] = Query(None, description="Filter posts from this date (ISO 8601 format)"),
-    date_to: Optional[str] = Query(None, description="Filter posts until this date (ISO 8601 format)"),
+    category: str | None = Query(None, description="Filter by category"),
+    search: str | None = Query(None, description="Search in title and content"),
+    author_username: str | None = Query(
+        None, description="Filter by author username"
+    ),
+    date_from: str | None = Query(
+        None, description="Filter posts from this date (ISO 8601 format)"
+    ),
+    date_to: str | None = Query(
+        None, description="Filter posts until this date (ISO 8601 format)"
+    ),
+    sort_by: PostSortBy = Query(
+        PostSortBy.RECENT,
+        description="Sort posts by: recent, popular, trending, or most_commented",
+    ),
     current_user: Annotated[dict | None, Depends(get_current_user)] = None,
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> PostListResult:
-    """Get community posts with optional filtering and search.
+    """Get community posts with optional filtering, sorting, and search.
 
     Args:
         limit: Maximum number of posts to return
@@ -121,6 +179,7 @@ async def get_posts(
         author_username: Optional filter by author username
         date_from: Optional filter posts from this date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
         date_to: Optional filter posts until this date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
+        sort_by: Sort option (recent, popular, trending, most_commented)
         current_user: Current authenticated user (optional, for like status and read status)
     """
     # Parse date strings to datetime objects
@@ -138,7 +197,7 @@ async def get_posts(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid date_from format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"
+                    detail="Invalid date_from format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
                 )
 
     if date_to:
@@ -154,7 +213,7 @@ async def get_posts(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid date_to format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"
+                    detail="Invalid date_to format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
                 )
 
     filters = PostFilters(
@@ -165,16 +224,33 @@ async def get_posts(
         author_username=author_username,
         date_from=parsed_date_from,
         date_to=parsed_date_to,
+        sort_by=sort_by,
     )
     current_user_id = current_user["id"] if current_user else None
     return await service.get_posts(filters=filters, current_user_id=current_user_id)
 
 
+@router.get("/posts/stats/categories")
+async def get_category_stats(
+    db: DatabaseSession,
+) -> dict[str, int]:
+    """Get post count statistics by category.
+
+    Returns:
+        Dictionary mapping category names to post counts
+    """
+    from app.infrastructure.repositories.community_repository import PostRepository
+
+    post_repo = PostRepository(db)
+    return await post_repo.get_category_counts()
+
+
 @router.get("/posts/{post_id}", response_model=PostResponse)
 async def get_post(
     post_id: str,
+    db: DatabaseSession,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     current_user: Annotated[dict | None, Depends(get_current_user)] = None,
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> PostResponse:
     """Get a specific post by ID.
 
@@ -196,44 +272,12 @@ async def get_post(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
 
 
-@router.get("/posts", response_model=PostListResult)
-async def get_posts(
-    category: str | None = Query(None, description="Filter by category"),
-    user_id: str | None = Query(None, description="Filter by user ID"),
-    search: str | None = Query(None, description="Search in title and content"),
-    limit: int = Query(20, ge=1, le=100, description="Number of posts to return"),
-    offset: int = Query(0, ge=0, description="Number of posts to skip"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
-) -> PostListResult:
-    """Get posts with optional filters and pagination.
-
-    Args:
-        category: Optional category filter
-        user_id: Optional user ID filter
-        search: Optional search query
-        limit: Maximum number of posts to return
-        offset: Number of posts to skip
-        service: Community service
-
-    Returns:
-        Paginated list of posts with total count
-    """
-    filters = PostFilters(
-        category=category,
-        user_id=user_id,
-        search=search,
-        limit=limit,
-        offset=offset,
-    )
-    return await service.get_posts(filters)
-
-
 @router.put("/posts/{post_id}", response_model=PostResponse)
 async def update_post(
     post_id: str,
     data: PostUpdate,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID requesting update"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> PostResponse:
     """Update a post (only by author).
 
@@ -260,8 +304,8 @@ async def update_post(
 @router.delete("/posts/{post_id}", status_code=status.HTTP_200_OK)
 async def delete_post(
     post_id: str,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID requesting deletion"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> dict:
     """Delete a post (only by author).
 
@@ -287,8 +331,8 @@ async def delete_post(
 @router.post("/posts/{post_id}/like", response_model=LikeResponse)
 async def toggle_post_like(
     post_id: str,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID toggling like"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> LikeResponse:
     """Toggle like on a post (like if not liked, unlike if already liked).
 
@@ -318,8 +362,8 @@ async def toggle_post_like(
 async def create_comment(
     post_id: str,
     data: CommentCreate,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID creating comment"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> CommentResponse:
     """Create a comment on a post.
 
@@ -344,8 +388,9 @@ async def create_comment(
 @router.get("/posts/{post_id}/comments", response_model=list[CommentResponse])
 async def get_post_comments(
     post_id: str,
+    db: DatabaseSession,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     current_user: Annotated[dict | None, Depends(get_current_user)] = None,
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> list[CommentResponse]:
     """Get all comments for a post with nested replies and like status.
 
@@ -365,8 +410,8 @@ async def get_post_comments(
 async def update_comment(
     comment_id: str,
     data: CommentUpdate,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID requesting update"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> CommentResponse:
     """Update a comment (only by author).
 
@@ -393,8 +438,8 @@ async def update_comment(
 @router.delete("/comments/{comment_id}", status_code=status.HTTP_200_OK)
 async def delete_comment(
     comment_id: str,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID requesting deletion"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> dict:
     """Delete a comment (only by author).
 
@@ -420,8 +465,8 @@ async def delete_comment(
 @router.post("/comments/{comment_id}/like", response_model=LikeResponse)
 async def toggle_comment_like(
     comment_id: str,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID toggling like"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> LikeResponse:
     """Toggle like on a comment (like if not liked, unlike if already liked).
 
@@ -445,8 +490,8 @@ async def toggle_comment_like(
 @router.post("/posts/{post_id}/read", status_code=status.HTTP_200_OK)
 async def mark_post_as_read(
     post_id: str,
+    service: Annotated[CommunityService, Depends(get_community_service)],
     user_id: str = Query(..., description="User ID marking post as read"),
-    service: Annotated[CommunityService, Depends(get_community_service)] = None,
 ) -> dict:
     """Mark a post as read by a user.
 

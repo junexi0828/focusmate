@@ -19,6 +19,7 @@ from app.infrastructure.repositories.user_settings_repository import (
     UserSettingsRepository,
 )
 
+
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 

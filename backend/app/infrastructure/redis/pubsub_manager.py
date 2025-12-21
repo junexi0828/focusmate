@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-from typing import Optional
 from uuid import UUID
 
 import redis.asyncio as aioredis
@@ -14,12 +13,12 @@ from app.infrastructure.websocket.chat_manager import connection_manager
 class RedisPubSubManager:
     """Manages Redis Pub/Sub for cross-server message synchronization."""
 
-    def __init__(self, redis_url: Optional[str] = None):
+    def __init__(self, redis_url: str | None = None):
         self.redis_url = redis_url or settings.REDIS_URL
-        self.redis: Optional[aioredis.Redis] = None
-        self.pubsub: Optional[aioredis.client.PubSub] = None
+        self.redis: aioredis.Redis | None = None
+        self.pubsub: aioredis.client.PubSub | None = None
         self.subscriptions: set[str] = set()
-        self._listener_task: Optional[asyncio.Task] = None
+        self._listener_task: asyncio.Task | None = None
 
     async def connect(self):
         """Connect to Redis."""
@@ -114,7 +113,7 @@ class RedisPubSubManager:
         asyncio.create_task(self.listen())
 
     # Presence operations
-    async def publish_presence(self, user_id: str, is_online: bool, metadata: Optional[dict] = None):
+    async def publish_presence(self, user_id: str, is_online: bool, metadata: dict | None = None):
         """Publish presence change to all servers.
 
         Args:
@@ -203,7 +202,7 @@ class RedisPubSubManager:
         await self.redis.hset(key, mapping=presence_data)
         await self.redis.expire(key, ttl_seconds)
 
-    async def get_cached_presence(self, user_id: str) -> Optional[dict]:
+    async def get_cached_presence(self, user_id: str) -> dict | None:
         """Get cached presence data from Redis.
 
         Args:

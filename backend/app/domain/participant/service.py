@@ -1,9 +1,17 @@
 """Participant domain service."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from app.core.exceptions import ParticipantNotFoundException, RoomFullException, RoomNotFoundException
-from app.domain.participant.schemas import ParticipantJoin, ParticipantListResponse, ParticipantResponse
+from app.core.exceptions import (
+    ParticipantNotFoundException,
+    RoomFullException,
+    RoomNotFoundException,
+)
+from app.domain.participant.schemas import (
+    ParticipantJoin,
+    ParticipantListResponse,
+    ParticipantResponse,
+)
 from app.infrastructure.database.models import Participant
 from app.infrastructure.repositories.participant_repository import ParticipantRepository
 from app.infrastructure.repositories.room_repository import RoomRepository
@@ -93,7 +101,7 @@ class ParticipantService:
             username=final_username,  # Use username from user info or provided
             is_connected=True,
             is_host=is_host,
-            joined_at=datetime.now(timezone.utc),
+            joined_at=datetime.now(UTC),
         )
 
         created = await self.participant_repo.create(participant)

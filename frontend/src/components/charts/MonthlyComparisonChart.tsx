@@ -93,6 +93,10 @@ export function MonthlyComparisonChart({
               stroke="hsl(var(--primary))"
               fill="hsl(var(--muted))"
               travellerWidth={10}
+              tickFormatter={(value) => value}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              startIndex={0}
+              endIndex={data.length - 1}
             />
           )}
         </LineChart>

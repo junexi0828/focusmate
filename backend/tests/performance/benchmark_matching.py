@@ -3,11 +3,9 @@
 This script demonstrates the performance improvements of the optimized matching algorithm.
 """
 
-import asyncio
 import random
 import time
 from collections import defaultdict
-from typing import List
 from uuid import uuid4
 
 
@@ -22,7 +20,7 @@ class MockPool:
         department: str,
         grade: int,
         preferred_match_type: str = "any",
-        preferred_categories: List[str] = None,
+        preferred_categories: list[str] = None,
     ):
         self.pool_id = pool_id
         self.member_count = member_count
@@ -33,7 +31,7 @@ class MockPool:
         self.preferred_categories = preferred_categories or []
 
 
-def generate_test_pools(count: int) -> List[MockPool]:
+def generate_test_pools(count: int) -> list[MockPool]:
     """Generate test pools for benchmarking."""
     pools = []
     departments = ["컴퓨터공학", "전자공학", "경영학", "경제학", "심리학"]
@@ -55,7 +53,7 @@ def generate_test_pools(count: int) -> List[MockPool]:
     return pools
 
 
-def original_algorithm(pools: List[MockPool]) -> tuple[List[tuple[str, str]], float]:
+def original_algorithm(pools: list[MockPool]) -> tuple[list[tuple[str, str]], float]:
     """Original matching algorithm (simpler scoring)."""
     start_time = time.time()
 
@@ -107,7 +105,7 @@ def original_algorithm(pools: List[MockPool]) -> tuple[List[tuple[str, str]], fl
     return matches, execution_time
 
 
-def optimized_algorithm(pools: List[MockPool]) -> tuple[List[tuple[str, str]], float]:
+def optimized_algorithm(pools: list[MockPool]) -> tuple[list[tuple[str, str]], float]:
     """Optimized matching algorithm with better scoring and grouping."""
     DEPARTMENT_CATEGORIES = {
         "컴퓨터공학": "공학",

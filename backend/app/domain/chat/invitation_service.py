@@ -2,8 +2,7 @@
 
 import secrets
 import string
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from app.core.config import settings
@@ -25,7 +24,7 @@ class InvitationService:
     def __init__(
         self,
         chat_repo: ChatRepository,
-        friend_repo: Optional[FriendRepository] = None,
+        friend_repo: FriendRepository | None = None,
     ):
         self.chat_repo = chat_repo
         self.friend_repo = friend_repo
@@ -60,7 +59,7 @@ class InvitationService:
         # Calculate expiration
         expires_at = None
         if data.expires_hours:
-            expires_at = datetime.now(timezone.utc) + timedelta(hours=data.expires_hours)
+            expires_at = datetime.now(UTC) + timedelta(hours=data.expires_hours)
 
         # Update room with invitation code
         await self.chat_repo.update_room_invitation(
@@ -85,7 +84,7 @@ class InvitationService:
         # Check expiration
         is_valid = True
         if room.invitation_expires_at:
-            if datetime.now(timezone.utc) > room.invitation_expires_at:
+            if datetime.now(UTC) > room.invitation_expires_at:
                 is_valid = False
 
         # Check max uses

@@ -38,9 +38,8 @@ python-dateutil==2.9.0.post0        # Date utilities
 typing-extensions>=4.6.0            # Type hints (required for SQLAlchemy 2.0.35+)
 greenlet>=3.0.0                     # Async support (required for SQLAlchemy)
 
-# Development & Testing (optional)
-pytest==8.3.4                       # Testing framework
-pytest-asyncio==0.24.0              # Async test support
+# Development & Testing (moved to requirements-dev.txt)
+# pytest and pytest-asyncio are now in requirements-dev.txt to avoid version conflicts
 
 # ============================================================================
 # Version Constraints Explanation:

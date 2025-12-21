@@ -1,24 +1,25 @@
 """API endpoints for matching pools."""
 
-from typing import Annotated, Optional
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import DatabaseSession, get_current_user
+from app.domain.matching.optimized_service import OptimizedMatchingPoolService
 from app.domain.matching.schemas import (
     ComprehensiveMatchingStats,
     MatchingPoolCreate,
     MatchingPoolResponse,
     MatchingPoolStats,
 )
-from app.domain.matching.optimized_service import OptimizedMatchingPoolService
 from app.infrastructure.repositories.matching_pool_repository import (
     MatchingPoolRepository,
 )
 from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
+
 
 router = APIRouter(prefix="/matching", tags=["matching"])
 
@@ -54,7 +55,7 @@ async def get_my_matching_pool(
     service: Annotated[
         OptimizedMatchingPoolService, Depends(get_matching_pool_service)
     ],
-) -> Optional[MatchingPoolResponse]:
+) -> MatchingPoolResponse | None:
     """Get current user's active matching pool."""
     try:
         if not current_user or not current_user.get("id"):
@@ -69,7 +70,7 @@ async def get_my_matching_pool(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get matching pool: {str(e)}",
+            detail=f"Failed to get matching pool: {e!s}",
         )
 
 
@@ -85,7 +86,7 @@ async def get_pool_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get pool statistics: {str(e)}",
+            detail=f"Failed to get pool statistics: {e!s}",
         )
 
 
@@ -138,5 +139,5 @@ async def get_comprehensive_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get comprehensive statistics: {str(e)}",
+            detail=f"Failed to get comprehensive statistics: {e!s}",
         )

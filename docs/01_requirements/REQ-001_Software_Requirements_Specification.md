@@ -8,6 +8,12 @@ author: Focus Mate Team
 iso_standard: ISO/IEC/IEEE 29148
 ---
 
+# Software Requirements Specification
+
+## [Home](../README.md) > [Requirements](./README.md) > REQ-001
+
+---
+
 # Software Requirements Specification (SRS)
 
 ## Team Pomodoro Timer (Focus Mate)
@@ -46,19 +52,20 @@ iso_standard: ISO/IEC/IEEE 29148
 
 ### 1.2 범위
 
-**포함 범위**:
+**포함 범위 (v1.0)**:
 
 - 웹 기반 실시간 협업 포모도로 타이머
-- 방 생성/참여/관리
-- 서버 기반 타이머 동기화
-- 브라우저 알림 및 통계
+- 방 생성/참여/관리 및 서버 기반 동기화
+- 사용자 인증 (JWT) 및 소셜 로그인 (Naver OAuth)
+- 실시간 랭킹 시스템 및 미니게임 (3종)
+- 그룹 매칭 시스템 (핑크캠퍼스) 및 통합 메시징
+- 커뮤니티 게시판 및 예약 시스템
 
-**제외 범위 (v1.0)**:
+**제외 범위 (v2.0 확장 계획)**:
 
-- 모바일 네이티브 앱
-- 사용자 인증/로그인
-- 소셜 기능 (채팅, 댓글)
-- 오프라인 모드
+- 모바일 네이티브 앱 (iOS/Android)
+- 리더보드 순위 변동 실시간 Push 알림
+- 오프라인 모드 및 다국어 지원
 
 ### 1.3 정의 및 약어
 

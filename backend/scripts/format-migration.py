@@ -9,8 +9,8 @@ path to the generated migration file.
 """
 
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -38,7 +38,7 @@ def main():
             [sys.executable, "-m", "ruff", "format", str(file_path)],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=10, check=False,
         )
 
         if result.returncode == 0:

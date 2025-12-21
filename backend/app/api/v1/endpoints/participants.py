@@ -5,13 +5,22 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import get_room_repository
-from app.core.exceptions import ParticipantNotFoundException, RoomFullException, RoomNotFoundException
-from app.domain.participant.schemas import ParticipantJoin, ParticipantListResponse, ParticipantResponse
+from app.core.exceptions import (
+    ParticipantNotFoundException,
+    RoomFullException,
+    RoomNotFoundException,
+)
+from app.domain.participant.schemas import (
+    ParticipantJoin,
+    ParticipantListResponse,
+    ParticipantResponse,
+)
 from app.domain.participant.service import ParticipantService
+from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.participant_repository import ParticipantRepository
 from app.infrastructure.repositories.room_repository import RoomRepository
 from app.infrastructure.repositories.user_repository import UserRepository
-from app.infrastructure.database.session import DatabaseSession
+
 
 router = APIRouter(prefix="/participants", tags=["participants"])
 

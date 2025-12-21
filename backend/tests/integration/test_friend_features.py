@@ -1,9 +1,10 @@
 """Comprehensive test for friend and chat features."""
 
 import asyncio
-import httpx
 import sys
-from uuid import uuid4
+
+import httpx
+
 
 BASE_URL = "http://localhost:8000/api/v1"
 
@@ -40,9 +41,8 @@ async def login_user(email: str, password: str) -> str:
             if response.status_code == 200:
                 data = response.json()
                 return data.get("access_token")
-            else:
-                print(f"Login failed for {email}: {response.status_code}")
-                print(f"Response: {response.text}")
+            print(f"Login failed for {email}: {response.status_code}")
+            print(f"Response: {response.text}")
         except Exception as e:
             print(f"Login error for {email}: {e}")
     return None
@@ -97,7 +97,7 @@ async def test_friend_requests():
             )
             print(f"   Status: {response.status_code}")
             if response.status_code == 200:
-                print(f"   ✓ Friend request accepted")
+                print("   ✓ Friend request accepted")
             else:
                 print(f"   ✗ Failed: {response.text}")
         else:
@@ -125,7 +125,7 @@ async def test_friend_requests():
                 )
                 print(f"   Status: {response.status_code}")
                 if response.status_code == 200:
-                    print(f"   ✓ Friend request accepted")
+                    print("   ✓ Friend request accepted")
                 else:
                     print(f"   ✗ Failed: {response.text}")
 
@@ -270,7 +270,7 @@ async def test_invitation_codes():
             print(f"\nGET /invitations/{{code}}: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
-                print(f"✓ Code info retrieved")
+                print("✓ Code info retrieved")
                 print(f"  Valid: {data.get('is_valid')}")
                 print(f"  Uses: {data.get('current_uses')}/{data.get('max_uses')}")
             else:
@@ -285,7 +285,7 @@ async def test_invitation_codes():
                 )
                 print(f"\nPOST /rooms/join (user2): {response.status_code}")
                 if response.status_code == 200:
-                    print(f"✓ user2 joined room via invitation code")
+                    print("✓ user2 joined room via invitation code")
                 else:
                     print(f"✗ Failed: {response.text}")
         else:
@@ -313,7 +313,7 @@ async def test_friend_room_creation():
         print(f"\nPOST /rooms/friends: {response.status_code}")
         if response.status_code == 200:
             data = response.json()
-            print(f"✓ Created room with friend")
+            print("✓ Created room with friend")
             print(f"  Room ID: {data.get('room_id')}")
             print(f"  Room name: {data.get('room_name')}")
             print(f"  Invitation code: {data.get('invitation_code')}")
@@ -335,7 +335,7 @@ async def test_quick_chat():
         print(f"\nPOST /friends/{{friend_id}}/chat: {response.status_code}")
         if response.status_code == 200:
             data = response.json()
-            print(f"✓ Chat created/retrieved")
+            print("✓ Chat created/retrieved")
             print(f"  Data: {data}")
         else:
             print(f"✗ Failed: {response.text}")

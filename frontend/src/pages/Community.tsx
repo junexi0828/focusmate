@@ -12,6 +12,8 @@ interface CommunityPageProps {
   onLike: (postId: string) => void;
   selectedCategory?: string;
   onCategoryChange?: (category: string) => void;
+  sortBy?: string;
+  onSortByChange?: (sortBy: string) => void;
   authorUsername: string;
   dateFrom: string;
   dateTo: string;
@@ -19,6 +21,8 @@ interface CommunityPageProps {
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onClearAdvancedFilters: () => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 export function CommunityPage({
@@ -28,6 +32,8 @@ export function CommunityPage({
   onLike,
   selectedCategory = "all",
   onCategoryChange,
+  sortBy = "recent",
+  onSortByChange,
   authorUsername,
   dateFrom,
   dateTo,
@@ -35,8 +41,31 @@ export function CommunityPage({
   onDateFromChange,
   onDateToChange,
   onClearAdvancedFilters,
+  searchQuery: propSearchQuery = "",
+  onSearchChange,
 }: CommunityPageProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [localSearchQuery, setLocalSearchQuery] = useState(propSearchQuery);
+
+  // Sync with prop when it changes
+  React.useEffect(() => {
+    setLocalSearchQuery(propSearchQuery);
+  }, [propSearchQuery]);
+
+  const handleSearchChange = (query: string) => {
+    setLocalSearchQuery(query);
+    if (onSearchChange) {
+      onSearchChange(query);
+    }
+  };
+
+  // Check if any search or filters are applied
+  const hasSearchOrFilters = !!(
+    localSearchQuery ||
+    selectedCategory !== "all" ||
+    authorUsername ||
+    dateFrom ||
+    dateTo
+  );
 
   return (
     <div className="min-h-full bg-muted/30 flex flex-col">
@@ -54,10 +83,12 @@ export function CommunityPage({
 
       {/* 검색 및 필터 헤더 (Discourse 스타일 - 고정) */}
       <PostListHeader
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        searchQuery={localSearchQuery}
+        onSearchChange={handleSearchChange}
         selectedCategory={selectedCategory}
         onCategoryChange={onCategoryChange || (() => {})}
+        sortBy={sortBy}
+        onSortByChange={onSortByChange || (() => {})}
         onCreatePost={onCreatePost}
         authorUsername={authorUsername || ""}
         dateFrom={dateFrom || ""}
@@ -70,20 +101,13 @@ export function CommunityPage({
 
       {/* 게시글 목록 (Discourse 스타일) */}
       <div className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
-        {posts.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="게시글이 없습니다"
-            description="첫 게시글을 작성하여 커뮤니티를 시작해보세요!"
-            action={
-              <Button variant="primary" onClick={onCreatePost}>
-                게시글 작성하기
-              </Button>
-            }
-          />
-        ) : (
-          <PostList posts={posts} onViewPost={onViewPost} onLike={onLike} />
-        )}
+        <PostList
+          posts={posts}
+          onViewPost={onViewPost}
+          onLike={onLike}
+          hasSearchOrFilters={hasSearchOrFilters}
+          onClearFilters={onClearAdvancedFilters}
+        />
       </div>
     </div>
   );

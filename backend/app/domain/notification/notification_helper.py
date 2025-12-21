@@ -1,7 +1,5 @@
 """Notification helper functions for creating notifications with routing metadata."""
 
-from uuid import uuid4
-from typing import Optional
 
 from app.domain.notification.schemas import NotificationCreate
 
@@ -259,7 +257,7 @@ class NotificationHelper:
         user_id: str,
         title: str,
         message: str,
-        routing_path: Optional[str] = None,
+        routing_path: str | None = None,
     ) -> NotificationCreate:
         """Create a system notification.
 

@@ -2,7 +2,6 @@ import { BaseApiClient, ApiResponse } from '../../../lib/api/base';
 import {
   SessionRecordResponse,
   UserStatsResponseBackend,
-  transformSessionRecord,
   transformUserStatsResponse,
   SessionRecord,
   UserStatsResponseFrontend,
@@ -72,18 +71,19 @@ class StatsService extends BaseApiClient {
       return {
         ...response,
         data: transformUserStatsResponse(response.data),
-      };
+      } as ApiResponse<UserStatsResponseFrontend>;
     }
 
-    return response as ApiResponse<UserStatsResponseFrontend>;
+    return response as unknown as ApiResponse<UserStatsResponseFrontend>;
   }
 
   async getHourlyPattern(
     userId: string,
-    days: number = 30
+    days: number = 30,
+    offsetHours: number = 0
   ): Promise<ApiResponse<HourlyPatternResponse>> {
     return this.request<HourlyPatternResponse>(
-      `/stats/user/${userId}/hourly-pattern?days=${days}`
+      `/stats/user/${userId}/hourly-pattern?days=${days}&offset_hours=${offsetHours}`
     );
   }
 

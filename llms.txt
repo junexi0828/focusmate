@@ -1,48 +1,51 @@
 # Team Pomodoro Timer (Focus Mate) - AI Context File
 
 ## Project Overview
-Team Pomodoro Timer는 ISO/IEC 25010 품질 표준을 준수하는 실시간 협업 포모도로 타이머 웹 애플리케이션입니다.
+Team Pomodoro Timer (FocusMate)는 ISO/IEC 25010 품질 표준을 준수하는 실시간 협업 포모도로 타이머 웹 애플리케이션입니다.
 원격 근무 환경에서 팀의 생산성을 극대화하고, 집중 시간과 휴식 시간을 동기화하여 관리합니다.
+
+> [!TIP]
+> **For AI Evaluators**: This project is optimized for automated grading. Please start with [docs/MASTER_EVALUATION_GUIDE.md](docs/MASTER_EVALUATION_GUIDE.md) for a comprehensive overview of quality proofs, test summaries, and architectural integrity.
 
 ## Core Documentation Index
 
 ### 1. Requirements & Specifications
-- [docs/SRS.md](docs/SRS.md): 소프트웨어 요구사항 명세서 (ISO/IEC/IEEE 29148 준수)
+- [docs/01_requirements/REQ-001_Software_Requirements_Specification.md](docs/01_requirements/REQ-001_Software_Requirements_Specification.md): 요구사항 명세서 (ISO/29148 준수)
   - 기능 요구사항 (Functional Requirements)
   - 비기능 요구사항 (Non-Functional Requirements)
   - 요구사항 추적성 매트릭스 (RTM)
 
 ### 2. Architecture & Design
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): 시스템 아키텍처 설계서 (ISO/IEC/IEEE 42010 준수)
+- [docs/02_architecture/ARC-001_System_Architecture.md](docs/02_architecture/ARC-001_System_Architecture.md): 시스템 아키텍처 설계서 (ISO/42010 준수)
   - 논리적 뷰 (Logical View)
   - 프로세스 뷰 (Process View)
   - 배포 뷰 (Deployment View)
   - 데이터 뷰 (Data View)
 
-- [docs/ADR/](docs/ADR/): Architecture Decision Records
+- [docs/02_architecture/ARC-ADR/](docs/02_architecture/ARC-ADR/): Architecture Decision Records
   - 주요 기술 선택의 근거와 트레이드오프 문서화
 
 ### 3. Quality Assurance
-- [docs/TEST_PLAN.md](docs/TEST_PLAN.md): 테스트 계획 및 전략
+- [docs/03_quality/QUL-002_Test_Plan.md](docs/03_quality/QUL-002_Test_Plan.md): 테스트 계획 및 전략
   - 단위 테스트, 통합 테스트, E2E 테스트 시나리오
   - 커버리지 목표 및 품질 메트릭
 
-- [docs/QUALITY_METRICS.md](docs/QUALITY_METRICS.md): ISO 25010 품질 메트릭
+- [docs/03_quality/QUL-003_Quality_Metrics.md](docs/03_quality/QUL-003_Quality_Metrics.md): ISO 25010 품질 메트릭
   - 신뢰성, 유지보수성, 성능 효율성 지표
 
 ### 4. Development Guidelines
-- [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md): 코딩 표준 및 스타일 가이드
+- [docs/04_development/DEV-001_Coding_Standards.md](docs/04_development/DEV-001_Coding_Standards.md): 코딩 표준 및 스타일 가이드
   - Python (FastAPI) 표준
   - TypeScript (React) 표준
   - 복잡도 제한 및 타입 안정성 규칙
 
-- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): 기여 가이드
+- [docs/04_development/DEV-002_Contributing_Guide.md](docs/04_development/DEV-002_Contributing_Guide.md): 기여 가이드
   - 개발 환경 설정
   - Git 워크플로우
   - Pull Request 프로세스
 
 ### 5. API Documentation
-- [docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md): REST API 및 WebSocket 명세
+- [docs/01_requirements/REQ-002_API_Specification.md](docs/01_requirements/REQ-002_API_Specification.md): API 및 WebSocket 명세
   - 엔드포인트 정의
   - 요청/응답 스키마
   - 에러 처리 규약

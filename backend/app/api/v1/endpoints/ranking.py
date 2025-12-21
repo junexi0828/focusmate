@@ -1,10 +1,10 @@
 """Ranking API endpoints."""
 
-from datetime import datetime, timedelta, timezone
-from typing import Annotated, Literal, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
 from app.api.deps import DatabaseSession, get_current_user
 from app.core.rbac import require_admin
@@ -17,10 +17,11 @@ from app.domain.ranking.schemas import (
     TeamResponse,
     TeamUpdate,
 )
-from app.domain.verification.schemas import VerificationResponse, VerificationReview
 from app.domain.ranking.service import RankingService
+from app.domain.verification.schemas import VerificationResponse, VerificationReview
 from app.infrastructure.repositories.ranking_repository import RankingRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+
 
 router = APIRouter(prefix="/ranking", tags=["ranking"])
 
@@ -73,7 +74,7 @@ async def get_my_teams(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get teams: {str(e)}",
+            detail=f"Failed to get teams: {e!s}",
         )
 
 
@@ -125,7 +126,6 @@ async def invite_member(
 
         # Send invitation email
         try:
-            from app.services.email_service import email_service
             from app.infrastructure.database.repositories.ranking_repository import (
                 RankingRepository,
             )
@@ -133,6 +133,7 @@ async def invite_member(
                 UserRepository,
             )
             from app.infrastructure.database.session import get_db
+            from app.services.email_service import email_service
 
             async for db in get_db():
                 repo = RankingRepository(db)
@@ -155,7 +156,7 @@ async def invite_member(
         except Exception as e:
             import logging
 
-            logging.error(f"Failed to send invitation email: {str(e)}")
+            logging.exception(f"Failed to send invitation email: {e!s}")
 
         return result
     except ValueError as e:
@@ -236,13 +237,13 @@ async def get_leaderboard(
         limit: Maximum number of teams to return
 
     Returns:
-        Leaderboard with team rankings
+        Leaderboard with team rankings based on RankingSession data
     """
 
     try:
-        from sqlalchemy import select, func
-        from app.infrastructure.database.models.session_history import SessionHistory
-        from app.infrastructure.database.models.ranking import RankingTeamMember
+        from sqlalchemy import func, select
+
+        from app.infrastructure.database.models.ranking import RankingMiniGame, RankingSession
 
         # Get all teams
         teams = await service.get_all_teams()
@@ -252,66 +253,67 @@ async def get_leaderboard(
             response = LeaderboardResponse(
                 ranking_type="team",
                 period=period,
-                updated_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(UTC),
                 leaderboard=[],
             )
             return response.model_dump()
 
         # Calculate date range based on period
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if period == "weekly":
             start_date = now - timedelta(days=7)
         elif period == "monthly":
             start_date = now - timedelta(days=30)
         else:  # all_time
-            start_date = datetime.min.replace(tzinfo=timezone.utc)
+            start_date = datetime.min.replace(tzinfo=UTC)
 
-        # Calculate scores for each team
+        # Calculate scores for each team based on RankingSession
         leaderboard_data = []
         for team in teams:
-            # Get team members
-            members_result = await db.execute(
-                select(RankingTeamMember).where(
-                    RankingTeamMember.team_id == team.team_id
+            # Calculate session stats from RankingSession table
+            sessions_result = await db.execute(
+                select(
+                    func.sum(RankingSession.duration_minutes).label("total_minutes"),
+                    func.count(RankingSession.session_id).label("total_sessions"),
                 )
+                .where(RankingSession.team_id == team.team_id)
+                .where(RankingSession.completed_at >= start_date)
+                .where(RankingSession.success == True)
+                .where(RankingSession.session_type == "work")
             )
-            members = members_result.scalars().all()
-            member_ids = [m.user_id for m in members]
+            session_stats = sessions_result.first()
 
-            # Calculate total score from session history
-            if member_ids:
-                sessions_result = await db.execute(
-                    select(
-                        func.sum(SessionHistory.duration_minutes).label(
-                            "total_minutes"
-                        ),
-                        func.count(SessionHistory.id).label("total_sessions"),
-                    )
-                    .where(SessionHistory.user_id.in_(member_ids))
-                    .where(SessionHistory.completed_at >= start_date)
-                )
-                stats = sessions_result.first()
+            total_minutes = float(session_stats.total_minutes or 0)
+            total_sessions = int(session_stats.total_sessions or 0)
 
-                total_minutes = float(stats.total_minutes or 0)
-                total_sessions = int(stats.total_sessions or 0)
+            # Calculate mini-game score
+            games_result = await db.execute(
+                select(func.sum(RankingMiniGame.score).label("total_game_score"))
+                .where(RankingMiniGame.team_id == team.team_id)
+                .where(RankingMiniGame.played_at >= start_date)
+            )
+            game_stats = games_result.first()
+            total_game_score = int(game_stats.total_game_score or 0)
 
-                # Calculate score (minutes + bonus for sessions)
-                score = total_minutes + (
-                    total_sessions * 5
-                )  # 5 bonus points per session
-                average_score = score / len(member_ids) if member_ids else 0.0
-            else:
-                score = 0.0
-                average_score = 0.0
-                total_minutes = 0
-                total_sessions = 0
+            # Get member count
+            from app.infrastructure.database.models.ranking import RankingTeamMember
+            members_result = await db.execute(
+                select(func.count(RankingTeamMember.member_id))
+                .where(RankingTeamMember.team_id == team.team_id)
+            )
+            member_count = members_result.scalar() or 0
+
+            # Calculate total score: focus time + session bonus + game score
+            # Focus time in minutes + 5 points per session + game score / 10
+            score = total_minutes + (total_sessions * 5) + (total_game_score / 10)
+            average_score = score / member_count if member_count > 0 else 0.0
 
             leaderboard_data.append(
                 {
                     "team": team,
                     "score": score,
                     "average_score": average_score,
-                    "member_count": len(member_ids),
+                    "member_count": member_count,
                     "total_sessions": total_sessions,
                 }
             )
@@ -319,26 +321,138 @@ async def get_leaderboard(
         # Sort by score descending
         leaderboard_data.sort(key=lambda x: x["score"], reverse=True)
 
-        # Create leaderboard entries
+        # Get previous ranks from RankingLeaderboard cache
+        from app.infrastructure.database.models.ranking import RankingLeaderboard
+        previous_ranks = {}
+        previous_ranks_result = await db.execute(
+            select(RankingLeaderboard)
+            .where(RankingLeaderboard.period == period)
+            .where(RankingLeaderboard.ranking_type == "study_time")
+        )
+        for prev_rank in previous_ranks_result.scalars().all():
+            previous_ranks[prev_rank.team_id] = prev_rank.rank
+
+        # Create leaderboard entries with rank change calculation
         leaderboard_entries = []
+        rank_changes_to_notify = []  # Track rank changes for notifications
         for idx, data in enumerate(leaderboard_data[:limit]):
+            current_rank = idx + 1
+            previous_rank = previous_ranks.get(data["team"].team_id)
+            rank_change = 0
+            if previous_rank is not None:
+                rank_change = previous_rank - current_rank  # Positive = moved up, negative = moved down
+
+            # Track significant rank changes for notifications
+            if previous_rank is not None and abs(rank_change) >= 1:
+                rank_changes_to_notify.append({
+                    "team_id": data["team"].team_id,
+                    "team_name": data["team"].team_name,
+                    "previous_rank": previous_rank,
+                    "current_rank": current_rank,
+                    "rank_change": rank_change,
+                })
+
             entry = LeaderboardEntry(
-                rank=idx + 1,
+                rank=current_rank,
                 team_id=data["team"].team_id,
                 team_name=data["team"].team_name,
                 team_type=data["team"].team_type,
                 score=data["score"],
-                rank_change=0,  # TODO: Track rank changes
+                rank_change=rank_change,
                 member_count=data["member_count"],
                 average_score=data["average_score"],
                 total_sessions=data["total_sessions"],
             )
             leaderboard_entries.append(entry)
 
+        # Update or create leaderboard cache entries
+        for idx, data in enumerate(leaderboard_data[:limit]):
+            current_rank = idx + 1
+            # Check if entry exists
+            existing_entry = await db.execute(
+                select(RankingLeaderboard)
+                .where(RankingLeaderboard.team_id == data["team"].team_id)
+                .where(RankingLeaderboard.period == period)
+                .where(RankingLeaderboard.ranking_type == "study_time")
+            )
+            existing = existing_entry.scalar_one_or_none()
+
+            if existing:
+                # Update existing entry
+                previous_rank = existing.rank
+                rank_change = previous_rank - current_rank if previous_rank else 0
+                existing.rank = current_rank
+                existing.score = float(data["score"])
+                existing.rank_change = rank_change
+            else:
+                # Create new entry
+                from app.infrastructure.database.models.ranking import RankingLeaderboard
+                new_entry = RankingLeaderboard(
+                    team_id=data["team"].team_id,
+                    ranking_type="study_time",
+                    period=period,
+                    score=float(data["score"]),
+                    rank=current_rank,
+                    rank_change=0,
+                )
+                db.add(new_entry)
+
+        await db.commit()
+
+        # Send notifications for rank changes
+        if rank_changes_to_notify:
+            try:
+                from app.domain.notification.service import NotificationService
+                from app.infrastructure.repositories.notification_repository import (
+                    NotificationRepository,
+                )
+                from app.infrastructure.repositories.ranking_repository import RankingRepository
+                from app.infrastructure.repositories.user_repository import UserRepository
+
+                notification_repo = NotificationRepository(db)
+                ranking_repo = RankingRepository(db)
+                user_repo = UserRepository(db)
+                notification_service = NotificationService(notification_repo, user_repo)
+
+                from app.domain.notification.schemas import NotificationCreate
+
+                for change in rank_changes_to_notify:
+                    # Get all team members
+                    members = await ranking_repo.get_team_members(change["team_id"])
+                    for member in members:
+                        change_direction = "상승" if change["rank_change"] > 0 else "하락"
+                        title = "랭킹 변동 알림"
+                        message = (
+                            f"{change['team_name']} 팀의 순위가 {change['previous_rank']}위에서 "
+                            f"{change['current_rank']}위로 {change_direction}했습니다 "
+                            f"({abs(change['rank_change'])}위 변동)"
+                        )
+
+                        notification_data = NotificationCreate(
+                            user_id=member.user_id,
+                            type="ranking",
+                            title=title,
+                            message=message,
+                            data={
+                                "team_id": str(change["team_id"]),
+                                "team_name": change["team_name"],
+                                "previous_rank": change["previous_rank"],
+                                "current_rank": change["current_rank"],
+                                "rank_change": change["rank_change"],
+                                "period": period,
+                            },
+                        )
+                        await notification_service.create_notification(notification_data)
+            except Exception as e:
+                # Log error but don't fail the request
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send rank change notifications: {e!s}")
+
         response = LeaderboardResponse(
             ranking_type="team",
             period=period,
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
             leaderboard=leaderboard_entries,
         )
 
@@ -347,7 +461,7 @@ async def get_leaderboard(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get leaderboard: {str(e)}",
+            detail=f"Failed to get leaderboard: {e!s}",
         )
 
 
@@ -429,11 +543,11 @@ async def review_verification(
 
     # Send email notification
     try:
-        from app.services.email_service import email_service
         from app.infrastructure.database.repositories.ranking_repository import (
             RankingRepository,
         )
         from app.infrastructure.database.session import get_db
+        from app.services.email_service import email_service
 
         # Get team and leader info
         async for db in get_db():
@@ -461,7 +575,7 @@ async def review_verification(
         # Log error but don't fail the request
         import logging
 
-        logging.error(f"Failed to send verification email: {str(e)}")
+        logging.exception(f"Failed to send verification email: {e!s}")
 
     return result
 
@@ -546,7 +660,7 @@ async def get_team_stats(
 async def get_session_history(
     team_id: UUID,
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    user_id: Optional[str] = None,
+    user_id: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
     """Get session history for a team or user."""
@@ -574,7 +688,7 @@ async def invite_member(
 async def get_user_invitations(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    status_filter: Optional[str] = Query(None, regex="^(pending|accepted|rejected)$"),
+    status_filter: str | None = Query(None, regex="^(pending|accepted|rejected)$"),
 ) -> dict:
     """Get all invitations for the current user."""
     try:
@@ -585,7 +699,7 @@ async def get_user_invitations(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve invitations: {str(e)}",
+            detail=f"Failed to retrieve invitations: {e!s}",
         )
 
 
@@ -661,7 +775,7 @@ async def get_mini_game_leaderboard(
 async def get_team_mini_games(
     team_id: UUID,
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    game_type: Optional[str] = None,
+    game_type: str | None = None,
     limit: int = 50,
 ) -> list[dict]:
     """Get mini-game history for a team."""

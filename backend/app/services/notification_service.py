@@ -1,11 +1,10 @@
 """Notification service for managing user notifications."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
 
 from app.infrastructure.database.models.notification import Notification
 
@@ -27,7 +26,7 @@ class NotificationService:
         notification_type: str,
         title: str,
         message: str,
-        data: Optional[dict] = None,
+        data: dict | None = None,
     ) -> Notification:
         """Create a new notification."""
         notification = Notification(

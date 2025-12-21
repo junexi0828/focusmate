@@ -7,6 +7,7 @@ from fastapi import WebSocket
 
 from app.infrastructure.websocket.base_manager import BaseConnectionManager
 
+
 logger = logging.getLogger(__name__)
 
 

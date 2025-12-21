@@ -1,6 +1,6 @@
 """Timer domain service with state machine logic."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.core.exceptions import (
     InvalidTimerStateException,
@@ -108,7 +108,7 @@ class TimerService:
 
         # Update timer
         timer.status = TimerStatus.RUNNING.value
-        timer.started_at = datetime.now(timezone.utc)
+        timer.started_at = datetime.now(UTC)
         timer.paused_at = None
 
         updated_timer = await self.timer_repo.update(timer)
@@ -156,12 +156,12 @@ class TimerService:
 
         # Calculate elapsed time
         if timer.started_at:
-            elapsed = (datetime.now(timezone.utc) - timer.started_at).total_seconds()
+            elapsed = (datetime.now(UTC) - timer.started_at).total_seconds()
             timer.remaining_seconds = max(0, timer.remaining_seconds - int(elapsed))
 
         # Update timer
         timer.status = TimerStatus.PAUSED.value
-        timer.paused_at = datetime.now(timezone.utc)
+        timer.paused_at = datetime.now(UTC)
 
         updated_timer = await self.timer_repo.update(timer)
 
@@ -197,7 +197,7 @@ class TimerService:
 
         # Update timer
         timer.status = TimerStatus.RUNNING.value
-        timer.started_at = datetime.now(timezone.utc)
+        timer.started_at = datetime.now(UTC)
         timer.paused_at = None
 
         updated_timer = await self.timer_repo.update(timer)
@@ -284,7 +284,7 @@ class TimerService:
 
         # Mark as completed
         timer.status = TimerStatus.COMPLETED.value
-        timer.completed_at = datetime.now(timezone.utc)
+        timer.completed_at = datetime.now(UTC)
         timer.remaining_seconds = 0
 
         # Transition to next phase
@@ -298,7 +298,7 @@ class TimerService:
             # Auto-start break if enabled
             if timer.is_auto_start:
                 timer.status = TimerStatus.RUNNING.value
-                timer.started_at = datetime.now(timezone.utc)
+                timer.started_at = datetime.now(UTC)
             else:
                 timer.status = TimerStatus.IDLE.value
                 timer.started_at = None
@@ -346,13 +346,13 @@ class TimerService:
 
         # Calculate real-time remaining seconds if running
         if timer.status == TimerStatus.RUNNING.value and timer.started_at:
-            elapsed = (datetime.now(timezone.utc) - timer.started_at).total_seconds()
+            elapsed = (datetime.now(UTC) - timer.started_at).total_seconds()
             current_remaining = max(0, timer.remaining_seconds - int(elapsed))
 
             # Check if timer completed
             if current_remaining == 0:
                 timer.status = TimerStatus.COMPLETED.value
-                timer.completed_at = datetime.now(timezone.utc)
+                timer.completed_at = datetime.now(UTC)
                 timer.remaining_seconds = 0
                 await self.timer_repo.update(timer)
 

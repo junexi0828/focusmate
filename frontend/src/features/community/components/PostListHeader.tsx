@@ -1,11 +1,18 @@
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button-enhanced";
-import { Search, PlusCircle } from "lucide-react";
+import { Search, PlusCircle, ArrowUpDown } from "lucide-react";
 import {
   Tabs,
   TabsList,
   TabsTrigger,
 } from "../../../components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select";
 import { AdvancedSearchDialog } from "./AdvancedSearchDialog";
 
 interface PostListHeaderProps {
@@ -13,6 +20,8 @@ interface PostListHeaderProps {
   onSearchChange: (query: string) => void;
   selectedCategory: string;
   onCategoryChange: (category: string) => void;
+  sortBy: string;
+  onSortByChange: (sortBy: string) => void;
   onCreatePost: () => void;
   authorUsername: string;
   dateFrom: string;
@@ -28,6 +37,8 @@ export function PostListHeader({
   onSearchChange,
   selectedCategory,
   onCategoryChange,
+  sortBy,
+  onSortByChange,
   onCreatePost,
   authorUsername,
   dateFrom,
@@ -52,6 +63,18 @@ export function PostListHeader({
             />
           </div>
           <div className="flex gap-2 flex-shrink-0">
+            <Select value={sortBy} onValueChange={onSortByChange}>
+              <SelectTrigger className="w-[180px]">
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="정렬" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">최신순</SelectItem>
+                <SelectItem value="popular">인기순</SelectItem>
+                <SelectItem value="trending">트렌딩</SelectItem>
+                <SelectItem value="most_commented">댓글순</SelectItem>
+              </SelectContent>
+            </Select>
             <AdvancedSearchDialog
               authorUsername={authorUsername}
               dateFrom={dateFrom}

@@ -4,7 +4,6 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from fastapi import UploadFile
 
@@ -19,7 +18,7 @@ class FileUploadService:
         self.allowed_extensions = {".jpg", ".jpeg", ".png", ".pdf"}
         self.max_file_size = 10 * 1024 * 1024  # 10MB
 
-    def validate_file(self, file: UploadFile) -> tuple[bool, Optional[str]]:
+    def validate_file(self, file: UploadFile) -> tuple[bool, str | None]:
         """Validate uploaded file."""
         # Check file extension
         file_ext = Path(file.filename).suffix.lower()

@@ -4,8 +4,7 @@ This middleware automatically encrypts files on upload and decrypts on download.
 Uses Fernet symmetric encryption from the encryption service.
 """
 
-import io
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import Request, Response, UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware

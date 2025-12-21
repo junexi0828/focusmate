@@ -60,12 +60,26 @@
     server: {
       port: 3000,
       open: true,
+      host: true, // 외부 접근 허용
+      hmr: {
+        port: 3000,
+        clientPort: 3000,
+      },
       proxy: {
         '/api': {
           target: 'http://localhost:8000',
           changeOrigin: true,
           secure: false,
         },
+        // WebSocket 프록시 설정
+        '/ws': {
+          target: 'ws://localhost:8000',
+          ws: true,
+          changeOrigin: true,
+        },
+      },
+      watch: {
+        usePolling: false,
       },
     },
   });
