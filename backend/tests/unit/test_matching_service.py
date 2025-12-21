@@ -105,8 +105,8 @@ class TestMatchingService:
             matching_type="open",
             message="Hello",
             status="waiting",
-            created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(hours=24)
+            created_at=datetime.now(UTC),
+            expires_at=datetime.now(UTC) + timedelta(hours=24)
         )
 
         mock_pool_repository.get_user_active_pool.return_value = expected_pool

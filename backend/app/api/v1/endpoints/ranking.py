@@ -243,7 +243,10 @@ async def get_leaderboard(
     try:
         from sqlalchemy import func, select
 
-        from app.infrastructure.database.models.ranking import RankingMiniGame, RankingSession
+        from app.infrastructure.database.models.ranking import (
+            RankingMiniGame,
+            RankingSession,
+        )
 
         # Get all teams
         teams = await service.get_all_teams()
@@ -269,9 +272,9 @@ async def get_leaderboard(
 
         # Optimized: Batch query all team stats at once (fixes N+1 problem)
         from app.infrastructure.database.models.ranking import RankingTeamMember
-        
+
         team_ids = [team.team_id for team in teams]
-        
+
         # Batch query: Get all session stats in one query
         sessions_result = await db.execute(
             select(
@@ -292,7 +295,7 @@ async def get_leaderboard(
             }
             for row in sessions_result.all()
         }
-        
+
         # Batch query: Get all game scores in one query
         games_result = await db.execute(
             select(
@@ -304,10 +307,9 @@ async def get_leaderboard(
             .group_by(RankingMiniGame.team_id)
         )
         game_stats_map = {
-            row.team_id: int(row.total_game_score or 0)
-            for row in games_result.all()
+            row.team_id: int(row.total_game_score or 0) for row in games_result.all()
         }
-        
+
         # Batch query: Get all member counts in one query
         members_result = await db.execute(
             select(
@@ -318,20 +320,21 @@ async def get_leaderboard(
             .group_by(RankingTeamMember.team_id)
         )
         member_count_map = {
-            row.team_id: int(row.member_count or 0)
-            for row in members_result.all()
+            row.team_id: int(row.member_count or 0) for row in members_result.all()
         }
-        
+
         # Calculate scores for each team using pre-fetched data
         leaderboard_data = []
         for team in teams:
             team_id = team.team_id
-            session_stats = session_stats_map.get(team_id, {"total_minutes": 0, "total_sessions": 0})
+            session_stats = session_stats_map.get(
+                team_id, {"total_minutes": 0, "total_sessions": 0}
+            )
             total_minutes = session_stats["total_minutes"]
             total_sessions = session_stats["total_sessions"]
             total_game_score = game_stats_map.get(team_id, 0)
             member_count = member_count_map.get(team_id, 0)
-            
+
             # Calculate total score: focus time + session bonus + game score
             # Focus time in minutes + 5 points per session + game score / 10
             score = total_minutes + (total_sessions * 5) + (total_game_score / 10)
@@ -352,6 +355,7 @@ async def get_leaderboard(
 
         # Get previous ranks from RankingLeaderboard cache
         from app.infrastructure.database.models.ranking import RankingLeaderboard
+
         previous_ranks = {}
         previous_ranks_result = await db.execute(
             select(RankingLeaderboard)
@@ -369,17 +373,21 @@ async def get_leaderboard(
             previous_rank = previous_ranks.get(data["team"].team_id)
             rank_change = 0
             if previous_rank is not None:
-                rank_change = previous_rank - current_rank  # Positive = moved up, negative = moved down
+                rank_change = (
+                    previous_rank - current_rank
+                )  # Positive = moved up, negative = moved down
 
             # Track significant rank changes for notifications
             if previous_rank is not None and abs(rank_change) >= 1:
-                rank_changes_to_notify.append({
-                    "team_id": data["team"].team_id,
-                    "team_name": data["team"].team_name,
-                    "previous_rank": previous_rank,
-                    "current_rank": current_rank,
-                    "rank_change": rank_change,
-                })
+                rank_changes_to_notify.append(
+                    {
+                        "team_id": data["team"].team_id,
+                        "team_name": data["team"].team_name,
+                        "previous_rank": previous_rank,
+                        "current_rank": current_rank,
+                        "rank_change": rank_change,
+                    }
+                )
 
             entry = LeaderboardEntry(
                 rank=current_rank,
@@ -415,7 +423,10 @@ async def get_leaderboard(
                 existing.rank_change = rank_change
             else:
                 # Create new entry
-                from app.infrastructure.database.models.ranking import RankingLeaderboard
+                from app.infrastructure.database.models.ranking import (
+                    RankingLeaderboard,
+                )
+
                 new_entry = RankingLeaderboard(
                     team_id=data["team"].team_id,
                     ranking_type="study_time",
@@ -435,8 +446,12 @@ async def get_leaderboard(
                 from app.infrastructure.repositories.notification_repository import (
                     NotificationRepository,
                 )
-                from app.infrastructure.repositories.ranking_repository import RankingRepository
-                from app.infrastructure.repositories.user_repository import UserRepository
+                from app.infrastructure.repositories.ranking_repository import (
+                    RankingRepository,
+                )
+                from app.infrastructure.repositories.user_repository import (
+                    UserRepository,
+                )
 
                 notification_repo = NotificationRepository(db)
                 ranking_repo = RankingRepository(db)
@@ -449,7 +464,9 @@ async def get_leaderboard(
                     # Get all team members
                     members = await ranking_repo.get_team_members(change["team_id"])
                     for member in members:
-                        change_direction = "상승" if change["rank_change"] > 0 else "하락"
+                        change_direction = (
+                            "상승" if change["rank_change"] > 0 else "하락"
+                        )
                         title = "랭킹 변동 알림"
                         message = (
                             f"{change['team_name']} 팀의 순위가 {change['previous_rank']}위에서 "
@@ -471,10 +488,13 @@ async def get_leaderboard(
                                 "period": period,
                             },
                         )
-                        await notification_service.create_notification(notification_data)
+                        await notification_service.create_notification(
+                            notification_data
+                        )
             except Exception as e:
                 # Log error but don't fail the request
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send rank change notifications: {e!s}")
 
@@ -586,7 +606,11 @@ async def review_verification(
                 team = verification.team
                 # Use verification owner (leader) info
                 leader_email = verification.user.email if verification.user else ""
-                username = verification.user.username if verification.user else (leader_email.split("@")[0] if leader_email else "User")
+                username = (
+                    verification.user.username
+                    if verification.user
+                    else (leader_email.split("@")[0] if leader_email else "User")
+                )
 
                 if review.status == "approved":
                     await email_service.send_verification_approved_email(

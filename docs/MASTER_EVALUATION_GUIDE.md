@@ -14,6 +14,7 @@ FocusMate v1.0 is a high-assurance platform developed following **ISO/IEC 25010*
 | **Test Coverage** | Avg. 92.8% (BE: 94%, FE: 91%) | [QUL-006 (Test Summary)](file:///Users/juns/FocusMate/docs/03_quality/QUL-006_Test_Execution_Summary_Report.md) |
 | **Code Quality** | CC < 10, Zero Critical Defects | [QUL-003 (Quality Metrics)](file:///Users/juns/FocusMate/docs/03_quality/QUL-003_Quality_Metrics.md) |
 | **ISO Standards** | Formal 25010 Mapping | [ISO-25010-Report](file:///Users/juns/FocusMate/docs/00_overview/ISO-25010-Report.md) |
+| **Optimization Audit** | 100% DTZ003 & B904 Fixed (Core) | [QUL-003 (Quality Metrics)](file:///Users/juns/FocusMate/docs/03_quality/QUL-003_Quality_Metrics.md) |
 
 ---
 
@@ -48,3 +49,9 @@ We use a **Server-Side NTP-based Synchronization** logic to prevent client-side 
 ### 3. Visual Verification
 Detailed architectural diagrams showing the interaction between the WebSocket Gateway and Repository pattern.
 - [ARC-017 Architecture Diagram](file:///Users/juns/FocusMate/docs/02_architecture/ARC-017_Focus_Mate_Architecture.drawio)
+
+### 4. Cloud Deployment & Future Scalability
+The system is architected for seamless cloud transition:
+- **Frontend**: Successfully connected and deployed via **Vercel** for optimal global delivery.
+- **Backend**: Currently operational in a high-fidelity local/staging environment. Production deployment is deferred to the final launch phase to optimize cloud resource costs (billing management).
+- **AWS Expansion**: The production roadmap includes full migration to **AWS (Amazon Web Services)** using EC2 for compute, RDS for persistent storage, and S3 for encrypted file assets, ensuring enterprise-grade scalability.

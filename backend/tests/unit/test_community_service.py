@@ -143,8 +143,8 @@ class TestCommunityService:
                 comment_count=0,
                 is_pinned=False,
                 is_deleted=False,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ),
             Post(
                 id=post_id2,
@@ -156,8 +156,8 @@ class TestCommunityService:
                 comment_count=0,
                 is_pinned=False,
                 is_deleted=False,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ),
         ]
 
