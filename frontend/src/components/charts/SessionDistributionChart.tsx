@@ -22,33 +22,35 @@ export function SessionDistributionChart({
       className="w-full"
     >
       <div className="flex flex-col md:flex-row items-center gap-6">
-        {/* Chart */}
-        <div className="w-full md:w-1/2 min-h-[300px] h-[300px] md:h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={2}
-                dataKey="value"
-                animationDuration={1000}
-                animationEasing="ease-out"
-              >
-                {data.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.color}
-                    stroke="hsl(var(--background))"
-                    strokeWidth={2}
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip total={total} />} />
-            </PieChart>
-          </ResponsiveContainer>
+        {/* Chart - 반응형 컨테이너 with padding */}
+        <div className="w-full md:w-1/2 flex items-center justify-center p-4">
+          <div className="w-full aspect-square max-w-[400px] min-h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="40%"
+                  outerRadius="70%"
+                  paddingAngle={2}
+                  dataKey="value"
+                  animationDuration={1000}
+                  animationEasing="ease-out"
+                >
+                  {data.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.color}
+                      stroke="hsl(var(--background))"
+                      strokeWidth={2}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip total={total} />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Legend */}

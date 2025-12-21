@@ -186,7 +186,7 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
 
       return {
         date: `${date.getMonth() + 1}/${date.getDate()}`,
-        hours: day.focusTime / 60,
+        hours: Math.round((day.focusTime / 60) * 10) / 10,
         sessions: daySessions.length,
       };
     });
@@ -250,7 +250,7 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
 
     return dailyStats.map((day) => ({
       date: day.date,
-      hours: day.focusTime / 60,
+      hours: Math.round((day.focusTime / 60) * 10) / 10,
       sessions: stats.sessions.filter(
         (s) =>
           new Date(s.completedAt).toISOString().split("T")[0] === day.date &&
@@ -531,9 +531,11 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
 
             {/* Session Distribution */}
             {chartData.sessionDistribution.length > 0 && (
-              <div className="rounded-xl border border-border bg-card p-6">
+              <div className="rounded-xl border border-border bg-card p-4 md:p-6 overflow-hidden">
                 <h3 className="text-lg font-semibold mb-4">세션 분포</h3>
-                <SessionDistributionChart data={chartData.sessionDistribution} />
+                <div className="w-full overflow-visible">
+                  <SessionDistributionChart data={chartData.sessionDistribution} />
+                </div>
               </div>
             )}
           </div>
@@ -563,7 +565,7 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
             {weeklyGoal ? (
               <GoalProgressRing
                 current={Math.round((weeklyGoal.current_value / 60) * 10) / 10}
-                goal={weeklyGoal.goal_value / 60}
+                goal={Math.round((weeklyGoal.goal_value / 60) * 10) / 10}
                 label="주간 목표"
               />
             ) : (
