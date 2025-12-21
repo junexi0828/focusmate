@@ -2,7 +2,7 @@
 
 import secrets
 import string
-from datetime import UTC
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.ranking.schemas import (
@@ -218,9 +218,8 @@ class RankingService:
             return False
 
         # Check if invitation has expired
-        from datetime import datetime
 
-        if invitation.expires_at < datetime.utcnow():
+        if invitation.expires_at < datetime.now(UTC):
             await self.repository.update_invitation_status(invitation_id, "expired")
             return False
 
@@ -354,7 +353,6 @@ class RankingService:
         self, request_id: UUID, approved: bool, admin_note: str, admin_id: str
     ) -> bool:
         """Review a verification request (admin only)."""
-        from datetime import datetime
 
         request = await self.repository.get_verification_request_by_id(request_id)
         if not request or request.status != "pending":
@@ -364,7 +362,7 @@ class RankingService:
         update_data = {
             "status": "approved" if approved else "rejected",
             "admin_note": admin_note,
-            "reviewed_at": datetime.utcnow(),
+            "reviewed_at": datetime.now(UTC),
             "reviewed_by": admin_id,
         }
 
@@ -497,7 +495,7 @@ class RankingService:
         members = await self.repository.get_team_members(team_id)
 
         # Calculate consecutive success streak (actual implementation)
-        from datetime import datetime, timedelta
+        from datetime import timedelta
 
         # Get all successful sessions for the team
         all_sessions = await self.repository.get_team_sessions(team_id, limit=10000)

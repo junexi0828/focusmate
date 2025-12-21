@@ -1,6 +1,6 @@
 """Notification repository."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,7 +111,7 @@ class NotificationRepository:
         result = await self.db.execute(
             update(Notification)
             .where(Notification.user_id == user_id, Notification.is_read == False)
-            .values(is_read=True, read_at=datetime.utcnow())
+            .values(is_read=True, read_at=datetime.now(UTC))
         )
         await self.db.commit()
         return result.rowcount

@@ -19,7 +19,7 @@ async def client():
 @pytest.fixture
 def auth_headers(test_user):
     """Create authentication headers with valid JWT token."""
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
 
     from jose import jwt
 
@@ -29,8 +29,8 @@ def auth_headers(test_user):
     payload = {
         "sub": test_user["id"],
         "email": test_user["email"],
-        "exp": datetime.utcnow() + timedelta(hours=1),
-        "iat": datetime.utcnow(),
+        "exp": datetime.now(UTC) + timedelta(hours=1),
+        "iat": datetime.now(UTC),
     }
 
     token = jwt.encode(

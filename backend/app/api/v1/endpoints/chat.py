@@ -40,8 +40,8 @@ from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 from app.infrastructure.repositories.chat_repository import ChatRepository
 from app.infrastructure.repositories.friend_repository import FriendRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.storage.chat_storage import ChatFileUploadService
 from app.infrastructure.websocket.chat_manager import connection_manager
-from app.services.chat_file_upload import ChatFileUploadService
 
 
 router = APIRouter(prefix="/chats", tags=["chats"])

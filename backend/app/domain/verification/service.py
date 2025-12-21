@@ -1,7 +1,7 @@
 """Service layer for user verification."""
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.verification.schemas import (
@@ -171,7 +171,7 @@ class VerificationService:
                     verification.verification_id,
                     {
                         "verification_status": "approved",
-                        "verified_at": datetime.utcnow(),
+                        "verified_at": datetime.now(UTC),
                         "admin_note": "SMTP 전송 성공으로 자동 승인되었습니다.",
                     },
                 )
@@ -295,7 +295,7 @@ class VerificationService:
         update_data = {
             "verification_status": "approved" if approved else "rejected",
             "admin_note": admin_note,
-            "verified_at": datetime.utcnow() if approved else None,
+            "verified_at": datetime.now(UTC) if approved else None,
         }
 
         verification = await self.repository.update_verification(

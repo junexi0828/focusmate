@@ -72,76 +72,351 @@ FocusMate 시스템
 
     async def send_verification_approved_email(
         self,
-        team_name: str = "",
-        leader_email: str = "",
+        to_email: str,
+        team_name: str,
+        username: str,
         admin_note: str | None = None,
     ) -> bool:
-        """Send email notification when verification is approved."""
-        subject = f"[FocusMate] {team_name} 인증이 승인되었습니다 ✅"
-        body = f"""안녕하세요,
+        """Send verification approval email with HTML template."""
+        subject = f"[Focus Mate] {team_name} 팀 인증 승인"
 
-축하합니다! {team_name}의 학교 인증이 승인되었습니다.
+        reason_html = f"<p><strong>관리자 메모:</strong> {admin_note}</p>" if admin_note else ""
+        reason_text = f"\n관리자 메모: {admin_note}\n" if admin_note else ""
 
-이제 인증된 팀으로 랭킹전에 참여하실 수 있습니다.
-"""
-        if admin_note:
-            body += f"\n관리자 메모: {admin_note}\n"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 30px;
+                    border-radius: 10px 10px 0 0;
+                    text-align: center;
+                }}
+                .content {{
+                    background: #f9fafb;
+                    padding: 30px;
+                    border-radius: 0 0 10px 10px;
+                }}
+                .success-badge {{
+                    display: inline-block;
+                    background: #10b981;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    margin: 20px 0;
+                }}
+                .button {{
+                    display: inline-block;
+                    background: #667eea;
+                    color: white;
+                    padding: 12px 24px;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    margin: 20px 0;
+                }}
+                .footer {{
+                    text-align: center;
+                    color: #6b7280;
+                    font-size: 14px;
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e5e7eb;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🎉 인증이 승인되었습니다!</h1>
+            </div>
+            <div class="content">
+                <p>안녕하세요, {username}님!</p>
 
-        body += """감사합니다.
-FocusMate 팀
-"""
-        return await self._send_email(leader_email, subject, body)
+                <div class="success-badge">✅ 승인 완료</div>
+
+                <p><strong>{team_name}</strong> 팀의 인증 요청이 승인되었습니다.</p>
+                {reason_html}
+
+                <p>이제 다음 기능을 사용하실 수 있습니다:</p>
+                <ul>
+                    <li>🏆 랭킹전 참여</li>
+                    <li>👥 팀 활동 기록</li>
+                    <li>📊 팀 통계 확인</li>
+                    <li>🎯 명예의 전당 등재</li>
+                </ul>
+
+                <p>팀원들과 함께 집중력을 높이고 목표를 달성하세요!</p>
+
+                <div style="text-align: center;">
+                    <a href="https://focusmate.com/ranking" class="button">랭킹 확인하기</a>
+                </div>
+            </div>
+            <div class="footer">
+                <p>Focus Mate - 함께 집중하는 힘</p>
+                <p>이 이메일은 자동으로 발송되었습니다.</p>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+        안녕하세요, {username}님!
+
+        {team_name} 팀의 인증 요청이 승인되었습니다.
+        {reason_text}
+        이제 랭킹전에 참여하실 수 있습니다.
+
+        Focus Mate - 함께 집중하는 힘
+        """
+        return await self._send_email(to_email, subject, text_content, html_content)
 
     async def send_verification_rejected_email(
         self,
+        to_email: str,
         team_name: str,
-        leader_email: str,
+        username: str,
         admin_note: str | None = None,
     ) -> bool:
-        """Send email notification when verification is rejected."""
-        subject = f"[FocusMate] {team_name} 인증이 반려되었습니다"
-        body = f"""안녕하세요,
+        """Send verification rejection email with HTML template."""
+        subject = f"[Focus Mate] {team_name} 팀 인증 거부"
 
-{team_name}의 학교 인증 요청이 반려되었습니다.
-"""
-        if admin_note:
-            body += f"\n반려 사유: {admin_note}\n\n"
+        reason_html = f"<p><strong>거부 사유:</strong> {admin_note}</p>" if admin_note else ""
+        reason_text = f"\n거부 사유: {admin_note}\n" if admin_note else ""
 
-        body += """서류를 보완하여 다시 신청하실 수 있습니다.
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+                    color: white;
+                    padding: 30px;
+                    border-radius: 10px 10px 0 0;
+                    text-align: center;
+                }}
+                .content {{
+                    background: #f9fafb;
+                    padding: 30px;
+                    border-radius: 0 0 10px 10px;
+                }}
+                .warning-badge {{
+                    display: inline-block;
+                    background: #ef4444;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    margin: 20px 0;
+                }}
+                .button {{
+                    display: inline-block;
+                    background: #667eea;
+                    color: white;
+                    padding: 12px 24px;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    margin: 20px 0;
+                }}
+                .footer {{
+                    text-align: center;
+                    color: #6b7280;
+                    font-size: 14px;
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e5e7eb;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>❌ 인증이 거부되었습니다</h1>
+            </div>
+            <div class="content">
+                <p>안녕하세요, {username}님!</p>
 
-감사합니다.
-FocusMate 팀
-"""
-        return await self._send_email(leader_email, subject, body)
+                <div class="warning-badge">거부됨</div>
+
+                <p><strong>{team_name}</strong> 팀의 인증 요청이 거부되었습니다.</p>
+
+                {reason_html}
+
+                <p>다음 사항을 확인하신 후 다시 신청해주세요:</p>
+                <ul>
+                    <li>📸 인증 사진이 명확한지 확인</li>
+                    <li>👥 모든 팀원이 포함되었는지 확인</li>
+                    <li>📝 팀 정보가 정확한지 확인</li>
+                </ul>
+
+                <p>문의사항이 있으시면 관리자에게 연락해주세요.</p>
+
+                <div style="text-align: center;">
+                    <a href="https://focusmate.com/ranking/verification" class="button">다시 신청하기</a>
+                </div>
+            </div>
+            <div class="footer">
+                <p>Focus Mate - 함께 집중하는 힘</p>
+                <p>이 이메일은 자동으로 발송되었습니다.</p>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+        안녕하세요, {username}님!
+
+        {team_name} 팀의 인증 요청이 거부되었습니다.
+        {reason_text}
+        다시 신청해주세요.
+
+        Focus Mate - 함께 집중하는 힘
+        """
+        return await self._send_email(to_email, subject, text_content, html_content)
 
     async def send_team_invitation_email(
         self,
         team_name: str,
         invitee_email: str,
         invite_link: str,
+        inviter_name: str = "FocusMate",
     ) -> bool:
-        """Send team invitation email."""
-        subject = f"[FocusMate] {team_name}에서 초대했습니다"
-        body = f"""
-안녕하세요,
+        """Send team invitation email with HTML template."""
+        subject = f"[Focus Mate] {inviter_name}님이 {team_name} 팀에 초대했습니다"
 
-{team_name}에서 회원님을 팀원으로 초대했습니다.
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 30px;
+                    border-radius: 10px 10px 0 0;
+                    text-align: center;
+                }}
+                .content {{
+                    background: #f9fafb;
+                    padding: 30px;
+                    border-radius: 0 0 10px 10px;
+                }}
+                .invite-badge {{
+                    display: inline-block;
+                    background: #3b82f6;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    margin: 20px 0;
+                }}
+                .button {{
+                    display: inline-block;
+                    background: #10b981;
+                    color: white;
+                    padding: 12px 24px;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    margin: 20px 0;
+                    font-weight: bold;
+                }}
+                .button:hover {{
+                    background: #059669;
+                }}
+                .footer {{
+                    text-align: center;
+                    color: #6b7280;
+                    font-size: 14px;
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e5e7eb;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🎊 팀 초대장이 도착했습니다!</h1>
+            </div>
+            <div class="content">
+                <p>안녕하세요!</p>
 
-아래 링크를 클릭하여 초대를 수락하세요:
-{invite_link}
+                <div class="invite-badge">📨 초대</div>
 
-초대는 7일 후 만료됩니다.
+                <p><strong>{inviter_name}</strong>님이 <strong>{team_name}</strong> 팀에 초대했습니다.</p>
 
-감사합니다.
-FocusMate 팀
-"""
-        return await self._send_email(invitee_email, subject, body)
+                <p>팀에 참여하면 다음을 할 수 있습니다:</p>
+                <ul>
+                    <li>🏆 팀원들과 함께 랭킹전 참여</li>
+                    <li>📊 팀 통계 및 성과 확인</li>
+                    <li>💬 팀 채팅으로 소통</li>
+                    <li>🎯 공동 목표 달성</li>
+                </ul>
+
+                <p>아래 버튼을 클릭하여 초대를 수락하세요!</p>
+
+                <div style="text-align: center;">
+                    <a href="{invite_link}" class="button">초대 수락하기</a>
+                </div>
+
+                <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
+                    초대 링크: <a href="{invite_link}">{invite_link}</a>
+                </p>
+            </div>
+            <div class="footer">
+                <p>Focus Mate - 함께 집중하는 힘</p>
+                <p>이 이메일은 자동으로 발송되었습니다.</p>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+        안녕하세요!
+
+        {inviter_name}님이 {team_name} 팀에 초대했습니다.
+
+        초대를 수락하려면 아래 링크를 클릭하세요:
+        {invite_link}
+
+        Focus Mate - 함께 집중하는 힘
+        """
+        return await self._send_email(invitee_email, subject, text_content, html_content)
 
     async def _send_email(
         self,
         to_email: str,
         subject: str,
-        body: str,
+        text_content: str,
+        html_content: str | None = None,
     ) -> bool:
         """Send email using aiosmtplib.
 
@@ -183,7 +458,13 @@ FocusMate 팀
                 from_email = self.from_email
             msg["From"] = f"{self.from_name} <{from_email}>"
             msg["To"] = to_email
-            msg.attach(MIMEText(body, "plain", "utf-8"))
+
+            # Attach plain text
+            msg.attach(MIMEText(text_content, "plain", "utf-8"))
+
+            # Attach HTML if provided
+            if html_content:
+                msg.attach(MIMEText(html_content, "html", "utf-8"))
 
             logger.info(
                 f"[EMAIL] 📤 Attempting to send email to {to_email} via {self.smtp_host}:{self.smtp_port}"

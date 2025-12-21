@@ -126,14 +126,14 @@ async def invite_member(
 
         # Send invitation email
         try:
-            from app.infrastructure.database.repositories.ranking_repository import (
+            from app.infrastructure.database.session import get_db
+            from app.infrastructure.email.email_service import email_service
+            from app.infrastructure.repositories.ranking_repository import (
                 RankingRepository,
             )
-            from app.infrastructure.database.repositories.user_repository import (
+            from app.infrastructure.repositories.user_repository import (
                 UserRepository,
             )
-            from app.infrastructure.database.session import get_db
-            from app.services.email_service import email_service
 
             async for db in get_db():
                 repo = RankingRepository(db)
@@ -146,11 +146,11 @@ async def invite_member(
                     # Generate invitation link
                     invitation_link = f"https://focusmate.com/ranking/invitations/{result['invitation_id']}"
 
-                    email_service.send_team_invitation(
+                    await email_service.send_team_invitation_email(
                         to_email=invitation_data.email,
                         team_name=team.team_name,
                         inviter_name=inviter.username or inviter.email.split("@")[0],
-                        invitation_link=invitation_link,
+                        invite_link=invitation_link,
                     )
                 break
         except Exception as e:
@@ -267,42 +267,71 @@ async def get_leaderboard(
         else:  # all_time
             start_date = datetime.min.replace(tzinfo=UTC)
 
-        # Calculate scores for each team based on RankingSession
+        # Optimized: Batch query all team stats at once (fixes N+1 problem)
+        from app.infrastructure.database.models.ranking import RankingTeamMember
+        
+        team_ids = [team.team_id for team in teams]
+        
+        # Batch query: Get all session stats in one query
+        sessions_result = await db.execute(
+            select(
+                RankingSession.team_id,
+                func.sum(RankingSession.duration_minutes).label("total_minutes"),
+                func.count(RankingSession.session_id).label("total_sessions"),
+            )
+            .where(RankingSession.team_id.in_(team_ids))
+            .where(RankingSession.completed_at >= start_date)
+            .where(RankingSession.success == True)
+            .where(RankingSession.session_type == "work")
+            .group_by(RankingSession.team_id)
+        )
+        session_stats_map = {
+            row.team_id: {
+                "total_minutes": float(row.total_minutes or 0),
+                "total_sessions": int(row.total_sessions or 0),
+            }
+            for row in sessions_result.all()
+        }
+        
+        # Batch query: Get all game scores in one query
+        games_result = await db.execute(
+            select(
+                RankingMiniGame.team_id,
+                func.sum(RankingMiniGame.score).label("total_game_score"),
+            )
+            .where(RankingMiniGame.team_id.in_(team_ids))
+            .where(RankingMiniGame.played_at >= start_date)
+            .group_by(RankingMiniGame.team_id)
+        )
+        game_stats_map = {
+            row.team_id: int(row.total_game_score or 0)
+            for row in games_result.all()
+        }
+        
+        # Batch query: Get all member counts in one query
+        members_result = await db.execute(
+            select(
+                RankingTeamMember.team_id,
+                func.count(RankingTeamMember.member_id).label("member_count"),
+            )
+            .where(RankingTeamMember.team_id.in_(team_ids))
+            .group_by(RankingTeamMember.team_id)
+        )
+        member_count_map = {
+            row.team_id: int(row.member_count or 0)
+            for row in members_result.all()
+        }
+        
+        # Calculate scores for each team using pre-fetched data
         leaderboard_data = []
         for team in teams:
-            # Calculate session stats from RankingSession table
-            sessions_result = await db.execute(
-                select(
-                    func.sum(RankingSession.duration_minutes).label("total_minutes"),
-                    func.count(RankingSession.session_id).label("total_sessions"),
-                )
-                .where(RankingSession.team_id == team.team_id)
-                .where(RankingSession.completed_at >= start_date)
-                .where(RankingSession.success == True)
-                .where(RankingSession.session_type == "work")
-            )
-            session_stats = sessions_result.first()
-
-            total_minutes = float(session_stats.total_minutes or 0)
-            total_sessions = int(session_stats.total_sessions or 0)
-
-            # Calculate mini-game score
-            games_result = await db.execute(
-                select(func.sum(RankingMiniGame.score).label("total_game_score"))
-                .where(RankingMiniGame.team_id == team.team_id)
-                .where(RankingMiniGame.played_at >= start_date)
-            )
-            game_stats = games_result.first()
-            total_game_score = int(game_stats.total_game_score or 0)
-
-            # Get member count
-            from app.infrastructure.database.models.ranking import RankingTeamMember
-            members_result = await db.execute(
-                select(func.count(RankingTeamMember.member_id))
-                .where(RankingTeamMember.team_id == team.team_id)
-            )
-            member_count = members_result.scalar() or 0
-
+            team_id = team.team_id
+            session_stats = session_stats_map.get(team_id, {"total_minutes": 0, "total_sessions": 0})
+            total_minutes = session_stats["total_minutes"]
+            total_sessions = session_stats["total_sessions"]
+            total_game_score = game_stats_map.get(team_id, 0)
+            member_count = member_count_map.get(team_id, 0)
+            
             # Calculate total score: focus time + session bonus + game score
             # Focus time in minutes + 5 points per session + game score / 10
             score = total_minutes + (total_sessions * 5) + (total_game_score / 10)
@@ -543,11 +572,11 @@ async def review_verification(
 
     # Send email notification
     try:
-        from app.infrastructure.database.repositories.ranking_repository import (
+        from app.infrastructure.database.session import get_db
+        from app.infrastructure.email.email_service import email_service
+        from app.infrastructure.repositories.ranking_repository import (
             RankingRepository,
         )
-        from app.infrastructure.database.session import get_db
-        from app.services.email_service import email_service
 
         # Get team and leader info
         async for db in get_db():
@@ -555,20 +584,23 @@ async def review_verification(
             verification = await repo.get_verification_by_id(verification_id)
             if verification and verification.team:
                 team = verification.team
-                leader = team.leader
+                # Use verification owner (leader) info
+                leader_email = verification.user.email if verification.user else ""
+                username = verification.user.username if verification.user else (leader_email.split("@")[0] if leader_email else "User")
 
                 if review.status == "approved":
-                    email_service.send_verification_approved(
-                        to_email=leader.email,
+                    await email_service.send_verification_approved_email(
+                        to_email=leader_email,
                         team_name=team.team_name,
-                        username=leader.username or leader.email.split("@")[0],
+                        username=username,
+                        admin_note=review.admin_note,
                     )
                 elif review.status == "rejected":
-                    email_service.send_verification_rejected(
-                        to_email=leader.email,
+                    await email_service.send_verification_rejected_email(
+                        to_email=leader_email,
                         team_name=team.team_name,
-                        username=leader.username or leader.email.split("@")[0],
-                        reason=review.admin_note,
+                        username=username,
+                        admin_note=review.admin_note,
                     )
             break
     except Exception as e:
