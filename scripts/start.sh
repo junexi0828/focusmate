@@ -223,15 +223,19 @@ setup_backend() {
         else
             if echo "$DATABASE_URL" | grep -qi "supabase"; then
                 echo -e "${GREEN}✅ Supabase connection detected${NC}"
-                if echo "$DATABASE_URL" | grep -qoE "xevhqwaxxlcsqzhmawjr|db\.[a-z0-9]+\.supabase\.co"; then
-                    SUPABASE_PROJECT=$(echo "$DATABASE_URL" | grep -oE "xevhqwaxxlcsqzhmawjr|db\.[a-z0-9]+\.supabase\.co" | head -1)
-                    if [[ "$SUPABASE_PROJECT" == "xevhqwaxxlcsqzhmawjr" ]]; then
-                        SUPABASE_URL="https://supabase.com/dashboard/project/xevhqwaxxlcsqzhmawjr"
-                    elif [[ "$SUPABASE_PROJECT" =~ ^db\. ]]; then
-                        PROJECT_REF=$(echo "$SUPABASE_PROJECT" | sed 's/db\.\([^.]*\)\.supabase\.co/\1/')
-                        SUPABASE_URL="https://supabase.com/dashboard/project/$PROJECT_REF"
-                    fi
+            # Dynamically extract Supabase project ID from DATABASE_URL
+            if echo "$DATABASE_URL" | grep -qoE "postgres\.[a-z0-9]+|db\.[a-z0-9]+\.supabase\.co"; then
+                SUPABASE_PROJECT=$(echo "$DATABASE_URL" | grep -oE "postgres\.[a-z0-9]+|db\.[a-z0-9]+\.supabase\.co" | head -1)
+                if [[ "$SUPABASE_PROJECT" =~ ^postgres\. ]]; then
+                    # Extract project ID from postgres.PROJECT_ID format
+                    PROJECT_REF=$(echo "$SUPABASE_PROJECT" | sed 's/postgres\.\([^@]*\).*/\1/')
+                    SUPABASE_URL="https://supabase.com/dashboard/project/$PROJECT_REF"
+                elif [[ "$SUPABASE_PROJECT" =~ ^db\. ]]; then
+                    # Extract project ID from db.PROJECT_ID.supabase.co format
+                    PROJECT_REF=$(echo "$SUPABASE_PROJECT" | sed 's/db\.\([^.]*\)\.supabase\.co/\1/')
+                    SUPABASE_URL="https://supabase.com/dashboard/project/$PROJECT_REF"
                 fi
+            fi
             elif echo "$DATABASE_URL" | grep -qi "localhost\|127.0.0.1"; then
                 echo -e "${GREEN}✅ Local PostgreSQL connection detected${NC}"
             else
@@ -257,6 +261,18 @@ setup_backend() {
     # 마이그레이션 실행
     print_section "$YELLOW" "🔄 Database Migrations"
     if [ -f "venv/bin/alembic" ]; then
+        # Check if alembic_version table exists (first-time setup)
+        if ! venv/bin/alembic current > /dev/null 2>&1; then
+            echo -e "${YELLOW}⚠️  Alembic version table not found. Initializing...${NC}"
+            if venv/bin/alembic stamp head; then
+                echo -e "${GREEN}✅ Alembic version table initialized${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Warning: Failed to initialize Alembic version table${NC}"
+                echo -e "${YELLOW}   This may be normal if tables already exist. Continuing...${NC}"
+            fi
+        fi
+        
+        # Run migrations
         if venv/bin/alembic upgrade head; then
             echo -e "${GREEN}✅ Database migrations completed successfully${NC}"
         else

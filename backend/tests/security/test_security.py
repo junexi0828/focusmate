@@ -76,7 +76,7 @@ class TestAuthentication:
 
     def test_expired_token_rejected(self, client):
         """Test that expired tokens are rejected."""
-        from datetime import datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
         from jose import jwt
 
@@ -86,8 +86,8 @@ class TestAuthentication:
         payload = {
             "sub": "test_user",
             "email": "test@example.com",
-            "exp": datetime.utcnow() - timedelta(hours=1),  # Expired
-            "iat": datetime.utcnow() - timedelta(hours=2)
+            "exp": datetime.now(UTC) - timedelta(hours=1),  # Expired
+            "iat": datetime.now(UTC) - timedelta(hours=2)
         }
         expired_token = jwt.encode(
             payload,

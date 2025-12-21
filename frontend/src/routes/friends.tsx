@@ -70,6 +70,8 @@ function FriendsComponent() {
       const response = await friendService.getFriends();
       return response.status === "success" ? response.data : { friends: [], total: 0 };
     },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Fetch received requests
@@ -79,6 +81,8 @@ function FriendsComponent() {
       const response = await friendService.getReceivedRequests(false);
       return response.status === "success" ? response.data : [];
     },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Fetch sent requests
@@ -88,6 +92,8 @@ function FriendsComponent() {
       const response = await friendService.getSentRequests();
       return response.status === "success" ? response.data : [];
     },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Send friend request
