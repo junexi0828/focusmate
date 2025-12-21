@@ -19,6 +19,7 @@ import { ko } from "date-fns/locale";
 import { api } from "../api/client";
 import { useNotifications } from "../hooks/useNotifications";
 import { useNavigate } from "@tanstack/react-router";
+import { authService } from "../features/auth/services/authService";
 
 interface Notification {
   notification_id: string;
@@ -52,7 +53,7 @@ export function NotificationBell() {
       return response.data;
     },
     refetchInterval: isOpen ? 5000 : 30000, // Refetch more frequently when open
-    enabled: !!localStorage.getItem("access_token"), // Only fetch when authenticated
+    enabled: authService.isAuthenticated() && !authService.isTokenExpired(), // Only fetch when authenticated and token is valid
     retry: 1,
   });
 
@@ -64,7 +65,7 @@ export function NotificationBell() {
       return response.data;
     },
     refetchInterval: 10000, // Refetch every 10 seconds
-    enabled: !!localStorage.getItem("access_token"), // Only fetch when authenticated
+    enabled: authService.isAuthenticated() && !authService.isTokenExpired(), // Only fetch when authenticated and token is valid
     retry: 1,
   });
 

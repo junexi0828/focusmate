@@ -40,7 +40,7 @@ export function Sidebar() {
     },
     refetchInterval: 30000, // 30초마다 갱신
     retry: 1,
-    enabled: !!user, // Only fetch when user is logged in
+    enabled: !!user && !authService.isTokenExpired(), // Only fetch when user is logged in and token is valid
   });
 
   const handleLogout = () => {
