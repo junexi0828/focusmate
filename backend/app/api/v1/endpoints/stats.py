@@ -1,6 +1,6 @@
 """Stats API endpoints."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import uuid4
 
@@ -204,19 +204,19 @@ async def get_user_stats(
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid date format. Use ISO format (YYYY-MM-DD)",
-                )
+                ) from e
 
         stats = await service.get_user_stats(user_id, days, start_dt, end_dt)
         return UserStatsResponse(**stats)
     except UnauthorizedException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve stats: {e!s}",
-        )
+        ) from e
 
 
 @router.get("/user/{user_id}/hourly-pattern", response_model=HourlyPatternResponse)
@@ -244,12 +244,12 @@ async def get_hourly_pattern(
         pattern = await service.get_hourly_pattern(user_id, days, offset_hours)
         return HourlyPatternResponse(**pattern)
     except UnauthorizedException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve hourly pattern: {e!s}",
-        )
+        ) from e
 
 
 @router.get(
@@ -277,12 +277,12 @@ async def get_monthly_comparison(
         comparison = await service.get_monthly_comparison(user_id, months)
         return MonthlyComparisonResponse(**comparison)
     except UnauthorizedException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve monthly comparison: {e!s}",
-        )
+        ) from e
 
 
 @router.get("/user/{user_id}/goal-achievement", response_model=GoalAchievementResponse)
@@ -318,12 +318,12 @@ async def get_goal_achievement(
         )
         return GoalAchievementResponse(**achievement)
     except UnauthorizedException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve goal achievement: {e!s}",
-        )
+        ) from e
 
 
 # User Goals Endpoints
@@ -398,8 +398,8 @@ async def get_user_goal(
             user_id=user_id,
             daily_goal_minutes=120,
             weekly_goal_sessions=5,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
 
     # Use the most recent goal

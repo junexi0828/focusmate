@@ -1,6 +1,6 @@
 """Ranking repository for database operations."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -124,7 +124,7 @@ class RankingRepository:
     async def create_invitation(self, invitation_data: dict) -> RankingTeamInvitation:
         """Create a team invitation."""
         # Set expiration to 7 days from now
-        invitation_data["expires_at"] = datetime.utcnow() + timedelta(days=7)
+        invitation_data["expires_at"] = datetime.now(UTC) + timedelta(days=7)
         invitation = RankingTeamInvitation(**invitation_data)
         self.session.add(invitation)
         await self.session.commit()
@@ -167,7 +167,7 @@ class RankingRepository:
 
         invitation.status = status
         if status == "accepted":
-            invitation.accepted_at = datetime.utcnow()
+            invitation.accepted_at = datetime.now(UTC)
 
         await self.session.commit()
         await self.session.refresh(invitation)
@@ -408,7 +408,7 @@ class RankingRepository:
         self, period: str = "all"
     ) -> list[dict]:
         """Get comprehensive leaderboard data for all teams."""
-        from datetime import datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
         from sqlalchemy import func
 
@@ -421,9 +421,9 @@ class RankingRepository:
         # Calculate date filter
         date_filter = None
         if period == "weekly":
-            date_filter = datetime.utcnow() - timedelta(days=7)
+            date_filter = datetime.now(UTC) - timedelta(days=7)
         elif period == "monthly":
-            date_filter = datetime.utcnow() - timedelta(days=30)
+            date_filter = datetime.now(UTC) - timedelta(days=30)
 
         # Get session stats
         session_query = (

@@ -1,7 +1,7 @@
 """Notification domain service."""
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.domain.notification.schemas import (
     NotificationCreate,
@@ -272,7 +272,7 @@ class NotificationService:
             notification = await self.repository.get_by_id(notification_id)
             if notification and not notification.is_read:
                 notification.is_read = True
-                notification.read_at = datetime.utcnow()
+                notification.read_at = datetime.now(UTC)
                 await self.repository.update(notification)
                 count += 1
         return count

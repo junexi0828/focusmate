@@ -1,6 +1,6 @@
 """Repository for matching pool operations."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -84,7 +84,7 @@ class MatchingPoolRepository:
             .where(MatchingPool.member_count == member_count)
             .where(MatchingPool.gender == opposite_gender)
             .where(MatchingPool.pool_id != exclude_pool_id)
-            .where(MatchingPool.expires_at > datetime.utcnow())
+            .where(MatchingPool.expires_at > datetime.now(UTC))
         )
         return list(result.scalars().all())
 
@@ -173,7 +173,7 @@ class MatchingPoolRepository:
         avg_wait_result = await self.session.execute(
             select(
                 func.avg(
-                    func.extract("epoch", datetime.utcnow() - MatchingPool.created_at)
+                    func.extract("epoch", datetime.now(UTC) - MatchingPool.created_at)
                     / 3600
                 )
             ).where(MatchingPool.status == "waiting")
@@ -214,7 +214,7 @@ class MatchingPoolRepository:
         result = await self.session.execute(
             select(MatchingPool)
             .where(MatchingPool.status == "waiting")
-            .where(MatchingPool.expires_at < datetime.utcnow())
+            .where(MatchingPool.expires_at < datetime.now(UTC))
         )
         expired_pools = result.scalars().all()
 

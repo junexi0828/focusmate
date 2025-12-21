@@ -244,7 +244,7 @@ async def websocket_notifications(
         if not user_id:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-    except Exception as e:
+    except Exception:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 

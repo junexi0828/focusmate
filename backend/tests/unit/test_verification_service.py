@@ -1,6 +1,6 @@
 """Unit tests for verification service."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -49,7 +49,7 @@ class TestVerificationService:
         mock_verification_obj.verification_status = "pending"
         mock_verification_obj.badge_visible = True
         mock_verification_obj.department_visible = True
-        mock_verification_obj.submitted_at = datetime.utcnow()
+        mock_verification_obj.submitted_at = datetime.now(UTC)
         mock_verification_obj.verified_at = None
         mock_verification_obj.submitted_documents = data.documents
 
@@ -83,8 +83,8 @@ class TestVerificationService:
         mock_verification_obj.verification_status = "approved"
         mock_verification_obj.badge_visible = True
         mock_verification_obj.department_visible = True
-        mock_verification_obj.submitted_at = datetime.utcnow()
-        mock_verification_obj.verified_at = datetime.utcnow()
+        mock_verification_obj.submitted_at = datetime.now(UTC)
+        mock_verification_obj.verified_at = datetime.now(UTC)
         mock_verification_obj.submitted_documents = []
 
         mock_verification_repository.update_verification.return_value = mock_verification_obj

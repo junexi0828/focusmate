@@ -39,7 +39,7 @@ async def get_timer_state(
     try:
         return await service.get_or_create_timer(room_id)
     except RoomNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
 
 
 @router.post("/{room_id}/start", response_model=TimerStateResponse)
@@ -54,9 +54,9 @@ async def start_timer(
     try:
         return await service.start_timer(room_id)
     except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
 
 
 @router.post("/{room_id}/pause", response_model=TimerStateResponse)
@@ -71,9 +71,9 @@ async def pause_timer(
     try:
         return await service.pause_timer(room_id)
     except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
 
 
 @router.post("/{room_id}/resume", response_model=TimerStateResponse)
@@ -88,9 +88,9 @@ async def resume_timer(
     try:
         return await service.resume_timer(room_id)
     except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
 
 
 @router.post("/{room_id}/reset", response_model=TimerStateResponse)
@@ -105,7 +105,7 @@ async def reset_timer(
     try:
         return await service.reset_timer(room_id)
     except (TimerNotFoundException, RoomNotFoundException) as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
 
 
 @router.post("/{room_id}/complete", response_model=TimerStateResponse)
@@ -121,8 +121,8 @@ async def complete_phase(
     try:
         return await service.complete_phase(room_id)
     except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except RoomNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e

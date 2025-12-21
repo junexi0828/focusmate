@@ -1,6 +1,6 @@
 """Unit tests for community service."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -100,8 +100,8 @@ class TestCommunityService:
             comment_count=0,
             is_pinned=False,
             is_deleted=False,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
 
         mock_user = User(

@@ -1,6 +1,6 @@
 """Service layer for matching proposals."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.chat.schemas import MatchingChatInfo
@@ -147,7 +147,7 @@ class ProposalService:
         ):
             # Both accepted - create chat room
             update_data["final_status"] = "matched"
-            update_data["matched_at"] = datetime.utcnow()
+            update_data["matched_at"] = datetime.now(UTC)
 
             # Create chat room
             chat_room = await self._create_matching_chat_room(proposal)
@@ -204,7 +204,7 @@ class ProposalService:
 
     async def get_proposal_statistics(self) -> dict:
         """Get comprehensive proposal statistics."""
-        from datetime import datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
         from sqlalchemy import func, select
 
@@ -276,7 +276,7 @@ class ProposalService:
         max_matching_time_hours = max_match_time_result.scalar() or 0.0
 
         # Daily matches (last 30 days)
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
         date_expr = func.date(MatchingProposal.matched_at).label("date")
         daily_matches_result = await self.proposal_repo.session.execute(
             select(
@@ -296,7 +296,7 @@ class ProposalService:
         ]
 
         # Weekly matches (last 12 weeks)
-        twelve_weeks_ago = datetime.utcnow() - timedelta(weeks=12)
+        twelve_weeks_ago = datetime.now(UTC) - timedelta(weeks=12)
         week_expr = func.date_trunc("week", MatchingProposal.matched_at).label("week")
         weekly_matches_result = await self.proposal_repo.session.execute(
             select(
@@ -316,7 +316,7 @@ class ProposalService:
         ]
 
         # Monthly matches (last 12 months)
-        twelve_months_ago = datetime.utcnow() - timedelta(days=365)
+        twelve_months_ago = datetime.now(UTC) - timedelta(days=365)
         month_expr = func.date_trunc("month", MatchingProposal.matched_at).label("month")
         monthly_matches_result = await self.proposal_repo.session.execute(
             select(

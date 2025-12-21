@@ -45,6 +45,8 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
     queryKey: ["user-goal", userId],
     queryFn: () => statsService.getGoal(),
     enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Fetch weekly goal for dashboard using user's goal settings
@@ -60,6 +62,8 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
       return response.data!;
     },
     enabled: !!userId,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false,
   });
 
   // 통계 데이터 변환

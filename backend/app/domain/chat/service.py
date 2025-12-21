@@ -13,9 +13,9 @@ from app.domain.chat.schemas import (
     TeamChatCreate,
     TeamChatCreateByEmail,
 )
+from app.infrastructure.email.email_service import EmailService
 from app.infrastructure.repositories.chat_repository import ChatRepository
 from app.infrastructure.repositories.user_repository import UserRepository
-from app.services.email_service import EmailService
 
 
 class ChatService:
@@ -179,11 +179,11 @@ class ChatService:
 
             for email in invitation_emails:
                 try:
-                    self.email_service.send_team_invitation(
-                        to_email=email,
+                    await self.email_service.send_team_invitation_email(
+                        invitee_email=email,
                         team_name=data.room_name,
                         inviter_name=creator_username,
-                        invitation_link=invitation_link,
+                        invite_link=invitation_link,
                     )
                 except Exception as e:
                     # Log but don't fail - room is already created
