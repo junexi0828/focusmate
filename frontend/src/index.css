@@ -248,46 +248,4 @@
   }
 }
 
-/* System preference fallback */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --background: #020617;
-    --foreground: #f9fafb;
-    --card: #0b1120;
-    --card-foreground: #f9fafb;
-    --popover: #0b1120;
-    --popover-foreground: #f9fafb;
-    --primary: #7ed6e8;
-    --primary-foreground: #020617;
-    --secondary: #f9a8d4;
-    --secondary-foreground: #020617;
-    --success: #2dd4bf;
-    --success-foreground: #020617;
-    --warning: #fbbf24;
-    --warning-foreground: #020617;
-    --destructive: #f87171;
-    --destructive-foreground: #020617;
-    --muted: #0b1120;
-    --muted-foreground: #9ca3af;
-    --accent: #1e3a4c;
-    --accent-foreground: #f9fafb;
-    --border: #1e293b;
-    --input: #0b1120;
-    --input-background: #0b1120;
-    --switch-background: #1e293b;
-    --ring: #7ed6e8;
-    --chart-1: #7ed6e8;
-    --chart-2: #f9a8d4;
-    --chart-3: #2dd4bf;
-    --chart-4: #fbbf24;
-    --chart-5: #fce7f5;
-    --sidebar: #020617;
-    --sidebar-foreground: #f9fafb;
-    --sidebar-primary: #7ed6e8;
-    --sidebar-primary-foreground: #020617;
-    --sidebar-accent: #0b1120;
-    --sidebar-accent-foreground: #f9fafb;
-    --sidebar-border: #1e293b;
-    --sidebar-ring: #7ed6e8;
-  }
-}
+/* removed @media (prefers-color-scheme: dark) to prevent flickering without classes */
