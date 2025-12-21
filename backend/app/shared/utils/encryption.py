@@ -17,7 +17,7 @@ from app.core.config import settings
 class EncryptionService:
     """Service for encrypting and decrypting sensitive data."""
 
-    def __init__(self, encryption_key: str | None = None):
+    def __init__(self, encryption_key: str | None = None) -> None:
         """Initialize encryption service.
 
         Args:
@@ -56,8 +56,7 @@ class EncryptionService:
             salt=salt,
             iterations=100000,  # Standard PBKDF2 iterations
         )
-        key = base64.urlsafe_b64encode(kdf.derive(secret.encode()))
-        return key
+        return base64.urlsafe_b64encode(kdf.derive(secret.encode()))
 
     def encrypt(self, data: bytes) -> bytes:
         """Encrypt data.
@@ -84,8 +83,9 @@ class EncryptionService:
         """
         try:
             return self.cipher.decrypt(encrypted_data)
-        except InvalidToken:
-            raise ValueError("Failed to decrypt data: invalid token")
+        except InvalidToken as e:
+            error_msg = "Failed to decrypt data: invalid token"
+            raise ValueError(error_msg) from e
 
     def encrypt_string(self, text: str) -> str:
         """Encrypt a string and return base64-encoded result.
@@ -116,7 +116,8 @@ class EncryptionService:
             decrypted = self.decrypt(encrypted_bytes)
             return decrypted.decode("utf-8")
         except (ValueError, binascii.Error) as e:
-            raise ValueError(f"Failed to decrypt string: {e}")
+            error_msg = f"Failed to decrypt string: {e}"
+            raise ValueError(error_msg) from e
 
 
 # Global encryption service instance

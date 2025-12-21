@@ -3,11 +3,12 @@
 ISO/IEC 25010 Quality Standards Compliant.
 """
 
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,45 +21,46 @@ from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager.
 
     Handles startup and shutdown events.
     """
+    logger = logging.getLogger("app")
     # Startup
-    print("🚀 Starting Focus Mate Backend...")
-    print(f"📍 Environment: {settings.APP_ENV}")
-    print(f"🗄️  Database: {settings.DATABASE_URL.split('://')[0]}")
+    logger.info("🚀 Starting Focus Mate Backend...")
+    logger.info("📍 Environment: %s", settings.APP_ENV)
+    logger.info("🗄️ Database: %s", settings.DATABASE_URL.split("://")[0])
 
     if settings.DEV_RESET_DB and settings.is_development:
-        print("⚠️  Resetting database (development only)...")
+        logger.warning("⚠️ Resetting database (development only)...")
 
     # Initialize database
     await init_db()
-    print("✅ Database initialized")
+    logger.info("✅ Database initialized")
 
     # Initialize Redis Pub/Sub
     try:
         await redis_pubsub_manager.connect()
         await redis_pubsub_manager.start_listener()
-        print("✅ Redis Pub/Sub initialized")
-    except Exception as e:
-        print(f"⚠️  Redis Pub/Sub initialization failed: {e}")
+        logger.info("✅ Redis Pub/Sub initialized")
+    except Exception:
+        logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
     yield
 
     # Shutdown
-    print("🛑 Shutting down Focus Mate Backend...")
+    logger.info("🛑 Shutting down Focus Mate Backend...")
 
     # Disconnect Redis
     try:
         await redis_pubsub_manager.disconnect()
-        print("✅ Redis Pub/Sub disconnected")
+        logger.info("✅ Redis Pub/Sub disconnected")
     except Exception:
-        pass
+        logger.exception("⚠️ Error disconnecting Redis")
 
     await close_db()
-    print("✅ Database connections closed")
+    logger.info("✅ Database connections closed")
 
 
 # Create FastAPI application
@@ -77,12 +79,13 @@ app = FastAPI(
 # CORS middleware - must be added before routes
 # This ensures OPTIONS preflight requests are handled correctly
 # Allow ngrok URLs in development using regex pattern
+ngrok_regex = r"https://.*\.ngrok(-free)?\.(app|io)"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_origin_regex=r"https://.*\.ngrok(-free)?\.(app|io)" if settings.is_development else None,  # Allow ngrok URLs in dev
+    allow_origin_regex=ngrok_regex if settings.is_development else None,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # Explicitly include OPTIONS
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],  # Allow all headers including Authorization
     expose_headers=["*"],  # Expose all headers
     max_age=3600,  # Cache preflight requests for 1 hour
@@ -91,7 +94,7 @@ app.add_middleware(
 
 # Exception handler for custom exceptions
 @app.exception_handler(AppException)
-async def app_exception_handler(request, exc: AppException):
+async def app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
     """Handle custom application exceptions."""
     return JSONResponse(
         status_code=400,
@@ -108,7 +111,7 @@ async def app_exception_handler(request, exc: AppException):
 
 # Health check endpoint
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {
         "status": "healthy",
@@ -128,12 +131,18 @@ uploads_dir.mkdir(exist_ok=True)
 # Mount chat uploads
 chat_uploads_dir = uploads_dir / "chat"
 chat_uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads/chat", StaticFiles(directory=str(chat_uploads_dir)), name="chat_uploads")
+app.mount(
+    "/uploads/chat", StaticFiles(directory=str(chat_uploads_dir)), name="chat_uploads"
+)
 
 # Mount verification uploads
 verification_uploads_dir = uploads_dir / "verification"
 verification_uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads/verification", StaticFiles(directory=str(verification_uploads_dir)), name="verification_uploads")
+app.mount(
+    "/uploads/verification",
+    StaticFiles(directory=str(verification_uploads_dir)),
+    name="verification_uploads",
+)
 
 
 if __name__ == "__main__":

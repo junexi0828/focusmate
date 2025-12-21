@@ -374,22 +374,50 @@ SELECT COUNT(*) FROM ranking_teams;
 
 ### 관리자
 ```
-이메일: junexi@naver.com
+이메일: admin@focusmate.dev (또는 .env의 ADMIN_EMAIL 값)
 비밀번호: admin123
-이름: juns
+이름: admin
 ```
 
 ```
-이메일: sc82.choi@pknu.ac.kr
+이메일: admin2@example.com
 비밀번호: admin123
-이름: sc82
+이름: admin2
 ```
 
 ### 일반 사용자
 ```
-이메일: user1@test.com ~ user5@test.com
+이메일: user1@example.com
 비밀번호: password123
-이름: 김도윤, 김지운, 심동혁, 유재성, 김시은
+이름: 김도윤 (부경대학교)
+
+이메일: user2@example.com
+비밀번호: password123
+이름: 김지운 (부경대학교)
+
+이메일: user3@example.com
+비밀번호: password123
+이름: 심동혁 (부경대학교)
+
+이메일: user4@example.com
+비밀번호: password123
+이름: 유재성 (부경대학교)
+
+이메일: user5@example.com
+비밀번호: password123
+이름: 김시은 (부경대학교)
+
+이메일: user6@example.com
+비밀번호: password123
+이름: 이민수 (부경대학교)
+
+이메일: user7@example.com
+비밀번호: password123
+이름: 박지현 (부경대학교)
+
+이메일: user8@example.com
+비밀번호: password123
+이름: 최영희 (부경대학교)
 ```
 
 ---

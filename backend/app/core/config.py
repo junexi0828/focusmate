@@ -202,11 +202,33 @@ class Settings(BaseSettings):
     STORAGE_LOCAL_PATH: str = "./uploads"
     STORAGE_MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
 
-    # AWS S3 (optional)
+    # ==========================================================================
+    # Cloud Expansion Roadmap (AWS Strategy) 프로덕션 전에 서버 가동
+    # ==========================================================================
+    # These settings are prepared for production-grade scaling on AWS.
+    # Currently operational via high-fidelity local/staging mocks.
+
+    # AWS S3 (S3 Storage Strategy)
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_S3_BUCKET: str = ""
     AWS_S3_REGION: str = "us-east-1"
+    # AWS_S3_ENDPOINT_URL: str | None = None  # For local S3 mocks like LocalStack
+    # AWS_S3_SIGNATURE_VERSION: str = "s3v4"
+
+    # AWS RDS (Database Scaling Strategy)
+    # Production database connection handles would be configured here:
+    # RDS_HOSTNAME: str = ""
+    # RDS_PORT: int = 5432
+    # RDS_DB_NAME: str = "focusmate_prod"
+    # RDS_USERNAME: str = ""
+    # RDS_PASSWORD: str = ""
+
+    # AWS SES (Enterprise Email Strategy)
+    # SES_REGION: str = "us-east-1"
+    # SES_ACCESS_KEY_ID: str = ""
+    # SES_SECRET_ACCESS_KEY: str = ""
+    # SES_SENDER_EMAIL: str = "noreply@focusmate.com"
 
     # ==========================================================================
     # Push Notifications
