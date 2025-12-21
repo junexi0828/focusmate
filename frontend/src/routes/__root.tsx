@@ -1,4 +1,5 @@
 import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { Toaster } from "sonner";
 import { Sidebar } from "../components/Sidebar";
@@ -13,6 +14,39 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const location = useLocation();
+
+  // Unified theme initialization
+  useEffect(() => {
+    const applyTheme = () => {
+      const savedTheme = localStorage.getItem("theme");
+      const root = document.documentElement;
+      root.classList.remove("light", "dark");
+
+      if (savedTheme === "dark") {
+        root.classList.add("dark");
+      } else if (savedTheme === "light") {
+        root.classList.add("light");
+      } else {
+        // Fallback to system preference if no specific theme is saved
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        root.classList.add(prefersDark ? "dark" : "light");
+      }
+    };
+
+    applyTheme();
+
+    // Optional: Listen for system theme changes if no explicit theme is set
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => {
+      if (!localStorage.getItem("theme")) {
+        applyTheme();
+      }
+    };
+
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
+
   // Hide sidebar on login page
   const isLoginPage = location.pathname === "/login";
 
