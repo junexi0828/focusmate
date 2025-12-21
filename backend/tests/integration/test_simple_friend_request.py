@@ -1,7 +1,9 @@
 """Simple test for friend request to debug the issue."""
 
 import asyncio
+
 import httpx
+
 
 BASE_URL = "http://localhost:8000/api/v1"
 
@@ -20,7 +22,7 @@ async def test():
             return
 
         token1 = response.json()["access_token"]
-        print(f"   ✓ Got token")
+        print("   ✓ Got token")
 
         # Login user2
         print("\n2. Logging in user2...")

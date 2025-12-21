@@ -1,6 +1,7 @@
 """Presence repository."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,25 +24,24 @@ class PresenceRepository:
         if existing:
             # Update existing
             existing.is_online = is_online
-            existing.last_seen_at = datetime.now(timezone.utc)
+            existing.last_seen_at = datetime.now(UTC)
             if status_message is not None:
                 existing.status_message = status_message
             await self.session.commit()
             await self.session.refresh(existing)
             return existing
-        else:
-            # Create new
-            presence = UserPresence(
-                id=user_id,
-                is_online=is_online,
-                last_seen_at=datetime.now(timezone.utc),
-                connection_count=0,
-                status_message=status_message,
-            )
-            self.session.add(presence)
-            await self.session.commit()
-            await self.session.refresh(presence)
-            return presence
+        # Create new
+        presence = UserPresence(
+            id=user_id,
+            is_online=is_online,
+            last_seen_at=datetime.now(UTC),
+            connection_count=0,
+            status_message=status_message,
+        )
+        self.session.add(presence)
+        await self.session.commit()
+        await self.session.refresh(presence)
+        return presence
 
     async def get_presence(self, user_id: str) -> UserPresence | None:
         """Get user presence by user ID."""
@@ -64,17 +64,16 @@ class PresenceRepository:
         if presence:
             presence.connection_count += 1
             presence.is_online = True
-            presence.last_seen_at = datetime.now(timezone.utc)
+            presence.last_seen_at = datetime.now(UTC)
             await self.session.commit()
             await self.session.refresh(presence)
             return presence.connection_count
-        else:
-            # Create new presence with count 1
-            presence = await self.upsert_presence(user_id, True)
-            presence.connection_count = 1
-            await self.session.commit()
-            await self.session.refresh(presence)
-            return 1
+        # Create new presence with count 1
+        presence = await self.upsert_presence(user_id, True)
+        presence.connection_count = 1
+        await self.session.commit()
+        await self.session.refresh(presence)
+        return 1
 
     async def decrement_connection_count(self, user_id: str) -> int:
         """Decrement connection count and return new count."""
@@ -82,7 +81,7 @@ class PresenceRepository:
 
         if presence and presence.connection_count > 0:
             presence.connection_count -= 1
-            presence.last_seen_at = datetime.now(timezone.utc)
+            presence.last_seen_at = datetime.now(UTC)
 
             # Set offline if no more connections
             if presence.connection_count == 0:
@@ -110,7 +109,7 @@ class PresenceRepository:
         """Clean up stale connections (users online but no recent activity)."""
         from datetime import timedelta
 
-        threshold_time = datetime.now(timezone.utc) - timedelta(minutes=threshold_minutes)
+        threshold_time = datetime.now(UTC) - timedelta(minutes=threshold_minutes)
 
         # Update users who are marked online but haven't been seen recently
         result = await self.session.execute(

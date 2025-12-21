@@ -6,7 +6,6 @@ Can be run with pytest or as a standalone script.
 
 import asyncio
 import time
-from typing import List
 from uuid import uuid4
 
 import pytest
@@ -25,7 +24,7 @@ class MockPool:
         department: str,
         grade: int,
         preferred_match_type: str = "any",
-        preferred_categories: List[str] = None,
+        preferred_categories: list[str] = None,
     ):
         self.pool_id = pool_id
         self.member_count = member_count
@@ -41,7 +40,7 @@ class MockPool:
         self.message = None
 
 
-def generate_test_pools(count: int) -> List[MatchingPoolResponse]:
+def generate_test_pools(count: int) -> list[MatchingPoolResponse]:
     """Generate test pools for benchmarking.
 
     Args:
@@ -70,7 +69,7 @@ def generate_test_pools(count: int) -> List[MatchingPoolResponse]:
     return pools
 
 
-async def benchmark_original_algorithm(pools: List[MatchingPoolResponse]) -> dict:
+async def benchmark_original_algorithm(pools: list[MatchingPoolResponse]) -> dict:
     """Benchmark original matching algorithm.
 
     Args:
@@ -135,7 +134,7 @@ async def benchmark_original_algorithm(pools: List[MatchingPoolResponse]) -> dic
     }
 
 
-async def benchmark_optimized_algorithm(pools: List[MatchingPoolResponse]) -> dict:
+async def benchmark_optimized_algorithm(pools: list[MatchingPoolResponse]) -> dict:
     """Benchmark optimized matching algorithm.
 
     Args:
@@ -415,8 +414,8 @@ async def run_performance_comparison():
               f"{optimized_metrics['matches_found']} matches")
 
         # Calculate improvement
-        if original_metrics['execution_time'] > 0:
-            speedup = original_metrics['execution_time'] / optimized_metrics['execution_time']
+        if original_metrics["execution_time"] > 0:
+            speedup = original_metrics["execution_time"] / optimized_metrics["execution_time"]
             print(f"Speedup: {speedup:.2f}x")
         else:
             speedup = 1.0

@@ -30,10 +30,12 @@ import { Route as RoomRoomIdRouteImport } from './routes/room.$roomId'
 import { Route as RankingHallOfFameRouteImport } from './routes/ranking.hall-of-fame'
 import { Route as MatchingStatsRouteImport } from './routes/matching.stats'
 import { Route as CommunityPostIdRouteImport } from './routes/community.$postId'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as RankingTeamsTeamIdRouteImport } from './routes/ranking.teams.$teamId'
 import { Route as MatchingProposalsProposalIdRouteImport } from './routes/matching.proposals.$proposalId'
 import { Route as MatchingPoolsPoolIdRouteImport } from './routes/matching.pools.$poolId'
 import { Route as MatchingMatchedProposalIdRouteImport } from './routes/matching.matched.$proposalId'
+import { Route as AuthNaverCallbackRouteImport } from './routes/auth.naver.callback'
 import { Route as RankingTeamsTeamIdManageRouteImport } from './routes/ranking.teams.$teamId.manage'
 
 const VerificationRoute = VerificationRouteImport.update({
@@ -141,6 +143,11 @@ const CommunityPostIdRoute = CommunityPostIdRouteImport.update({
   path: '/$postId',
   getParentRoute: () => CommunityRoute,
 } as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/auth/reset-password',
+  path: '/auth/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RankingTeamsTeamIdRoute = RankingTeamsTeamIdRouteImport.update({
   id: '/teams/$teamId',
   path: '/teams/$teamId',
@@ -163,6 +170,11 @@ const MatchingMatchedProposalIdRoute =
     path: '/matched/$proposalId',
     getParentRoute: () => MatchingRoute,
   } as any)
+const AuthNaverCallbackRoute = AuthNaverCallbackRouteImport.update({
+  id: '/auth/naver/callback',
+  path: '/auth/naver/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RankingTeamsTeamIdManageRoute =
   RankingTeamsTeamIdManageRouteImport.update({
     id: '/manage',
@@ -184,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/verification': typeof VerificationRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/community/$postId': typeof CommunityPostIdRoute
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
@@ -192,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/community/': typeof CommunityIndexRoute
   '/matching/': typeof MatchingIndexRoute
   '/ranking/': typeof RankingIndexRoute
+  '/auth/naver/callback': typeof AuthNaverCallbackRoute
   '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
   '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
   '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
@@ -209,6 +223,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/verification': typeof VerificationRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/community/$postId': typeof CommunityPostIdRoute
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
@@ -217,6 +232,7 @@ export interface FileRoutesByTo {
   '/community': typeof CommunityIndexRoute
   '/matching': typeof MatchingIndexRoute
   '/ranking': typeof RankingIndexRoute
+  '/auth/naver/callback': typeof AuthNaverCallbackRoute
   '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
   '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
   '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
@@ -238,6 +254,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/verification': typeof VerificationRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/community/$postId': typeof CommunityPostIdRoute
   '/matching/stats': typeof MatchingStatsRoute
   '/ranking/hall-of-fame': typeof RankingHallOfFameRoute
@@ -246,6 +263,7 @@ export interface FileRoutesById {
   '/community/': typeof CommunityIndexRoute
   '/matching/': typeof MatchingIndexRoute
   '/ranking/': typeof RankingIndexRoute
+  '/auth/naver/callback': typeof AuthNaverCallbackRoute
   '/matching/matched/$proposalId': typeof MatchingMatchedProposalIdRoute
   '/matching/pools/$poolId': typeof MatchingPoolsPoolIdRoute
   '/matching/proposals/$proposalId': typeof MatchingProposalsProposalIdRoute
@@ -268,6 +286,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stats'
     | '/verification'
+    | '/auth/reset-password'
     | '/community/$postId'
     | '/matching/stats'
     | '/ranking/hall-of-fame'
@@ -276,6 +295,7 @@ export interface FileRouteTypes {
     | '/community/'
     | '/matching/'
     | '/ranking/'
+    | '/auth/naver/callback'
     | '/matching/matched/$proposalId'
     | '/matching/pools/$poolId'
     | '/matching/proposals/$proposalId'
@@ -293,6 +313,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stats'
     | '/verification'
+    | '/auth/reset-password'
     | '/community/$postId'
     | '/matching/stats'
     | '/ranking/hall-of-fame'
@@ -301,6 +322,7 @@ export interface FileRouteTypes {
     | '/community'
     | '/matching'
     | '/ranking'
+    | '/auth/naver/callback'
     | '/matching/matched/$proposalId'
     | '/matching/pools/$poolId'
     | '/matching/proposals/$proposalId'
@@ -321,6 +343,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stats'
     | '/verification'
+    | '/auth/reset-password'
     | '/community/$postId'
     | '/matching/stats'
     | '/ranking/hall-of-fame'
@@ -329,6 +352,7 @@ export interface FileRouteTypes {
     | '/community/'
     | '/matching/'
     | '/ranking/'
+    | '/auth/naver/callback'
     | '/matching/matched/$proposalId'
     | '/matching/pools/$poolId'
     | '/matching/proposals/$proposalId'
@@ -350,8 +374,10 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
   VerificationRoute: typeof VerificationRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   RoomRoomIdRoute: typeof RoomRoomIdRoute
   RoomsMyRoomsRoute: typeof RoomsMyRoomsRoute
+  AuthNaverCallbackRoute: typeof AuthNaverCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -503,6 +529,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommunityPostIdRouteImport
       parentRoute: typeof CommunityRoute
     }
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/auth/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ranking/teams/$teamId': {
       id: '/ranking/teams/$teamId'
       path: '/teams/$teamId'
@@ -530,6 +563,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/matching/matched/$proposalId'
       preLoaderRoute: typeof MatchingMatchedProposalIdRouteImport
       parentRoute: typeof MatchingRoute
+    }
+    '/auth/naver/callback': {
+      id: '/auth/naver/callback'
+      path: '/auth/naver/callback'
+      fullPath: '/auth/naver/callback'
+      preLoaderRoute: typeof AuthNaverCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/ranking/teams/$teamId/manage': {
       id: '/ranking/teams/$teamId/manage'
@@ -615,8 +655,10 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
   VerificationRoute: VerificationRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
   RoomRoomIdRoute: RoomRoomIdRoute,
   RoomsMyRoomsRoute: RoomsMyRoomsRoute,
+  AuthNaverCallbackRoute: AuthNaverCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

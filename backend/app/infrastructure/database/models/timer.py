@@ -6,7 +6,8 @@ Server-authoritative design: timer state is managed by backend.
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin

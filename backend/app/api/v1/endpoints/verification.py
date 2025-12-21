@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from fastapi.responses import Response
 
 from app.api.deps import DatabaseSession, get_current_user
@@ -21,6 +21,7 @@ from app.infrastructure.repositories.user_repository import UserRepository
 from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ async def submit_verification(
         # Otherwise, verification should have been created successfully
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"인증 신청 처리 중 오류가 발생했습니다: {str(e)}"
+            detail=f"인증 신청 처리 중 오류가 발생했습니다: {e!s}"
         )
 
 

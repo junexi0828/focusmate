@@ -9,11 +9,12 @@ from app.domain.verification.schemas import (
     VerificationSubmit,
 )
 
+
 __all__ = [
-    "VerificationSubmit",
-    "VerificationResponse",
-    "VerificationStatusResponse",
-    "VerificationSettingsUpdate",
-    "VerificationReview",
     "VerificationListItem",
+    "VerificationResponse",
+    "VerificationReview",
+    "VerificationSettingsUpdate",
+    "VerificationStatusResponse",
+    "VerificationSubmit",
 ]

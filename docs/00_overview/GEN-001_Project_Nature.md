@@ -8,6 +8,12 @@ author: Focus Mate Team
 iso_standard: ISO/IEC 25010 Quality in Use
 ---
 
+# Project Nature & Product Identity
+
+## [Home](../README.md) > [Overview](./README.md) > GEN-001
+
+---
+
 # Focus Mate: 프로젝트 컨셉 및 제품의 본질
 
 ## 1. 제품 정체성 ("소프트웨어의 본질")

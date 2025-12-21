@@ -1,7 +1,8 @@
 """Friend repository."""
 
-from datetime import datetime, timezone
-from sqlalchemy import select, or_, and_
+from datetime import UTC, datetime
+
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models.friend import Friend, FriendRequest, FriendRequestStatus
@@ -76,7 +77,7 @@ class FriendRequestRepository:
         request = await self.get_request_by_id(request_id)
         if request:
             request.status = status
-            request.responded_at = datetime.now(timezone.utc)
+            request.responded_at = datetime.now(UTC)
             await self.session.commit()
             await self.session.refresh(request)
         return request
@@ -236,10 +237,9 @@ class FriendRepository:
 
         Returns list of tuples: (Friend, User, UserPresence or None)
         """
-        from app.infrastructure.database.models.user import User
+
         from app.infrastructure.database.models.presence import UserPresence
-        from sqlalchemy.orm import joinedload
-        from sqlalchemy import outerjoin
+        from app.infrastructure.database.models.user import User
 
         result = await self.session.execute(
             select(Friend, User, UserPresence)

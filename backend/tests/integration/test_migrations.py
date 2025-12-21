@@ -1,7 +1,8 @@
 """Test script to verify database migrations."""
 
 import asyncio
-from sqlalchemy import inspect, text
+
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import settings

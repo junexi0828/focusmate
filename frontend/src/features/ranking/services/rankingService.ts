@@ -230,6 +230,43 @@ class RankingService extends BaseApiClient {
     return this.request<HallOfFameResponse>(`/ranking/hall-of-fame?period=${period}`);
   }
 
+  // Session Management
+  async startSession(
+    teamId: string,
+    sessionType: 'work' | 'break' = 'work'
+  ): Promise<ApiResponse<{ team_id: string; user_id: string; session_type: string; message: string }>> {
+    return this.request(`/ranking/sessions/start?team_id=${teamId}&session_type=${sessionType}`, {
+      method: 'POST',
+    });
+  }
+
+  async completeSession(
+    teamId: string,
+    durationMinutes: number,
+    sessionType: 'work' | 'break' = 'work',
+    success: boolean = true
+  ): Promise<ApiResponse<SessionHistory>> {
+    return this.request(`/ranking/sessions/complete?team_id=${teamId}&duration_minutes=${durationMinutes}&session_type=${sessionType}&success=${success}`, {
+      method: 'POST',
+    });
+  }
+
+  async getSessionHistory(
+    teamId: string,
+    options?: { userId?: string; limit?: number }
+  ): Promise<ApiResponse<SessionHistory[]>> {
+    const params = new URLSearchParams();
+    if (options?.userId) {
+      params.append('user_id', options.userId);
+    }
+    if (options?.limit) {
+      params.append('limit', options.limit.toString());
+    }
+    const queryString = params.toString();
+    const url = `/ranking/teams/${teamId}/sessions${queryString ? `?${queryString}` : ''}`;
+    return this.request<SessionHistory[]>(url);
+  }
+
   // Leaderboard
   async getLeaderboard(
     period: 'weekly' | 'monthly' | 'all_time' = 'weekly',

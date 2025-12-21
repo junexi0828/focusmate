@@ -66,6 +66,7 @@ class CommunityService extends BaseApiClient {
     author_username?: string;
     date_from?: string;
     date_to?: string;
+    sort_by?: string;
   }): Promise<ApiResponse<PostListResponse>> {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.append('limit', String(params.limit));
@@ -76,6 +77,7 @@ class CommunityService extends BaseApiClient {
     if (params?.author_username) queryParams.append('author_username', params.author_username);
     if (params?.date_from) queryParams.append('date_from', params.date_from);
     if (params?.date_to) queryParams.append('date_to', params.date_to);
+    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
 
     const query = queryParams.toString();
     return this.request<PostListResponse>(`/community/posts${query ? `?${query}` : ''}`);

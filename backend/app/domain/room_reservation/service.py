@@ -1,6 +1,6 @@
 """Room Reservation domain service."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.core.exceptions import NotFoundException
 from app.domain.room_reservation.schemas import (
@@ -38,11 +38,11 @@ class RoomReservationService:
         Returns:
             Created reservation
         """
+
         from app.infrastructure.database.models.room_reservation import RoomReservation
-        from datetime import timedelta
 
         # Validate scheduled_at is in the future
-        if data.scheduled_at <= datetime.now():
+        if data.scheduled_at <= datetime.now(UTC):
             raise ValueError("Scheduled time must be in the future")
 
         # Normalize recurrence_type (handle both Enum and string)
@@ -88,8 +88,9 @@ class RoomReservationService:
             data: Original reservation data
             start_date: Starting date for recurrence
         """
-        from app.infrastructure.database.models.room_reservation import RoomReservation
         from datetime import timedelta
+
+        from app.infrastructure.database.models.room_reservation import RoomReservation
 
         current_date = start_date
         delta_map = {
@@ -195,7 +196,7 @@ class RoomReservationService:
         if reservation.user_id != user_id:
             raise ValueError("You can only update your own reservations")
 
-        if data.scheduled_at and data.scheduled_at <= datetime.now():
+        if data.scheduled_at and data.scheduled_at <= datetime.now(UTC):
             raise ValueError("Scheduled time must be in the future")
 
         if data.scheduled_at:
@@ -240,7 +241,7 @@ class RoomReservationService:
         """
         from datetime import timedelta
 
-        now = datetime.now()
+        now = datetime.now(UTC)
         target_time = now + timedelta(minutes=1)
 
         reservations = await self.repository.get_due_reservations(now, target_time)
@@ -260,8 +261,8 @@ class RoomReservationService:
         Raises:
             NotFoundException: If reservation not found
         """
-        from app.infrastructure.repositories.room_repository import RoomRepository
         from app.infrastructure.database.models.room import Room
+        from app.infrastructure.repositories.room_repository import RoomRepository
 
         reservation = await self.repository.get_by_id(reservation_id)
         if not reservation:
@@ -316,7 +317,7 @@ class RoomReservationService:
         reservations = await self.repository.get_reservations_needing_notification()
 
         # Filter reservations based on notification_minutes
-        now = datetime.now()
+        now = datetime.now(UTC)
         filtered = []
         for r in reservations:
             notification_time = r.scheduled_at - timedelta(minutes=r.notification_minutes)

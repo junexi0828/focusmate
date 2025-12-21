@@ -1,20 +1,19 @@
 """Friend service."""
 
-from typing import Optional
 from uuid import uuid4
 
-from app.core.exceptions import NotFoundException, ConflictException, UnauthorizedException
+from app.core.exceptions import ConflictException, NotFoundException, UnauthorizedException
 from app.domain.friend.schemas import (
+    FriendListResponse,
     FriendRequestCreate,
     FriendRequestResponse,
     FriendResponse,
-    FriendListResponse,
     FriendSearchParams,
 )
 from app.infrastructure.database.models.friend import FriendRequestStatus
 from app.infrastructure.repositories.friend_repository import (
-    FriendRequestRepository,
     FriendRepository,
+    FriendRequestRepository,
 )
 from app.infrastructure.repositories.presence_repository import PresenceRepository
 
@@ -26,7 +25,7 @@ class FriendService:
         self,
         friend_request_repo: FriendRequestRepository,
         friend_repo: FriendRepository,
-        presence_repo: Optional[PresenceRepository] = None,
+        presence_repo: PresenceRepository | None = None,
     ):
         self.friend_request_repo = friend_request_repo
         self.friend_repo = friend_repo

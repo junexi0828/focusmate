@@ -1,7 +1,7 @@
 """Stats API endpoints."""
 
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -22,6 +22,7 @@ from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.session_history_repository import (
     SessionHistoryRepository,
 )
+
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -59,7 +60,7 @@ class HourlyPatternResponse(BaseModel):
 
     hourly_focus_time: list[int]  # 24 hours (0-23)
     total_days: int
-    peak_hour: Optional[int] = None
+    peak_hour: int | None = None
 
 
 class MonthlyComparisonResponse(BaseModel):
@@ -92,9 +93,10 @@ def get_session_history_repository(db: DatabaseSession) -> SessionHistoryReposit
 
 def get_stats_service(
     repo: Annotated[SessionHistoryRepository, Depends(get_session_history_repository)],
+    db: DatabaseSession,
 ) -> StatsService:
     """Get stats service."""
-    return StatsService(repo)
+    return StatsService(repo, db)
 
 
 # Endpoints
@@ -106,12 +108,14 @@ def get_stats_service(
 async def record_session(
     data: SessionRecordRequest,
     service: Annotated[StatsService, Depends(get_stats_service)],
+    db: DatabaseSession,
 ) -> SessionRecordResponse:
     """Record a completed pomodoro session.
 
     Args:
         data: Session details (user_id, room_id, session_type, duration_minutes)
         service: Stats service
+        db: Database session
 
     Returns:
         Session record confirmation with session_id
@@ -122,6 +126,42 @@ async def record_session(
         session_type=data.session_type,
         duration_minutes=data.duration_minutes,
     )
+
+    # Check and unlock achievements after session completion
+    try:
+        from app.domain.achievement.service import AchievementService
+        from app.infrastructure.repositories.achievement_repository import (
+            AchievementRepository,
+            UserAchievementRepository,
+        )
+        from app.infrastructure.repositories.community_repository import PostRepository
+        from app.infrastructure.repositories.session_history_repository import (
+            SessionHistoryRepository,
+        )
+        from app.infrastructure.repositories.user_repository import UserRepository
+
+        achievement_repo = AchievementRepository(db)
+        user_achievement_repo = UserAchievementRepository(db)
+        user_repo = UserRepository(db)
+        post_repo = PostRepository(db)
+        session_repo = SessionHistoryRepository(db)
+
+        achievement_service = AchievementService(
+            achievement_repo,
+            user_achievement_repo,
+            user_repo,
+            post_repo,
+            session_repo,
+        )
+
+        # Check achievements in background (don't wait for result)
+        await achievement_service.check_and_unlock_achievements(data.user_id)
+    except Exception as e:
+        # Log error but don't fail the session recording
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to check achievements after session: {e}")
+
     return SessionRecordResponse(**result)
 
 
@@ -130,10 +170,10 @@ async def get_user_stats(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
     days: int = Query(7, ge=1, le=365),
-    start_date: Optional[str] = Query(
+    start_date: str | None = Query(
         None, description="Start date (ISO format: YYYY-MM-DD)"
     ),
-    end_date: Optional[str] = Query(
+    end_date: str | None = Query(
         None, description="End date (ISO format: YYYY-MM-DD)"
     ),
 ) -> UserStatsResponse:
@@ -175,7 +215,7 @@ async def get_user_stats(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve stats: {str(e)}",
+            detail=f"Failed to retrieve stats: {e!s}",
         )
 
 
@@ -184,12 +224,14 @@ async def get_hourly_pattern(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
+    offset_hours: int = Query(0, ge=-12, le=14, description="Timezone offset in hours"),
 ) -> HourlyPatternResponse:
     """Get hourly focus pattern for radar chart.
 
     Args:
         user_id: User identifier
         days: Number of days to analyze (default: 30)
+        offset_hours: Timezone offset in hours (default: 0)
         service: Stats service
 
     Returns:
@@ -199,14 +241,14 @@ async def get_hourly_pattern(
         HTTPException: If user not found or invalid parameters
     """
     try:
-        pattern = await service.get_hourly_pattern(user_id, days)
+        pattern = await service.get_hourly_pattern(user_id, days, offset_hours)
         return HourlyPatternResponse(**pattern)
     except UnauthorizedException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve hourly pattern: {str(e)}",
+            detail=f"Failed to retrieve hourly pattern: {e!s}",
         )
 
 
@@ -239,7 +281,7 @@ async def get_monthly_comparison(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve monthly comparison: {str(e)}",
+            detail=f"Failed to retrieve monthly comparison: {e!s}",
         )
 
 
@@ -280,7 +322,7 @@ async def get_goal_achievement(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve goal achievement: {str(e)}",
+            detail=f"Failed to retrieve goal achievement: {e!s}",
         )
 
 
@@ -314,18 +356,17 @@ async def save_user_goal(
         await db.commit()
         await db.refresh(existing_goal)
         return UserGoalResponse.model_validate(existing_goal)
-    else:
-        # Create new
-        new_goal = UserGoal(
-            id=uuid4(),
-            user_id=user_id,
-            daily_goal_minutes=goal_data.daily_goal_minutes,
-            weekly_goal_sessions=goal_data.weekly_goal_sessions,
-        )
-        db.add(new_goal)
-        await db.commit()
-        await db.refresh(new_goal)
-        return UserGoalResponse.model_validate(new_goal)
+    # Create new
+    new_goal = UserGoal(
+        id=uuid4(),
+        user_id=user_id,
+        daily_goal_minutes=goal_data.daily_goal_minutes,
+        weekly_goal_sessions=goal_data.weekly_goal_sessions,
+    )
+    db.add(new_goal)
+    await db.commit()
+    await db.refresh(new_goal)
+    return UserGoalResponse.model_validate(new_goal)
 
 
 @router.get("/goals", response_model=UserGoalResponse)
@@ -350,17 +391,22 @@ async def get_user_goal(
     result = await db.execute(stmt)
     goals = result.scalars().all()
 
-    # If multiple goals exist, use the most recent one
-    # TODO: Consider cleaning up duplicate goals
     if not goals:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No goals set yet",
+        # Return default goals if none set
+        return UserGoalResponse(
+            id=uuid4(),
+            user_id=user_id,
+            daily_goal_minutes=120,
+            weekly_goal_sessions=5,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
         )
 
-    # Use the most recent goal (first one after ordering by created_at desc)
+    # Use the most recent goal
     goal = goals[0]
 
+    # Optional: If there are duplicates, we could log them or clean them up here
+    # For now, we just return the most relevant one to avoid 404s
     return UserGoalResponse.model_validate(goal)
 
 

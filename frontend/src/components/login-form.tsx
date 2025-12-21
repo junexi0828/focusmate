@@ -4,6 +4,7 @@ import { Button } from "./ui/button-enhanced";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { LogIn } from "lucide-react";
+import { PasswordResetDialog } from "./PasswordResetDialog";
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => void;
@@ -15,6 +16,7 @@ export function LoginForm({ onLogin, onSwitchToSignup }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordResetOpen, setIsPasswordResetOpen] = useState(false);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -91,6 +93,17 @@ export function LoginForm({ onLogin, onSwitchToSignup }: LoginFormProps) {
           </Button>
 
           <div className="text-center text-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              className="p-0 h-auto text-sm"
+              onClick={() => setIsPasswordResetOpen(true)}
+            >
+              비밀번호를 잊으셨나요?
+            </Button>
+          </div>
+
+          <div className="text-center text-sm">
             <span className="text-muted-foreground">계정이 없으신가요? </span>
             <Button
               type="button"
@@ -103,6 +116,10 @@ export function LoginForm({ onLogin, onSwitchToSignup }: LoginFormProps) {
           </div>
         </form>
       </CardContent>
+      <PasswordResetDialog
+        open={isPasswordResetOpen}
+        onOpenChange={setIsPasswordResetOpen}
+      />
     </Card>
   );
 }

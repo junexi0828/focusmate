@@ -1,17 +1,17 @@
 """Unit tests for ranking service."""
 
-import pytest
-from uuid import uuid4
 from unittest.mock import AsyncMock
+from uuid import uuid4
+
+import pytest
 
 from app.domain.ranking.service import RankingService
-from app.infrastructure.repositories.ranking_repository import RankingRepository
 
 
 @pytest.fixture
 def mock_ranking_repository():
     """Create mock ranking repository."""
-    return AsyncMock(spec=RankingRepository)
+    return AsyncMock()
 
 
 @pytest.fixture
@@ -24,40 +24,49 @@ class TestRankingService:
     """Test cases for RankingService."""
 
     @pytest.mark.asyncio
-    async def test_get_top_users(self, ranking_service, mock_ranking_repository):
-        """Test getting top ranked users."""
-        expected_rankings = [
-            {"user_id": str(uuid4()), "username": "user1", "score": 1000, "rank": 1},
-            {"user_id": str(uuid4()), "username": "user2", "score": 900, "rank": 2},
-            {"user_id": str(uuid4()), "username": "user3", "score": 800, "rank": 3},
-        ]
-
-        mock_ranking_repository.get_top_users.return_value = expected_rankings
-
-        result = await ranking_service.get_top_users(limit=3)
-
-        assert len(result) == 3
-        assert result[0]["rank"] == 1
-        assert result[0]["score"] > result[1]["score"]
-        mock_ranking_repository.get_top_users.assert_called_once_with(limit=3)
-
-    @pytest.mark.asyncio
-    async def test_get_user_rank(self, ranking_service, mock_ranking_repository):
-        """Test getting user's rank."""
-        user_id = str(uuid4())
-        expected_rank = {
-            "user_id": user_id,
-            "score": 750,
-            "rank": 5,
+    async def test_get_hall_of_fame(self, ranking_service, mock_ranking_repository):
+        """Test getting hall of fame data."""
+        expected_hall_of_fame = {
+            "period": "all",
+            "total_teams": 3,
+            "teams": [
+                {"team_id": uuid4(), "team_name": "Team 1", "total_focus_time": 1000, "total_game_score": 500},
+                {"team_id": uuid4(), "team_name": "Team 2", "total_focus_time": 800, "total_game_score": 400},
+                {"team_id": uuid4(), "team_name": "Team 3", "total_focus_time": 600, "total_game_score": 300},
+            ],
+            "top_focus_teams": [],
+            "top_game_teams": []
         }
 
-        mock_ranking_repository.get_user_rank.return_value = expected_rank
+        mock_ranking_repository.get_comprehensive_leaderboard.return_value = expected_hall_of_fame["teams"]
 
-        result = await ranking_service.get_user_rank(user_id)
+        result = await ranking_service.get_hall_of_fame(period="all")
 
-        assert result["user_id"] == user_id
-        assert result["rank"] == 5
-        mock_ranking_repository.get_user_rank.assert_called_once_with(user_id)
+        assert result["total_teams"] == 3
+        assert result["teams"][0]["total_focus_time"] == 1000
+        mock_ranking_repository.get_comprehensive_leaderboard.assert_called_once_with("all")
+
+    @pytest.mark.asyncio
+    async def test_get_team_statistics(self, ranking_service, mock_ranking_repository):
+        """Test getting team statistics."""
+        team_id = uuid4()
+        expected_stats = {
+            "total_focus_time": 1200,
+            "total_sessions": 15
+        }
+        mock_members = [AsyncMock(), AsyncMock()]
+        mock_sessions = []
+
+        mock_ranking_repository.get_team_stats.return_value = expected_stats
+        mock_ranking_repository.get_team_members.return_value = mock_members
+        mock_ranking_repository.get_team_sessions.return_value = mock_sessions
+
+        result = await ranking_service.get_team_statistics(team_id)
+
+        assert result["team_id"] == team_id
+        assert result["total_focus_time"] == 1200
+        assert result["member_count"] == 2
+        mock_ranking_repository.get_team_stats.assert_called_once_with(team_id)
 
 
 def test_ranking_service_import():

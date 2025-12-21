@@ -1,6 +1,6 @@
 """Participant repository implementation."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,6 +60,6 @@ class ParticipantRepository:
         participant = await self.get_by_id(participant_id)
         if participant:
             participant.is_connected = False
-            participant.left_at = datetime.now(timezone.utc)
+            participant.left_at = datetime.now(UTC)
             return await self.update(participant)
         return None

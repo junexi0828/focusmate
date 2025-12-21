@@ -30,7 +30,7 @@ class RankingRepository:
         await self.session.refresh(team)
         return team
 
-    async def get_team_by_id(self, team_id: UUID) -> Optional[RankingTeam]:
+    async def get_team_by_id(self, team_id: UUID) -> RankingTeam | None:
         """Get team by ID."""
         result = await self.session.execute(
             select(RankingTeam).where(RankingTeam.team_id == team_id)
@@ -49,7 +49,7 @@ class RankingRepository:
         result = await self.session.execute(select(RankingTeam))
         return list(result.scalars().all())
 
-    async def update_team(self, team_id: UUID, update_data: dict) -> Optional[RankingTeam]:
+    async def update_team(self, team_id: UUID, update_data: dict) -> RankingTeam | None:
         """Update team information."""
         team = await self.get_team_by_id(team_id)
         if not team:
@@ -91,7 +91,7 @@ class RankingRepository:
 
     async def get_member_by_user_and_team(
         self, user_id: str, team_id: UUID
-    ) -> Optional[RankingTeamMember]:
+    ) -> RankingTeamMember | None:
         """Get team member by user ID and team ID."""
         result = await self.session.execute(
             select(RankingTeamMember).where(
@@ -131,7 +131,7 @@ class RankingRepository:
         await self.session.refresh(invitation)
         return invitation
 
-    async def get_invitation_by_id(self, invitation_id: UUID) -> Optional[RankingTeamInvitation]:
+    async def get_invitation_by_id(self, invitation_id: UUID) -> RankingTeamInvitation | None:
         """Get invitation by ID."""
         result = await self.session.execute(
             select(RankingTeamInvitation).where(
@@ -159,7 +159,7 @@ class RankingRepository:
 
     async def update_invitation_status(
         self, invitation_id: UUID, status: str
-    ) -> Optional[RankingTeamInvitation]:
+    ) -> RankingTeamInvitation | None:
         """Update invitation status."""
         invitation = await self.get_invitation_by_id(invitation_id)
         if not invitation:
@@ -296,6 +296,7 @@ class RankingRepository:
     async def get_team_stats(self, team_id: UUID) -> dict:
         """Get team statistics."""
         from sqlalchemy import func
+
         from app.infrastructure.database.models.ranking import RankingSession
 
         # Total focus time
@@ -354,7 +355,7 @@ class RankingRepository:
         return result.scalar_one_or_none()
 
     async def get_team_mini_games(
-        self, team_id: UUID, game_type: Optional[str] = None, limit: int = 100
+        self, team_id: UUID, game_type: str | None = None, limit: int = 100
     ) -> list["RankingMiniGame"]:
         """Get mini-games for a team."""
         from app.infrastructure.database.models.ranking import RankingMiniGame
@@ -374,6 +375,7 @@ class RankingRepository:
     ) -> list[dict]:
         """Get leaderboard for a specific game type."""
         from sqlalchemy import func
+
         from app.infrastructure.database.models.ranking import RankingMiniGame, RankingTeam
 
         # Get top scores per team
@@ -406,12 +408,14 @@ class RankingRepository:
         self, period: str = "all"
     ) -> list[dict]:
         """Get comprehensive leaderboard data for all teams."""
-        from sqlalchemy import func
         from datetime import datetime, timedelta
+
+        from sqlalchemy import func
+
         from app.infrastructure.database.models.ranking import (
-            RankingTeam,
-            RankingSession,
             RankingMiniGame,
+            RankingSession,
+            RankingTeam,
         )
 
         # Calculate date filter

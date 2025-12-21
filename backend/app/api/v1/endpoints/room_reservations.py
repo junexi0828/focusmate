@@ -17,6 +17,7 @@ from app.infrastructure.repositories.room_reservation_repository import (
     RoomReservationRepository,
 )
 
+
 router = APIRouter(prefix="/room-reservations", tags=["room-reservations"])
 
 
@@ -70,7 +71,7 @@ async def get_upcoming_reservations(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get upcoming reservations: {str(e)}"
+            detail=f"Failed to get upcoming reservations: {e!s}"
         )
 
 
@@ -135,7 +136,7 @@ async def process_due_reservations(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process due reservations: {str(e)}"
+            detail=f"Failed to process due reservations: {e!s}"
         )
 
 
@@ -168,6 +169,6 @@ async def send_notifications(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send notifications: {str(e)}"
+            detail=f"Failed to send notifications: {e!s}"
         )
 

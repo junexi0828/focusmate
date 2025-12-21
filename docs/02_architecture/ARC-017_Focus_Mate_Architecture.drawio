@@ -1,0 +1,983 @@
+<mxfile host="65bd71144e">
+    <diagram name="1. 시스템 아키텍처" id="system-architecture">
+        <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="Focus Mate 시스템 아키텍처" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="40" width="600" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="140" width="380" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="클라이언트 계층" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="140" y="155" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="React 18.3.1 SPA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;fontColor=#FFFFFF;fontSize=16;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="200" width="320" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="TanStack Router 1.141.0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#60A5FA;strokeColor=#2563EB;strokeWidth=1;fontColor=#FFFFFF;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="265" width="320" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="TanStack Query 5.90.12" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#60A5FA;strokeColor=#2563EB;strokeWidth=1;fontColor=#FFFFFF;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="310" width="320" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="Tailwind CSS 4.1.18" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#60A5FA;strokeColor=#2563EB;strokeWidth=1;fontColor=#FFFFFF;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="355" width="320" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="610" y="140" width="380" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="백엔드 계층" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="155" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="FastAPI 0.115.6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;fontColor=#FFFFFF;fontSize=16;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="640" y="200" width="320" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="Python 3.13" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34D399;strokeColor=#059669;strokeWidth=1;fontColor=#FFFFFF;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="640" y="265" width="150" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="SQLAlchemy 2.0.35+" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34D399;strokeColor=#059669;strokeWidth=1;fontColor=#FFFFFF;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="810" y="265" width="150" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="Pydantic 2.10.6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34D399;strokeColor=#059669;strokeWidth=1;fontColor=#FFFFFF;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="640" y="310" width="150" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="Uvicorn 0.34.0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34D399;strokeColor=#059669;strokeWidth=1;fontColor=#FFFFFF;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="810" y="310" width="150" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="JWT + bcrypt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34D399;strokeColor=#059669;strokeWidth=1;fontColor=#FFFFFF;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="640" y="355" width="320" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1100" y="140" width="380" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" value="데이터 계층" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="155" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#F59E0B;strokeColor=#D97706;strokeWidth=2;fontColor=#FFFFFF;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1130" y="210" width="150" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="PostgreSQL" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="1155" y="260" width="100" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" value="38개 테이블" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="1155" y="290" width="100" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" value="" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#EF4444;strokeColor=#DC2626;strokeWidth=2;fontColor=#FFFFFF;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1310" y="210" width="150" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="Redis" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="1335" y="260" width="100" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" value="Pub/Sub" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="1335" y="290" width="100" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#3B82F6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="5" target="11" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="500" y="225" as="sourcePoint"/>
+                        <mxPoint x="550" y="175" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="26" value="REST API (HTTPS)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;fontStyle=1;fontColor=#3B82F6;" parent="25" connectable="0" vertex="1">
+                    <mxGeometry x="-0.1" y="2" relative="1" as="geometry">
+                        <mxPoint x="10" y="-18" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="27" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#8B5CF6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" parent="1" source="6" target="12" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="480" y="235" as="sourcePoint"/>
+                        <mxPoint x="650" y="235" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="28" value="WebSocket" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;fontStyle=1;fontColor=#8B5CF6;" parent="27" connectable="0" vertex="1">
+                    <mxGeometry x="-0.1" y="2" relative="1" as="geometry">
+                        <mxPoint x="10" y="18" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="29" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#10B981;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="11" target="19" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="970" y="225" as="sourcePoint"/>
+                        <mxPoint x="1130" y="300" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="30" value="asyncpg (비동기)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;fontStyle=1;fontColor=#10B981;" parent="29" connectable="0" vertex="1">
+                    <mxGeometry x="-0.1" y="2" relative="1" as="geometry">
+                        <mxPoint x="10" y="-18" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="31" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#EF4444;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="13" target="22" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="970" y="235" as="sourcePoint"/>
+                        <mxPoint x="1140" y="310" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="32" value="Pub/Sub 메시지" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;fontStyle=1;fontColor=#EF4444;" parent="31" connectable="0" vertex="1">
+                    <mxGeometry x="-0.1" y="2" relative="1" as="geometry">
+                        <mxPoint x="10" y="18" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="33" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="480" width="1360" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="34" value="주요 특징" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="140" y="500" width="150" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="35" value="✓ 실시간 알림 (WebSocket)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="550" width="280" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="36" value="✓ JWT 인증 + bcrypt 해싱" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="590" width="280" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="37" value="✓ 비동기 I/O (asyncpg)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="550" width="280" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="38" value="✓ 타입 안전 API (Pydantic)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="590" width="280" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="39" value="✓ Redis Pub/Sub (다중 인스턴스)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="550" width="300" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" value="✓ PostgreSQL 38개 테이블" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="590" width="300" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="41" value="✓ TanStack Query 캐싱" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1180" y="550" width="280" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="42" value="✓ Vite 빌드 시스템" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1180" y="590" width="280" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="phil-box" value="💡 핵심 설계 철학&#10;① Zero-Latency Interaction: SPA 기반 지연시간 최적화&#10;② Client-First State: TanStack Query 활용 서버 상태 동기화&#10;③ Type-Safety: OpenAPI 기반 프론트-백 타입 계약 자동화" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;fontSize=14;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="1">
+                    <mxGeometry x="120" y="680" width="1360" height="80" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="2. 기술 스택 레이어" id="tech-stack">
+        <mxGraphModel dx="505" dy="676" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="Focus Mate 기술 스택 레이어" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="40" width="700" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="130" width="1000" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="프레젠테이션 계층" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="140" width="200" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="React 18.3.1  |  TypeScript 5.9.3  |  Vite 6.4.1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="170" width="600" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="240" width="1000" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="라우팅 &amp; 상태 관리" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="250" width="200" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="TanStack Router 1.141.0  |  TanStack Query 5.90.12  |  Axios 1.13.2" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="280" width="800" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EC4899;strokeColor=#DB2777;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="350" width="1000" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="UI 컴포넌트" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="360" width="200" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="Radix UI  |  Tailwind CSS 4.1.18  |  Framer Motion 12.23.26  |  Recharts 2.15.4" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="390" width="900" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="460" width="1000" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="백엔드 API" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="470" width="200" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="FastAPI 0.115.6  |  Uvicorn 0.34.0  |  Python 3.13" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="500" width="600" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#14B8A6;strokeColor=#0F766E;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="570" width="1000" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="비즈니스 로직" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="580" width="200" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" value="SQLAlchemy 2.0.35+  |  Pydantic 2.10.6  |  JWT + bcrypt" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="610" width="600" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F59E0B;strokeColor=#D97706;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="680" width="1000" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="데이터 저장소" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="690" width="200" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="PostgreSQL (Supabase)  |  Redis (Cache/Pub-Sub)  |  Alembic 1.14.0" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="720" width="700" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" value="" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#666666;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="800" y="220" as="sourcePoint"/>
+                        <mxPoint x="800" y="240" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="22" value="" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#666666;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="800" y="330" as="sourcePoint"/>
+                        <mxPoint x="800" y="350" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="23" value="" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#666666;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="800" y="440" as="sourcePoint"/>
+                        <mxPoint x="800" y="460" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="24" value="" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#666666;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="800" y="550" as="sourcePoint"/>
+                        <mxPoint x="800" y="570" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="25" value="" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#666666;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="800" y="660" as="sourcePoint"/>
+                        <mxPoint x="800" y="680" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="3. 데이터베이스 스키마" id="database-schema">
+        <mxGraphModel dx="505" dy="676" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="db-title" value="데이터베이스 스키마 - 38개 테이블" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="40" width="800" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-box1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="130" width="320" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-title1" value="핵심 도메인 (5)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="145" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-text1" value="• User&#10;• Room&#10;• Participant&#10;• Timer&#10;• Session History" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="185" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-box2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="130" width="320" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-title2" value="사용자 관리 (5)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="145" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-text2" value="• User Settings&#10;• User Goals&#10;• User Achievement&#10;• Achievement&#10;• User Verification" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="185" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-box3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="130" width="320" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-title3" value="커뮤니티 (5)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="145" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-text3" value="• Post&#10;• Comment&#10;• Post Like&#10;• Comment Like&#10;• Post Read" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="870" y="185" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-box4" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1200" y="130" width="320" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-title4" value="랭킹 시스템 (7)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="145" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-text4" value="• Leaderboard&#10;• Teams&#10;• Team Members&#10;• Team Invitations&#10;• Ranking Sessions&#10;• Mini Games&#10;• Verification Requests" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1230" y="185" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-box5" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="370" width="320" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-title5" value="매칭 시스템 (5)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="385" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-text5" value="• Matching Pools&#10;• Proposals&#10;• Matching Chat Rooms&#10;• Chat Members&#10;• Messages" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="425" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-box6" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="370" width="320" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-title6" value="메시징 (5)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="385" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-text6" value="• Chat Rooms&#10;• Chat Members&#10;• Chat Messages&#10;• Conversation&#10;• Message" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="425" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-box7" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad9d5;strokeColor=#ae4132;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="370" width="320" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-title7" value="친구 시스템 (2)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="385" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-text7" value="• Friend&#10;• Friend Request" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="870" y="425" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-box8" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1200" y="370" width="320" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-title8" value="알림 &amp; 예약 (3)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="385" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-text8" value="• Notifications&#10;• Room Reservations&#10;• Manual Sessions" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1230" y="425" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="db-footer" value="&lt;span style=&quot;background-color: rgb(255, 255, 255);&quot;&gt;&lt;font color=&quot;#000000&quot;&gt;PostgreSQL 38개 테이블 | UUID 기본 키 | 외래 키 제약조건 | 인덱스 최적화&lt;/font&gt;&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontSize=16;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="620" width="1400" height="60" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="4. 사용자 흐름 (User Flow)" id="user-flow">
+        <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="uf-title" value="Focus Mate 사용자 흐름" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="40" width="600" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-start" value="시작" style="ellipse;whiteSpace=wrap;html=1;fillColor=#60A5FA;strokeColor=#2563EB;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="130" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-login" value="로그인 /" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="140" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-register" value="회원가입" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="220" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-dashboard" value="대시보드" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;fontColor=#FFFFFF;fontSize=16;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="160" width="160" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-room" value="방 생성/참여" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="100" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-community" value="커뮤니티" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EC4899;strokeColor=#DB2777;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="180" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-ranking" value="랭킹" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F59E0B;strokeColor=#D97706;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="260" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-timer" value="타이머 시작" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A78BFA;strokeColor=#7C3AED;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="980" y="80" width="130" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-chat" value="채팅" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A78BFA;strokeColor=#7C3AED;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="980" y="145" width="130" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-post" value="게시글 작성" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F472B6;strokeColor=#EC4899;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="980" y="210" width="130" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-team" value="팀 생성/참여" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBBF24;strokeColor=#F59E0B;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="980" y="275" width="130" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-complete" value="세션 완료" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#14B8A6;strokeColor=#0F766E;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1180" y="100" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-stats" value="통계 업데이트" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#14B8A6;strokeColor=#0F766E;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1180" y="180" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-achievement" value="업적 획득" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#14B8A6;strokeColor=#0F766E;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1180" y="260" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-notification" value="실시간 알림" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EF4444;strokeColor=#DC2626;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1400" y="180" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow1" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="1" source="uf-start" target="uf-login" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow2" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="1" source="uf-login" target="uf-dashboard" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow3" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="1" source="uf-register" target="uf-dashboard" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow4" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#8B5CF6;" parent="1" source="uf-dashboard" target="uf-room" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow5" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#EC4899;" parent="1" source="uf-dashboard" target="uf-community" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow6" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#F59E0B;" parent="1" source="uf-dashboard" target="uf-ranking" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow7" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#8B5CF6;" parent="1" source="uf-room" target="uf-timer" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow8" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#8B5CF6;" parent="1" source="uf-room" target="uf-chat" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow9" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#EC4899;" parent="1" source="uf-community" target="uf-post" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow10" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#F59E0B;" parent="1" source="uf-ranking" target="uf-team" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow11" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#14B8A6;" parent="1" source="uf-timer" target="uf-complete" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow12" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#14B8A6;" parent="1" source="uf-complete" target="uf-stats" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow13" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#14B8A6;" parent="1" source="uf-stats" target="uf-achievement" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-arrow14" value="WebSocket" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#EF4444;dashed=1;" parent="1" source="uf-dashboard" target="uf-notification" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-legend" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="380" width="1420" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-legend-title" value="주요 흐름 설명" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="140" y="395" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-legend1" value="1. 사용자는 로그인 또는 회원가입을 통해 시작" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="435" width="400" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-legend2" value="2. 대시보드에서 방 생성/참여, 커뮤니티, 랭킹 등 선택" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="465" width="450" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-legend3" value="3. 방에서 타이머 시작, 채팅 등 활동 수행" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="435" width="400" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-legend4" value="4. 세션 완료 후 통계 업데이트 및 업적 획득" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="465" width="400" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="uf-legend5" value="5. WebSocket을 통한 실시간 알림 수신" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1180" y="435" width="350" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="timer-ssot" value="⏱️ 타이머 SSOT 원칙&#10;서버에서 'target_timestamp'를 계산하여&#10;브로드캐스트하며, 클라이언트는 현재 시간과&#10;차이를 계산하여 초 단위 동기화 유지" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF1F2;strokeColor=#E11D48;fontSize=13;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="1">
+                    <mxGeometry x="120" y="540" width="1420" height="60" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="5. 인증 플로우 (Auth Flow)" id="auth-flow">
+        <mxGraphModel dx="505" dy="676" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="af-title" value="JWT 인증 플로우" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="40" width="500" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-user" value="" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="150" width="60" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-user-label" value="사용자" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="105" y="280" width="90" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-client" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#60A5FA;strokeColor=#2563EB;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="130" width="180" height="600" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-client-label" value="React Client" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="145" width="120" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-backend" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="130" width="180" height="600" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-backend-label" value="FastAPI Backend" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="145" width="140" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-db" value="" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#F59E0B;strokeColor=#D97706;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="130" width="180" height="600" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-db-label" value="PostgreSQL" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="1050" y="160" width="100" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-step1" value="1. 이메일/비밀번호 입력" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="200" y="220" as="sourcePoint"/>
+                        <mxPoint x="350" y="220" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="af-step2" value="2. POST /auth/login" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="530" y="260" as="sourcePoint"/>
+                        <mxPoint x="680" y="260" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="af-step3" value="3. SELECT user WHERE email=?" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#F59E0B;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="860" y="300" as="sourcePoint"/>
+                        <mxPoint x="1010" y="300" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="af-step4" value="4. User data" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#F59E0B;dashed=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="1010" y="340" as="sourcePoint"/>
+                        <mxPoint x="860" y="340" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="af-step5" value="5. bcrypt.verify(password)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34D399;strokeColor=#059669;strokeWidth=1;fontColor=#FFFFFF;fontSize=12;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="370" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-step6" value="6. JWT 토큰 생성" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34D399;strokeColor=#059669;strokeWidth=1;fontColor=#FFFFFF;fontSize=12;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="430" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-step7" value="7. {access_token, user}" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;dashed=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="680" y="490" as="sourcePoint"/>
+                        <mxPoint x="530" y="490" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="af-step8" value="8. localStorage.setItem('token')" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#60A5FA;strokeColor=#2563EB;strokeWidth=1;fontColor=#FFFFFF;fontSize=12;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="370" y="520" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-step9" value="9. 로그인 성공" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;dashed=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="350" y="580" as="sourcePoint"/>
+                        <mxPoint x="200" y="580" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="af-divider" value="인증된 API 요청" style="text;html=1;strokeColor=none;fillColor=#f5f5f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=16;fontStyle=1;fontColor=#1a1a1a;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="650" width="840" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-step10" value="10. GET /api/v1/users/me" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="530" y="720" as="sourcePoint"/>
+                        <mxPoint x="680" y="720" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="af-step10-label" value="Authorization: Bearer {token}" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="695" width="130" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-step11" value="11. JWT 검증" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34D399;strokeColor=#059669;strokeWidth=1;fontColor=#FFFFFF;fontSize=12;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="750" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="af-step12" value="12. User data" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;dashed=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="680" y="810" as="sourcePoint"/>
+                        <mxPoint x="530" y="810" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="6. 매칭 알고리즘 최적화" id="matching-algorithm">
+        <mxGraphModel dx="505" dy="676" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="ma-title" value="매칭 알고리즘 최적화: Stable Matching with Greedy Approach" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="30" width="1200" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="perf-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#F59E0B;strokeWidth=3;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="90" width="1400" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="perf-title" value="⚡ 성능 개선 지표" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="100" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="metric1" value="DB 쿼리: O(n) → O(1)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="105" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="metric2" value="비교 횟수: O(n²) → O(k²)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="105" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="metric3" value="처리 시간: 85% 단축" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="105" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="metric4" value="메모리: 캐싱 최적화" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EC4899;strokeColor=#DB2777;strokeWidth=2;fontColor=#FFFFFF;fontSize=14;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1150" y="105" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="step1-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="200" width="680" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="step1-title" value="STEP 1: 배치 로딩 + 그룹화" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="215" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="step1-code" value="# 1. 모든 대기 풀 로드 (단일 쿼리)&#10;pools = await get_waiting_pools()&#10;&#10;# 2. 인원수+성별로 그룹화&#10;groups = defaultdict(list)&#10;for pool in pools:&#10;    key = (pool.member_count, pool.gender)&#10;    groups[key].append(pool)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1E3A8A;strokeColor=#1E40AF;strokeWidth=1;fontColor=#FFFFFF;fontSize=12;fontFamily=Courier New;align=left;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="250" width="630" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="step2-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#F59E0B;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="820" y="200" width="680" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="step2-title" value="STEP 2: 점수 계산 시스템" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="215" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="scoring-table" value="같은 학과 (양쪽 선호): 200점&#10;같은 학과 (한쪽 선호): 100점&#10;계열 일치 (양쪽 선호): 160점&#10;계열 일치 (한쪽 선호): 80점&#10;양쪽 '상관없음': 60점&#10;같은 학년: +20점&#10;학년 차이 1: +10점" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;fontColor=#1a1a1a;fontSize=13;align=left;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="250" width="630" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="step3-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#10B981;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="450" width="680" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="step3-title" value="STEP 3: Greedy 매칭 알고리즘" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="465" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="step3-desc" value="✓ 점수 기준 내림차순 정렬&#10;✓ 최고 점수부터 매칭&#10;✓ 이미 매칭된 풀 제외&#10;✓ Stable Matching 보장" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="500" width="300" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="step3-code" value="# 점수 계산&#10;scores = []&#10;for a in male_pools:&#10;    for b in female_pools:&#10;        score = calc_score(a, b)&#10;        scores.append((a.id, b.id, score))&#10;&#10;# Greedy 매칭&#10;scores.sort(key=lambda x: x[2], reverse=True)&#10;matched = set()&#10;for a_id, b_id, score in scores:&#10;    if a_id not in matched and b_id not in matched:&#10;        create_match(a_id, b_id)&#10;        matched.add(a_id); matched.add(b_id)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#065F46;strokeColor=#047857;strokeWidth=1;fontColor=#FFFFFF;fontSize=10;fontFamily=Courier New;align=left;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="590" width="630" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="visual-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE7F3;strokeColor=#EC4899;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="820" y="450" width="680" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="visual-title" value="매칭 시각화 예시" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="465" width="200" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="pool-m1" value="남성 풀 A&#10;(컴공, 2학년)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#60A5FA;strokeColor=#2563EB;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="510" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="pool-f1" value="여성 풀 B&#10;(컴공, 2학년)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EC4899;strokeColor=#DB2777;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1060" y="510" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="match1" value="200점" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=4;strokeColor=#10B981;fontColor=#10B981;fontSize=14;fontStyle=1;" parent="1" source="pool-m1" target="pool-f1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="pool-m2" value="남성 풀 C&#10;(경영, 3학년)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#60A5FA;strokeColor=#2563EB;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="610" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="pool-f2" value="여성 풀 D&#10;(경제, 3학년)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EC4899;strokeColor=#DB2777;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1060" y="610" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="match2" value="180점" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=4;strokeColor=#3B82F6;fontColor=#3B82F6;fontSize=14;fontStyle=1;" parent="1" source="pool-m2" target="pool-f2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="match-note" value="✓ 최고 점수 매칭 우선&#10;✓ 안정적 매칭 보장&#10;✓ 공정성 확보" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="550" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="benefits-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="760" width="1400" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="benefits-title" value="🎯 최적화 효과" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="775" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="benefit1" value="✓ 배치 로딩으로 DB 부하 최소화" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="815" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="benefit2" value="✓ 그룹화로 불필요한 비교 제거" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="845" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="benefit3" value="✓ 점수 기반 최적 매칭 보장" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="815" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="benefit4" value="✓ Greedy 알고리즘으로 안정성 확보" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="845" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="benefit5" value="✓ 메모리 캐싱으로 빠른 접근" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="815" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="benefit6" value="✓ 시간 복잡도 O(n log n) 달성" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="845" width="300" height="25" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="7. Fernet 암호화 시스템" id="encryption-system">
+        <mxGraphModel dx="505" dy="676" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="enc-title" value="Fernet 파일 암호화 시스템 (AES-128 CBC + HMAC-SHA256)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="40" width="1000" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="sec-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#EF4444;strokeWidth=3;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="100" width="1400" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="sec-title" value="🔐 보안 특징" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="110" width="150" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="sec-feat1" value="AES-128 CBC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="115" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="sec-feat2" value="HMAC-SHA256" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="530" y="115" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="sec-feat3" value="PBKDF2 (100k)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F59E0B;strokeColor=#D97706;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="710" y="115" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="sec-feat4" value="Base64 인코딩" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="890" y="115" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="sec-feat5" value="GDPR 준수" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EC4899;strokeColor=#DB2777;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1070" y="115" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="key-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#F59E0B;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="200" width="1400" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="key-title" value="1️⃣ 암호화 키 생성 (PBKDF2-HMAC-SHA256)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="215" width="400" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="secret" value="SECRET_KEY" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="260" width="150" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow1" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#F59E0B;" parent="1" source="secret" target="pbkdf2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="pbkdf2" value="PBKDF2&#10;100k iterations&#10;SHA-256&#10;32 bytes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;fontColor=#1a1a1a;fontSize=12;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="260" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow2" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#F59E0B;" parent="1" source="pbkdf2" target="base64" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="base64" value="Base64&#10;인코딩" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F59E0B;strokeColor=#D97706;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="660" y="260" width="150" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow3" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#10B981;" parent="1" source="base64" target="fernet-key" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="fernet-key" value="Fernet Key&#10;(32 bytes)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="890" y="260" width="150" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="key-note" value="✓ 결정적 키 생성 (동일 SECRET_KEY → 동일 Fernet Key)&#10;✓ 별도 키 저장 불필요&#10;✓ Brute-force 공격 방어 (100,000 iterations)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#059669;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="260" width="350" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="enc-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="410" width="1400" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="enc-title2" value="2️⃣ 파일 암호화 프로세스" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="425" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="plain" value="원본 파일&#10;(학생증)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#666666;strokeWidth=2;fontColor=#1a1a1a;fontSize=12;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="470" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow4" value="1. 읽기" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;fontColor=#3B82F6;fontSize=11;fontStyle=1;" parent="1" source="plain" target="cipher" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="cipher" value="Fernet Cipher&#10;① AES-128 CBC 암호화&#10;② 타임스탬프 추가&#10;③ HMAC-SHA256 생성&#10;④ 무결성 태그 부착" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;strokeWidth=2;fontColor=#1a1a1a;fontSize=11;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="460" width="250" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow5" value="2. 암호화" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;fontColor=#3B82F6;fontSize=11;fontStyle=1;" parent="1" source="cipher" target="encrypted" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="encrypted" value="암호화된 파일&#10;+ HMAC 태그" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="470" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow6" value="3. 저장" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#8B5CF6;fontColor=#8B5CF6;fontSize=11;fontStyle=1;" parent="1" source="encrypted" target="storage" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="storage" value="파일 시스템" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#EC4899;strokeColor=#DB2777;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="460" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="enc-note" value="✓ 파일 내용 완전 암호화&#10;✓ 변조 방지 (HMAC)&#10;✓ 타임스탬프로 유효성 검증" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#1E40AF;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1100" y="470" width="350" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="dec-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#10B981;strokeWidth=2;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="620" width="1400" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="dec-title" value="3️⃣ 파일 복호화 프로세스" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="635" width="300" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="enc-file" value="암호화된 파일" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="680" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow7" value="1. 읽기" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;fontColor=#10B981;fontSize=11;fontStyle=1;" parent="1" source="enc-file" target="verify" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="verify" value="HMAC 검증" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EF4444;strokeColor=#DC2626;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="690" width="120" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow8" value="✓ 통과" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;fontColor=#10B981;fontSize=11;fontStyle=1;" parent="1" source="verify" target="decrypt" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow9" value="✗ 실패" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#EF4444;dashed=1;fontColor=#EF4444;fontSize=11;fontStyle=1;" parent="1" source="verify" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="410" y="770" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="error" value="InvalidToken&#10;예외 발생" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#EF4444;strokeWidth=2;fontColor=#EF4444;fontSize=11;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="760" width="120" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="decrypt" value="AES-128 CBC&#10;복호화" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;fontColor=#FFFFFF;fontSize=13;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="690" width="120" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow10" value="2. 복호화" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;fontColor=#10B981;fontSize=11;fontStyle=1;" parent="1" source="decrypt" target="decrypted" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="decrypted" value="원본 파일 복원" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#666666;strokeWidth=2;fontColor=#1a1a1a;fontSize=12;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="750" y="680" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow11" value="3. 반환" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;fontColor=#10B981;fontSize=11;fontStyle=1;" parent="1" source="decrypted" target="app" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="app" value="애플리케이션" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;fontColor=#FFFFFF;fontSize=12;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="950" y="680" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="dec-note" value="✓ HMAC으로 무결성 검증&#10;✓ 변조 시 즉시 차단&#10;✓ 안전한 복호화&#10;✓ 원본 파일 복원" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#047857;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1150" y="680" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="use-box" value="📁 활용 사례: 학생증 파일 암호화 | 개인정보 보호 (GDPR) | 민감 데이터 저장 | 파일 무결성 검증 | 보안 감사 대응 | 규정 준수 (ISO 27001)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE7F3;strokeColor=#EC4899;strokeWidth=2;fontColor=#1a1a1a;fontSize=13;fontStyle=1;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="830" width="1400" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="8. 방 생성 및 참여 흐름 (Room Flow)" id="room-flow">
+        <mxGraphModel dx="505" dy="676" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="rf-0"/>
+                <mxCell id="rf-1" parent="rf-0"/>
+                <mxCell id="rf-title" value="방 생성 및 참여 흐름 (Room Life-cycle)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a1a;" parent="rf-1" vertex="1">
+                    <mxGeometry x="500" y="40" width="600" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="rf-user" value="사용자 (Host/Guest)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;strokeWidth=2;" parent="rf-1" vertex="1">
+                    <mxGeometry x="100" y="150" width="30" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="rf-api" value="FastAPI Backend&#10;(Room Service)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;strokeWidth=2;fontColor=#FFFFFF;fontStyle=1;" parent="rf-1" vertex="1">
+                    <mxGeometry x="350" y="150" width="150" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="rf-db" value="PostgreSQL" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#F59E0B;strokeColor=#D97706;strokeWidth=2;fontColor=#FFFFFF;fontStyle=1;" parent="rf-1" vertex="1">
+                    <mxGeometry x="650" y="250" width="100" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="rf-ws" value="WebSocket Server" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;strokeWidth=2;fontColor=#FFFFFF;fontStyle=1;" parent="rf-1" vertex="1">
+                    <mxGeometry x="350" y="550" width="150" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="rf-step1" value="1. 방 생성 요청(POST /rooms)" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="rf-1" source="rf-user" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="140" y="180" as="sourcePoint"/>
+                        <mxPoint x="350" y="180" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rf-valid" value="입력 검증 (Pydantic)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#10B981;fontSize=11;" parent="rf-1" vertex="1">
+                    <mxGeometry x="365" y="190" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="rf-uuid" value="UUID 생성" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#10B981;fontSize=11;" parent="rf-1" vertex="1">
+                    <mxGeometry x="365" y="240" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="rf-save" value="2. 데이터 저장" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#F59E0B;" parent="rf-1" source="rf-api" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="510" y="300" as="sourcePoint"/>
+                        <mxPoint x="650" y="300" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rf-url" value="3. 공유 URL 생성" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#10B981;fontSize=11;" parent="rf-1" vertex="1">
+                    <mxGeometry x="365" y="350" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="rf-resp" value="4. 방 정보 반환" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;dashed=1;" parent="rf-1" target="rf-user" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="350" y="420" as="sourcePoint"/>
+                        <mxPoint x="140" y="420" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rf-join" value="5. 참여 시도 (GET /rooms/{id})" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#8B5CF6;" parent="rf-1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="140" y="520" as="sourcePoint"/>
+                        <mxPoint x="350" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rf-wss" value="6. WS 연결 &amp; 동기화" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#8B5CF6;dashed=1;" parent="rf-1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="350" y="590" as="sourcePoint"/>
+                        <mxPoint x="140" y="590" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="9. 통합 메시징 &amp; Redis Pub/Sub (Messaging)" id="messaging-pubsub">
+        <mxGraphModel dx="505" dy="676" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="msg-0"/>
+                <mxCell id="msg-1" parent="msg-0"/>
+                <mxCell id="msg-title" value="통합 메시징 시스템 &amp; Redis Pub/Sub 브로드캐스팅" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a1a;" parent="msg-1" vertex="1">
+                    <mxGeometry x="400" y="40" width="800" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-c1" value="Client 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;fontColor=#FFFFFF;" parent="msg-1" vertex="1">
+                    <mxGeometry x="100" y="200" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-c2" value="Client 2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;fontColor=#FFFFFF;" parent="msg-1" vertex="1">
+                    <mxGeometry x="100" y="400" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-be1" value="FastAPI 인스턴스 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#FFFFFF;" parent="msg-1" vertex="1">
+                    <mxGeometry x="400" y="200" width="150" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-be2" value="FastAPI 인스턴스 2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#FFFFFF;" parent="msg-1" vertex="1">
+                    <mxGeometry x="400" y="400" width="150" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-redis" value="Redis Cluster&#10;(Pub/Sub)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#EF4444;strokeColor=#DC2626;fontColor=#FFFFFF;" parent="msg-1" vertex="1">
+                    <mxGeometry x="800" y="280" width="120" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-db" value="PostgreSQL&#10;(Persistence)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#F59E0B;strokeColor=#D97706;fontColor=#FFFFFF;" parent="msg-1" vertex="1">
+                    <mxGeometry x="800" y="450" width="120" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-flow1" value="1. 메시지 전송 (HTTPS POST)" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="msg-1" source="msg-c1" target="msg-be1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-flow2" value="2. DB 저장" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#F59E0B;" parent="msg-1" source="msg-be1" target="msg-db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="550" y="240" as="sourcePoint"/>
+                        <mxPoint x="800" y="460" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="msg-flow3" value="3. Publish to Redis" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#EF4444;" parent="msg-1" source="msg-be1" target="msg-redis" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-flow4" value="4. Subscribe &amp; Broadcast" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#EF4444;dashed=1;" parent="msg-1" source="msg-redis" target="msg-be2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-flow5" value="5. WebSocket Push" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#8B5CF6;" parent="msg-1" source="msg-be2" target="msg-c2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg-note" value="✓ 다중 인스턴스 간 실시간 동기화 보장&#10;✓ 영구 저장을 통한 메시지 히스토리 유지&#10;✓ Redis Pub/Sub을 통한 수평 확장성 확보" style="text;html=1;strokeColor=none;fillColor=#F3F4F6;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontColor=#1a1a1a;" parent="msg-1" vertex="1">
+                    <mxGeometry x="1000" y="280" width="300" height="100" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="10. 매칭 프로세스 (Matching Process)" id="matching-process">
+        <mxGraphModel dx="505" dy="676" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="mt-0"/>
+                <mxCell id="mt-1" parent="mt-0"/>
+                <mxCell id="mt-title" value="매칭 프로세스 (Matching End-to-End Flow)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a1a;" parent="mt-1" vertex="1">
+                    <mxGeometry x="500" y="40" width="600" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="mt-u1" value="사용자 A (그룹 A)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;fontColor=#FFFFFF;fontStyle=1;" parent="mt-1" vertex="1">
+                    <mxGeometry x="100" y="150" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="mt-u2" value="사용자 B (그룹 B)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;fontColor=#FFFFFF;fontStyle=1;" parent="mt-1" vertex="1">
+                    <mxGeometry x="100" y="600" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="mt-svc" value="매칭 서비스 (Matching Service)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#FFFFFF;fontStyle=1;" parent="mt-1" vertex="1">
+                    <mxGeometry x="400" y="150" width="200" height="510" as="geometry"/>
+                </mxCell>
+                <mxCell id="mt-admin" value="관리자 (Admin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6B7280;strokeColor=#374151;fontColor=#FFFFFF;fontStyle=1;" parent="mt-1" vertex="1">
+                    <mxGeometry x="750" y="150" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="mt-step1" value="1. 학생 인증 제출" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="mt-1" source="mt-u1" target="mt-svc" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="220" y="180" as="sourcePoint"/>
+                        <mxPoint x="400" y="180" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mt-step2" value="2. 인증 승인" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#6B7280;" parent="mt-1" source="mt-admin" target="mt-svc" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mt-step3" value="3. 매칭 풀 생성" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="mt-1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="220" y="280" as="sourcePoint"/>
+                        <mxPoint x="400" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mt-algo" value="자동 매칭 알고리즘 실행&#10;(학과/성별 고려)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#10B981;fontSize=11;" parent="mt-1" vertex="1">
+                    <mxGeometry x="425" y="320" width="150" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="mt-step4" value="4. 매칭 제안 전송" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#10B981;dashed=1;" parent="mt-1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="400" y="450" as="sourcePoint"/>
+                        <mxPoint x="220" y="450" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mt-step5" value="5. 제안 수락" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3B82F6;" parent="mt-1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="220" y="520" as="sourcePoint"/>
+                        <mxPoint x="400" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mt-step6" value="6. 익명 채팅방 생성" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#8B5CF6;" parent="mt-1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="400" y="630" as="sourcePoint"/>
+                        <mxPoint x="220" y="630" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mt-note" value="✓ 학생 인증 기반 전공/계열 매칭 품질 보장&#10;✓ 제안-수락 기반의 상호 합의 매칭&#10;✓ 익명성 보장을 위한 블라인드 채팅 연결" style="text;html=1;strokeColor=none;fillColor=#F3F4F6;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontColor=#1a1a1a;" parent="mt-1" vertex="1">
+                    <mxGeometry x="650" y="450" width="300" height="100" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

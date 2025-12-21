@@ -1,9 +1,8 @@
 """Notification ORM Model."""
 
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Boolean, ForeignKey, JSON, String, Text
+from sqlalchemy import JSON, Boolean, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
@@ -46,7 +45,7 @@ class Notification(Base, TimestampMixin):
         comment="Notification message content",
     )
 
-    data: Mapped[Optional[dict]] = mapped_column(
+    data: Mapped[dict | None] = mapped_column(
         JSON(),
         nullable=True,
         comment="Additional notification data (JSON)",
@@ -59,7 +58,7 @@ class Notification(Base, TimestampMixin):
         comment="Whether the notification has been read",
     )
 
-    read_at: Mapped[Optional[datetime]] = mapped_column(
+    read_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
         comment="Timestamp when notification was read",
     )

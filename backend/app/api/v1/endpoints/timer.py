@@ -5,11 +5,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import get_room_repository, get_timer_repository
-from app.core.exceptions import InvalidTimerStateException, RoomNotFoundException, TimerNotFoundException
+from app.core.exceptions import (
+    InvalidTimerStateException,
+    RoomNotFoundException,
+    TimerNotFoundException,
+)
 from app.domain.timer.schemas import TimerStateResponse
 from app.domain.timer.service import TimerService
 from app.infrastructure.repositories.room_repository import RoomRepository
 from app.infrastructure.repositories.timer_repository import TimerRepository
+
 
 router = APIRouter(prefix="/timer", tags=["timer"])
 

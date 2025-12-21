@@ -4,29 +4,13 @@ import asyncio
 import sys
 from pathlib import Path
 
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.infrastructure.database.session import engine
 from app.infrastructure.database.base import Base
 
 # Import all models to register them with Base
-from app.infrastructure.database.models.user import User
-from app.infrastructure.database.models.user_stats import UserGoal, ManualSession
-from app.infrastructure.database.models.community import Post, Comment, PostLike
-from app.infrastructure.database.models.ranking import (
-    RankingTeam,
-    RankingTeamMember,
-    RankingTeamInvitation,
-    RankingVerificationRequest,
-)
-from app.infrastructure.database.models.chat import ChatRoom, ChatMessage, ChatMember
-from app.infrastructure.database.models.achievement import Achievement, UserAchievement
-from app.infrastructure.database.models.session_history import SessionHistory
-from app.infrastructure.database.models.room import Room
-from app.infrastructure.database.models.participant import Participant
-from app.infrastructure.database.models.timer import Timer
-from app.infrastructure.database.models.room_reservation import RoomReservation
-from app.infrastructure.database.models.notification import Notification
+from app.infrastructure.database.session import engine
 
 
 async def create_all_tables():

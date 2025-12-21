@@ -4,7 +4,9 @@ import { ProposalDetailPage } from "../pages/ProposalDetail";
 import { authService } from "../features/auth/services/authService";
 import { matchingApi } from "../api/matching";
 import { PageTransition } from "../components/PageTransition";
+import { ReportDialog } from "../components/ReportDialog";
 import { toast } from "sonner";
+import { useState } from "react";
 import type { MatchingProposal } from "../types/matching";
 
 export const Route = createFileRoute("/matching/proposals/$proposalId")({
@@ -53,6 +55,7 @@ function ProposalDetailComponent() {
   const initialData = Route.useLoaderData();
   const user = authService.getCurrentUser();
   const isDemo = initialData.isDemo || proposalId.startsWith("demo-");
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
   // 데모 모드: 쿼리 캐시에서 데모 proposal 찾기
   const demoProposals =
@@ -217,7 +220,18 @@ function ProposalDetailComponent() {
         onAccept={() => respondMutation.mutate("accept")}
         onReject={() => respondMutation.mutate("reject")}
         onBack={() => navigate({ to: "/matching" })}
+        onReport={() => setIsReportDialogOpen(true)}
         isLoading={respondMutation.isPending}
+      />
+      <ReportDialog
+        open={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
+        proposalId={!isDemo ? proposalId : undefined}
+        poolId={displayProposal?.pool_id_a || displayProposal?.pool_id_b}
+        reportedUserId={
+          displayProposal?.pool_a?.creator_id ||
+          displayProposal?.pool_b?.creator_id
+        }
       />
     </PageTransition>
   );

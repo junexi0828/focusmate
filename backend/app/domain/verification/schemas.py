@@ -1,7 +1,6 @@
 """Pydantic schemas for user verification."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -12,9 +11,9 @@ class VerificationSubmit(BaseModel):
 
     school_name: str = Field(..., min_length=1, max_length=100)
     department: str = Field(..., min_length=1, max_length=100)
-    major_category: Optional[str] = Field(None, max_length=50)
+    major_category: str | None = Field(None, max_length=50)
     grade: str = Field(..., min_length=1, max_length=20)
-    student_id: Optional[str] = Field(None, max_length=20)
+    student_id: str | None = Field(None, max_length=20)
     gender: str = Field(..., pattern="^(male|female|other)$")
     documents: list[str] = Field(default_factory=list)
 
@@ -33,14 +32,14 @@ class VerificationResponse(BaseModel):
     user_id: str
     school_name: str
     department: str
-    major_category: Optional[str]
+    major_category: str | None
     grade: str
     gender: str
     verification_status: str
     badge_visible: bool
     department_visible: bool
     submitted_at: datetime
-    verified_at: Optional[datetime]
+    verified_at: datetime | None
 
     class Config:
         from_attributes = True
@@ -49,31 +48,31 @@ class VerificationResponse(BaseModel):
 class VerificationStatusResponse(BaseModel):
     """Schema for verification status response."""
 
-    verification_id: Optional[UUID]
-    status: Optional[str]
-    school_name: Optional[str]
-    department: Optional[str]
-    major_category: Optional[str]
-    grade: Optional[str]
-    gender: Optional[str]
-    badge_visible: Optional[bool]
-    department_visible: Optional[bool]
-    verified_at: Optional[datetime]
-    message: Optional[str]
+    verification_id: UUID | None
+    status: str | None
+    school_name: str | None
+    department: str | None
+    major_category: str | None
+    grade: str | None
+    gender: str | None
+    badge_visible: bool | None
+    department_visible: bool | None
+    verified_at: datetime | None
+    message: str | None
 
 
 class VerificationSettingsUpdate(BaseModel):
     """Schema for updating verification settings."""
 
-    badge_visible: Optional[bool] = None
-    department_visible: Optional[bool] = None
+    badge_visible: bool | None = None
+    department_visible: bool | None = None
 
 
 class VerificationReview(BaseModel):
     """Schema for admin verification review."""
 
     approved: bool
-    admin_note: Optional[str] = Field(None, max_length=500)
+    admin_note: str | None = Field(None, max_length=500)
 
 
 class VerificationListItem(BaseModel):

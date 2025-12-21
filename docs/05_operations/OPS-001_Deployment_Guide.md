@@ -10,6 +10,12 @@ iso_standard: ISO/IEC 20000 Service Management
 
 # Deployment Guide
 
+## [Home](../README.md) > [Operations](./README.md) > OPS-001
+
+---
+
+# Deployment Guide
+
 # Team Pomodoro Timer (Focus Mate)
 
 **문서 버전**: 1.0

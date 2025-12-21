@@ -9,6 +9,7 @@ import {
 } from "../features/participants/components/ParticipantListOriginal";
 import { RoomSettingsDialog } from "../features/room/components/RoomSettingsDialog";
 import { useServerTimer } from "../features/timer/hooks/useServerTimer";
+import { timerService } from "../features/timer/services/timerService";
 import { LogOut, Copy, Check, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { roomService } from "../features/room/services/roomService";
@@ -264,12 +265,18 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
   // Check if current user is host
   const currentAuthUser = authService.getCurrentUser();
+  // First check room.host_id (most reliable)
+  const isCurrentUserHostByRoom =
+    room?.host_id && currentAuthUser?.id && room.host_id === currentAuthUser.id;
+  // Fallback to participant is_host check
   const currentUser =
     participants.find((p) => p.user_id === currentAuthUser?.id && p.is_host) ||
     participants.find((p) => p.is_host) ||
     participants[0];
-  const isCurrentUserHost =
+  const isCurrentUserHostByParticipant =
     currentUser?.user_id === currentAuthUser?.id && currentUser?.is_host;
+  // Use room.host_id if available, otherwise fallback to participant check
+  const isCurrentUserHost = isCurrentUserHostByRoom ?? isCurrentUserHostByParticipant;
 
   // Use server-side timer hook
   const {
@@ -559,9 +566,26 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         setBreakTime(newBreakTime);
         setAutoStart(newAutoStart);
         setRemoveOnLeave(newRemoveOnLeave);
+
+        // Reload timer state to reflect duration changes
+        if (roomId) {
+          try {
+            const timerResponse = await timerService.getTimer(roomId);
+            if (timerResponse.status === "success" && timerResponse.data) {
+              updateTimerState(timerResponse.data);
+            }
+          } catch (error) {
+            console.error("Failed to reload timer state:", error);
+          }
+        }
+
         toast.success("설정이 업데이트되었습니다");
       } else {
-        toast.error(response.error?.message || "설정 업데이트에 실패했습니다");
+        if (response.error?.code === "FORBIDDEN" || response.error?.code === "ROOM_HOST_REQUIRED") {
+          toast.error("방장만 방 설정을 변경할 수 있습니다");
+        } else {
+          toast.error(response.error?.message || "설정 업데이트에 실패했습니다");
+        }
       }
     } catch (error) {
       console.error("Failed to update settings:", error);
@@ -580,7 +604,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           onLeaveRoom();
         }, 1000);
       } else {
-        if (response.error?.code === "FORBIDDEN") {
+        if (response.error?.code === "FORBIDDEN" || response.error?.code === "ROOM_HOST_REQUIRED") {
           toast.error("방장만 방을 삭제할 수 있습니다");
         } else {
           toast.error(response.error?.message || "방 삭제에 실패했습니다");

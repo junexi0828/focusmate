@@ -1,6 +1,6 @@
 """Achievement domain service - gamification and achievement tracking."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.core.exceptions import ValidationException
 from app.domain.achievement.schemas import (
@@ -180,7 +180,7 @@ class AchievementService:
                     id=generate_uuid(),
                     user_id=user_id,
                     achievement_id=achievement.id,
-                    unlocked_at=datetime.now(timezone.utc),
+                    unlocked_at=datetime.now(UTC),
                     progress=current_progress,
                 )
                 created = await self.user_achievement_repo.create(user_achievement)
@@ -203,16 +203,15 @@ class AchievementService:
         """
         if requirement_type == "total_sessions":
             return user.total_sessions
-        elif requirement_type == "total_focus_time":
+        if requirement_type == "total_focus_time":
             return user.total_focus_time
-        elif requirement_type == "streak_days":
+        if requirement_type == "streak_days":
             # Calculate consecutive days streak from session history
             return await self._calculate_streak_days(user.id)
-        elif requirement_type == "community_posts":
+        if requirement_type == "community_posts":
             # Get community post count from repository
             return await self._get_community_post_count(user.id)
-        else:
-            return 0
+        return 0
 
     async def _get_community_post_count(self, user_id: str) -> int:
         """Get total community posts count for a user.
@@ -240,7 +239,7 @@ class AchievementService:
             return 0
 
         # Get sessions from the last 365 days
-        since = datetime.now(timezone.utc) - timedelta(days=365)
+        since = datetime.now(UTC) - timedelta(days=365)
         sessions = await self.session_repo.get_by_user_since(user_id, since)
 
         if not sessions:
@@ -261,7 +260,7 @@ class AchievementService:
         sorted_dates = sorted(session_dates, reverse=True)
 
         # Calculate streak from today backwards
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         streak = 0
         current_date = today
 

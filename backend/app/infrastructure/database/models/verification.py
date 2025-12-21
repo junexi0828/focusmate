@@ -1,10 +1,9 @@
 """User verification database models."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import text, ARRAY, Boolean, ForeignKey, String, Text, TIMESTAMP
+from sqlalchemy import ARRAY, TIMESTAMP, Boolean, ForeignKey, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,11 +32,11 @@ class UserVerification(Base):
 
     # Department information
     department: Mapped[str] = mapped_column(String(100), nullable=False)
-    major_category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    major_category: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Grade information
     grade: Mapped[str] = mapped_column(String(20), nullable=False)
-    student_id_encrypted: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    student_id_encrypted: Mapped[str | None] = mapped_column(Text(), nullable=True)
 
     # Personal information
     gender: Mapped[str] = mapped_column(String(10), nullable=False)
@@ -46,10 +45,10 @@ class UserVerification(Base):
     verification_status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'pending'")
     )
-    submitted_documents: Mapped[Optional[list[str]]] = mapped_column(
+    submitted_documents: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text()), nullable=True
     )
-    admin_note: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    admin_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
 
     # Display settings
     badge_visible: Mapped[bool] = mapped_column(
@@ -63,7 +62,7 @@ class UserVerification(Base):
     submitted_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    verified_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )

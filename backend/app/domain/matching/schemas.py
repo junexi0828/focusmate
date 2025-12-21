@@ -1,7 +1,7 @@
 """Pydantic schemas for matching pool."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -12,9 +12,9 @@ class MatchingPoolCreate(BaseModel):
 
     member_ids: list[str] = Field(..., min_length=2, max_length=8)
     preferred_match_type: str = Field(..., pattern="^(any|same_department|major_category)$")
-    preferred_categories: Optional[list[str]] = None
+    preferred_categories: list[str] | None = None
     matching_type: str = Field(..., pattern="^(blind|open)$")
-    message: Optional[str] = Field(None, max_length=200)
+    message: str | None = Field(None, max_length=200)
 
     @field_validator("member_ids")
     @classmethod
@@ -37,9 +37,9 @@ class MatchingPoolResponse(BaseModel):
     grade: str
     gender: str
     preferred_match_type: str
-    preferred_categories: Optional[list[str]]
+    preferred_categories: list[str] | None
     matching_type: str
-    message: Optional[str]
+    message: str | None
     status: str
     created_at: datetime
     expires_at: datetime

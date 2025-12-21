@@ -1,6 +1,6 @@
 """Community domain service - posts, comments, and social interactions."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.exceptions import NotFoundException, UnauthorizedException
 from app.domain.community.schemas import (
@@ -15,7 +15,13 @@ from app.domain.community.schemas import (
     PostResponse,
     PostUpdate,
 )
-from app.infrastructure.database.models.community import Comment, CommentLike, Post, PostLike, PostRead
+from app.infrastructure.database.models.community import (
+    Comment,
+    CommentLike,
+    Post,
+    PostLike,
+    PostRead,
+)
 from app.infrastructure.repositories.community_repository import (
     CommentLikeRepository,
     CommentRepository,
@@ -105,7 +111,7 @@ class CommunityService:
                     id=generate_uuid(),
                     post_id=post_id,
                     user_id=current_user_id,
-                    read_at=datetime.now(timezone.utc),
+                    read_at=datetime.now(UTC),
                 )
                 await self.post_read_repo.create_or_update(post_read)
                 response.is_read = True
@@ -113,7 +119,7 @@ class CommunityService:
         return response
 
     async def get_posts(self, filters: PostFilters, current_user_id: str | None = None) -> PostListResult:
-        """Get posts with filters and pagination."""
+        """Get posts with filters, sorting, and pagination."""
         posts, total = await self.post_repo.get_posts(
             category=filters.category,
             user_id=filters.user_id,
@@ -121,6 +127,7 @@ class CommunityService:
             author_username=filters.author_username,
             date_from=filters.date_from,
             date_to=filters.date_to,
+            sort_by=filters.sort_by,
             limit=filters.limit,
             offset=filters.offset,
         )
@@ -207,18 +214,17 @@ class CommunityService:
             post.likes = max(0, post.likes - 1)
             await self.post_repo.update(post)
             return LikeResponse(success=True, liked=False, new_count=post.likes)
-        else:
-            # Like
-            post_like = PostLike(
-                id=generate_uuid(),
-                post_id=post_id,
-                user_id=user_id,
-                created_at=datetime.now(timezone.utc),
-            )
-            await self.post_like_repo.create(post_like)
-            post.likes += 1
-            await self.post_repo.update(post)
-            return LikeResponse(success=True, liked=True, new_count=post.likes)
+        # Like
+        post_like = PostLike(
+            id=generate_uuid(),
+            post_id=post_id,
+            user_id=user_id,
+            created_at=datetime.now(UTC),
+        )
+        await self.post_like_repo.create(post_like)
+        post.likes += 1
+        await self.post_repo.update(post)
+        return LikeResponse(success=True, liked=True, new_count=post.likes)
 
     # Comment Operations
     async def create_comment(
@@ -350,15 +356,14 @@ class CommunityService:
             comment.likes = max(0, comment.likes - 1)
             await self.comment_repo.update(comment)
             return LikeResponse(success=True, liked=False, new_count=comment.likes)
-        else:
-            # Like
-            comment_like = CommentLike(
-                id=generate_uuid(),
-                comment_id=comment_id,
-                user_id=user_id,
-                created_at=datetime.now(timezone.utc),
-            )
-            await self.comment_like_repo.create(comment_like)
-            comment.likes += 1
-            await self.comment_repo.update(comment)
-            return LikeResponse(success=True, liked=True, new_count=comment.likes)
+        # Like
+        comment_like = CommentLike(
+            id=generate_uuid(),
+            comment_id=comment_id,
+            user_id=user_id,
+            created_at=datetime.now(UTC),
+        )
+        await self.comment_like_repo.create(comment_like)
+        comment.likes += 1
+        await self.comment_repo.update(comment)
+        return LikeResponse(success=True, liked=True, new_count=comment.likes)

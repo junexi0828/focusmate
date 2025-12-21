@@ -1,11 +1,9 @@
 """Presence service for managing user online/offline status."""
 
-from datetime import datetime
-from typing import Optional
 
 from app.domain.friend.schemas import FriendPresence
-from app.infrastructure.repositories.presence_repository import PresenceRepository
 from app.infrastructure.repositories.friend_repository import FriendRepository
+from app.infrastructure.repositories.presence_repository import PresenceRepository
 
 
 class PresenceService:
@@ -37,7 +35,7 @@ class PresenceService:
         """Decrement connection count and return new count."""
         return await self.presence_repo.decrement_connection_count(user_id)
 
-    async def get_user_presence(self, user_id: str) -> Optional[FriendPresence]:
+    async def get_user_presence(self, user_id: str) -> FriendPresence | None:
         """Get presence for a specific user."""
         presence = await self.presence_repo.get_presence(user_id)
         if presence:
@@ -65,7 +63,7 @@ class PresenceService:
         return [p.user_id for p in presences if p.is_online]
 
     async def update_status_message(
-        self, user_id: str, status_message: Optional[str]
+        self, user_id: str, status_message: str | None
     ) -> FriendPresence:
         """Update user's status message."""
         presence = await self.presence_repo.get_presence(user_id)

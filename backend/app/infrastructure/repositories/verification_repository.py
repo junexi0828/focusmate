@@ -1,6 +1,5 @@
 """Repository for user verification operations."""
 
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -25,7 +24,7 @@ class VerificationRepository:
 
     async def get_verification_by_id(
         self, verification_id: UUID
-    ) -> Optional[UserVerification]:
+    ) -> UserVerification | None:
         """Get verification by ID."""
         result = await self.session.execute(
             select(UserVerification).where(
@@ -36,7 +35,7 @@ class VerificationRepository:
 
     async def get_verification_by_user(
         self, user_id: str
-    ) -> Optional[UserVerification]:
+    ) -> UserVerification | None:
         """Get verification by user ID."""
         result = await self.session.execute(
             select(UserVerification).where(UserVerification.user_id == user_id)
@@ -58,7 +57,7 @@ class VerificationRepository:
 
     async def update_verification(
         self, verification_id: UUID, update_data: dict
-    ) -> Optional[UserVerification]:
+    ) -> UserVerification | None:
         """Update verification."""
         verification = await self.get_verification_by_id(verification_id)
         if not verification:
@@ -73,7 +72,7 @@ class VerificationRepository:
 
     async def update_verification_settings(
         self, user_id: str, settings: dict
-    ) -> Optional[UserVerification]:
+    ) -> UserVerification | None:
         """Update verification display settings."""
         verification = await self.get_verification_by_user(user_id)
         if not verification:

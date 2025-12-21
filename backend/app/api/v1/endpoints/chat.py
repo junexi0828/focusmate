@@ -1,6 +1,6 @@
 """Chat API endpoints."""
 
-from typing import Annotated, List, Optional
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import (
@@ -18,30 +18,31 @@ from fastapi.websockets import WebSocketState
 
 from app.api.deps import DatabaseSession, get_current_user, get_current_user_required
 from app.core.security import decode_jwt_token
+from app.domain.chat.invitation_service import InvitationService
 from app.domain.chat.schemas import (
     ChatMemberResponse,
     ChatRoomListResponse,
     ChatRoomResponse,
     DirectChatCreate,
+    FriendRoomCreate,
+    InvitationCodeCreate,
+    InvitationCodeInfo,
+    InvitationJoinRequest,
     MessageCreate,
     MessageListResponse,
     MessageResponse,
     MessageUpdate,
     TeamChatCreate,
     TeamChatCreateByEmail,
-    InvitationCodeCreate,
-    InvitationCodeInfo,
-    InvitationJoinRequest,
-    FriendRoomCreate,
 )
 from app.domain.chat.service import ChatService
-from app.domain.chat.invitation_service import InvitationService
+from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 from app.infrastructure.repositories.chat_repository import ChatRepository
 from app.infrastructure.repositories.friend_repository import FriendRepository
 from app.infrastructure.repositories.user_repository import UserRepository
-from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 from app.infrastructure.websocket.chat_manager import connection_manager
 from app.services.chat_file_upload import ChatFileUploadService
+
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -82,7 +83,7 @@ def get_invitation_service(
 async def get_user_rooms(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-    room_type: Optional[str] = Query(None, regex="^(direct|team|matching)$"),
+    room_type: str | None = Query(None, regex="^(direct|team|matching)$"),
 ) -> ChatRoomListResponse:
     """Get all chat rooms for the current user."""
     user_id = current_user["id"]
@@ -103,7 +104,7 @@ async def get_unread_count(
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Get unread count error: {str(e)}", exc_info=True)
+        logger.error(f"Get unread count error: {e!s}", exc_info=True)
         # Return 0 if there's an error (e.g., chat tables don't exist yet)
         return {"count": 0}
 
@@ -169,12 +170,12 @@ async def get_room(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get("/rooms/{room_id}/members", response_model=List[ChatMemberResponse])
+@router.get("/rooms/{room_id}/members", response_model=list[ChatMemberResponse])
 async def get_room_members(
     room_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-) -> List[ChatMemberResponse]:
+) -> list[ChatMemberResponse]:
     """Get all members of a chat room."""
     # Verify user is member
     member = await service.repository.get_member(room_id, current_user["id"])
@@ -196,7 +197,7 @@ async def get_messages(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
     limit: int = Query(50, ge=1, le=100),
-    before_message_id: Optional[UUID] = None,
+    before_message_id: UUID | None = None,
 ) -> MessageListResponse:
     """Get messages from room."""
     try:
@@ -278,7 +279,7 @@ async def upload_files(
     room_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-    files: List[UploadFile] = File(...),
+    files: list[UploadFile] = File(...),
 ) -> dict:
     """Upload files to chat room."""
     # Verify user is member
@@ -502,30 +503,23 @@ async def websocket_chat(
     """WebSocket endpoint for real-time chat."""
     # Verify token and get user
     try:
-        print(f"[WebSocket] Connection attempt with token: {token[:20]}...")
         payload = decode_jwt_token(token)
         user_id: str = payload.get("sub")
         if not user_id:
-            print("[WebSocket] ERROR: No user_id in token payload")
             if websocket.client_state != WebSocketState.DISCONNECTED:
                 await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
-        print(f"[WebSocket] Token validated for user {user_id}")
         # Note: Full user verification would require DB session
         # For WebSocket, we trust the JWT token for now
         # Full verification can be added if needed
 
-    except Exception as e:
-        print(f"[WebSocket] ERROR: Token validation failed: {str(e)}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
-    print(f"[WebSocket] Connection accepted for user {user_id}")
 
     # Send welcome message to confirm connection is established
     try:
@@ -534,11 +528,7 @@ async def websocket_chat(
             "message": "WebSocket connection established",
             "user_id": user_id
         })
-        print(f"[WebSocket] Sent welcome message to {user_id}")
-    except Exception as e:
-        print(f"[WebSocket] ERROR: Failed to send welcome message to {user_id}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
         # If we can't send welcome message, connection is likely broken
         try:
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
@@ -551,29 +541,24 @@ async def websocket_chat(
             try:
                 # Use receive_text() and parse JSON manually for better error handling
                 message = await websocket.receive_text()
-                print(f"[WebSocket] Received raw message from {user_id}: {message[:100]}")
 
                 import json
                 data = json.loads(message)
-                print(f"[WebSocket] Received message from {user_id}: {data.get('type')}")
 
                 # Handle different message types
                 if data.get("type") == "ping":
                     # Heartbeat - respond with pong
                     await websocket.send_json({"type": "pong"})
-                    print(f"[WebSocket] Sent pong to {user_id}")
 
                 elif data.get("type") == "join_room":
                     room_id = UUID(data["room_id"])
                     await connection_manager.connect(websocket, room_id, user_id)
                     await websocket.send_json({"type": "joined", "room_id": str(room_id)})
-                    print(f"[WebSocket] User {user_id} joined room {room_id}")
 
                 elif data.get("type") == "leave_room":
                     room_id = UUID(data["room_id"])
                     connection_manager.disconnect(websocket, room_id)
                     await websocket.send_json({"type": "left", "room_id": str(room_id)})
-                    print(f"[WebSocket] User {user_id} left room {room_id}")
 
                 elif data.get("type") == "typing":
                     room_id = UUID(data["room_id"])
@@ -585,12 +570,8 @@ async def websocket_chat(
                             "room_id": str(room_id),
                         },
                     )
-                    print(f"[WebSocket] User {user_id} typing in room {room_id}")
-                else:
-                    print(f"[WebSocket] Unknown message type from {user_id}: {data.get('type')}")
 
-            except json.JSONDecodeError as e:
-                print(f"[WebSocket] JSON decode error from {user_id}: {str(e)}")
+            except json.JSONDecodeError:
                 # Send error response and continue
                 try:
                     await websocket.send_json({
@@ -602,16 +583,16 @@ async def websocket_chat(
                 continue
             except RuntimeError as e:
                 # Connection was closed - exit loop
-                if "Cannot call \"receive\"" in str(e):
+                if 'Cannot call "receive"' in str(e):
                     print(f"[WebSocket] Connection closed for {user_id}, exiting receive loop")
                     break
-                print(f"[WebSocket] RuntimeError from {user_id}: {str(e)}")
+                print(f"[WebSocket] RuntimeError from {user_id}: {e!s}")
                 continue
             except ValueError as e:
-                print(f"[WebSocket] ValueError from {user_id}: {str(e)}")
+                print(f"[WebSocket] ValueError from {user_id}: {e!s}")
                 continue
             except Exception as e:
-                print(f"[WebSocket] Error processing message from {user_id}: {str(e)}")
+                print(f"[WebSocket] Error processing message from {user_id}: {e!s}")
                 import traceback
                 traceback.print_exc()
                 continue
@@ -622,7 +603,7 @@ async def websocket_chat(
         for room_id in list(connection_manager.active_connections.keys()):
             connection_manager.disconnect(websocket, room_id)
     except Exception as e:
-        print(f"[WebSocket] ERROR: Fatal error for user {user_id}: {str(e)}")
+        print(f"[WebSocket] ERROR: Fatal error for user {user_id}: {e!s}")
         import traceback
         traceback.print_exc()
         # Clean up all connections for this websocket

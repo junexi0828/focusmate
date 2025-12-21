@@ -52,6 +52,8 @@ export function NotificationBell() {
       return response.data;
     },
     refetchInterval: isOpen ? 5000 : 30000, // Refetch more frequently when open
+    enabled: !!localStorage.getItem("access_token"), // Only fetch when authenticated
+    retry: 1,
   });
 
   // Get unread count
@@ -62,6 +64,8 @@ export function NotificationBell() {
       return response.data;
     },
     refetchInterval: 10000, // Refetch every 10 seconds
+    enabled: !!localStorage.getItem("access_token"), // Only fetch when authenticated
+    retry: 1,
   });
 
   // WebSocket for real-time updates

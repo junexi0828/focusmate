@@ -1,7 +1,6 @@
 """Repository for matching pool operations."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -24,14 +23,14 @@ class MatchingPoolRepository:
         await self.session.refresh(pool)
         return pool
 
-    async def get_pool_by_id(self, pool_id: UUID) -> Optional[MatchingPool]:
+    async def get_pool_by_id(self, pool_id: UUID) -> MatchingPool | None:
         """Get pool by ID."""
         result = await self.session.execute(
             select(MatchingPool).where(MatchingPool.pool_id == pool_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_pool_by_creator(self, creator_id: str) -> Optional[MatchingPool]:
+    async def get_pool_by_creator(self, creator_id: str) -> MatchingPool | None:
         """Get active pool by creator ID."""
         result = await self.session.execute(
             select(MatchingPool)
@@ -40,7 +39,7 @@ class MatchingPoolRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_user_active_pool(self, user_id: str) -> Optional[MatchingPool]:
+    async def get_user_active_pool(self, user_id: str) -> MatchingPool | None:
         """Get active pool where user is a member."""
         # PostgreSQL ARRAY contains check: use ANY() operator
         # Check if user_id is in member_ids array or if user is creator
@@ -59,7 +58,7 @@ class MatchingPoolRepository:
         return result.scalar_one_or_none()
 
     async def get_waiting_pools(
-        self, exclude_pool_id: Optional[UUID] = None
+        self, exclude_pool_id: UUID | None = None
     ) -> list[MatchingPool]:
         """Get all waiting pools."""
         query = select(MatchingPool).where(MatchingPool.status == "waiting")
@@ -91,7 +90,7 @@ class MatchingPoolRepository:
 
     async def update_pool(
         self, pool_id: UUID, update_data: dict
-    ) -> Optional[MatchingPool]:
+    ) -> MatchingPool | None:
         """Update pool."""
         pool = await self.get_pool_by_id(pool_id)
         if not pool:

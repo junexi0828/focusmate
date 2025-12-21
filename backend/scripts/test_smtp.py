@@ -5,11 +5,12 @@ import asyncio
 import sys
 from pathlib import Path
 
+
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.infrastructure.email.email_service import EmailService
 from app.core.config import settings
+from app.infrastructure.email.email_service import EmailService
 
 
 async def test_smtp_connection():
@@ -69,9 +70,8 @@ FocusMate 팀
             print("✅ Email sent successfully!")
             print(f"   Please check your inbox: {test_email}")
             return True
-        else:
-            print("❌ Failed to send email. Check the logs above for details.")
-            return False
+        print("❌ Failed to send email. Check the logs above for details.")
+        return False
 
     except Exception as e:
         print(f"❌ Error sending email: {e}")

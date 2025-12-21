@@ -1,11 +1,11 @@
 """Community repository - posts, comments, and likes."""
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.community.schemas import PostSortBy
 from app.infrastructure.database.models.community import (
     Comment,
     CommentLike,
@@ -40,14 +40,15 @@ class PostRepository:
         self,
         limit: int = 20,
         offset: int = 0,
-        category: Optional[str] = None,
-        user_id: Optional[str] = None,
-        search_query: Optional[str] = None,
-        author_username: Optional[str] = None,
-        date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None,
+        category: str | None = None,
+        user_id: str | None = None,
+        search_query: str | None = None,
+        author_username: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        sort_by: PostSortBy = PostSortBy.RECENT,
     ) -> tuple[list[Post], int]:
-        """Get posts with optional filtering and search."""
+        """Get posts with optional filtering, search, and sorting."""
         # Join with User table for author username search
         query = select(Post).join(User, Post.user_id == User.id).where(Post.is_deleted == False)
 
@@ -78,9 +79,22 @@ class PostRepository:
         total_result = await self.db.execute(count_query)
         total = total_result.scalar() or 0
 
-        # Apply ordering (pinned first, then by created_at)
-        query = query.order_by(desc(Post.is_pinned), desc(Post.created_at))
+        # Apply ordering (pinned posts always first)
+        order_clauses = [desc(Post.is_pinned)]
 
+        # Add sorting based on sort_by parameter
+        if sort_by == PostSortBy.RECENT:
+            order_clauses.append(desc(Post.created_at))
+        elif sort_by == PostSortBy.POPULAR:
+            order_clauses.extend([desc(Post.likes), desc(Post.created_at)])
+        elif sort_by == PostSortBy.TRENDING:
+            # Trending: weighted score (likes * 0.3 + comment_count * 0.7)
+            trending_score = (Post.likes * 0.3) + (Post.comment_count * 0.7)
+            order_clauses.extend([desc(trending_score), desc(Post.created_at)])
+        elif sort_by == PostSortBy.MOST_COMMENTED:
+            order_clauses.extend([desc(Post.comment_count), desc(Post.created_at)])
+
+        query = query.order_by(*order_clauses)
         query = query.limit(limit).offset(offset)
 
         # Execute
@@ -88,6 +102,27 @@ class PostRepository:
         posts = list(result.scalars().all())
 
         return posts, total
+
+    async def get_category_counts(self) -> dict[str, int]:
+        """Get count of posts per category."""
+        from sqlalchemy import func
+
+        result = await self.db.execute(
+            select(Post.category, func.count(Post.id))
+            .where(Post.is_deleted == False)
+            .group_by(Post.category)
+        )
+
+        # Convert to dictionary
+        counts = {category: count for category, count in result.all()}
+
+        # Ensure all expected categories are present
+        expected_categories = ["tips", "achievement", "question", "general"]
+        for cat in expected_categories:
+            if cat not in counts:
+                counts[cat] = 0
+
+        return counts
 
     async def update(self, post: Post) -> Post:
         """Update post."""
@@ -259,12 +294,11 @@ class PostReadRepository:
             await self.db.flush()
             await self.db.refresh(existing)
             return existing
-        else:
-            # Create new read record
-            self.db.add(post_read)
-            await self.db.flush()
-            await self.db.refresh(post_read)
-            return post_read
+        # Create new read record
+        self.db.add(post_read)
+        await self.db.flush()
+        await self.db.refresh(post_read)
+        return post_read
 
     async def get_by_post_and_user(self, post_id: str, user_id: str) -> PostRead | None:
         """Check if user has read the post."""

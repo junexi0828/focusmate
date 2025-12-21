@@ -1,7 +1,6 @@
 """Pydantic schemas for matching proposals and chat."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -17,13 +16,13 @@ class ProposalResponse(BaseModel):
     group_a_status: str
     group_b_status: str
     final_status: str
-    chat_room_id: Optional[UUID]
+    chat_room_id: UUID | None
     created_at: datetime
     expires_at: datetime
-    matched_at: Optional[datetime]
+    matched_at: datetime | None
     # Optional pool information for detail view
-    pool_a: Optional[dict] = None
-    pool_b: Optional[dict] = None
+    pool_a: dict | None = None
+    pool_b: dict | None = None
 
     class Config:
         from_attributes = True
@@ -57,7 +56,7 @@ class MessageCreate(BaseModel):
 
     content: str = Field(..., min_length=1, max_length=2000)
     message_type: str = Field(default="text", pattern="^(text|image|system)$")
-    attachments: Optional[list[str]] = None
+    attachments: list[str] | None = None
 
 
 class MessageResponse(BaseModel):
@@ -68,9 +67,9 @@ class MessageResponse(BaseModel):
     sender_id: str
     message_type: str
     content: str
-    attachments: Optional[list[str]]
+    attachments: list[str] | None
     created_at: datetime
-    deleted_at: Optional[datetime]
+    deleted_at: datetime | None
 
     class Config:
         from_attributes = True
@@ -92,9 +91,9 @@ class ChatMemberResponse(BaseModel):
     user_id: str
     group_label: str
     member_index: int
-    anonymous_name: Optional[str]
+    anonymous_name: str | None
     is_active: bool
-    last_read_at: Optional[datetime]
+    last_read_at: datetime | None
     joined_at: datetime
 
     class Config:

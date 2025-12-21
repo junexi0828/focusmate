@@ -1,4 +1,3 @@
-import React from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { StatsPage } from "../pages/Stats";
@@ -66,7 +65,9 @@ function StatsPageWithData({ userId }: { userId: string }) {
   const { data: hourlyPattern, isLoading: isLoadingHourly } = useQuery({
     queryKey: ["stats", "hourly-pattern", userId, 30],
     queryFn: async () => {
-      const response = await statsService.getHourlyPattern(userId, 30);
+      // Get timezone offset in hours
+      const offsetHours = Math.round(new Date().getTimezoneOffset() / -60);
+      const response = await statsService.getHourlyPattern(userId, 30, offsetHours);
       if (response.status === "error") {
         // Admin can proceed with empty data
         if (isAdmin) {
@@ -107,14 +108,22 @@ function StatsPageWithData({ userId }: { userId: string }) {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  // 유저 목표 정보 조회
+  const { data: userGoal } = useQuery({
+    queryKey: ["user-goal", userId],
+    queryFn: () => statsService.getGoal(),
+    enabled: !!userId,
+  });
+
   // 목표 달성률 (주간, 월간, 연간)
   const { data: weeklyGoal, isLoading: isLoadingWeeklyGoal } = useQuery({
-    queryKey: ["stats", "goal", userId, "focus_time", 30, "week"],
+    queryKey: ["stats", "goal", userId, "focus_time", userGoal?.data?.daily_goal_minutes, "week"],
     queryFn: async () => {
+      const targetMinutes = userGoal?.data?.daily_goal_minutes ? userGoal.data.daily_goal_minutes * 7 : 120 * 7;
       const response = await statsService.getGoalAchievement(
         userId,
         "focus_time",
-        30,
+        targetMinutes,
         "week"
       );
       if (response.status === "error") {
@@ -124,16 +133,18 @@ function StatsPageWithData({ userId }: { userId: string }) {
       }
       return response.data!;
     },
+    enabled: !!userId,
     staleTime: 1000 * 60, // 1 minute
   });
 
   const { data: monthlyGoal, isLoading: isLoadingMonthlyGoal } = useQuery({
-    queryKey: ["stats", "goal", userId, "focus_time", 120, "month"],
+    queryKey: ["stats", "goal", userId, "focus_time", userGoal?.data?.daily_goal_minutes, "month"],
     queryFn: async () => {
+      const targetMinutes = userGoal?.data?.daily_goal_minutes ? userGoal.data.daily_goal_minutes * 30 : 120 * 30;
       const response = await statsService.getGoalAchievement(
         userId,
         "focus_time",
-        120,
+        targetMinutes,
         "month"
       );
       if (response.status === "error") {
@@ -141,13 +152,13 @@ function StatsPageWithData({ userId }: { userId: string }) {
         if (isAdmin) {
           return {
             goal_type: "focus_time",
-            goal_value: 120,
+            goal_value: targetMinutes,
             current_value: 0,
             achievement_rate: 0,
             period: "month",
             is_achieved: false,
-            remaining: 120,
-          };
+            remaining: targetMinutes,
+          } as any;
         }
         throw new Error(
           response.error?.message || "Failed to load monthly goal"
@@ -155,17 +166,19 @@ function StatsPageWithData({ userId }: { userId: string }) {
       }
       return response.data!;
     },
+    enabled: !!userId,
     staleTime: 1000 * 60, // 1 minute
   });
 
   const { data: yearlyGoal, isLoading: isLoadingYearlyGoal } = useQuery({
-    queryKey: ["stats", "goal", userId, "focus_time", 1000, "month"],
+    queryKey: ["stats", "goal", userId, "focus_time", userGoal?.data?.daily_goal_minutes, "year"],
     queryFn: async () => {
+      const targetMinutes = userGoal?.data?.daily_goal_minutes ? userGoal.data.daily_goal_minutes * 365 : 120 * 365;
       // 연간 목표는 월간 API를 사용하되 더 큰 목표값 사용
       const response = await statsService.getGoalAchievement(
         userId,
         "focus_time",
-        1000,
+        targetMinutes,
         "month"
       );
       if (response.status === "error") {
@@ -175,6 +188,7 @@ function StatsPageWithData({ userId }: { userId: string }) {
       }
       return response.data!;
     },
+    enabled: !!userId,
     staleTime: 1000 * 60, // 1 minute
   });
 

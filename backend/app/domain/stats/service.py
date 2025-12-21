@@ -1,10 +1,12 @@
 """Stats domain service - session tracking and statistics."""
 
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models.session_history import SessionHistory
+from app.infrastructure.repositories.ranking_repository import RankingRepository
 from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 from app.shared.utils.uuid import generate_uuid
 
@@ -12,8 +14,13 @@ from app.shared.utils.uuid import generate_uuid
 class StatsService:
     """Statistics and session tracking service."""
 
-    def __init__(self, repository: SessionHistoryRepository) -> None:
+    def __init__(
+        self,
+        repository: SessionHistoryRepository,
+        db: AsyncSession | None = None,
+    ) -> None:
         self.repository = repository
+        self.db = db
 
     async def record_session(
         self,
@@ -22,24 +29,46 @@ class StatsService:
         session_type: str,
         duration_minutes: int,
     ) -> dict:
-        """Record a completed session."""
+        """Record a completed session and sync with ranking system."""
+        # Create session history record
         session = SessionHistory(
             id=generate_uuid(),
             user_id=user_id,
             room_id=room_id,
             session_type=session_type,
             duration_minutes=duration_minutes,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         await self.repository.create(session)
+
+        # Sync with ranking system if user is in any ranking teams
+        if self.db is not None:
+            try:
+                ranking_repo = RankingRepository(self.db)
+                user_teams = await ranking_repo.get_user_teams(user_id)
+
+                # Create ranking session for each team the user is in
+                for team in user_teams:
+                    await ranking_repo.create_session({
+                        "team_id": team.team_id,
+                        "user_id": user_id,
+                        "duration_minutes": duration_minutes,
+                        "session_type": session_type,
+                        "success": True,  # Session completed successfully
+                    })
+            except Exception as e:
+                # Log error but don't fail the request
+                import logging
+                logging.exception(f"Failed to sync session with ranking system: {e!s}")
+
         return {"status": "recorded", "session_id": session.id}
 
     async def get_user_stats(
         self,
         user_id: str,
         days: int = 7,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> dict:
         """Get user statistics for last N days or date range.
 
@@ -56,8 +85,8 @@ class StatsService:
             since = start_date
             until = end_date
         else:
-            since = datetime.now(timezone.utc) - timedelta(days=days)
-            until = datetime.now(timezone.utc)
+            since = datetime.now(UTC) - timedelta(days=days)
+            until = datetime.now(UTC)
 
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
@@ -86,18 +115,19 @@ class StatsService:
             ],
         }
 
-    async def get_hourly_pattern(self, user_id: str, days: int = 30) -> dict:
+    async def get_hourly_pattern(self, user_id: str, days: int = 30, offset_hours: int = 0) -> dict:
         """Get hourly focus pattern for radar chart.
 
         Args:
             user_id: User identifier
             days: Number of days to analyze (default: 30)
+            offset_hours: Timezone offset in hours (default: 0 for UTC)
 
         Returns:
             Dictionary with hourly focus time distribution (0-23 hours)
         """
-        since = datetime.now(timezone.utc) - timedelta(days=days)
-        until = datetime.now(timezone.utc)
+        since = datetime.now(UTC) - timedelta(days=days)
+        until = datetime.now(UTC)
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
         # Initialize hourly buckets (0-23)
@@ -105,8 +135,9 @@ class StatsService:
 
         for session in sessions:
             if session.session_type == "work":
-                # Get hour in user's local time (assuming UTC for now)
-                hour = session.completed_at.hour
+                # Apply timezone offset to the UTC completion time
+                local_time = session.completed_at + timedelta(hours=offset_hours)
+                hour = local_time.hour
                 hourly_focus[hour] += session.duration_minutes
 
         # Convert to list format for frontend (0-23 hours)
@@ -128,8 +159,8 @@ class StatsService:
         Returns:
             Dictionary with monthly statistics
         """
-        since = datetime.now(timezone.utc) - timedelta(days=months * 30)
-        until = datetime.now(timezone.utc)
+        since = datetime.now(UTC) - timedelta(days=months * 30)
+        until = datetime.now(UTC)
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
         # Group by month
@@ -180,7 +211,7 @@ class StatsService:
             Dictionary with current progress, goal, and achievement rate
         """
         # Calculate date range based on period
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if period == "day":
             since = now.replace(hour=0, minute=0, second=0, microsecond=0)
         elif period == "week":

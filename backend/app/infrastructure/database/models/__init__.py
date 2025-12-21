@@ -13,70 +13,73 @@ from app.infrastructure.database.models.community import (
     PostLike,
     PostRead,
 )
+from app.infrastructure.database.models.friend import Friend, FriendRequest
+from app.infrastructure.database.models.matching import (
+    MatchingChatMember,
+    MatchingChatRoom,
+    MatchingMessage,
+    MatchingPool,
+    MatchingProposal,
+)
 from app.infrastructure.database.models.message import Conversation, Message
+from app.infrastructure.database.models.notification import Notification
 from app.infrastructure.database.models.participant import Participant
+from app.infrastructure.database.models.ranking import (
+    RankingLeaderboard,
+    RankingTeam,
+    RankingTeamInvitation,
+    RankingTeamMember,
+    RankingVerificationRequest,
+)
+from app.infrastructure.database.models.report import Report
 from app.infrastructure.database.models.room import Room
 from app.infrastructure.database.models.room_reservation import RoomReservation
-from app.infrastructure.database.models.notification import Notification
 from app.infrastructure.database.models.session_history import SessionHistory
 from app.infrastructure.database.models.timer import Timer
 from app.infrastructure.database.models.user import User
-from app.infrastructure.database.models.verification import UserVerification
-from app.infrastructure.database.models.matching import (
-    MatchingPool,
-    MatchingProposal,
-    MatchingChatRoom,
-    MatchingChatMember,
-    MatchingMessage,
-)
-from app.infrastructure.database.models.ranking import (
-    RankingTeam,
-    RankingTeamMember,
-    RankingTeamInvitation,
-    RankingVerificationRequest,
-    RankingLeaderboard,
-)
-from app.infrastructure.database.models.user_stats import (
-    UserGoal,
-    ManualSession,
-)
 from app.infrastructure.database.models.user_settings import UserSettings
-from app.infrastructure.database.models.friend import Friend, FriendRequest
+from app.infrastructure.database.models.user_stats import (
+    ManualSession,
+    UserGoal,
+)
+from app.infrastructure.database.models.verification import UserVerification
+
 
 __all__ = [
-    "Room",
-    "Timer",
-    "Participant",
-    "User",
-    "SessionHistory",
     "Achievement",
-    "UserAchievement",
-    "Post",
-    "Comment",
-    "PostLike",
-    "CommentLike",
-    "PostRead",
-    "Conversation",
-    "Message",
-    "RoomReservation",
-    "ChatRoom",
     "ChatMember",
     "ChatMessage",
-    "Notification",
-    "UserVerification",
-    "MatchingPool",
-    "MatchingProposal",
-    "MatchingChatRoom",
-    "MatchingChatMember",
-    "MatchingMessage",
-    "RankingTeam",
-    "RankingMember",
-    "RankingSession",
-    "RankingMiniGame",
-    "RankingLeaderboard",
-    "UserGoal",
-    "ManualSession",
-    "UserSettings",
+    "ChatRoom",
+    "Comment",
+    "CommentLike",
+    "Conversation",
     "Friend",
     "FriendRequest",
+    "ManualSession",
+    "MatchingChatMember",
+    "MatchingChatRoom",
+    "MatchingMessage",
+    "MatchingPool",
+    "MatchingProposal",
+    "Message",
+    "Notification",
+    "Participant",
+    "Post",
+    "PostLike",
+    "PostRead",
+    "RankingLeaderboard",
+    "RankingMember",
+    "RankingMiniGame",
+    "RankingSession",
+    "RankingTeam",
+    "Report",
+    "Room",
+    "RoomReservation",
+    "SessionHistory",
+    "Timer",
+    "User",
+    "UserAchievement",
+    "UserGoal",
+    "UserSettings",
+    "UserVerification",
 ]

@@ -1,185 +1,112 @@
 # Test Scripts
 
-## test-all.sh
+## run_tests.sh
 
-포괄적인 시스템 테스트 스크립트입니다.
+포괄적인 테스트 실행 스크립트입니다. 모든 테스트 카테고리를 모듈화하여 실행할 수 있습니다.
 
 ### 사용법
 
 ```bash
 # 전체 테스트 실행
+./scripts/run_tests.sh --all
+
+# 특정 카테고리만 실행
+./scripts/run_tests.sh --unit
+./scripts/run_tests.sh --integration
+./scripts/run_tests.sh --e2e
+./scripts/run_tests.sh --performance
+./scripts/run_tests.sh --security
+
+# 커버리지 리포트 생성
+./scripts/run_tests.sh --all --coverage
+
+# 상세 출력
+./scripts/run_tests.sh --all --verbose
+
+# 테스트 리포트 생성
+./scripts/run_tests.sh --all --report
+```
+
+### 옵션
+
+- `-a, --all`: 모든 테스트 실행
+- `-u, --unit`: 단위 테스트만 실행
+- `-i, --integration`: 통합 테스트만 실행
+- `-e, --e2e`: E2E 테스트만 실행
+- `-p, --performance`: 성능 테스트만 실행
+- `-s, --security`: 보안 테스트만 실행
+- `-r, --report`: 테스트 리포트 생성
+- `-v, --verbose`: 상세 출력
+- `-c, --coverage`: 커버리지 리포트 생성
+- `-h, --help`: 도움말 표시
+
+## test_e2e.sh
+
+E2E 테스트 전용 실행 스크립트입니다.
+
+### 사용법
+
+```bash
+./scripts/test_e2e.sh
+```
+
+## test_performance.sh
+
+성능 테스트 전용 실행 스크립트입니다.
+
+### 사용법
+
+```bash
+./scripts/test_performance.sh
+```
+
+## test_security.sh
+
+보안 테스트 전용 실행 스크립트입니다.
+
+### 사용법
+
+```bash
+./scripts/test_security.sh
+```
+
+## test-all.sh
+
+기존 포괄적인 시스템 테스트 스크립트입니다. (유지됨)
+
+### 사용법
+
+```bash
 ./scripts/test-all.sh
-
-# 또는
-cd scripts
-./test-all.sh
-```
-
-### 테스트 항목
-
-#### 1. Backend - Python Syntax & Compilation (8 tests)
-- ✅ RBAC System
-- ✅ Email Service
-- ✅ File Upload Service
-- ✅ Chat File Upload Service
-- ✅ Notification Service
-- ✅ Chat Repository
-- ✅ Chat Service
-- ✅ Chat API Endpoints
-
-#### 2. Backend - Configuration & Imports (4 tests)
-- ✅ Config Loading
-- ✅ EmailService Initialization
-- ✅ S3UploadService Import
-- ✅ RBAC Import
-
-#### 3. Backend - Unit Tests (3 tests)
-- ✅ RBAC Unit Tests (15 tests)
-- ⚠️ Chat Repository Tests (requires database)
-- ⚠️ Chat Service Tests (partial)
-
-#### 4. Frontend - TypeScript Compilation (5 tests)
-- ✅ TypeScript Type Check
-- ✅ Dashboard Types
-- ✅ Stats Types
-- ✅ Messages Types
-- ✅ Matching Types
-
-#### 5. Frontend - ESLint (1 test)
-- ⚠️ ESLint Check (optional)
-
-#### 6. Frontend - Build Test (1 test)
-- ✅ Production Build
-
-#### 7. Documentation Validation (6 tests)
-- ✅ System Documentation
-- ✅ Architecture Docs
-- ✅ API Specs
-- ✅ RBAC Docs
-- ✅ Deployment Guide
-- ✅ Test Documentation
-
-#### 8. Environment & Configuration (3 tests)
-- ✅ .env.example
-- ✅ Frontend .env.example
-- ✅ Database Migrations
-
-#### 9. File Structure Validation (5 tests)
-- ✅ Backend App Directory
-- ✅ Frontend Src Directory
-- ✅ Tests Directory
-- ✅ Docs Directory
-- ✅ Scripts Directory
-
-### 출력 예시
-
-```
-╔════════════════════════════════════════════════════════════╗
-║         FocusMate - Comprehensive Test Suite              ║
-╚════════════════════════════════════════════════════════════╝
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  1. Backend - Python Syntax & Compilation
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-▶ Running: RBAC System
-✓ PASSED: RBAC System
-▶ Running: Email Service
-✓ PASSED: Email Service
-...
-
-╔════════════════════════════════════════════════════════════╗
-║                     TEST SUMMARY                           ║
-╚════════════════════════════════════════════════════════════╝
-
-Total Tests:   36
-Passed:        34
-Failed:        2
-
-Success Rate:  94%
-
-✓ EXCELLENT! System is production-ready! 🎉
-```
-
-### 성공 기준
-
-- **90%+ 성공률**: EXCELLENT - Production-ready ✅
-- **70-89% 성공률**: GOOD - Minor issues ⚠️
-- **70% 미만**: CRITICAL - Major issues ❌
-
-### 로그 파일
-
-테스트 실행 중 생성되는 로그:
-- `/tmp/rbac_test.log` - RBAC 테스트 로그
-- `/tmp/chat_repo_test.log` - Chat Repository 테스트 로그
-- `/tmp/build.log` - Frontend 빌드 로그
-
-### 문제 해결
-
-#### Database 관련 테스트 실패
-```bash
-# PostgreSQL 실행 확인
-brew services list | grep postgresql
-
-# PostgreSQL 시작
-brew services start postgresql@15
-```
-
-#### Frontend 빌드 실패
-```bash
-# 의존성 재설치
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-```
-
-#### Python Import 에러
-```bash
-# 가상환경 활성화
-cd backend
-source venv/bin/activate
-
-# 의존성 재설치
-pip install -r requirements.txt
-```
-
-### CI/CD 통합
-
-#### GitHub Actions
-
-```yaml
-name: Test Suite
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Run all tests
-        run: ./scripts/test-all.sh
-```
-
-### 개발 워크플로우
-
-```bash
-# 1. 코드 수정 후
-git add .
-
-# 2. 테스트 실행
-./scripts/test-all.sh
-
-# 3. 테스트 통과 시 커밋
-git commit -m "feat: add new feature"
-
-# 4. Push
-git push
 ```
 
 ---
 
-**작성일**: 2025-12-12
-**버전**: 1.0.0
-**총 테스트**: 36개
+## 테스트 구조
+
+```
+backend/tests/
+├── unit/              # 단위 테스트
+├── integration/       # 통합 테스트
+├── e2e/              # E2E 테스트
+│   ├── test_user_workflow.py
+│   └── test_api_integration.py
+├── performance/       # 성능 테스트
+│   ├── test_api_performance.py
+│   └── test_matching_performance.py
+├── security/         # 보안 테스트
+│   └── test_security.py
+└── test_tracker.py   # 테스트 추적 시스템
+```
+
+## 테스트 추적 관리
+
+테스트 결과는 `backend/test_reports/` 디렉토리에 저장됩니다:
+
+- JSON 리포트: `test_report_YYYYMMDD_HHMMSS.json`
+- Markdown 리포트: `test_report_YYYYMMDD_HHMMSS.md`
+
+---
+
+**작성일**: 2025-12-21
+**버전**: 2.0.0

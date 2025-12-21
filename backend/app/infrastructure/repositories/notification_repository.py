@@ -1,7 +1,6 @@
 """Notification repository."""
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +29,7 @@ class NotificationRepository:
         await self.db.refresh(notification)
         return notification
 
-    async def get_by_id(self, notification_id: str) -> Optional[Notification]:
+    async def get_by_id(self, notification_id: str) -> Notification | None:
         """Get notification by ID.
 
         Args:

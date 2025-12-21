@@ -5,7 +5,7 @@ ISO/IEC 25010: Maintainability, Security
 """
 
 from functools import lru_cache
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # Application
     # ==========================================================================
     APP_ENV: Literal["development", "staging", "production"] = "development"
-    APP_DEBUG: bool = True
+    APP_DEBUG: bool = False  # Production safe default
     APP_LOG_LEVEL: Literal["debug", "info", "warning", "error", "critical"] = "info"
     APP_NAME: str = "Focus Mate"
     APP_VERSION: str = "1.0.0"
@@ -90,9 +90,17 @@ class Settings(BaseSettings):
     BCRYPT_ROUNDS: int = Field(default=12, ge=10, le=14)
 
     # File Encryption (optional - if not set, derives from SECRET_KEY)
-    FILE_ENCRYPTION_KEY: Optional[str] = Field(
+    FILE_ENCRYPTION_KEY: str | None = Field(
         default=None,
         description="Base64-encoded Fernet key for file encryption. If not set, derives from SECRET_KEY.",
+    )
+
+    # ==========================================================================
+    # Frontend
+    # ==========================================================================
+    FRONTEND_URL: str = Field(
+        default="http://localhost:3000",
+        description="Frontend application URL",
     )
 
     # ==========================================================================
@@ -221,11 +229,27 @@ class Settings(BaseSettings):
     # ==========================================================================
     # Feature Flags
     # ==========================================================================
-    FEATURE_COMMUNITY_ENABLED: bool = False
-    FEATURE_MESSAGING_ENABLED: bool = False
-    FEATURE_STATS_ENABLED: bool = False
-    FEATURE_ACHIEVEMENTS_ENABLED: bool = False
-    FEATURE_NOTIFICATIONS_ENABLED: bool = False
+    FEATURE_COMMUNITY_ENABLED: bool = True
+    FEATURE_MESSAGING_ENABLED: bool = True
+    FEATURE_STATS_ENABLED: bool = True
+    FEATURE_ACHIEVEMENTS_ENABLED: bool = True
+    FEATURE_NOTIFICATIONS_ENABLED: bool = True
+
+    # ==========================================================================
+    # OAuth (Social Login)
+    # ==========================================================================
+    NAVER_CLIENT_ID: str = Field(
+        default="YOUR_NAVER_CLIENT_ID",
+        description="Naver OAuth Client ID",
+    )
+    NAVER_CLIENT_SECRET: str = Field(
+        default="YOUR_NAVER_CLIENT_SECRET",
+        description="Naver OAuth Client Secret",
+    )
+    NAVER_REDIRECT_URI: str = Field(
+        default="http://localhost:3000/auth/naver/callback",
+        description="Naver OAuth Redirect URI",
+    )
 
     # ==========================================================================
     # Development

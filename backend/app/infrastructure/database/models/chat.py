@@ -6,11 +6,11 @@ from uuid import UUID
 
 from sqlalchemy import (
     ARRAY,
+    JSON,
     Boolean,
     DateTime,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -38,16 +38,16 @@ class ChatRoom(Base):
     room_type: Mapped[str] = mapped_column(String(20), nullable=False)
 
     # Room information
-    room_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    description: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    room_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text(), nullable=True)
 
     # Type-specific metadata (renamed from 'metadata' to avoid SQLAlchemy reserved word)
-    room_metadata: Mapped[Optional[dict]] = mapped_column(
+    room_metadata: Mapped[dict | None] = mapped_column(
         "metadata", JSON(), nullable=True
     )
 
     # Display settings
-    display_mode: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    display_mode: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     # Status
     is_active: Mapped[bool] = mapped_column(
@@ -58,11 +58,11 @@ class ChatRoom(Base):
     )
 
     # Invitation codes
-    invitation_code: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
-    invitation_expires_at: Mapped[Optional[datetime]] = mapped_column(
+    invitation_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    invitation_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    invitation_max_uses: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True)
+    invitation_max_uses: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     invitation_use_count: Mapped[int] = mapped_column(
         Integer(), nullable=False, server_default=text("0")
     )
@@ -77,7 +77,7 @@ class ChatRoom(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
-    last_message_at: Mapped[Optional[datetime]] = mapped_column(
+    last_message_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -120,12 +120,12 @@ class ChatMember(Base):
     )
 
     # Display name
-    display_name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    anonymous_name: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    anonymous_name: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Group identification (for matching)
-    group_label: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
-    member_index: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True)
+    group_label: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    member_index: Mapped[int | None] = mapped_column(Integer(), nullable=True)
 
     # Status
     is_active: Mapped[bool] = mapped_column(
@@ -136,7 +136,7 @@ class ChatMember(Base):
     )
 
     # Read status
-    last_read_at: Mapped[Optional[datetime]] = mapped_column(
+    last_read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     unread_count: Mapped[int] = mapped_column(
@@ -147,7 +147,7 @@ class ChatMember(Base):
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    left_at: Mapped[Optional[datetime]] = mapped_column(
+    left_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -190,12 +190,12 @@ class ChatMessage(Base):
     content: Mapped[str] = mapped_column(Text(), nullable=False)
 
     # Attachments
-    attachments: Mapped[Optional[list[str]]] = mapped_column(
+    attachments: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text()), nullable=True
     )
 
     # Reply/Thread
-    parent_message_id: Mapped[Optional[UUID]] = mapped_column(
+    parent_message_id: Mapped[UUID | None] = mapped_column(
         PostgreSQL_UUID(as_uuid=True),
         ForeignKey("chat_messages.message_id", ondelete="SET NULL"),
         nullable=True,
@@ -227,7 +227,7 @@ class ChatMessage(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

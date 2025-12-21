@@ -14,15 +14,18 @@ import { staggerContainer, staggerItem } from "../components/PageTransition";
 import { FocusTimeChart } from "../components/charts/FocusTimeChart";
 import { SessionDistributionChart } from "../components/charts/SessionDistributionChart";
 import { Button } from "../components/ui/button-enhanced";
-import { PomodoroWidget } from "../components/PomodoroWidget";
-import { StreakCalendar } from "../components/StreakCalendar";
 import { GoalSettingModal } from "../components/GoalSettingModal";
 import { SharingModal } from "../components/SharingCard";
-import { UserStatsResponse } from "../features/stats/services/statsService";
+import { statsService, UserStatsResponse, GoalAchievementResponse } from "../features/stats/services/statsService";
 import { calculateDailyStats } from "../utils/stats-calculator";
 import { DataExporter } from "../utils/dataExporter";
 import { CelebrationSystem } from "../utils/celebrationSystem";
 import { transformSessionRecordsForStats } from "../utils/api-transformers";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { authService } from "../features/auth/services/authService";
+import { GoalProgressRing } from "../components/charts/GoalProgressRing";
+import { PomodoroWidget } from "../components/PomodoroWidget";
+import { StreakCalendar } from "../components/StreakCalendar";
 
 interface DashboardPageProps {
   stats?: UserStatsResponse;
@@ -31,9 +34,33 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
+  const queryClient = useQueryClient();
+  const userId = authService.getCurrentUser()?.id || "";
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
   const [sharingCardData, setSharingCardData] = useState<any>(null);
+
+  // Fetch user goals first
+  const { data: userGoal } = useQuery({
+    queryKey: ["user-goal", userId],
+    queryFn: () => statsService.getGoal(),
+    enabled: !!userId,
+  });
+
+  // Fetch weekly goal for dashboard using user's goal settings
+  const { data: weeklyGoal } = useQuery({
+    queryKey: ["stats", "goal", "weekly", userId, userGoal?.data?.daily_goal_minutes],
+    queryFn: async (): Promise<GoalAchievementResponse | null> => {
+      if (!userId) return null;
+
+      const targetMinutes = userGoal?.data?.daily_goal_minutes ? userGoal.data.daily_goal_minutes * 7 : 120 * 7;
+
+      const response = await statsService.getGoalAchievement(userId, "focus_time", targetMinutes, "week");
+      if (response.status === "error") return null;
+      return response.data!;
+    },
+    enabled: !!userId,
+  });
 
   // 통계 데이터 변환
   const dashboardStats = useMemo(() => {
@@ -274,11 +301,18 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
     targetHours: number;
   }) => {
     try {
-      const { saveUserGoal } = await import("../api/stats");
-      await saveUserGoal({
-        daily_goal_minutes: Math.round((goal.targetHours * 60) / 7),
-        weekly_goal_sessions: 5,
+      // Unify with statsService
+      const dailyGoalMinutes = Math.round((goal.targetHours * 60) / (goal.type === "weekly" ? 7 : goal.type === "monthly" ? 30 : 365));
+      const weeklyGoalSessions = goal.type === "weekly" ? Math.round(goal.targetHours / 2) : 5;
+
+      await statsService.saveGoal({
+        daily_goal_minutes: dailyGoalMinutes,
+        weekly_goal_sessions: weeklyGoalSessions,
       });
+
+      queryClient.invalidateQueries({ queryKey: ["stats", "goal"] });
+      queryClient.invalidateQueries({ queryKey: ["user-goal"] });
+
       console.log("Goal saved:", goal);
       CelebrationSystem.celebrate();
     } catch (error) {
@@ -515,9 +549,32 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
           </div>
         </div>
 
-        {/* Right Column - Pomodoro Widget */}
-        <div>
+        {/* Right Column - Pomodoro Widget & Goal Progress */}
+        <div className="space-y-6">
           <PomodoroWidget onSessionComplete={handleSessionComplete} />
+
+          {/* Dashboard Goal Progress Widget */}
+          <div className="rounded-xl border border-border bg-card p-6">
+            <h3 className="text-lg font-semibold mb-4">주간 목표 달성 현황</h3>
+            {weeklyGoal ? (
+              <GoalProgressRing
+                current={Math.round((weeklyGoal.current_value / 60) * 10) / 10}
+                goal={weeklyGoal.goal_value / 60}
+                label="주간 목표"
+              />
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                목표를 설정해보세요!
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={() => setIsGoalModalOpen(true)}
+            >
+              목표 수정하기
+            </Button>
+          </div>
         </div>
       </div>
 

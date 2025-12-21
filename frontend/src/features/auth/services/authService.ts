@@ -1,4 +1,9 @@
-import { BaseApiClient, ApiResponse } from "../../../lib/api/base";
+/**
+ * Authentication service
+ */
+
+import api from "../../../api/client";
+import type { AxiosResponse } from "axios";
 
 export interface LoginRequest {
   email: string;
@@ -11,93 +16,220 @@ export interface RegisterRequest {
   username: string;
 }
 
-export interface TokenResponse {
-  access_token: string;
-  token_type: string;
-  user: UserResponse;
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetVerify {
+  token: string;
+}
+
+export interface PasswordResetComplete {
+  token: string;
+  new_password: string;
 }
 
 export interface UserResponse {
   id: string;
   email: string;
   username: string;
-  bio?: string;
-  created_at: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_admin: boolean;
+  bio?: string | null;
+  school?: string | null;
+  profile_image?: string | null;
   total_focus_time: number;
   total_sessions: number;
-  is_active?: boolean;
-  is_verified?: boolean;
-  is_admin?: boolean;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: UserResponse;
 }
 
 export interface ProfileUpdateRequest {
   username?: string;
   bio?: string;
+  school?: string;
+  profile_image?: string;
 }
 
-class AuthService extends BaseApiClient {
+export interface ApiResponse<T> {
+  status: "success" | "error";
+  data?: T;
+  error?: {
+    message: string;
+    code?: string;
+  };
+}
+
+class AuthService {
   async login(data: LoginRequest): Promise<ApiResponse<TokenResponse>> {
-    const response = await this.request<TokenResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-
-    if (response.status === "success" && response.data) {
-      // Store token
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+    try {
+      const response: AxiosResponse<TokenResponse> = await api.post("/auth/login", data);
+      if (response.data) {
+        this.setToken(response.data.access_token);
+        this.setCurrentUser(response.data.user);
+      }
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "로그인에 실패했습니다",
+        },
+      };
     }
-
-    return response;
   }
 
   async register(data: RegisterRequest): Promise<ApiResponse<TokenResponse>> {
-    const response = await this.request<TokenResponse>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-
-    if (response.status === "success" && response.data) {
-      // Store token
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+    try {
+      const response: AxiosResponse<TokenResponse> = await api.post("/auth/register", data);
+      if (response.data) {
+        this.setToken(response.data.access_token);
+        this.setCurrentUser(response.data.user);
+      }
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "회원가입에 실패했습니다",
+        },
+      };
     }
+  }
 
-    return response;
+  async requestPasswordReset(
+    data: PasswordResetRequest
+  ): Promise<ApiResponse<{ message: string }>> {
+    try {
+      const response = await api.post("/auth/password-reset/request", data);
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "요청에 실패했습니다",
+        },
+      };
+    }
+  }
+
+  async verifyPasswordResetToken(
+    data: PasswordResetVerify
+  ): Promise<ApiResponse<{ valid: boolean; message: string }>> {
+    try {
+      const response = await api.post("/auth/password-reset/verify", data);
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "토큰 검증에 실패했습니다",
+        },
+      };
+    }
+  }
+
+  async completePasswordReset(
+    data: PasswordResetComplete
+  ): Promise<ApiResponse<{ message: string }>> {
+    try {
+      const response = await api.post("/auth/password-reset/complete", data);
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "비밀번호 재설정에 실패했습니다",
+        },
+      };
+    }
+  }
+
+  async getNaverLoginUrl(): Promise<
+    ApiResponse<{ auth_url: string; state: string }>
+  > {
+    try {
+      const response = await api.get("/auth/naver/login");
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "네이버 로그인 URL을 가져오는데 실패했습니다",
+        },
+      };
+    }
+  }
+
+  async naverOAuthCallback(code: string, state?: string): Promise<ApiResponse<TokenResponse>> {
+    try {
+      const response: AxiosResponse<TokenResponse> = await api.post("/auth/naver/callback", { code, state });
+      if (response.data) {
+        this.setToken(response.data.access_token);
+        this.setCurrentUser(response.data.user);
+      }
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "네이버 로그인에 실패했습니다",
+        },
+      };
+    }
   }
 
   async getProfile(userId: string): Promise<ApiResponse<UserResponse>> {
-    return this.request<UserResponse>(`/auth/profile/${userId}`);
+    try {
+      const response = await api.get(`/auth/profile/${userId}`);
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "프로필을 가져오는데 실패했습니다",
+        },
+      };
+    }
   }
 
   async updateProfile(
     userId: string,
     data: ProfileUpdateRequest
   ): Promise<ApiResponse<UserResponse>> {
-    const response = await this.request<UserResponse>(
-      `/auth/profile/${userId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(data),
+    try {
+      const response = await api.put(`/auth/profile/${userId}`, data);
+      if (response.data) {
+        this.setCurrentUser(response.data);
       }
-    );
-
-    if (response.status === "success" && response.data) {
-      // Update stored user
-      localStorage.setItem("user", JSON.stringify(response.data));
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      return {
+        status: "error",
+        error: {
+          message: error?.response?.data?.detail || "프로필 업데이트에 실패했습니다",
+        },
+      };
     }
-
-    return response;
-  }
-
-  logout(): void {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user");
   }
 
   getToken(): string | null {
     return localStorage.getItem("access_token");
+  }
+
+  setToken(token: string): void {
+    localStorage.setItem("access_token", token);
+  }
+
+  removeToken(): void {
+    localStorage.removeItem("access_token");
   }
 
   getCurrentUser(): UserResponse | null {
@@ -110,54 +242,45 @@ class AuthService extends BaseApiClient {
     }
   }
 
+  setCurrentUser(user: UserResponse): void {
+    localStorage.setItem("user", JSON.stringify(user));
+  }
+
+  removeCurrentUser(): void {
+    localStorage.removeItem("user");
+  }
+
   isAuthenticated(): boolean {
-    const token = this.getToken();
-    if (!token) return false;
-
-    // 토큰이 만료되었는지 확인
-    if (this.isTokenExpired()) {
-      // 만료된 토큰은 자동으로 삭제
-      console.log("[AuthService] Token expired, logging out");
-      this.logout();
-      return false;
-    }
-
-    return true;
+    return !!this.getToken();
   }
 
-  isAdmin(): boolean {
-    const user = this.getCurrentUser();
-    return user?.is_admin === true;
-  }
-
-  /**
-   * Check if JWT token is expired
-   */
   isTokenExpired(): boolean {
     const token = this.getToken();
     if (!token) return true;
 
     try {
-      // JWT token format: header.payload.signature
-      const parts = token.split(".");
-      if (parts.length !== 3) return true;
+      // Decode JWT token (base64 decode the payload)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload.exp;
 
-      // Decode payload (base64url)
-      const payload = JSON.parse(
-        atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
-      );
+      if (!exp) return false; // No expiration claim
 
-      // Check expiration
-      if (!payload.exp) return true;
-      const expirationTime = payload.exp * 1000; // Convert to milliseconds
-      const now = Date.now();
-
-      // Consider token expired if less than 1 minute remaining
-      return now >= expirationTime - 60000;
+      // Check if token is expired (exp is in seconds, Date.now() is in milliseconds)
+      return Date.now() >= exp * 1000;
     } catch (error) {
-      console.error("Error checking token expiration:", error);
-      return true;
+      console.error('Failed to decode token:', error);
+      return true; // Treat invalid tokens as expired
     }
+  }
+
+  isAdmin(): boolean {
+    const user = this.getCurrentUser();
+    return user?.is_admin || false;
+  }
+
+  logout(): void {
+    this.removeToken();
+    this.removeCurrentUser();
   }
 }
 

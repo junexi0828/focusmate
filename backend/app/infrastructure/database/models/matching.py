@@ -1,10 +1,21 @@
 """Matching pool database models."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import ARRAY, Boolean, CheckConstraint, ForeignKey, Integer, JSON, String, Text, TIMESTAMP, UniqueConstraint, text
+from sqlalchemy import (
+    ARRAY,
+    JSON,
+    TIMESTAMP,
+    Boolean,
+    CheckConstraint,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -38,7 +49,7 @@ class MatchingPool(Base):
 
     # Matching preferences
     preferred_match_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    preferred_categories: Mapped[Optional[list[str]]] = mapped_column(
+    preferred_categories: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text()), nullable=True
     )
 
@@ -46,7 +57,7 @@ class MatchingPool(Base):
     matching_type: Mapped[str] = mapped_column(String(10), nullable=False)
 
     # Message
-    message: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    message: Mapped[str | None] = mapped_column(Text(), nullable=True)
 
     # Status
     status: Mapped[str] = mapped_column(
@@ -113,7 +124,7 @@ class MatchingProposal(Base):
     )
 
     # Chat room
-    chat_room_id: Mapped[Optional[UUID]] = mapped_column(
+    chat_room_id: Mapped[UUID | None] = mapped_column(
         PostgreSQL_UUID(as_uuid=True), nullable=True
     )
 
@@ -126,7 +137,7 @@ class MatchingProposal(Base):
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP + INTERVAL '24 hours'"),
     )
-    matched_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
+    matched_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
@@ -224,19 +235,19 @@ class MatchingChatMember(Base):
     member_index: Mapped[int] = mapped_column(Integer(), nullable=False)
 
     # Anonymous name
-    anonymous_name: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    anonymous_name: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Status
     is_active: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=text("true")
     )
-    last_read_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
+    last_read_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
 
     # Timestamps
     joined_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    left_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
+    left_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("room_id", "user_id", name="uq_matching_chat_members_room_user"),
@@ -279,7 +290,7 @@ class MatchingMessage(Base):
     content: Mapped[str] = mapped_column(Text(), nullable=False)
 
     # Attachments
-    attachments: Mapped[Optional[list[str]]] = mapped_column(
+    attachments: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text()), nullable=True
     )
 
@@ -290,7 +301,7 @@ class MatchingMessage(Base):
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
 
     # Relationships
     room: Mapped["MatchingChatRoom"] = relationship(

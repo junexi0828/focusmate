@@ -3,9 +3,8 @@
 ISO/IEC 25010 Quality Standards Compliant.
 """
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -77,9 +76,11 @@ app = FastAPI(
 
 # CORS middleware - must be added before routes
 # This ensures OPTIONS preflight requests are handled correctly
+# Allow ngrok URLs in development using regex pattern
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"https://.*\.ngrok(-free)?\.(app|io)" if settings.is_development else None,  # Allow ngrok URLs in dev
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # Explicitly include OPTIONS
     allow_headers=["*"],  # Allow all headers including Authorization

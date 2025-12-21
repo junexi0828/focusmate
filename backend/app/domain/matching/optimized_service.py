@@ -8,11 +8,9 @@ Improvements:
 - Caching for frequently accessed data
 """
 
-import asyncio
 import logging
 import time
 from collections import defaultdict
-from typing import Optional
 from uuid import UUID
 
 from app.domain.matching.schemas import (
@@ -26,6 +24,7 @@ from app.infrastructure.repositories.matching_pool_repository import (
 from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +110,7 @@ class OptimizedMatchingPoolService:
         pool = await self.pool_repository.create_pool(pool_data)
         return MatchingPoolResponse.model_validate(pool)
 
-    async def get_my_pool(self, user_id: str) -> Optional[MatchingPoolResponse]:
+    async def get_my_pool(self, user_id: str) -> MatchingPoolResponse | None:
         """Get user's active pool."""
         pool = await self.pool_repository.get_user_active_pool(user_id)
         if not pool:
@@ -120,7 +119,7 @@ class OptimizedMatchingPoolService:
 
     async def get_pool(
         self, pool_id: UUID, user_id: str
-    ) -> Optional[MatchingPoolResponse]:
+    ) -> MatchingPoolResponse | None:
         """Get pool by ID."""
         pool = await self.pool_repository.get_pool_by_id(pool_id)
         if not pool:
@@ -375,11 +374,11 @@ class OptimizedMatchingPoolService:
 
     async def get_comprehensive_statistics(self) -> "ComprehensiveMatchingStats":
         """Get comprehensive matching statistics."""
+        from app.domain.matching.proposal_service import ProposalRepository, ProposalService
         from app.domain.matching.schemas import (
             ComprehensiveMatchingStats,
             MatchingProposalStats,
         )
-        from app.domain.matching.proposal_service import ProposalService, ProposalRepository
         from app.infrastructure.repositories.chat_repository import ChatRepository
 
         # Get pool statistics

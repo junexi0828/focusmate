@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { getUnreadCount } from "../../api/notifications";
 import { NotificationList } from "./NotificationList";
 import { useNotifications } from "../../hooks/useNotifications";
@@ -17,22 +13,50 @@ export function NotificationBell() {
 
   // WebSocket connection for real-time updates
   const { isConnected } = useNotifications(() => {
-    // Reload count when new notification arrives
-    loadUnreadCount();
+    // Reload count when new notification arrives (only if authenticated)
+    if (localStorage.getItem("access_token")) {
+      loadUnreadCount();
+    }
   });
 
   useEffect(() => {
+    // Only load if authenticated
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      return; // Don't poll if not authenticated
+    }
+
     loadUnreadCount();
     // Poll every 30 seconds
-    const interval = setInterval(loadUnreadCount, 30000);
+    const interval = setInterval(() => {
+      // Check token again before each poll
+      if (localStorage.getItem("access_token")) {
+        loadUnreadCount();
+      }
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const loadUnreadCount = async () => {
+    // Check authentication before making request
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setUnreadCount(0);
+      return;
+    }
+
     try {
       const count = await getUnreadCount();
       setUnreadCount(count);
     } catch (error) {
+      // Don't log errors if it's a 401 (expected when not authenticated)
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          setUnreadCount(0);
+          return;
+        }
+      }
       console.error("Failed to load unread count:", error);
     }
   };

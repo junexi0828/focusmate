@@ -34,6 +34,12 @@ class TimerService extends BaseApiClient {
       method: "POST",
     });
   }
+
+  async getTimer(roomId: string): Promise<ApiResponse<TimerState>> {
+    return this.request(`/timer/${roomId}`, {
+      method: "GET",
+    });
+  }
 }
 
 export const timerService = new TimerService();

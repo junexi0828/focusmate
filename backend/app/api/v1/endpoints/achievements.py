@@ -21,6 +21,7 @@ from app.infrastructure.repositories.community_repository import PostRepository
 from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 from app.infrastructure.repositories.user_repository import UserRepository
 
+
 router = APIRouter(prefix="/achievements", tags=["achievements"])
 
 

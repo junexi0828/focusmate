@@ -1,6 +1,6 @@
 """User Settings ORM Model."""
 
-from sqlalchemy import Boolean, ForeignKey, JSON, String
+from sqlalchemy import JSON, Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin

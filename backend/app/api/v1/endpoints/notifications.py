@@ -2,9 +2,17 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 
-from app.api.deps import get_current_user, get_current_user_required
+from app.api.deps import get_current_user_required
 from app.core.security import decode_jwt_token
 from app.domain.notification.schemas import (
     NotificationCreate,
@@ -17,6 +25,7 @@ from app.infrastructure.repositories.notification_repository import (
     NotificationRepository,
 )
 from app.infrastructure.websocket.notification_manager import notification_ws_manager
+
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -32,18 +41,22 @@ def get_user_settings_repository(db: DatabaseSession) -> "UserSettingsRepository
     from app.infrastructure.repositories.user_settings_repository import (
         UserSettingsRepository,
     )
+
     return UserSettingsRepository(db)
 
 
 def get_user_repository(db: DatabaseSession) -> "UserRepository":
     """Get user repository."""
     from app.infrastructure.repositories.user_repository import UserRepository
+
     return UserRepository(db)
 
 
 def get_notification_service(
     repo: Annotated[NotificationRepository, Depends(get_notification_repository)],
-    settings_repo: Annotated["UserSettingsRepository", Depends(get_user_settings_repository)],
+    settings_repo: Annotated[
+        "UserSettingsRepository", Depends(get_user_settings_repository)
+    ],
     user_repo: Annotated["UserRepository", Depends(get_user_repository)],
 ) -> NotificationService:
     """Get notification service with dependencies."""
@@ -51,7 +64,9 @@ def get_notification_service(
 
 
 # Endpoints
-@router.post("/create", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/create", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_notification(
     data: NotificationCreate,
     service: Annotated[NotificationService, Depends(get_notification_service)],
@@ -85,7 +100,7 @@ async def create_notification(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create notification: {str(e)}",
+            detail=f"Failed to create notification: {e!s}",
         )
 
 
@@ -219,27 +234,33 @@ async def websocket_notifications(
         }
     }
     """
+    # Accept WebSocket connection first (required by FastAPI)
+    await websocket.accept()
+
     # Verify token and get user
     try:
         payload = decode_jwt_token(token)
-        user_id: str = payload.get("sub")
+        user_id: str | None = payload.get("sub")
         if not user_id:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-    except Exception:
+    except Exception as e:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    # Connect user
-    await notification_ws_manager.connect(websocket, user_id)
+    # Connect user (this will add to active connections)
+    # user_id is guaranteed to be str at this point
+    notification_ws_manager._add_connection(websocket, user_id)
 
     try:
         # Send connection confirmation
-        await websocket.send_json({
-            "type": "connected",
-            "message": "Connected to notification stream",
-            "user_id": user_id,
-        })
+        await websocket.send_json(
+            {
+                "type": "connected",
+                "message": "Connected to notification stream",
+                "user_id": user_id,
+            }
+        )
 
         # Keep connection alive and handle incoming messages (e.g., ping/pong)
         while True:

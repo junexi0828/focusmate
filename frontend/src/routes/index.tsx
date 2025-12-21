@@ -66,8 +66,10 @@ function IndexComponent() {
           navigate({ to: "/room/$roomId", params: { roomId } });
           toast.success("방이 생성되고 참여되었습니다!");
 
-          // Trigger refresh of MyRoomsSection
-          window.dispatchEvent(new Event("refreshMyRooms"));
+          // Trigger refresh of MyRoomsSection with a small delay to ensure backend is ready
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("refreshMyRooms"));
+          }, 500);
         } else {
           // 참여 실패해도 방으로 이동 (Room 페이지에서 다시 참여 시도)
           navigate({ to: "/room/$roomId", params: { roomId } });

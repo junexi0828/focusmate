@@ -2,7 +2,7 @@
 
 import secrets
 import string
-from typing import Optional
+from datetime import UTC
 from uuid import UUID
 
 from app.domain.ranking.schemas import (
@@ -59,7 +59,7 @@ class RankingService:
 
         return TeamResponse.model_validate(team)
 
-    async def get_team(self, team_id: UUID) -> Optional[TeamResponse]:
+    async def get_team(self, team_id: UUID) -> TeamResponse | None:
         """Get team by ID."""
         team = await self.repository.get_team_by_id(team_id)
         if not team:
@@ -121,7 +121,7 @@ class RankingService:
         return result
 
     async def get_user_invitations(
-        self, user_id: str, status_filter: Optional[str] = None
+        self, user_id: str, status_filter: str | None = None
     ) -> list:
         """Get all invitations for a user.
 
@@ -147,7 +147,7 @@ class RankingService:
 
     async def update_team(
         self, team_id: UUID, update_data: TeamUpdate, user_id: str
-    ) -> Optional[TeamResponse]:
+    ) -> TeamResponse | None:
         """Update team information (leader only)."""
         # Verify user is team leader
         team = await self.repository.get_team_by_id(team_id)
@@ -315,7 +315,7 @@ class RankingService:
             "submitted_at": request.submitted_at,
         }
 
-    async def get_verification_status(self, team_id: UUID) -> Optional[dict]:
+    async def get_verification_status(self, team_id: UUID) -> dict | None:
         """Get verification status for a team."""
         request = await self.repository.get_verification_request_by_team(team_id)
         if not request:
@@ -389,7 +389,7 @@ class RankingService:
 
     # Email notification integration
     async def _send_verification_notification(
-        self, team_id: UUID, status: str, admin_note: Optional[str] = None
+        self, team_id: UUID, status: str, admin_note: str | None = None
     ) -> None:
         """Send email notification for verification status change."""
 
@@ -397,8 +397,8 @@ class RankingService:
         if not team:
             return
 
-        from app.infrastructure.email.email_service import EmailService
         from app.core.config import settings
+        from app.infrastructure.email.email_service import EmailService
 
         email_service_instance = EmailService(
             smtp_host=settings.SMTP_HOST,
@@ -496,25 +496,66 @@ class RankingService:
         # Get member count
         members = await self.repository.get_team_members(team_id)
 
-        # Calculate streak (simplified - just check if there are sessions today)
-        from datetime import datetime
+        # Calculate consecutive success streak (actual implementation)
+        from datetime import datetime, timedelta
 
-        today = datetime.utcnow().date()
-        sessions_today = await self.repository.get_team_sessions(team_id, limit=1000)
-        sessions_today_count = sum(
-            1 for s in sessions_today if s.completed_at.date() == today and s.success
-        )
+        # Get all successful sessions for the team
+        all_sessions = await self.repository.get_team_sessions(team_id, limit=10000)
+        successful_sessions = [
+            s for s in all_sessions if s.success and s.session_type == "work"
+        ]
+
+        # Calculate consecutive days with successful sessions
+        current_streak = 0
+        if successful_sessions:
+            # Sort by date (most recent first)
+            sessions_by_date = {}
+            for session in successful_sessions:
+                session_date = session.completed_at.date()
+                if session_date not in sessions_by_date:
+                    sessions_by_date[session_date] = []
+                sessions_by_date[session_date].append(session)
+
+            # Get unique dates sorted descending
+            unique_dates = sorted(
+                set(s.completed_at.date() for s in successful_sessions), reverse=True
+            )
+
+            # Calculate streak from today backwards
+            today = datetime.now(UTC).date()
+            check_date = today
+
+            # Check if there's a session today
+            if check_date in unique_dates:
+                current_streak = 1
+                check_date = check_date - timedelta(days=1)
+
+                # Continue checking backwards
+                while check_date in unique_dates:
+                    current_streak += 1
+                    check_date = check_date - timedelta(days=1)
+            else:
+                # No session today, check yesterday
+                check_date = today - timedelta(days=1)
+                if check_date in unique_dates:
+                    current_streak = 1
+                    check_date = check_date - timedelta(days=1)
+
+                    # Continue checking backwards
+                    while check_date in unique_dates:
+                        current_streak += 1
+                        check_date = check_date - timedelta(days=1)
 
         return {
             "team_id": team_id,
             "total_focus_time": stats["total_focus_time"],
             "total_sessions": stats["total_sessions"],
             "member_count": len(members),
-            "current_streak": 1 if sessions_today_count > 0 else 0,  # Simplified
+            "current_streak": current_streak,
         }
 
     async def get_session_history(
-        self, team_id: UUID, user_id: Optional[str] = None, limit: int = 100
+        self, team_id: UUID, user_id: str | None = None, limit: int = 100
     ) -> list[dict]:
         """Get session history for a team or user."""
         if user_id:
@@ -606,7 +647,7 @@ class RankingService:
         return await self.repository.get_mini_game_leaderboard(game_type, limit)
 
     async def get_team_mini_game_history(
-        self, team_id: UUID, game_type: Optional[str] = None, limit: int = 50
+        self, team_id: UUID, game_type: str | None = None, limit: int = 50
     ) -> list[dict]:
         """Get mini-game history for a team."""
         games = await self.repository.get_team_mini_games(team_id, game_type, limit)

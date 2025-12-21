@@ -3,7 +3,6 @@
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 from fastapi import UploadFile
 
@@ -97,8 +96,8 @@ class ChatFileUploadService:
         return str(file_path), file_url
 
     async def save_multiple_files(
-        self, files: List[UploadFile], user_id: str, room_id: str
-    ) -> List[tuple[str, str]]:
+        self, files: list[UploadFile], user_id: str, room_id: str
+    ) -> list[tuple[str, str]]:
         """Save multiple files and return list of (file_path, file_url)."""
         results = []
         for file in files:

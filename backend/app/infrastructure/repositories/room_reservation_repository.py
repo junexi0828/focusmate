@@ -3,8 +3,7 @@
 Handles database operations for room reservations.
 """
 
-from datetime import datetime
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +37,7 @@ class RoomReservationRepository:
         await self.session.refresh(reservation)
         return reservation
 
-    async def get_by_id(self, reservation_id: str) -> Optional[RoomReservation]:
+    async def get_by_id(self, reservation_id: str) -> RoomReservation | None:
         """Get reservation by ID.
 
         Args:
@@ -80,7 +79,7 @@ class RoomReservationRepository:
         Returns:
             List of upcoming active reservations
         """
-        now = datetime.now()
+        now = datetime.now(UTC)
         result = await self.session.execute(
             select(RoomReservation)
             .where(RoomReservation.user_id == user_id)
@@ -150,7 +149,7 @@ class RoomReservationRepository:
         Returns:
             List of active reservations that haven't sent notification yet
         """
-        now = datetime.now()
+        now = datetime.now(UTC)
         result = await self.session.execute(
             select(RoomReservation)
             .where(RoomReservation.is_active == True)

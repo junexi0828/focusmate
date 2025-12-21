@@ -18,6 +18,7 @@ import {
   Hourglass,
   MessageSquare,
   ArrowRight,
+  Flag,
 } from "lucide-react";
 import { MatchingProposal, MatchingPool } from "../types/matching";
 import { formatDistanceToNow, format } from "date-fns";
@@ -34,6 +35,7 @@ interface ProposalDetailPageProps {
   onAccept: () => void;
   onReject: () => void;
   onBack: () => void;
+  onReport?: () => void;
   isLoading: boolean;
 }
 
@@ -47,6 +49,7 @@ export function ProposalDetailPage({
   onAccept,
   onReject,
   onBack,
+  onReport,
   isLoading,
 }: ProposalDetailPageProps) {
   const navigate = useNavigate();

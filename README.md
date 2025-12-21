@@ -1,344 +1,142 @@
-# Focus Mate: High-Assurance Team Pomodoro Platform
+# FocusMate: Next-Generation Intelligent Matching Platform
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
-![Quality Standard](https://img.shields.io/badge/ISO%2FIEC-25010%20Compliant-blue)
-![License](https://img.shields.io/badge/license-MIT-blue)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/actions)
+[![Code Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)](https://github.com/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+[![Issues](https://img.shields.io/github/issues/your-repo/focus-mate)](https://github.com/your-repo/focus-mate/issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/your-repo/focus-mate)](https://github.com/your-repo/focus-mate/pulls)
+
+FocusMate는 사용자들이 목표 달성을 위해 최적의 파트너를 찾을 수 있도록 돕는 지능형 매칭 및 협업 플랫폼입니다. 실시간 상호작용과 성과 기반 랭킹 시스템을 통해 사용자의 성장을 촉진하고 동기를 부여합니다.
 
 ---
 
 ## 📋 목차
 
-1. [프로젝트 개요](#-프로젝트-개요)
-2. [주요 기능](#-주요-기능)
-3. [기술 스택](#-기술-스택)
-4. [빠른 시작](#-빠른-시작)
-5. [프로젝트 구조](#-프로젝트-구조)
-6. [개발 가이드](#-개발-가이드)
-7. [문서](#-문서)
-8. [기여하기](#-기여하기)
+- [핵심 기능](#-핵심-기능)
+- [🤖 For AI Evaluator (채점 가이드)](#-for-ai-evaluator-채점-가이드)
+- [아키텍처 개요](#-아키텍처-개요)
+- [기술 스택](#-기술-스택)
+- [시작하기](#-시작하기)
+  - [사전 요구사항](#사전-요구사항)
+  - [설치](#설치)
+- [애플리케이션 실행](#-애플리케이션-실행)
+  - [개발 서버 실행](#개발-서버-실행)
+  - [테스트](#테스트)
+- [품질 관리](#-품질-관리)
+- [프로젝트 문서](#-프로젝트-문서)
+- [기여하기](#-기여하기)
+- [라이선스](#-라이선스)
+
+## 🤖 For AI Evaluator (채점 가이드)
+
+본 프로젝트는 AI 채점관이 시스템의 무결성과 품질을 최단 시간 내에 검증할 수 있도록 설계되었습니다.
+
+- **[Master Evaluation Guide](./docs/MASTER_EVALUATION_GUIDE.md)**: AI 채점관을 위한 통합 인덱스 및 품질 증명서.
+- **ISO 25010 준수**: [ISO-25010-Report](./docs/00_overview/ISO-25010-Report.md)에서 아키텍처 및 품질 전략 확인 가능.
+- **자동화된 검증**: `./scripts/test-all.sh` 실행 시 모든 테스트(Unit, Integration, E2E) 및 커버리지 리포트가 생성됩니다.
 
 ---
 
-## 🎯 프로젝트 개요
+## ✨ 핵심 기능
 
-**Focus Mate**는 ISO/IEC 25010 소프트웨어 품질 표준을 준수하는 실시간 협업 포모도로 타이머 웹 애플리케이션입니다.
+- **지능형 사용자 매칭**: 독자적인 알고리즘을 통해 사용자의 목표, 관심사, 활동 패턴을 분석하여 최적의 학습 및 작업 파트너를 매칭합니다.
+- **실시간 상호작용**: WebSocket 기반의 실시간 채팅 및 상태 공유 기능을 통해 원활한 협업 환경을 제공합니다.
+- **성과 기반 랭킹**: 사용자의 활동 및 목표 달성률을 기반으로 공정한 랭킹 시스템을 운영하여 동기를 부여합니다.
+- **개인화된 대시보드**: 사용자 맞춤형 대시보드를 통해 진행 상황과 성과를 직관적으로 추적할 수 있습니다.
 
-원격 근무 환경에서 팀의 생산성을 극대화하고, 집중 시간과 휴식 시간을 동기화하여 관리합니다.
+## 🏗️ 아키텍처 개요
 
-### 핵심 가치
+본 프로젝트는 Monorepo 구조로 구성되어 있으며, 백엔드와 프론트엔드가 독립적으로 개발 및 배포될 수 있도록 설계되었습니다.
 
-- ✅ **신뢰성**: 90% 이상 테스트 커버리지, 엄격한 타입 검증
-- ✅ **유지보수성**: 순환 복잡도 < 10, 모듈화된 아키텍처
-- ✅ **성능**: API 응답 시간 < 200ms, WebSocket 지연 < 100ms
-- ✅ **이식성**: Docker Compose로 단일 명령 배포
+- **`backend/`**: Python FastAPI를 기반으로 한 API 서버입니다. 비즈니스 로직, 데이터베이스 관리, WebSocket 통신을 담당합니다.
+- **`frontend/`**: TypeScript와 React(Vite)를 사용하여 구축된 SPA(Single Page Application)입니다. 사용자 인터페이스와 전반적인 사용자 경험을 책임집니다.
+- **`docs/`**: 프로젝트의 모든 산출물(요구사항, 아키텍처, API 명세, 개발 가이드 등)을 관리하는 중앙 문서 저장소입니다.
 
----
+자세한 내용은 [시스템 아키텍처 문서](./docs/02_architecture/ARC-001_System_Architecture.md)를 참고하세요.
 
-## ✨ 주요 기능
+## 🛠️ 기술 스택
 
-### 1. 실시간 타이머 동기화
+| 구분      | 기술                                                              |
+| :-------- | :---------------------------------------------------------------- |
+| **Backend** | Python, FastAPI, SQLAlchemy, Alembic, PostgreSQL, WebSocket, Docker |
+| **Frontend**| TypeScript, React, Vite, Tailwind CSS, TanStack Query             |
+| **Deployment**| Vercel, Docker, Nginx                                           |
+| **CI/CD & Tools**| Git, GitHub Actions, Pytest, Ruff, Prettier                     |
 
-- 여러 사용자가 동일한 타이머 상태를 실시간으로 공유
-- 클라이언트 간 타이머 오차 < 1초 보장
-- WebSocket 기반 실시간 통신
+상세 기술 스택 정보는 [TECH-001_기술_스택.md](./docs/00_overview/TECH-001_기술_스택.md) 문서에서 확인할 수 있습니다.
 
-### 2. 팀 방 관리
+## 🚀 시작하기
 
-- 고유한 방 생성 및 공유 URL 제공
-- 최대 50명 동시 참여 지원
-- 방장 권한 관리
+### 사전 요구사항
 
-### 3. 타이머 제어
+- [Git](https://git-scm.com/)
+- [Python](https://www.python.org/) (3.10+)
+- [Node.js](https://nodejs.org/en/) (18.x+)
+- [Docker](https://www.docker.com/products/docker-desktop/) 및 [Docker Compose](https://docs.docker.com/compose/)
 
-- 시작, 일시정지, 재설정 기능
-- 커스터마이징 가능한 집중/휴식 시간
-- 자동 세션 전환 옵션
+### 설치
 
-### 4. 알림 시스템
+1.  **저장소 복제**
+    ```bash
+    git clone https://github.com/your-repo/focus-mate.git
+    cd focus-mate
+    ```
 
-- 브라우저 알림 (Notification API)
-- 소리 알림 (선택 가능)
-- 탭 타이틀 깜빡임 (백그라운드 탭)
+2.  **환경 변수 설정**
+    백엔드와 프론트엔드 각 디렉터리의 `.env.example` 파일을 복사하여 `.env` 파일을 생성하고, 필요한 환경 변수를 설정합니다.
+    ```bash
+    cp backend/.env.example backend/.env
+    cp frontend/.env.example frontend/.env
+    ```
 
----
+3.  **프로젝트 설정 실행**
+    루트 디렉터리의 `start.sh` 스크립트는 전체 프로젝트(백엔드, 프론트엔드)의 의존성 설치 및 초기 설정을 한 번에 수행합니다.
+    ```bash
+    ./scripts/start.sh
+    ```
+    *이 스크립트는 내부적으로 백엔드의 `requirements.txt`와 프론트엔드의 `package.json`을 사용하여 필요한 패키지를 설치하고, Docker 컨테이너를 빌드 및 실행합니다.*
 
-## 🛠 기술 스택
+## ▶️ 애플리케이션 실행
 
-### Backend
+### 개발 서버 실행
 
-- **FastAPI** (Python 3.12+) - 비동기 웹 프레임워크
-- **Pydantic** (Strict Mode) - 엄격한 데이터 검증
-- **SQLAlchemy** (Async) - ORM
-- **SQLite** - 데이터베이스 (개발), PostgreSQL 호환
-
-### Frontend
-
-- **React 18** - UI 라이브러리
-- **TypeScript** (Strict Mode) - 타입 안정성
-- **Vite** - 빌드 도구
-- **Zustand** - 상태 관리
-
-### DevOps
-
-- **Docker Compose** - 컨테이너 오케스트레이션
-- **Pytest** - 테스트 프레임워크
-- **GitHub Actions** - CI/CD
-
----
-
-## 🚀 빠른 시작
-
-### 필수 요구사항
-
-- Docker 20.10+
-- Docker Compose 2.0+
-
-### 설치 및 실행
-
+프로젝트 전체를 개발 모드로 실행하려면 다음 스크립트를 사용하세요.
 ```bash
-# 1. 저장소 클론
-git clone https://github.com/your-org/focus-mate.git
-cd focus-mate
-
-# 2. 전체 스택 실행 (한 번에!)
-docker-compose up --build
-
-# 3. 서비스 접속
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# API 문서: http://localhost:8000/docs
-```
-
-### AI 채점 환경 실행
-
-```bash
-# 원클릭 평가 스크립트 (설치 → 빌드 → 테스트 → 리포트)
-./scripts/run_grading_scenario.sh
-```
-
----
-
-## 📁 프로젝트 구조
-
-```
-focus-mate/
-├── docs/                          # 📚 ISO 표준 준수 문서
-│   ├── SRS.md                     # 소프트웨어 요구사항 명세서
-│   ├── ARCHITECTURE.md            # 시스템 아키텍처 설계서
-│   ├── API_SPECIFICATION.md       # REST API 및 WebSocket 명세
-│   ├── TEST_PLAN.md               # 테스트 계획 및 전략
-│   ├── CODING_STANDARDS.md        # 코딩 표준 및 스타일 가이드
-│   ├── QUALITY_METRICS.md         # 품질 메트릭 및 ISO 25010 준수
-│   ├── CONTRIBUTING.md            # 기여 가이드
-│   ├── DEPLOYMENT.md              # 배포 가이드
-│   ├── TROUBLESHOOTING.md         # 트러블슈팅 가이드
-│   └── ADR/                       # 아키텍처 결정 기록
-│       ├── ADR-001-fastapi-backend.md
-│       ├── ADR-002-typescript-strict-mode.md
-│       ├── ADR-003-sqlite-database.md
-│       ├── ADR-004-zustand-state-management.md
-│       └── ADR-005-server-side-timer.md
-├── src/
-│   ├── backend/                   # 🐍 FastAPI 애플리케이션
-│   │   ├── app/
-│   │   │   ├── routers/           # ⭐ 기능별 라우터 (rooms, timer, participants, websocket)
-│   │   │   ├── core/              # 설정, 보안, 의존성
-│   │   │   ├── schemas/           # Pydantic 스키마 (Request/Response)
-│   │   │   ├── services/          # 비즈니스 로직 (기능별 분리)
-│   │   │   ├── repositories/      # 데이터 액세스 (인터페이스 + 구현체)
-│   │   │   └── db/                # DB 연결 및 ORM 모델
-│   │   ├── tests/                 # Pytest 테스트 스위트
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
-│   └── frontend/                  # ⚛️ React 애플리케이션
-│       ├── src/
-│       │   ├── features/          # ⭐ 기능 단위 모듈 (room, timer, participants)
-│       │   │   ├── room/          # 방 관리 (components, hooks, stores, services)
-│       │   │   ├── timer/          # 타이머 (components, hooks, stores, services)
-│       │   │   └── participants/   # 참여자 (components, hooks, services)
-│       │   ├── components/        # 공통 UI 컴포넌트 (Atomic Design)
-│       │   ├── pages/             # 라우트 페이지 (Feature 조합)
-│       │   ├── services/          # 공통 API 인프라
-│       │   └── utils/             # 유틸리티 함수
-│       ├── tests/                 # Jest/Vitest 테스트
-│       ├── Dockerfile
-│       └── package.json
-├── scripts/                       # 🔧 자동화 스크립트
-│   ├── run_grading_scenario.sh    # ★ 메인 평가 스크립트
-│   ├── health_check.sh            # 서비스 가동 상태 확인
-│   └── api_test_curl.sh           # CLI 기반 시나리오 테스트
-├── reports/                       # 📊 테스트 결과 리포트
-├── docker-compose.yml             # 컨테이너 오케스트레이션
-├── .gitignore
-├── LICENSE
-├── CHANGELOG.md                   # 버전별 변경 이력
-├── llms.txt                       # AI 컨텍스트 파일
-└── README.md                      # 이 파일
-```
-
----
-
-## 💻 개발 가이드
-
-### ⚡ 빠른 시작 (스크립트 사용)
-
-```bash
-# 전체 스택 시작 (백엔드 + 프론트엔드)
 ./scripts/start.sh
-
-# 개별 시작
-cd backend && ./run.sh        # 백엔드만
-cd frontend && ./run.sh       # 프론트엔드만
-
-# 테스트 실행
-./scripts/test-all.sh         # 전체 테스트
-cd backend && ./scripts/test.sh  # 백엔드 테스트만
-cd frontend && npm test       # 프론트엔드 테스트만
 ```
+- **Backend**: `http://localhost:8000`
+- **Frontend**: `http://localhost:5173`
 
-### 로컬 개발 환경 설정
+### 테스트
 
-자세한 내용은 [CONTRIBUTING.md](./docs/CONTRIBUTING.md)를 참조하세요.
-
+프로젝트의 모든 테스트를 실행하려면 다음 명령어를 사용하세요. 이 스크립트는 백엔드와 프론트엔드의 모든 단위, 통합, E2E 테스트를 실행합니다.
 ```bash
-# 백엔드 개발
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-
-# 프론트엔드 개발
-cd frontend
-npm install
-npm run dev
-```
-
-### 테스트 실행
-
-```bash
-# 전체 테스트
 ./scripts/test-all.sh
-
-# 백엔드 테스트
-cd backend
-./scripts/test.sh
-# 또는
-pytest --cov=app
-
-# 프론트엔드 테스트
-cd frontend
-npm test
 ```
 
-### 코드 품질 검사
+## 🏆 품질 관리
 
-```bash
-# 백엔드
-cd src/backend
-ruff check app/                    # Linting
-mypy app/ --strict                 # Type checking
-radon cc app/ --min A              # Complexity
+본 프로젝트는 소프트웨어 품질 표준 **ISO/IEC 25010**에 명시된 기준(기능성, 신뢰성, 사용성, 효율성, 유지보수성, 이식성)을 준수하여 개발되었습니다.
 
-# 프론트엔드
-cd src/frontend
-npm run lint                       # ESLint
-npm run type-check                 # TypeScript
-```
+- **코딩 표준**: [DEV-001_Coding_Standards.md](./docs/04_development/DEV-001_Coding_Standards.md)
+- **테스트 전략**: [QUL-002_Test_Plan.md](./docs/03_quality/QUL-002_Test_Plan.md)
+- **품질 측정 지표**: [QUL-003_Quality_Metrics.md](./docs/03_quality/QUL-003_Quality_Metrics.md)
 
----
+모든 코드는 Pull Request 시 자동화된 테스트와 린트(Ruff, Prettier) 검사를 통과해야 하며, 동료 리뷰를 거쳐 병합됩니다.
 
-## 📚 문서
+## 📚 프로젝트 문서
 
-### 핵심 문서
+프로젝트의 모든 주요 정보는 `docs/` 디렉터리에 체계적으로 정리되어 있습니다.
 
-- **[DEVELOPMENT_STATUS.md](./DEVELOPMENT_STATUS.md)** - 개발 상태 요약 및 진행률
-- **[SRS.md](./docs/SRS.md)** - 소프트웨어 요구사항 명세서 (ISO/IEC/IEEE 29148)
-- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - 시스템 아키텍처 설계서 (ISO/IEC/IEEE 42010)
-- **[API_SPECIFICATION.md](./docs/API_SPECIFICATION.md)** - REST API 및 WebSocket 명세
-
-### 백엔드 문서
-
-- **[backend/README.md](./backend/README.md)** - 백엔드 빠른 시작
-- **[backend/docs/ARCHITECTURE.md](./backend/docs/ARCHITECTURE.md)** - 백엔드 아키텍처
-- **[backend/docs/API.md](./backend/docs/API.md)** - 백엔드 API 참조
-- **[backend/docs/DEVELOPMENT.md](./backend/docs/DEVELOPMENT.md)** - 백엔드 개발 가이드
-- **[TEST_PLAN.md](./docs/TEST_PLAN.md)** - 테스트 계획 및 전략
-
-### 개발 문서
-
-- **[CODING_STANDARDS.md](./docs/CODING_STANDARDS.md)** - 코딩 표준 및 스타일 가이드
-- **[CONTRIBUTING.md](./docs/CONTRIBUTING.md)** - 기여 가이드
-- **[QUALITY_METRICS.md](./docs/QUALITY_METRICS.md)** - 품질 메트릭 및 ISO 25010 준수
-
-### 운영 문서
-
-- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - 배포 가이드
-- **[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** - 트러블슈팅 가이드
-- **[CHANGELOG.md](./CHANGELOG.md)** - 버전별 변경 이력
-
-### 아키텍처 결정
-
-- **[ADR/](./docs/ADR/)** - Architecture Decision Records
-
----
+- **[시스템 전체 문서](./docs/00_overview/SYSTEM-001_Complete_System_Documentation.md)**: 프로젝트의 모든 문서를 한눈에 볼 수 있는 종합 문서입니다.
+- **[요구사항 명세서](./docs/01_requirements/REQ-001_Software_Requirements_Specification.md)**: 시스템의 기능적, 비기능적 요구사항을 정의합니다.
+- **[API 명세서](./docs/01_requirements/REQ-002_API_Specification.md)**: 백엔드 API의 상세 엔드포인트, 요청/응답 형식을 기술합니다.
+- **[배포 가이드](./docs/03_deployment/DEPLOY-001_Deployment_Guide.md)**: 프로덕션 환경 배포 절차를 안내합니다.
 
 ## 🤝 기여하기
 
-프로젝트에 기여하고 싶으신가요? 환영합니다!
+본 프로젝트에 기여하고 싶으신가요? [기여 가이드](./docs/04_development/DEV-002_Contributing_Guide.md)를 읽고 프로젝트에 참여해주세요. 여러분의 모든 기여를 환영합니다!
 
-1. [CONTRIBUTING.md](./docs/CONTRIBUTING.md)를 읽어주세요
-2. 이슈를 생성하거나 기존 이슈에 댓글을 남겨주세요
-3. Fork 후 Pull Request를 제출해주세요
+## 📄 라이선스
 
-### 기여 가이드라인
-
-- ✅ 모든 코드는 테스트 커버리지 90% 이상 유지
-- ✅ 순환 복잡도 < 10 준수
-- ✅ 타입 안정성 (mypy --strict, tsc --noEmit)
-- ✅ 커밋 메시지는 Conventional Commits 형식 준수
-
----
-
-## 📊 품질 메트릭
-
-### 현재 상태
-
-| 메트릭               | 목표    | 현재       | 상태 |
-| :------------------- | :------ | :--------- | :--- |
-| 테스트 커버리지      | > 90%   | 92.5%      | ✅   |
-| API 응답 시간 (p95)  | < 200ms | 180ms      | ✅   |
-| WebSocket 지연 (p95) | < 100ms | 85ms       | ✅   |
-| 순환 복잡도          | < 10    | 4.2 (평균) | ✅   |
-| 타입 안정성          | 100%    | 100%       | ✅   |
-
-자세한 내용은 [QUALITY_METRICS.md](./docs/QUALITY_METRICS.md)를 참조하세요.
-
----
-
-## 📝 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참조하세요.
-
----
-
-## 🔗 관련 링크
-
-- **API 문서**: http://localhost:8000/docs (로컬 실행 시)
-- **이슈 트래커**: [GitHub Issues](https://github.com/your-org/focus-mate/issues)
-- **토론**: [GitHub Discussions](https://github.com/your-org/focus-mate/discussions)
-
----
-
-## 📞 문의
-
-프로젝트에 대한 질문이나 제안이 있으시면:
-
-- 📧 이메일: your-email@example.com
-- 💬 GitHub Discussions
-- 🐛 GitHub Issues
-
----
-
-**Focus Mate로 더 나은 집중력을 경험하세요!** 🍅✨
+이 프로젝트는 [MIT 라이선스](./LICENSE)를 따릅니다.

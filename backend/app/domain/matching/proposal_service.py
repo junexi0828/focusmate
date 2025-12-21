@@ -1,7 +1,6 @@
 """Service layer for matching proposals."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from app.domain.chat.schemas import MatchingChatInfo
@@ -32,7 +31,7 @@ class ProposalRepository:
 
     async def get_proposal_by_id(
         self, proposal_id: UUID
-    ) -> Optional[MatchingProposal]:
+    ) -> MatchingProposal | None:
         """Get proposal by ID."""
         from sqlalchemy import select
 
@@ -61,7 +60,7 @@ class ProposalRepository:
 
     async def update_proposal(
         self, proposal_id: UUID, update_data: dict
-    ) -> Optional[MatchingProposal]:
+    ) -> MatchingProposal | None:
         """Update proposal."""
         proposal = await self.get_proposal_by_id(proposal_id)
         if not proposal:
@@ -205,8 +204,10 @@ class ProposalService:
 
     async def get_proposal_statistics(self) -> dict:
         """Get comprehensive proposal statistics."""
-        from sqlalchemy import func, select
         from datetime import datetime, timedelta
+
+        from sqlalchemy import func, select
+
         from app.infrastructure.database.models.matching import MatchingProposal
 
         # Total proposals
@@ -276,17 +277,18 @@ class ProposalService:
 
         # Daily matches (last 30 days)
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        date_expr = func.date(MatchingProposal.matched_at).label("date")
         daily_matches_result = await self.proposal_repo.session.execute(
             select(
-                func.date(MatchingProposal.matched_at).label("date"),
+                date_expr,
                 func.count(MatchingProposal.proposal_id).label("count"),
             )
             .where(
                 MatchingProposal.matched_at.isnot(None),
                 MatchingProposal.matched_at >= thirty_days_ago,
             )
-            .group_by(func.date(MatchingProposal.matched_at))
-            .order_by(func.date(MatchingProposal.matched_at).desc())
+            .group_by(date_expr)
+            .order_by(date_expr.desc())
         )
         daily_matches = [
             {"date": str(row.date), "count": row.count}
@@ -295,17 +297,18 @@ class ProposalService:
 
         # Weekly matches (last 12 weeks)
         twelve_weeks_ago = datetime.utcnow() - timedelta(weeks=12)
+        week_expr = func.date_trunc("week", MatchingProposal.matched_at).label("week")
         weekly_matches_result = await self.proposal_repo.session.execute(
             select(
-                func.date_trunc("week", MatchingProposal.matched_at).label("week"),
+                week_expr,
                 func.count(MatchingProposal.proposal_id).label("count"),
             )
             .where(
                 MatchingProposal.matched_at.isnot(None),
                 MatchingProposal.matched_at >= twelve_weeks_ago,
             )
-            .group_by(func.date_trunc("week", MatchingProposal.matched_at))
-            .order_by(func.date_trunc("week", MatchingProposal.matched_at).desc())
+            .group_by(week_expr)
+            .order_by(week_expr.desc())
         )
         weekly_matches = [
             {"week": str(row.week), "count": row.count}
@@ -314,17 +317,18 @@ class ProposalService:
 
         # Monthly matches (last 12 months)
         twelve_months_ago = datetime.utcnow() - timedelta(days=365)
+        month_expr = func.date_trunc("month", MatchingProposal.matched_at).label("month")
         monthly_matches_result = await self.proposal_repo.session.execute(
             select(
-                func.date_trunc("month", MatchingProposal.matched_at).label("month"),
+                month_expr,
                 func.count(MatchingProposal.proposal_id).label("count"),
             )
             .where(
                 MatchingProposal.matched_at.isnot(None),
                 MatchingProposal.matched_at >= twelve_months_ago,
             )
-            .group_by(func.date_trunc("month", MatchingProposal.matched_at))
-            .order_by(func.date_trunc("month", MatchingProposal.matched_at).desc())
+            .group_by(month_expr)
+            .order_by(month_expr.desc())
         )
         monthly_matches = [
             {"month": str(row.month), "count": row.count}

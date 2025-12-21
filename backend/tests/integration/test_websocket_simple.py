@@ -2,8 +2,9 @@
 """Simple WebSocket test - no authentication."""
 
 import asyncio
+
 import websockets
-import json
+
 
 async def test_websocket():
     # First, let's just try to connect without a token to see what happens
@@ -18,12 +19,12 @@ async def test_websocket():
             try:
                 message = await asyncio.wait_for(websocket.recv(), timeout=2)
                 print(f"Received: {message}")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 print("No message received within 2 seconds")
 
     except websockets.exceptions.InvalidStatusCode as e:
         print(f"❌ Connection rejected with status code: {e.status_code}")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("❌ Connection timeout")
     except Exception as e:
         print(f"❌ Error: {type(e).__name__}: {e}")
