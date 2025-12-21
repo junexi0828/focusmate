@@ -54,4 +54,4 @@ Detailed architectural diagrams showing the interaction between the WebSocket Ga
 The system is architected for seamless cloud transition:
 - **Frontend**: Successfully connected and deployed via **Vercel** for optimal global delivery.
 - **Backend**: Currently operational in a high-fidelity local/staging environment. Production deployment is deferred to the final launch phase to optimize cloud resource costs (billing management).
-- **AWS Expansion**: The production roadmap includes full migration to **AWS (Amazon Web Services)** using EC2 for compute, RDS for persistent storage, and S3 for encrypted file assets, ensuring enterprise-grade scalability.
+- **AWS Expansion**: The production roadmap includes full migration to **AWS (Amazon Web Services)**. Architectural hooks for **RDS** (Database), **S3** (Storage), and **SES** (Email) are already implemented as commented-out configurations in [config.py](file:///Users/juns/FocusMate/backend/app/core/config.py#L203-228), ensuring zero-refactor scalability.
