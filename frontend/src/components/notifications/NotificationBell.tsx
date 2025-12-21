@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { getUnreadCount } from "../../api/notifications";
 import { NotificationList } from "./NotificationList";
 import { useNotifications } from "../../hooks/useNotifications";
+import { authService } from "../../features/auth/services/authService";
 
 export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -13,24 +14,23 @@ export function NotificationBell() {
 
   // WebSocket connection for real-time updates
   const { isConnected } = useNotifications(() => {
-    // Reload count when new notification arrives (only if authenticated)
-    if (localStorage.getItem("access_token")) {
+    // Reload count when new notification arrives (only if authenticated and token valid)
+    if (authService.isAuthenticated() && !authService.isTokenExpired()) {
       loadUnreadCount();
     }
   });
 
   useEffect(() => {
-    // Only load if authenticated
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      return; // Don't poll if not authenticated
+    // Only load if authenticated and token valid
+    if (!authService.isAuthenticated() || authService.isTokenExpired()) {
+      return; // Don't poll if not authenticated or token expired
     }
 
     loadUnreadCount();
     // Poll every 30 seconds
     const interval = setInterval(() => {
       // Check token again before each poll
-      if (localStorage.getItem("access_token")) {
+      if (authService.isAuthenticated() && !authService.isTokenExpired()) {
         loadUnreadCount();
       }
     }, 30000);
@@ -39,8 +39,7 @@ export function NotificationBell() {
 
   const loadUnreadCount = async () => {
     // Check authentication before making request
-    const token = localStorage.getItem("access_token");
-    if (!token) {
+    if (!authService.isAuthenticated() || authService.isTokenExpired()) {
       setUnreadCount(0);
       return;
     }
