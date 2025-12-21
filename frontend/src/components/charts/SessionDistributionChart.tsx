@@ -23,16 +23,16 @@ export function SessionDistributionChart({
     >
       <div className="flex flex-col md:flex-row items-center gap-6">
         {/* Chart - 반응형 컨테이너 with padding */}
-        <div className="w-full md:w-1/2 flex items-center justify-center p-4">
-          <div className="w-full aspect-square max-w-[400px] min-h-[280px]">
+        <div className="w-full md:w-1/2 flex items-center justify-center p-2">
+          <div className="w-full aspect-square max-w-[500px] min-h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+              <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                 <Pie
                   data={data}
                   cx="50%"
                   cy="50%"
-                  innerRadius="40%"
-                  outerRadius="70%"
+                  innerRadius="35%"
+                  outerRadius="80%"
                   paddingAngle={2}
                   dataKey="value"
                   animationDuration={1000}
