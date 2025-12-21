@@ -90,11 +90,21 @@ export function MonthlyComparisonChart({
             <Brush
               dataKey="month"
               height={30}
-              stroke="hsl(var(--primary))"
+              stroke="hsl(var(--border))"
               fill="hsl(var(--muted))"
               travellerWidth={10}
+              travellerProps={{
+                style: {
+                  fill: "hsl(var(--primary))",
+                  stroke: "hsl(var(--primary))",
+                },
+              }}
               tickFormatter={(value) => value}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              tick={{
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 11,
+                fontWeight: 400,
+              }}
               startIndex={0}
               endIndex={data.length - 1}
             />
