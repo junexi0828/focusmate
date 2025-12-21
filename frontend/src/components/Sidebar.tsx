@@ -267,28 +267,27 @@ function ThemeToggleButton({ isCollapsed }: { isCollapsed: boolean }) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
-    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
-    setTheme(initialTheme);
+    // Sync with actual class on mount
+    const isDark = document.documentElement.classList.contains("dark");
+    setTheme(isDark ? "dark" : "light");
 
-    // Remove both classes first
-    document.documentElement.classList.remove("dark", "light");
-    // Add the appropriate class
-    document.documentElement.classList.add(initialTheme);
+    // Optional: MutationObserver to sync state if changed elsewhere
+    const observer = new MutationObserver(() => {
+      const currentlyDark = document.documentElement.classList.contains("dark");
+      setTheme(currentlyDark ? "dark" : "light");
+    });
+
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
   }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
 
-    // Remove both classes first
-    document.documentElement.classList.remove("dark", "light");
-    // Add the appropriate class
+    document.documentElement.classList.remove("light", "dark");
     document.documentElement.classList.add(newTheme);
+    // Theme state will be updated by the MutationObserver
   };
 
   return (
