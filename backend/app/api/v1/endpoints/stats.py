@@ -355,7 +355,14 @@ async def save_user_goal(
         existing_goal.weekly_goal_sessions = goal_data.weekly_goal_sessions
         await db.commit()
         await db.refresh(existing_goal)
-        return UserGoalResponse.model_validate(existing_goal)
+        return UserGoalResponse(
+            id=str(existing_goal.id),
+            user_id=str(existing_goal.user_id),
+            daily_goal_minutes=existing_goal.daily_goal_minutes,
+            weekly_goal_sessions=existing_goal.weekly_goal_sessions,
+            created_at=existing_goal.created_at,
+            updated_at=existing_goal.updated_at,
+        )
     # Create new
     new_goal = UserGoal(
         id=uuid4(),
@@ -366,7 +373,14 @@ async def save_user_goal(
     db.add(new_goal)
     await db.commit()
     await db.refresh(new_goal)
-    return UserGoalResponse.model_validate(new_goal)
+    return UserGoalResponse(
+        id=str(new_goal.id),
+        user_id=str(new_goal.user_id),
+        daily_goal_minutes=new_goal.daily_goal_minutes,
+        weekly_goal_sessions=new_goal.weekly_goal_sessions,
+        created_at=new_goal.created_at,
+        updated_at=new_goal.updated_at,
+    )
 
 
 @router.get("/goals", response_model=UserGoalResponse)
@@ -394,7 +408,7 @@ async def get_user_goal(
     if not goals:
         # Return default goals if none set
         return UserGoalResponse(
-            id=uuid4(),
+            id=str(uuid4()),
             user_id=user_id,
             daily_goal_minutes=120,
             weekly_goal_sessions=5,
@@ -407,7 +421,14 @@ async def get_user_goal(
 
     # Optional: If there are duplicates, we could log them or clean them up here
     # For now, we just return the most relevant one to avoid 404s
-    return UserGoalResponse.model_validate(goal)
+    return UserGoalResponse(
+        id=str(goal.id),
+        user_id=str(goal.user_id),
+        daily_goal_minutes=goal.daily_goal_minutes,
+        weekly_goal_sessions=goal.weekly_goal_sessions,
+        created_at=goal.created_at,
+        updated_at=goal.updated_at,
+    )
 
 
 # Manual Session Endpoints
