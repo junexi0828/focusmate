@@ -307,23 +307,15 @@ FocusMate 팀
 
         async with httpx.AsyncClient() as client:
             try:
-                import logging
-                logger = logging.getLogger(__name__)
-
                 token_response = await client.post(token_url, params=token_params)
                 token_response.raise_for_status()
                 token_data = token_response.json()
 
-                logger.debug(f"Naver token response: {token_data}")
-
                 if "error" in token_data:
-                    error_msg = f"Naver OAuth error: {token_data.get('error_description', 'Unknown error')}"
-                    logger.error(f"Naver OAuth token error: {error_msg}")
-                    raise ValidationException("oauth", error_msg)
+                    raise ValidationException("oauth", f"Naver OAuth error: {token_data.get('error_description', 'Unknown error')}")
 
                 access_token = token_data.get("access_token")
                 if not access_token:
-                    logger.error("Failed to get access token from Naver")
                     raise ValidationException("oauth", "Failed to get access token from Naver")
 
                 # Get user info from Naver
@@ -332,26 +324,17 @@ FocusMate 팀
                 userinfo_response = await client.get(userinfo_url, headers=headers)
                 userinfo_response.raise_for_status()
                 userinfo_data = userinfo_response.json()
-                
-                logger.info(f"Naver userinfo full response: {userinfo_data}")
 
                 if userinfo_data.get("resultcode") != "00":
-                    error_msg = f"Failed to get user info from Naver: {userinfo_data.get('message', 'Unknown error')}"
-                    logger.error(f"Naver userinfo error: {error_msg}")
-                    raise ValidationException("oauth", error_msg)
+                    raise ValidationException("oauth", f"Failed to get user info from Naver: {userinfo_data.get('message', 'Unknown error')}")
 
                 naver_user = userinfo_data.get("response", {})
-                logger.info(f"Naver user response object: {naver_user}")
-                
                 naver_id = naver_user.get("id")
                 email = naver_user.get("email")
                 nickname = naver_user.get("nickname") or naver_user.get("name") or "네이버 사용자"
-                
-                logger.info(f"Naver user data extracted: id={naver_id}, email={email}, nickname={nickname}")
 
                 if not naver_id or not email:
-                    logger.error(f"Incomplete user information: id={naver_id}, email={email}, full response keys: {list(naver_user.keys())}")
-                    raise ValidationException("oauth", "Incomplete user information from Naver. 이메일 정보가 필요합니다. 네이버 개발자 센터에서 '회원정보 조회' API 사용 설정과 이메일 정보 제공 동의를 확인해주세요.")
+                    raise ValidationException("oauth", "이메일 정보 제공 동의가 필요합니다. 네이버 로그인 시 이메일 정보 제공에 동의해주세요.")
 
                 # Check if user exists by naver_id
                 user = await self.repository.get_by_naver_id(naver_id)
@@ -397,14 +380,8 @@ FocusMate 팀
                 )
 
             except httpx.HTTPError as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Naver OAuth HTTP error: {e!s}", exc_info=True)
                 raise ValidationException("oauth", f"Naver OAuth HTTP error: {e!s}")
             except ValidationException:
                 raise
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Naver OAuth error: {e!s}", exc_info=True)
                 raise ValidationException("oauth", f"Naver OAuth error: {e!s}")
