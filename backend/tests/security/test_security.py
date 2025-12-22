@@ -68,7 +68,12 @@ class TestAuthentication:
             "/api/v1/auth/login",
             json={"email": "nonexistent@example.com", "password": "wrongpassword"},
         )
-        assert response.status_code in [401, 404, 422, 500], "Invalid credentials should be rejected"
+        assert response.status_code in [
+            401,
+            404,
+            422,
+            500,
+        ], "Invalid credentials should be rejected"
 
     def test_missing_token_rejected(self, client):
         """Test that endpoints requiring auth reject requests without token."""
@@ -83,7 +88,11 @@ class TestAuthentication:
         """Test that invalid tokens are rejected."""
         headers = {"Authorization": "Bearer invalid_token_12345"}
         response = client.get("/api/v1/rooms", headers=headers)
-        assert response.status_code in [401, 403, 404], "Invalid tokens should be rejected"
+        assert response.status_code in [
+            401,
+            403,
+            404,
+        ], "Invalid tokens should be rejected"
 
     def test_expired_token_rejected(self, client):
         """Test that expired tokens are rejected."""
@@ -106,7 +115,11 @@ class TestAuthentication:
 
         headers = {"Authorization": f"Bearer {expired_token}"}
         response = client.get("/api/v1/rooms", headers=headers)
-        assert response.status_code in [401, 403, 404], "Expired tokens should be rejected"
+        assert response.status_code in [
+            401,
+            403,
+            404,
+        ], "Expired tokens should be rejected"
 
     def test_password_not_returned(self, client):
         """Test that passwords are never returned in responses."""
@@ -147,7 +160,9 @@ class TestAuthorization:
             404,
         ], "Users should not access admin endpoints"
 
-    def test_user_cannot_modify_other_users_data(self, client, auth_headers, check_db_connection):
+    def test_user_cannot_modify_other_users_data(
+        self, client, auth_headers, check_db_connection
+    ):
         """Test that users cannot modify other users' data.
 
         ⚠️ Requires database connection.
@@ -168,7 +183,11 @@ class TestAuthorization:
                 422,
             ], f"Users should not modify other users' data: {response.status_code} - {response.text[:200]}"
         except RuntimeError as e:
-            if "different loop" in str(e).lower() or "event loop" in str(e).lower() or "attached to a different loop" in str(e).lower():
+            if (
+                "different loop" in str(e).lower()
+                or "event loop" in str(e).lower()
+                or "attached to a different loop" in str(e).lower()
+            ):
                 pytest.skip(f"Event loop issue (may require database): {str(e)}")
             raise
 
