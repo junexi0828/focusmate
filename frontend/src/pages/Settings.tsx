@@ -44,12 +44,17 @@ export default function Settings() {
     loadSettings();
   }, []);
 
-  // Apply theme when settings are loaded
+  // Sync settings theme with current localStorage theme on initial load
   useEffect(() => {
-    if (settings?.theme) {
-      applyTheme(settings.theme);
+    if (settings) {
+      const currentTheme = localStorage.getItem("theme");
+      // If localStorage has a theme but settings don't match, update settings to match localStorage
+      // This ensures Settings page shows the current active theme
+      if (currentTheme && settings.theme !== currentTheme) {
+        setSettings({ ...settings, theme: currentTheme as 'light' | 'dark' | 'system' });
+      }
     }
-  }, [settings?.theme]);
+  }, [settings?.theme]); // Only run when settings first load
 
   // Helper function to apply theme (consistent with __root.tsx)
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
