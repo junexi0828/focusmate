@@ -25,31 +25,31 @@ export function SessionDistributionChart({
         {/* Chart - 반응형 컨테이너 with padding */}
         <div className="w-full md:w-1/2 flex items-center justify-center p-2">
           <div className="w-full aspect-square max-w-[500px] min-h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <Pie
-                  data={data}
-                  cx="50%"
-                  cy="50%"
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
                   innerRadius="35%"
                   outerRadius="80%"
-                  paddingAngle={2}
-                  dataKey="value"
-                  animationDuration={1000}
-                  animationEasing="ease-out"
-                >
-                  {data.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.color}
-                      stroke="hsl(var(--background))"
-                      strokeWidth={2}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip total={total} />} />
-              </PieChart>
-            </ResponsiveContainer>
+                paddingAngle={2}
+                dataKey="value"
+                animationDuration={1000}
+                animationEasing="ease-out"
+              >
+                {data.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.color}
+                    stroke="hsl(var(--background))"
+                    strokeWidth={2}
+                  />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip total={total} />} />
+            </PieChart>
+          </ResponsiveContainer>
           </div>
         </div>
 

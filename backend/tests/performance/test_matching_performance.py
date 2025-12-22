@@ -26,6 +26,8 @@ class MockPool:
         preferred_match_type: str = "any",
         preferred_categories: list[str] = None,
     ):
+        from datetime import UTC, datetime, timedelta
+
         self.pool_id = pool_id
         self.member_count = member_count
         self.gender = gender
@@ -38,6 +40,8 @@ class MockPool:
         self.member_ids = [str(uuid4()) for _ in range(member_count)]
         self.matching_type = "instant"
         self.message = None
+        self.created_at = datetime.now(UTC)
+        self.expires_at = datetime.now(UTC) + timedelta(hours=1)
 
 
 def generate_test_pools(count: int) -> list[MatchingPoolResponse]:
