@@ -14,6 +14,7 @@ import { staggerContainer, staggerItem } from "../components/PageTransition";
 import { FocusTimeChart } from "../components/charts/FocusTimeChart";
 import { SessionDistributionChart } from "../components/charts/SessionDistributionChart";
 import { Button } from "../components/ui/button-enhanced";
+import { Skeleton } from "../components/ui/skeleton";
 import { GoalSettingModal } from "../components/GoalSettingModal";
 import { SharingModal } from "../components/SharingCard";
 import { statsService, UserStatsResponse, GoalAchievementResponse } from "../features/stats/services/statsService";
