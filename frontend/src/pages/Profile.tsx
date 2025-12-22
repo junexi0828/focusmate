@@ -70,14 +70,6 @@ export function ProfilePage({
     });
   };
 
-  const getInitials = (name: string) => {
-    const words = name.trim().split(" ");
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
   return (
     <div className="min-h-full bg-muted/30 flex flex-col">
       {/* Profile Header (Discourse 스타일) */}

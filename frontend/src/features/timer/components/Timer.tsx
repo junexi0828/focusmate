@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import type { TimerState } from "../types/timer.types";
 
 interface TimerProps {
