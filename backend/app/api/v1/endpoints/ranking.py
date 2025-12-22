@@ -117,6 +117,7 @@ async def invite_member(
     invitation_data: TeamInvitationCreate,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
+    db: DatabaseSession,
 ) -> dict:
     """Invite a new member to the team (leader only)."""
     try:
@@ -124,9 +125,8 @@ async def invite_member(
             team_id, invitation_data, current_user["id"]
         )
 
-        # Send invitation email
+        # Send invitation email (best-effort, non-blocking)
         try:
-            from app.infrastructure.database.session import get_db
             from app.infrastructure.email.email_service import email_service
             from app.infrastructure.repositories.ranking_repository import (
                 RankingRepository,
@@ -135,24 +135,22 @@ async def invite_member(
                 UserRepository,
             )
 
-            async for db in get_db():
-                repo = RankingRepository(db)
-                user_repo = UserRepository(db)
+            repo = RankingRepository(db)
+            user_repo = UserRepository(db)
 
-                team = await repo.get_team_by_id(team_id)
-                inviter = await user_repo.get_by_id(current_user["id"])
+            team = await repo.get_team_by_id(team_id)
+            inviter = await user_repo.get_by_id(current_user["id"])
 
-                if team and inviter:
-                    # Generate invitation link
-                    invitation_link = f"https://focusmate.com/ranking/invitations/{result['invitation_id']}"
+            if team and inviter:
+                # Generate invitation link
+                invitation_link = f"https://focusmate.com/ranking/invitations/{result['invitation_id']}"
 
-                    await email_service.send_team_invitation_email(
-                        to_email=invitation_data.email,
-                        team_name=team.team_name,
-                        inviter_name=inviter.username or inviter.email.split("@")[0],
-                        invite_link=invitation_link,
-                    )
-                break
+                await email_service.send_team_invitation_email(
+                    team_name=team.team_name,
+                    invitee_email=invitation_data.email,
+                    invite_link=invitation_link,
+                    inviter_name=inviter.username or inviter.email.split("@")[0],
+                )
         except Exception as e:
             import logging
 
@@ -721,23 +719,6 @@ async def get_session_history(
 ) -> list[dict]:
     """Get session history for a team or user."""
     return await service.get_session_history(team_id, user_id, limit)
-
-
-@router.post("/teams/{team_id}/invite")
-async def invite_member(
-    team_id: str,
-    data: TeamInvitationCreate,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[RankingService, Depends(get_ranking_service)],
-) -> TeamInvitationResponse:
-    """Invite a member to the team."""
-    try:
-        invitation = await service.invite_member(team_id, current_user["id"], data)
-        return invitation
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except PermissionError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
 @router.get("/invitations")
