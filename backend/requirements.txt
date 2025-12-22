@@ -41,6 +41,11 @@ greenlet>=3.0.0                     # Async support (required for SQLAlchemy)
 # Development & Testing (moved to requirements-dev.txt)
 # pytest and pytest-asyncio are now in requirements-dev.txt to avoid version conflicts
 
+# Monitoring & Observability
+prometheus-fastapi-instrumentator==7.0.0  # Prometheus metrics for FastAPI
+prometheus-client==0.21.1                  # Prometheus client library
+redis==5.2.1                               # Redis client for caching & pub/sub
+
 # ============================================================================
 # Version Constraints Explanation:
 # - sqlalchemy>=2.0.35,<2.1: Minimum 2.0.35 for Python 3.13 compatibility

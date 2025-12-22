@@ -22,11 +22,13 @@ security = HTTPBearer(auto_error=False)
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    db: DatabaseSession = Depends(get_db),
 ) -> dict | None:
     """Get current authenticated user from JWT token.
 
     Args:
         credentials: HTTP Bearer token credentials (optional)
+        db: Database session from dependency injection
 
     Returns:
         User dictionary with id, email, username, or None if not authenticated
@@ -52,20 +54,18 @@ async def get_current_user(
         # Invalid token, return None for optional auth
         return None
 
-    # Get user from database - create a new session for this operation
-    from app.infrastructure.database.session import AsyncSessionLocal
-    async with AsyncSessionLocal() as db:
-        user_repo = UserRepository(db)
-        user = await user_repo.get_by_id(user_id)
-        if not user or not user.is_active:
-            return None
+    # Get user from database using injected session
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_id(user_id)
+    if not user or not user.is_active:
+        return None
 
-        return {
-            "id": user.id,
-            "email": user.email,
-            "username": user.username,
-            "is_admin": user.is_admin,
-        }
+    return {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "is_admin": user.is_admin,
+    }
 
 
 async def get_current_user_required(

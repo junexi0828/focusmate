@@ -83,7 +83,7 @@ def get_invitation_service(
 async def get_user_rooms(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-    room_type: str | None = Query(None, regex="^(direct|team|matching)$"),
+    room_type: str | None = Query(None, pattern="^(direct|team|matching)$"),
 ) -> ChatRoomListResponse:
     """Get all chat rooms for the current user."""
     user_id = current_user["id"]

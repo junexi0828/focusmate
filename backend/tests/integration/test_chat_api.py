@@ -75,11 +75,16 @@ class TestChatRoomEndpoints:
                 assert isinstance(data, dict), "Response should be a dictionary"
 
     @pytest.mark.asyncio
-    async def test_create_direct_chat(self, client, auth_headers, mock_current_user):
+    async def test_create_direct_chat(self, client, auth_headers, mock_current_user, test_user):
         """Test creating a direct chat."""
-        payload = {"recipient_id": "user2"}
+        from app.api.deps import get_current_user
 
-        with patch("app.api.deps.get_current_user", return_value=await mock_current_user()):
+        # Override dependency to return test user
+        app.dependency_overrides[get_current_user] = mock_current_user
+
+        try:
+            payload = {"recipient_id": "user2"}
+
             response = await client.post(
                 "/api/v1/chats/rooms/direct",
                 json=payload,
@@ -94,6 +99,9 @@ class TestChatRoomEndpoints:
             if response.status_code == 201:
                 data = response.json()
                 assert isinstance(data, dict), "Response should be a dictionary"
+        finally:
+            # Clean up dependency override
+            app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     async def test_create_team_chat(self, client, auth_headers, mock_current_user):

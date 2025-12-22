@@ -15,6 +15,8 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from prometheus_fastapi_instrumentator import Instrumentator
+
 from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.api.middleware.request_logging import RequestLoggingMiddleware
 from app.api.v1.router import api_router
@@ -160,6 +162,10 @@ async def health_check() -> dict[str, str]:
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
+
+# Prometheus metrics instrumentation
+# Exposes metrics at /metrics endpoint
+Instrumentator().instrument(app).expose(app)
 
 # Mount static files for uploads
 uploads_dir = Path("uploads")
