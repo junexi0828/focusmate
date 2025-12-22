@@ -150,18 +150,31 @@ run_test_category() {
 
     # Run tests
     if pytest $pytest_args "$test_path" 2>&1 | tee "/tmp/test_${category}.log"; then
-        local passed=$(grep -c "PASSED\|passed" "/tmp/test_${category}.log" 2>/dev/null || echo "0")
-        local failed=$(grep -c "FAILED\|failed" "/tmp/test_${category}.log" 2>/dev/null || echo "0")
+        # Extract test counts from pytest summary line
+        local summary_line=$(grep -E "^=+ .* (passed|failed|skipped)" "/tmp/test_${category}.log" | tail -1)
+        local passed=$(echo "$summary_line" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" || echo "0")
+        local failed=$(echo "$summary_line" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" || echo "0")
+        local skipped=$(echo "$summary_line" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" || echo "0")
+
+        # Ensure we have valid numbers
+        passed=${passed:-0}
+        failed=${failed:-0}
+        skipped=${skipped:-0}
+
         local total=$((passed + failed))
 
         TOTAL_TESTS=$((TOTAL_TESTS + total))
         PASSED_TESTS=$((PASSED_TESTS + passed))
         FAILED_TESTS=$((FAILED_TESTS + failed))
+        SKIPPED_TESTS=$((SKIPPED_TESTS + skipped))
 
         echo -e "${GREEN}✅ $category_name 테스트 완료: $passed/$total 통과${NC}"
         return 0
     else
-        local failed=$(grep -c "FAILED\|failed" "/tmp/test_${category}.log" 2>/dev/null || echo "0")
+        # Extract counts even on failure
+        local summary_line=$(grep -E "^=+ .* (passed|failed|skipped)" "/tmp/test_${category}.log" | tail -1)
+        local failed=$(echo "$summary_line" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" || echo "0")
+        failed=${failed:-0}
         FAILED_TESTS=$((FAILED_TESTS + failed))
         echo -e "${RED}❌ $category_name 테스트 실패${NC}"
         return 1
@@ -194,7 +207,6 @@ if [ "$RUN_ALL" = true ] || [ "$RUN_SECURITY" = true ]; then
     run_test_category "security" "보안 테스트"
 fi
 
-# Summary
 echo ""
 echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║                     테스트 요약                             ║${NC}"
