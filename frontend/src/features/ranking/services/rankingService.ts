@@ -251,21 +251,6 @@ class RankingService extends BaseApiClient {
     });
   }
 
-  async getSessionHistory(
-    teamId: string,
-    options?: { userId?: string; limit?: number }
-  ): Promise<ApiResponse<SessionHistory[]>> {
-    const params = new URLSearchParams();
-    if (options?.userId) {
-      params.append('user_id', options.userId);
-    }
-    if (options?.limit) {
-      params.append('limit', options.limit.toString());
-    }
-    const queryString = params.toString();
-    const url = `/ranking/teams/${teamId}/sessions${queryString ? `?${queryString}` : ''}`;
-    return this.request<SessionHistory[]>(url);
-  }
 
   // Leaderboard
   async getLeaderboard(
