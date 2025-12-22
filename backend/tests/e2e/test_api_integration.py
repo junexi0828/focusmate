@@ -71,7 +71,7 @@ class TestAuthEndpoints:
         """Test user login endpoint."""
         # First register
         test_email = f"login_test_{int(time.time())}@example.com"
-        client.post(
+        register_response = client.post(
             "/api/v1/auth/register",
             json={
                 "email": test_email,
@@ -79,13 +79,18 @@ class TestAuthEndpoints:
                 "password": "TestPassword123!",
             },
         )
+        
+        # Check if registration was successful or user already exists
+        assert register_response.status_code in [201, 400], \
+            f"Registration failed: {register_response.status_code} - {register_response.text}"
 
         # Then login
         response = client.post(
             "/api/v1/auth/login",
             json={"email": test_email, "password": "TestPassword123!"},
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, \
+            f"Login failed: {response.status_code} - {response.text}"
         data = response.json()
         assert "access_token" in data
         assert "user" in data
