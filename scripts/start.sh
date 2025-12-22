@@ -847,29 +847,29 @@ test_api_verification() {
 
 show_menu() {
     echo ""
-    echo -e "${BOLD}${CYAN}╔════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${CYAN}║   FocusMate 통합 실행 및 테스트 메뉴    ║${NC}"
-    echo -e "${BOLD}${CYAN}╚════════════════════════════════════════╝${NC}"
+    echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${CYAN}║                    FocusMate 통합 실행 및 테스트 메뉴                        ║${NC}"
+    echo -e "${BOLD}${CYAN}╠══════════════════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${BOLD}${CYAN}║                                                                              ║${NC}"
+    echo -e "${BOLD}${CYAN}║  실행 옵션을 선택하세요:                                                    ║${NC}"
+    echo -e "${BOLD}${CYAN}║                                                                              ║${NC}"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "1) 🚀 백엔드 & 프론트엔드 실행"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "2) 🔧 백엔드만 실행"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "3) 🎨 프론트엔드만 실행"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "4) 🧪 단위 테스트 실행 (Unit Tests)"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "5) 🔗 통합 테스트 실행 (Integration Tests)"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "6) 🌐 E2E 테스트 실행 (End-to-End Tests)"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "7) 📋 전체 테스트 실행 (All Tests)"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "8) ⚡ 성능 테스트 실행 (Performance Tests)"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "9) 🗄️  데이터베이스 연결 테스트"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "10) 🔄 마이그레이션 테스트"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "11) 🔍 API 검증 테스트"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "12) 📊 프로젝트 정보 보기"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "13) ❌ 종료"
+    echo -e "${BOLD}${CYAN}║                                                                              ║${NC}"
+    printf "${BOLD}${CYAN}║  %-74s ║${NC}\n" "💡 'x'를 입력하면 종료됩니다"
+    echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${CYAN}실행 옵션을 선택하세요${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
-    echo "  1) 🚀 백엔드 & 프론트엔드 실행"
-    echo "  2) 🔧 백엔드만 실행"
-    echo "  3) 🎨 프론트엔드만 실행"
-    echo "  4) 🧪 단위 테스트 실행 (Unit Tests)"
-    echo "  5) 🔗 통합 테스트 실행 (Integration Tests)"
-    echo "  6) 🌐 E2E 테스트 실행 (End-to-End Tests)"
-    echo "  7) 📋 전체 테스트 실행 (All Tests)"
-    echo "  8) ⚡ 성능 테스트 실행 (Performance Tests)"
-    echo "  9) 🗄️  데이터베이스 연결 테스트"
-    echo " 10) 🔄 마이그레이션 테스트"
-    echo " 11) 🔍 API 검증 테스트"
-    echo " 12) 📊 프로젝트 정보 보기"
-    echo " 13) ❌ 종료"
-    echo ""
-    echo -e "${YELLOW}💡 'x'를 입력하면 종료됩니다${NC}"
 }
 
 # ==================================================
@@ -878,8 +878,9 @@ show_menu() {
 
 print_startup_banner() {
     clear
+    BUILD_DATE=$(date +%Y.%m.%d)
     echo -e "${BOLD}${CYAN}"
-    cat << 'EOF'
+    cat << EOF
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
 ║ ███████╗ ██████╗  ██████╗██╗   ██╗███████╗    ███╗   ███╗ █████╗ ████████╗███████╗ ║
@@ -894,13 +895,13 @@ print_startup_banner() {
 ║  ┌────────────────────────────────────────────────────────────────────────┐  ║
 ║  │                    FOCUS MATE - 통합 실행 스크립트                      │  ║
 ║  │                    Version: 1.0.0                                       │  ║
-║  │                    Build: $(date +%Y.%m.%d)                                       │  ║
+║  │                    Build: $BUILD_DATE                                       │  ║
 ║  └────────────────────────────────────────────────────────────────────────┘  ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 EOF
     echo -e "${NC}"
-    
+
     # System Information
     echo -e "${BOLD}${CYAN}"
     cat << EOF
@@ -909,7 +910,7 @@ EOF
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
 EOF
-    
+
     # Get system information
     PLATFORM=$(uname -s)
     RELEASE=$(uname -r)
@@ -918,7 +919,7 @@ EOF
     NODE_VERSION=$(node --version 2>/dev/null || echo "Not found")
     LAUNCH_TIME=$(date '+%Y-%m-%d %H:%M:%S')
     SESSION_ID=$$
-    
+
     printf "║  Platform:     %-60s ║\n" "$PLATFORM $RELEASE ($MACHINE)"
     printf "║  Python:       %-60s ║\n" "$PYTHON_VERSION"
     printf "║  Node.js:      %-60s ║\n" "$NODE_VERSION"
@@ -933,7 +934,7 @@ EOF
 main() {
     # Print startup banner
     print_startup_banner
-    
+
     # 가상환경이 없으면 먼저 설정
     if [ ! -d "$PROJECT_ROOT/backend/venv" ]; then
         echo -e "${YELLOW}⚠️  가상환경이 없습니다.${NC}"
@@ -960,9 +961,7 @@ main() {
 
         # 'x' 키 처리 (종료)
         if [ "$choice" = "BACK" ] || [ "$choice" = "x" ] || [ "$choice" = "X" ]; then
-            echo ""
-            echo -e "${YELLOW}프로그램을 종료합니다...${NC}"
-            echo ""
+            cleanup
             exit 0
         fi
 
@@ -1170,9 +1169,7 @@ main() {
                 read dummy
                 ;;
             13)
-                echo ""
-                echo -e "${YELLOW}종료합니다.${NC}"
-                echo ""
+                cleanup
                 exit 0
                 ;;
             *)
