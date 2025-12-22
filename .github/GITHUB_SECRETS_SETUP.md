@@ -36,7 +36,7 @@ GitHub Personal Access Token은 GitHub Secrets에 저장해야 합니다.
 | ------------------- | ------------------- | ---------------------- |
 | `DOCKER_USERNAME`   | Docker Hub 사용자명 | Docker 이미지 푸시용   |
 | `DOCKER_PASSWORD`   | Docker Hub 비밀번호 | Docker 이미지 푸시용   |
-| `SLACK_WEBHOOK_URL` | Slack Webhook URL   | 빌드 알림용 (필수) |
+| `SLACK_WEBHOOK_URL` | Slack Webhook URL   | 빌드 알림용 (선택사항) |
 
 ---
 
@@ -166,7 +166,7 @@ git push origin main
 | `GH_TOKEN`          | ⚠️ 추가 필요 | GitHub API 접근   |
 | `DOCKER_USERNAME`   | ⚠️ 추가 필요 | Docker Hub 로그인 |
 | `DOCKER_PASSWORD`   | ⚠️ 추가 필요 | Docker Hub 로그인 |
-| `SLACK_WEBHOOK_URL` | ⚠️ 추가 필요  | Slack 알림 (필수) |
+| `SLACK_WEBHOOK_URL` | ⚠️ 추가 필요 | Slack 알림 (필수) |
 
 ---
 
