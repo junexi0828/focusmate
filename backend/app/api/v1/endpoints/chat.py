@@ -532,7 +532,8 @@ async def websocket_chat(
         # If we can't send welcome message, connection is likely broken
         try:
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
-        except:
+        except (RuntimeError, ConnectionError, WebSocketDisconnect):
+            # Connection already closed or broken - ignore
             pass
         return
 
@@ -578,8 +579,9 @@ async def websocket_chat(
                         "type": "error",
                         "message": "Invalid JSON format"
                     })
-                except:
-                    pass
+                except (RuntimeError, ConnectionError, WebSocketDisconnect):
+                    # Connection closed - exit loop
+                    break
                 continue
             except RuntimeError as e:
                 # Connection was closed - exit loop
@@ -612,7 +614,8 @@ async def websocket_chat(
         # Try to close connection gracefully
         try:
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
-        except:
+        except (RuntimeError, ConnectionError, WebSocketDisconnect):
+            # Connection already closed or broken - ignore
             pass
 
 
