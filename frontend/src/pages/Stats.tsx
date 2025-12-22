@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Clock, Target, TrendingUp, Award, Flame, Settings } from "lucide-react";
+import { Clock, Target, TrendingUp, Settings } from "lucide-react";
+import { achievementIcons, type AchievementId } from "../assets/achievements";
 import { DateRange } from "react-day-picker";
 import { PageTransition, staggerContainer, staggerItem } from "../components/PageTransition";
 import { Button } from "../components/ui/button-enhanced";
@@ -324,32 +325,14 @@ export function StatsPage({
     return Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
   }
 
-  // 아이콘 매핑 함수
-  const getAchievementIcon = (iconName: string | null | undefined) => {
+  // 아이콘 매핑 함수 - SVG 아이콘 URL 반환
+  const getAchievementIcon = (iconName: string | null | undefined): string => {
     if (!iconName || typeof iconName !== 'string') {
-      return Award; // 기본값 반환
+      return achievementIcons['first-session']; // 기본값
     }
 
-    switch (iconName.toLowerCase()) {
-      case "flame":
-      case "streak":
-        return Flame;
-      case "target":
-      case "focus":
-        return Target;
-      case "award":
-      case "trophy":
-      case "medal":
-        return Award;
-      case "trending-up":
-      case "growth":
-        return TrendingUp;
-      case "clock":
-      case "time":
-        return Clock;
-      default:
-        return Award;
-    }
+    const achievementId = iconName as AchievementId;
+    return achievementIcons[achievementId] || achievementIcons['first-session'];
   };
 
   const achievements = useMemo(() => {
@@ -357,7 +340,7 @@ export function StatsPage({
       // 데이터가 없는 경우 기본값 표시 (가이드용)
       return [
         {
-          icon: Flame,
+          iconUrl: achievementIcons['first-session'],
           title: "첫 걸음",
           description: "첫 집중 세션을 완료하세요",
           unlocked: false,
@@ -366,7 +349,7 @@ export function StatsPage({
     }
 
     return achievementsData.map((a: any) => ({
-      icon: getAchievementIcon(a.achievement_icon),
+      iconUrl: getAchievementIcon(a.achievement_id),
       title: a.achievement_name || "업적",
       description: a.achievement_description || "설명 없음",
       unlocked: a.is_unlocked || false,
@@ -700,14 +683,14 @@ function StatCard({ icon: Icon, label, value, change, trend }: StatCardProps) {
 }
 
 interface AchievementCardProps {
-  icon: typeof Flame;
+  iconUrl: string;
   title: string;
   description: string;
   unlocked: boolean;
 }
 
 function AchievementCard({
-  icon: Icon,
+  iconUrl,
   title,
   description,
   unlocked,
@@ -727,7 +710,11 @@ function AchievementCard({
           unlocked ? "bg-primary/20" : "bg-muted"
         }`}
       >
-        <Icon className={`h-5 w-5 ${unlocked ? "text-primary" : "text-muted-foreground"}`} />
+        <img
+          src={iconUrl}
+          alt={title}
+          className={`h-8 w-8 ${!unlocked && "opacity-30 grayscale"}`}
+        />
       </div>
       <h4 className="font-semibold text-sm mb-1">{title}</h4>
       <p className="text-xs text-muted-foreground">{description}</p>

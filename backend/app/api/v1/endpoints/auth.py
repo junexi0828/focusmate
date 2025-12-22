@@ -30,12 +30,16 @@ def get_user_repository(db: DatabaseSession) -> UserRepository:
     return UserRepository(db)
 
 
-def get_user_service(repo: Annotated[UserRepository, Depends(get_user_repository)]) -> UserService:
+def get_user_service(
+    repo: Annotated[UserRepository, Depends(get_user_repository)],
+) -> UserService:
     """Get user service."""
     return UserService(repo)
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(
     data: UserRegister,
     service: Annotated[UserService, Depends(get_user_service)],
@@ -47,6 +51,7 @@ async def register(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
     except Exception as e:
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Registration error: {e!s}", exc_info=True)
         raise HTTPException(
@@ -67,6 +72,7 @@ async def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
     except Exception as e:
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Login error: {e!s}", exc_info=True)
         raise HTTPException(
@@ -167,9 +173,7 @@ async def upload_profile_image(
         file_url = upload_service.get_file_url(file_path)
 
         # Update user profile with image URL
-        await service.update_profile(
-            user_id, UserProfileUpdate(profile_image=file_url)
-        )
+        await service.update_profile(user_id, UserProfileUpdate(profile_image=file_url))
 
         return {"profile_image": file_url}
     except ValueError as e:
@@ -253,7 +257,8 @@ async def naver_login_url() -> dict:
         f"response_type=code&"
         f"client_id={settings.NAVER_CLIENT_ID}&"
         f"redirect_uri={settings.NAVER_REDIRECT_URI}&"
-        f"state={state}"
+        f"state={state}&"
+        f"scope=email"
     )
 
     return {
