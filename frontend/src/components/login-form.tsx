@@ -67,6 +67,7 @@ export function LoginForm({ onLogin, onSwitchToSignup }: LoginFormProps) {
             <Input
               id="email"
               type="email"
+              autoComplete="username"
               placeholder="example@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -80,6 +81,7 @@ export function LoginForm({ onLogin, onSwitchToSignup }: LoginFormProps) {
             <Input
               id="password"
               type="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -18,8 +18,8 @@ import {
   Award,
   MessageSquare,
   CheckCircle2,
-  Circle,
 } from "lucide-react";
+import { achievementIcons, type AchievementId } from "../assets/achievements";
 import { toast } from "sonner";
 import {
   ProfileHeader,
@@ -188,15 +188,19 @@ export function ProfilePage({
                   {achievements
                     .filter((a) => a.is_unlocked)
                     .slice(0, 3)
-                    .map((achievement, index) => (
+                    .map((achievement, index) => {
+                      const achievementId = achievement.achievement_id as AchievementId;
+                      const iconSrc = achievementIcons[achievementId] || achievementIcons['first-session'];
+
+                      return (
                       <div
                         key={
                           achievement.achievement_id || `achievement-${index}`
                         }
                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
                       >
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Award className="w-5 h-5 text-primary" />
+                        <div className="w-10 h-10 flex items-center justify-center">
+                          <img src={iconSrc} alt={achievement.achievement_name} className="w-10 h-10" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
@@ -207,7 +211,8 @@ export function ProfilePage({
                           </p>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   {achievements.filter((a) => a.is_unlocked).length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       아직 획득한 업적이 없습니다
@@ -342,7 +347,11 @@ export function ProfilePage({
               <CardContent className="space-y-3">
                 {achievements
                   .filter((a) => a.is_unlocked)
-                  .map((achievement, index) => (
+                  .map((achievement, index) => {
+                    const achievementId = achievement.achievement_id as AchievementId;
+                    const iconSrc = achievementIcons[achievementId] || achievementIcons['first-session'];
+
+                    return (
                     <div
                       key={
                         achievement.achievement_id ||
@@ -350,8 +359,8 @@ export function ProfilePage({
                       }
                       className="flex items-center gap-4 p-4 rounded-lg bg-primary/5 border border-primary/20"
                     >
-                      <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                        <Award className="w-6 h-6 text-primary-foreground" />
+                      <div className="w-16 h-16 flex items-center justify-center flex-shrink-0">
+                        <img src={iconSrc} alt={achievement.achievement_name} className="w-16 h-16" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -380,7 +389,8 @@ export function ProfilePage({
                       </div>
                       <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
                     </div>
-                  ))}
+                  );
+                  })}
                 {achievements.filter((a) => a.is_unlocked).length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     아직 획득한 업적이 없습니다
@@ -401,7 +411,11 @@ export function ProfilePage({
               <CardContent className="space-y-4">
                 {achievements
                   .filter((a) => !a.is_unlocked)
-                  .map((achievement, index) => (
+                  .map((achievement, index) => {
+                    const achievementId = achievement.achievement_id as AchievementId;
+                    const iconSrc = achievementIcons[achievementId] || achievementIcons['first-session'];
+
+                    return (
                     <div
                       key={
                         achievement.achievement_id ||
@@ -409,8 +423,8 @@ export function ProfilePage({
                       }
                       className="flex items-start gap-4 p-4 rounded-lg bg-muted/50 border"
                     >
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                        <Circle className="w-6 h-6 text-muted-foreground" />
+                      <div className="w-16 h-16 flex items-center justify-center flex-shrink-0">
+                        <img src={iconSrc} alt={achievement.achievement_name} className="w-16 h-16 opacity-30 grayscale" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -441,7 +455,8 @@ export function ProfilePage({
                         </div>
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 {achievements.filter((a) => !a.is_unlocked).length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     모든 업적을 획득했습니다! 🎉
