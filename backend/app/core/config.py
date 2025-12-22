@@ -259,7 +259,7 @@ class Settings(BaseSettings):
     # ==========================================================================
     # Monitoring
     # ==========================================================================
-    PROMETHEUS_ENABLED: bool = False
+    PROMETHEUS_ENABLED: bool = True
     PROMETHEUS_PORT: int = 9090
 
     SENTRY_ENABLED: bool = False
@@ -267,6 +267,12 @@ class Settings(BaseSettings):
 
     OTEL_ENABLED: bool = False
     OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+
+    # Slack Webhook for Alerts
+    SLACK_WEBHOOK_URL: str = Field(
+        default="",
+        description="Slack webhook URL for monitoring alerts",
+    )
 
     # ==========================================================================
     # Feature Flags
