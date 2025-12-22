@@ -21,14 +21,14 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: DatabaseSession,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict | None:
     """Get current authenticated user from JWT token.
 
     Args:
-        credentials: HTTP Bearer token credentials (optional)
         db: Database session from dependency injection
+        credentials: HTTP Bearer token credentials (optional)
 
     Returns:
         User dictionary with id, email, username, or None if not authenticated
