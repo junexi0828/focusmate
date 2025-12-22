@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -74,6 +75,14 @@ app = FastAPI(
     openapi_url="/openapi.json",
     lifespan=lifespan,
     redirect_slashes=False,  # Disable automatic trailing slash redirects to prevent CORS issues
+)
+
+# Rate limiting middleware - should be added before CORS
+# Protects against brute force attacks and API abuse
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=60,  # Default: 60 requests per minute
+    exempt_paths=["/health", "/docs", "/redoc", "/openapi.json"],
 )
 
 # CORS middleware - must be added before routes
