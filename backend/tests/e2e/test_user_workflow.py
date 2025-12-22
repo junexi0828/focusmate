@@ -3,6 +3,7 @@ E2E Tests for User Workflow
 Tests complete user journeys from registration to core feature usage
 """
 
+import time
 from typing import Any
 
 import pytest

@@ -50,15 +50,15 @@ cleanup() {
 ║                           SESSION TERMINATED                                 ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
-║  Thank you for using FocusMate!                                             ║
+║  Thank you for using FocusMate!                                              ║
 ║                                                                              ║
 ║  Services stopped successfully.                                              ║
 ║                                                                              ║
 ║  For support and inquiries:                                                  ║
-║  • GitHub: https://github.com/junexi0828/focusmate                          ║
-║  • Documentation: See docs/ directory                                       ║
+║  • GitHub: https://github.com/junexi0828/focusmate                           ║
+║  • Documentation: See docs/ directory                                        ║
 ║                                                                              ║
-║  Copyright © 2025 FocusMate Team. All Rights Reserved.                      ║
+║  Copyright © 2025 FocusMate Team. All Rights Reserved.                       ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 EOF
@@ -848,7 +848,7 @@ test_api_verification() {
 show_menu() {
     echo ""
     echo -e "${BOLD}${CYAN}╔════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${CYAN}║   FocusMate 통합 실행 및 테스트 메뉴    ║${NC}"
+    echo -e "${BOLD}${CYAN}║   FocusMate 통합 실행 및 테스트 메뉴   ║${NC}"
     echo -e "${BOLD}${CYAN}╚════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -883,19 +883,19 @@ print_startup_banner() {
     cat << EOF
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║ ███████╗ ██████╗  ██████╗██╗   ██╗███████╗    ███╗   ███╗ █████╗ ████████╗███████╗ ║
-║ ██╔════╝██╔═══██╗██╔════╝██║   ██║██╔════╝    ████╗ ████║██╔══██╗╚══██╔══╝██╔════╝ ║
-║ █████╗  ██║   ██║██║     ██║   ██║███████╗    ██╔████╔██║███████║   ██║   █████╗   ║
-║ ██╔══╝  ██║   ██║██║     ██║   ██║╚════██║    ██║╚██╔╝██║██╔══██║   ██║   ██╔══╝   ║
-║ ██║     ╚██████╔╝╚██████╗╚██████╔╝███████║    ██║ ╚═╝ ██║██║  ██║   ██║   ███████╗ ║
-║ ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝    ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝ ║
+║ ███████╗ ██████╗  ██████╗██╗   ██╗███████╗    ███╗   ███╗ █████╗ ████████╗███████╗
+║ ██╔════╝██╔═══██╗██╔════╝██║   ██║██╔════╝    ████╗ ████║██╔══██╗╚══██╔══╝██╔════╝
+║ █████╗  ██║   ██║██║     ██║   ██║███████╗    ██╔████╔██║███████║   ██║   █████╗
+║ ██╔══╝  ██║   ██║██║     ██║   ██║╚════██║    ██║╚██╔╝██║██╔══██║   ██║   ██╔══╝
+║ ██║     ╚██████╔╝╚██████╗╚██████╔╝███████║    ██║ ╚═╝ ██║██║  ██║   ██║   ███████╗
+║ ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝    ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝
 ║                                                                              ║
-║                      Team Pomodoro Focus Platform                           ║
+║                      Team Pomodoro Focus Platform                            ║
 ║                                                                              ║
 ║  ┌────────────────────────────────────────────────────────────────────────┐  ║
-║  │                    FOCUS MATE - 통합 실행 스크립트                      │  ║
-║  │                    Version: 1.0.0                                       │  ║
-║  │                    Build: $BUILD_DATE                                       │  ║
+║  │                    FOCUS MATE - 통합 실행 스크립트                     │  ║
+║  │                    Version: 1.0.0 (2025 Edition)                       │  ║
+║  │                    Build by Juns: $BUILD_DATE                           │  ║
 ║  └────────────────────────────────────────────────────────────────────────┘  ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -920,11 +920,11 @@ EOF
     LAUNCH_TIME=$(date '+%Y-%m-%d %H:%M:%S')
     SESSION_ID=$$
 
-    printf "║  Platform:     %-60s ║\n" "$PLATFORM $RELEASE ($MACHINE)"
-    printf "║  Python:       %-60s ║\n" "$PYTHON_VERSION"
-    printf "║  Node.js:      %-60s ║\n" "$NODE_VERSION"
-    printf "║  Launch Time:  %-60s ║\n" "$LAUNCH_TIME"
-    printf "║  Session ID:   %-60s ║\n" "$SESSION_ID"
+    printf "║  Platform:     %-60s  ║\n" "$PLATFORM $RELEASE ($MACHINE)"
+    printf "║  Python:       %-60s  ║\n" "$PYTHON_VERSION"
+    printf "║  Node.js:      %-60s  ║\n" "$NODE_VERSION"
+    printf "║  Launch Time:  %-60s  ║\n" "$LAUNCH_TIME"
+    printf "║  Session ID:   %-60s  ║\n" "$SESSION_ID"
     echo "║                                                                              ║"
     echo "╚══════════════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"

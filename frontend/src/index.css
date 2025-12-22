@@ -249,3 +249,45 @@
 }
 
 /* removed @media (prefers-color-scheme: dark) to prevent flickering without classes */
+
+/* ============================================
+   Phase 1 Design Improvements
+   ============================================ */
+
+@layer base {
+  /* 1. Smooth Color Transitions */
+  * {
+    @apply transition-colors duration-200 ease-in-out;
+  }
+
+  /* 2. Improved Focus Styles (Accessibility) */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Remove default focus outline */
+  *:focus:not(:focus-visible) {
+    @apply outline-none;
+  }
+}
+
+@layer components {
+  /* 3. Consistent Shadow System */
+  .card {
+    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  .card-interactive {
+    @apply shadow-sm hover:shadow-lg active:shadow-sm transition-all duration-200;
+  }
+
+  /* Button enhancements */
+  .btn-enhanced {
+    @apply hover:scale-105 active:scale-95 transition-transform duration-200;
+  }
+
+  /* Interactive elements */
+  .interactive {
+    @apply hover:bg-accent/50 transition-colors duration-150 cursor-pointer;
+  }
+}

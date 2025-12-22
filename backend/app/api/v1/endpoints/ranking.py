@@ -744,7 +744,7 @@ async def invite_member(
 async def get_user_invitations(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    status_filter: str | None = Query(None, regex="^(pending|accepted|rejected)$"),
+    status_filter: str | None = Query(None, pattern="^(pending|accepted|rejected)$"),
 ) -> dict:
     """Get all invitations for the current user."""
     try:

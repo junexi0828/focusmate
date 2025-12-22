@@ -35,6 +35,7 @@ import { Progress } from "../components/ui/progress";
 import type { AchievementProgress } from "../features/achievements/services/achievementService";
 import type { Post } from "../features/community/services/communityService";
 import { NotificationSettings } from "../features/notification/components/NotificationSettings";
+import { celebrateAchievement } from "../utils/confetti";
 
 interface ProfilePageProps {
   user: User;
@@ -189,10 +190,20 @@ export function ProfilePage({
                         key={
                           achievement.achievement_id || `achievement-${index}`
                         }
-                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => celebrateAchievement()}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${achievement.achievement_name} 업적 축하하기`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            celebrateAchievement();
+                          }
+                        }}
                       >
-                        <div className="w-10 h-10 flex items-center justify-center">
-                          <img src={iconSrc} alt={achievement.achievement_name} className="w-10 h-10" />
+                        <div className="w-10 h-10 flex items-center justify-center" aria-hidden="true">
+                          <img src={iconSrc} alt="" className="w-10 h-10" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
