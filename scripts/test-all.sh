@@ -96,7 +96,7 @@ run_test "File Upload Service" \
     "python -m py_compile app/infrastructure/storage/file_upload.py"
 
 run_test "Chat File Upload Service" \
-    "python -m py_compile app/services/chat_file_upload.py"
+    "python -m py_compile app/infrastructure/storage/chat_storage.py"
 
 run_test "Notification Service" \
     "python -m py_compile app/services/notification_service.py"
