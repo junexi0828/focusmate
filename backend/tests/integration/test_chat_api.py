@@ -203,12 +203,12 @@ class TestChatRoomEndpoints:
                 # Check for DB connection errors FIRST (before assert)
                 if is_db_connection_error(response):
                     pytest.skip(f"Database connection not available: {response.text[:200]}")
-                
+
                 # Accept multiple status codes
                 # 500 can be DB IntegrityError or other DB issues
                 assert response.status_code in [201, 400, 401, 403, 404, 422, 500], \
                     f"Expected 201, 400, 401, 403, 404, 422, or 500, got {response.status_code}"
-                
+
                 # If 500, check if it's a DB error and skip
                 if response.status_code == 500:
                     error_text = response.text.lower()

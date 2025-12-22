@@ -24,6 +24,7 @@ from app.infrastructure.database.models.matching import (
 from app.infrastructure.database.models.message import Conversation, Message
 from app.infrastructure.database.models.notification import Notification
 from app.infrastructure.database.models.participant import Participant
+from app.infrastructure.database.models.presence import UserPresence
 from app.infrastructure.database.models.ranking import (
     RankingLeaderboard,
     RankingTeam,
@@ -68,6 +69,7 @@ __all__ = [
     "PostLike",
     "PostRead",
     "RankingLeaderboard",
+    "UserPresence",
     "RankingMember",
     "RankingMiniGame",
     "RankingSession",
