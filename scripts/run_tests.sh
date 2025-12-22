@@ -151,12 +151,15 @@ run_test_category() {
     # Run tests
     if pytest $pytest_args "$test_path" 2>&1 | tee "/tmp/test_${category}.log"; then
         # Extract test counts from pytest summary line
-        local summary_line=$(grep -E "^=+ .* (passed|failed|skipped)" "/tmp/test_${category}.log" | tail -1)
-        local passed=$(echo "$summary_line" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" || echo "0")
-        local failed=$(echo "$summary_line" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" || echo "0")
-        local skipped=$(echo "$summary_line" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" || echo "0")
+        # Use grep with pattern that matches pytest summary (handles ANSI codes)
+        local summary_line=$(grep "passed" "/tmp/test_${category}.log" | grep -E "[0-9]+ (passed|failed|skipped)" | tail -1)
 
-        # Ensure we have valid numbers
+        # Extract numbers using simpler pattern
+        local passed=$(echo "$summary_line" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" | head -1)
+        local failed=$(echo "$summary_line" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" | head -1)
+        local skipped=$(echo "$summary_line" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" | head -1)
+
+        # Ensure we have valid numbers (default to 0 if not found)
         passed=${passed:-0}
         failed=${failed:-0}
         skipped=${skipped:-0}
@@ -168,15 +171,22 @@ run_test_category() {
         FAILED_TESTS=$((FAILED_TESTS + failed))
         SKIPPED_TESTS=$((SKIPPED_TESTS + skipped))
 
-        echo -e "${GREEN}✅ $category_name 테스트 완료: $passed/$total 통과${NC}"
+        echo -e "${GREEN}✅ $category_name 테스트 완료: $passed/$total 통과 (건너뜀: $skipped)${NC}"
         return 0
     else
         # Extract counts even on failure
-        local summary_line=$(grep -E "^=+ .* (passed|failed|skipped)" "/tmp/test_${category}.log" | tail -1)
-        local failed=$(echo "$summary_line" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" || echo "0")
+        local summary_line=$(grep "failed" "/tmp/test_${category}.log" | grep -E "[0-9]+ (passed|failed|skipped)" | tail -1)
+        local passed=$(echo "$summary_line" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" | head -1)
+        local failed=$(echo "$summary_line" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" | head -1)
+
+        passed=${passed:-0}
         failed=${failed:-0}
+
+        TOTAL_TESTS=$((TOTAL_TESTS + passed + failed))
+        PASSED_TESTS=$((PASSED_TESTS + passed))
         FAILED_TESTS=$((FAILED_TESTS + failed))
-        echo -e "${RED}❌ $category_name 테스트 실패${NC}"
+
+        echo -e "${RED}❌ $category_name 테스트 실패: $passed/$((passed + failed)) 통과${NC}"
         return 1
     fi
 }
