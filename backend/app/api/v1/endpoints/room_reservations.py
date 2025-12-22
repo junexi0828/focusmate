@@ -1,5 +1,6 @@
 """Room Reservation API endpoints."""
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +11,7 @@ from app.domain.room_reservation.schemas import (
     RoomReservationCreate,
     RoomReservationResponse,
     RoomReservationUpdate,
+
 )
 from app.domain.room_reservation.service import RoomReservationService
 from app.infrastructure.database.session import DatabaseSession
@@ -126,7 +128,7 @@ async def process_due_reservations(
                 processed_count += 1
             except Exception as e:
                 # Log error but continue processing other reservations
-                print(f"Error creating room for reservation {reservation.id}: {e}")
+                logging.getLogger(__name__).error(f"Error creating room for reservation {reservation.id}: {e}")
 
         return {
             "status": "success",
@@ -159,7 +161,7 @@ async def send_notifications(
                 await service.mark_notification_sent(reservation.id)
                 sent_count += 1
             except Exception as e:
-                print(f"Error sending notification for reservation {reservation.id}: {e}")
+                logging.getLogger(__name__).error(f"Error sending notification for reservation {reservation.id}: {e}")
 
         return {
             "status": "success",

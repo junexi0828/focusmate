@@ -1,5 +1,6 @@
 """Achievement domain service - gamification and achievement tracking."""
 
+import logging
 from datetime import UTC, datetime, timedelta
 
 from app.core.exceptions import ValidationException
@@ -137,7 +138,7 @@ class AchievementService:
                 result.append(progress_response)
             except Exception as e:
                 # Log error but continue processing other achievements
-                print(f"Error calculating progress for achievement {achievement.id}: {e}")
+                logging.getLogger(__name__).error(f"Error calculating progress for achievement {achievement.id}: {e}")
                 continue
 
         return result

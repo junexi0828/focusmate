@@ -8,6 +8,8 @@ from pathlib import Path
 from fastapi import UploadFile
 
 
+import logging
+
 class FileUploadService:
     """Service for handling file uploads."""
 
@@ -66,7 +68,7 @@ class FileUploadService:
                 file_paths.append(file_path)
             except ValueError as e:
                 # Log error but continue with other files
-                print(f"Error saving file {file.filename}: {e}")
+                logging.getLogger(__name__).error(f"Error saving file {file.filename}: {e}")
                 continue
 
         return file_paths
@@ -80,7 +82,7 @@ class FileUploadService:
                 return True
             return False
         except Exception as e:
-            print(f"Error deleting file {file_path}: {e}")
+            logging.getLogger(__name__).error(f"Error deleting file {file_path}: {e}")
             return False
 
     def get_file_url(self, file_path: str) -> str:
@@ -150,7 +152,7 @@ class S3UploadService:
                 s3_key, file_url = await self.save_file(file, user_id)
                 results.append((s3_key, file_url))
             except Exception as e:
-                print(f"Error uploading file {file.filename}: {e}")
+                logging.getLogger(__name__).error(f"Error uploading file {file.filename}: {e}")
                 continue
         return results
 
@@ -160,5 +162,5 @@ class S3UploadService:
             self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
             return True
         except self.ClientError as e:
-            print(f"Error deleting file {s3_key}: {e}")
+            logging.getLogger(__name__).error(f"Error deleting file {s3_key}: {e}")
             return False

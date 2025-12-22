@@ -7,6 +7,8 @@ from pathlib import Path
 from fastapi import UploadFile
 
 
+import logging
+
 class ChatFileUploadService:
     """Service for handling chat file uploads."""
 
@@ -106,7 +108,7 @@ class ChatFileUploadService:
                 results.append((file_path, file_url))
             except Exception as e:
                 # Log error but continue with other files
-                print(f"Error saving file {file.filename}: {e}")
+                logging.getLogger(__name__).error(f"Error saving file {file.filename}: {e}")
                 continue
         return results
 
@@ -119,7 +121,7 @@ class ChatFileUploadService:
                 return True
             return False
         except Exception as e:
-            print(f"Error deleting file {file_path}: {e}")
+            logging.getLogger(__name__).error(f"Error deleting file {file_path}: {e}")
             return False
 
     def get_file_type(self, content_type: str) -> str:

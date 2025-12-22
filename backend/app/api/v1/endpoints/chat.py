@@ -586,26 +586,26 @@ async def websocket_chat(
             except RuntimeError as e:
                 # Connection was closed - exit loop
                 if 'Cannot call "receive"' in str(e):
-                    print(f"[WebSocket] Connection closed for {user_id}, exiting receive loop")
+                    logging.getLogger(__name__).error(f"[WebSocket] Connection closed for {user_id}, exiting receive loop")
                     break
-                print(f"[WebSocket] RuntimeError from {user_id}: {e!s}")
+                logging.getLogger(__name__).error(f"[WebSocket] RuntimeError from {user_id}: {e!s}")
                 continue
             except ValueError as e:
-                print(f"[WebSocket] ValueError from {user_id}: {e!s}")
+                logging.getLogger(__name__).error(f"[WebSocket] ValueError from {user_id}: {e!s}")
                 continue
             except Exception as e:
-                print(f"[WebSocket] Error processing message from {user_id}: {e!s}")
+                logging.getLogger(__name__).error(f"[WebSocket] Error processing message from {user_id}: {e!s}")
                 import traceback
                 traceback.print_exc()
                 continue
 
     except WebSocketDisconnect as e:
-        print(f"[WebSocket] User {user_id} disconnected (code: {e.code})")
+        logging.getLogger(__name__).error(f"[WebSocket] User {user_id} disconnected (code: {e.code})")
         # Clean up all connections for this websocket
         for room_id in list(connection_manager.active_connections.keys()):
             connection_manager.disconnect(websocket, room_id)
     except Exception as e:
-        print(f"[WebSocket] ERROR: Fatal error for user {user_id}: {e!s}")
+        logging.getLogger(__name__).error(f"[WebSocket] ERROR: Fatal error for user {user_id}: {e!s}")
         import traceback
         traceback.print_exc()
         # Clean up all connections for this websocket
