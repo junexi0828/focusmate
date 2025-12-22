@@ -355,7 +355,7 @@ run_test "System Documentation Exists" \
     "test -f docs/00_overview/SYSTEM-001_Complete_System_Documentation.md"
 
 run_test "Architecture Docs Exist" \
-    "test -f docs/02_architecture/ARCH-009_Messaging_System_Architecture.md"
+    "test -f docs/02_architecture/ARC-010_Messaging_System_Architecture.md"
 
 run_test "API Specs Exist" \
     "test -f docs/02_architecture/ARCH-010_Messaging_API_Specification.md"
