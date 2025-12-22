@@ -285,18 +285,24 @@ class TestRoomWorkflow:
                 pytest.skip(f"Database connection not available: {response.text[:200]}")
             # Should succeed or return 409 if already joined, or 404 if endpoint doesn't exist
             if response.status_code == 404:
-                pytest.skip(f"Participants endpoint not available: {response.text[:200]}")
+                pytest.skip(
+                    f"Participants endpoint not available: {response.text[:200]}"
+                )
             assert response.status_code in [
                 201,
                 409,
             ], f"Join failed: {response.status_code} - {response.text[:200]}"
 
             # Get participants
-            response = client.get(f"/api/v1/rooms/{room_id}/participants", headers=headers)
+            response = client.get(
+                f"/api/v1/rooms/{room_id}/participants", headers=headers
+            )
             if is_db_connection_error(response):
                 pytest.skip(f"Database connection not available: {response.text[:200]}")
             if response.status_code == 404:
-                pytest.skip(f"Participants endpoint not available: {response.text[:200]}")
+                pytest.skip(
+                    f"Participants endpoint not available: {response.text[:200]}"
+                )
             assert response.status_code in [
                 200,
                 404,
@@ -305,7 +311,11 @@ class TestRoomWorkflow:
                 participants = response.json()
                 assert isinstance(participants, (list, dict))
         except RuntimeError as e:
-            if "different loop" in str(e).lower() or "event loop" in str(e).lower() or "attached to a different loop" in str(e).lower():
+            if (
+                "different loop" in str(e).lower()
+                or "event loop" in str(e).lower()
+                or "attached to a different loop" in str(e).lower()
+            ):
                 pytest.skip(f"Event loop issue (may require database): {str(e)}")
             raise
 
@@ -602,7 +612,9 @@ class TestRankingWorkflow:
                 "team_type": "general",
                 "mini_game_enabled": True,
             }
-            response = client.post("/api/v1/ranking/teams", json=team_data, headers=headers)
+            response = client.post(
+                "/api/v1/ranking/teams", json=team_data, headers=headers
+            )
 
             # Check for DB connection errors
             if is_db_connection_error(response):
@@ -636,7 +648,11 @@ class TestRankingWorkflow:
             ], f"Team retrieval failed: {response.status_code} - {response.text[:200]}"
         except RuntimeError as e:
             # Handle event loop issues
-            if "different loop" in str(e).lower() or "event loop" in str(e).lower() or "attached to a different loop" in str(e).lower():
+            if (
+                "different loop" in str(e).lower()
+                or "event loop" in str(e).lower()
+                or "attached to a different loop" in str(e).lower()
+            ):
                 pytest.skip(f"Event loop issue (may require database): {str(e)}")
             raise
 
