@@ -99,7 +99,7 @@ run_test "Chat File Upload Service" \
     "python -m py_compile app/infrastructure/storage/chat_storage.py"
 
 run_test "Notification Service" \
-    "python -m py_compile app/services/notification_service.py"
+    "python -m py_compile app/domain/notification/service.py"
 
 run_test "Chat Repository" \
     "python -m py_compile app/infrastructure/repositories/chat_repository.py"
