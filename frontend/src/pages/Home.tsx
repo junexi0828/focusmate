@@ -22,7 +22,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         - py-4: 세로 패딩만 적용 (가로 패딩은 __root.tsx에서 처리)
         - bg-muted/30: 배경색 투명도 (변경: bg-muted, bg-background 등)
       */
-      className="flex flex-col items-center justify-center py-4 bg-muted/30 min-h-full"
+      className="flex flex-col items-center justify-center py-4 mesh-gradient min-h-full relative"
     >
       {/*
         컨테이너 최대 너비 설정

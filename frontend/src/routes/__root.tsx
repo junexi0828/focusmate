@@ -7,6 +7,7 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { CommandPalette } from "../components/CommandPalette";
 import { NotificationBell } from "../components/notifications/NotificationBell";
 import { Footer } from "../components/footer";
+import { InteractiveCursor } from "../components/InteractiveCursor";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -88,6 +89,9 @@ function RootComponent() {
 
         {/* Command Palette (⌘K) */}
         {!isLoginPage && <CommandPalette />}
+
+        {/* Interactive Cursor Effect */}
+        <InteractiveCursor />
 
         {/* Global Toaster for Notifications */}
         <Toaster position="top-center" richColors />
