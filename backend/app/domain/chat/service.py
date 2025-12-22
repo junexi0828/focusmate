@@ -271,8 +271,13 @@ class ChatService:
                         room_dict["partner_username"] = partner_user.username
                         room_dict["partner_email"] = partner_user.email
                         room_dict["partner_profile_image"] = partner_user.profile_image
-                        # TODO: Get online status from presence system
-                        room_dict["partner_is_online"] = False
+                        # Get online status from presence system
+                        try:
+                            from app.infrastructure.redis.presence_manager import presence_manager
+                            room_dict["partner_is_online"] = await presence_manager.is_user_online(partner.user_id)
+                        except Exception:
+                            # Fallback to False if presence system unavailable
+                            room_dict["partner_is_online"] = False
 
             room_responses.append(ChatRoomResponse(**room_dict))
 
@@ -311,8 +316,13 @@ class ChatService:
                     room_dict["partner_username"] = partner_user.username
                     room_dict["partner_email"] = partner_user.email
                     room_dict["partner_profile_image"] = partner_user.profile_image
-                    # TODO: Get online status from presence system
-                    room_dict["partner_is_online"] = False
+                    # Get online status from presence system
+                    try:
+                        from app.infrastructure.redis.presence_manager import presence_manager
+                        room_dict["partner_is_online"] = await presence_manager.is_user_online(partner.user_id)
+                    except Exception:
+                        # Fallback to False if presence system unavailable
+                        room_dict["partner_is_online"] = False
 
         return ChatRoomResponse(**room_dict)
 

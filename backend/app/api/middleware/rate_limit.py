@@ -16,6 +16,8 @@ from starlette.types import ASGIApp
 from app.core.config import settings
 
 
+import logging
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Rate limiting middleware using Redis for distributed rate limiting."""
 
@@ -61,7 +63,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     decode_responses=True,
                 )
             except Exception as e:
-                print(f"Rate limit middleware: Failed to connect to Redis: {e}")
+                logging.getLogger(__name__).error(f"Rate limit middleware: Failed to connect to Redis: {e}")
                 # Continue without rate limiting if Redis is unavailable
                 self.redis = None
 
@@ -169,7 +171,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             }
 
         except Exception as e:
-            print(f"Rate limit check error: {e}")
+            logging.getLogger(__name__).error(f"Rate limit check error: {e}")
             # On error, allow the request
             return False, {"limit": rate_limit, "remaining": rate_limit, "reset": current_time + 60}
 

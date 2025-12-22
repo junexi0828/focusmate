@@ -337,7 +337,7 @@ class VerificationService:
                 )
         except Exception as e:
             # Log error but don't fail verification review
-            print(f"Failed to send verification email: {e}")
+            logging.getLogger(__name__).error(f"Failed to send verification email: {e}")
 
         return VerificationResponse.model_validate(verification)
 

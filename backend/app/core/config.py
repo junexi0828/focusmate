@@ -325,10 +325,12 @@ def get_settings() -> Settings:
 
     Example:
         ```python
-        from app.core.config import get_settings
-
-        settings = get_settings()
-        print(settings.APP_NAME)
+       # Test configuration
+    if __name__ == "__main__":
+        import logging
+        logger = logging.getLogger(__name__)
+        settings = Settings()
+        logger.info(f"App Name: {settings.APP_NAME}")
         ```
     """
     return Settings()

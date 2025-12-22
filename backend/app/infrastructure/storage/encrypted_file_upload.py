@@ -9,6 +9,8 @@ from app.infrastructure.storage.file_upload import FileUploadService
 from app.shared.utils.encryption import get_encryption_service
 
 
+import logging
+
 class EncryptedFileUploadService(FileUploadService):
     """File upload service with encryption support."""
 
@@ -113,7 +115,7 @@ class EncryptedFileUploadService(FileUploadService):
                 file_paths.append(file_path)
             except ValueError as e:
                 # Log error but continue with other files
-                print(f"Error saving file {file.filename}: {e}")
+                logging.getLogger(__name__).error(f"Error saving file {file.filename}: {e}")
                 continue
 
         return file_paths

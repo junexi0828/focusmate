@@ -10,6 +10,8 @@ from app.core.config import settings
 from app.infrastructure.websocket.chat_manager import connection_manager
 
 
+import logging
+
 class RedisPubSubManager:
     """Manages Redis Pub/Sub for cross-server message synchronization."""
 
@@ -106,7 +108,7 @@ class RedisPubSubManager:
                     await connection_manager.broadcast_to_room(room_id, data)
 
                 except Exception as e:
-                    print(f"Error processing Redis message: {e}")
+                    logging.getLogger(__name__).error(f"Error processing Redis message: {e}")
 
     async def start_listener(self):
         """Start background listener task."""
@@ -182,7 +184,7 @@ class RedisPubSubManager:
             users = await self.redis.smembers("presence:online_users")
             return set(users) if users else set()
         except Exception as e:
-            print(f"Error getting online users: {e}")
+            logging.getLogger(__name__).error(f"Error getting online users: {e}")
             return set()
 
     async def cache_user_presence(
@@ -219,7 +221,7 @@ class RedisPubSubManager:
             data = await self.redis.hgetall(key)
             return dict(data) if data else None
         except Exception as e:
-            print(f"Error getting cached presence: {e}")
+            logging.getLogger(__name__).error(f"Error getting cached presence: {e}")
             return None
 
 
