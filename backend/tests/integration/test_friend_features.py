@@ -4,6 +4,7 @@ import asyncio
 import sys
 
 import httpx
+import pytest
 
 
 BASE_URL = "http://localhost:8000/api/v1"
@@ -67,6 +68,7 @@ async def setup_test_data():
 
 async def test_friend_requests():
     """Test sending, accepting friend requests."""
+    pytest.skip("Requires live server and authenticated users")
     print("\n" + "=" * 60)
     print("Test: Friend Requests")
     print("=" * 60)
@@ -132,6 +134,7 @@ async def test_friend_requests():
 
 async def test_get_friends():
     """Test getting friends list."""
+    pytest.skip("Requires live server and authenticated users")
     print("\n" + "=" * 60)
     print("Test: Get Friends List")
     print("=" * 60)
@@ -156,6 +159,7 @@ async def test_get_friends():
 
 async def test_presence_endpoints():
     """Test presence endpoints."""
+    pytest.skip("Requires live server and authenticated users")
     print("\n" + "=" * 60)
     print("Test: Presence Endpoints")
     print("=" * 60)
@@ -193,6 +197,7 @@ async def test_presence_endpoints():
 
 async def test_friend_search():
     """Test friend search and filter."""
+    pytest.skip("Requires live server and authenticated users")
     print("\n" + "=" * 60)
     print("Test: Friend Search and Filter")
     print("=" * 60)
@@ -225,6 +230,7 @@ async def test_friend_search():
 
 async def test_invitation_codes():
     """Test invitation code generation and joining."""
+    pytest.skip("Requires live server and authenticated users")
     print("\n" + "=" * 60)
     print("Test: Invitation Codes")
     print("=" * 60)
@@ -294,6 +300,7 @@ async def test_invitation_codes():
 
 async def test_friend_room_creation():
     """Test creating room with friends."""
+    pytest.skip("Requires live server and authenticated users")
     print("\n" + "=" * 60)
     print("Test: Create Room with Friends")
     print("=" * 60)
@@ -323,6 +330,7 @@ async def test_friend_room_creation():
 
 async def test_quick_chat():
     """Test creating/getting direct chat with friend."""
+    pytest.skip("Requires live server and authenticated users")
     print("\n" + "=" * 60)
     print("Test: Quick Chat with Friend")
     print("=" * 60)

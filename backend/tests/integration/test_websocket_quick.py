@@ -3,11 +3,14 @@
 import asyncio
 import json
 
+import pytest
 import websockets
 
 
 async def test_websocket():
     """Test WebSocket presence connection."""
+    pytest.skip("Requires live server and authenticated users")
+
     # Login to get token
     import httpx
     async with httpx.AsyncClient() as client:
