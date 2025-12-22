@@ -36,6 +36,8 @@ import type { AchievementProgress } from "../features/achievements/services/achi
 import type { Post } from "../features/community/services/communityService";
 import { NotificationSettings } from "../features/notification/components/NotificationSettings";
 import { celebrateAchievement } from "../utils/confetti";
+import { use3DCard } from "../hooks/use3DCard";
+import { Achievement3DCard } from "../components/Achievement3DCard";
 
 interface ProfilePageProps {
   user: User;

@@ -79,7 +79,7 @@ class TestAuthEndpoints:
                 "password": "TestPassword123!",
             },
         )
-        
+
         # Check if registration was successful or user already exists
         assert register_response.status_code in [201, 400], \
             f"Registration failed: {register_response.status_code} - {register_response.text}"
