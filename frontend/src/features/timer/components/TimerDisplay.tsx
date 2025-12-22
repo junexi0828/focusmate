@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 
 export type TimerStatus = "idle" | "running" | "paused" | "completed";
 export type SessionType = "focus" | "break";

@@ -10,10 +10,13 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.middleware.rate_limit import RateLimitMiddleware
+from app.api.middleware.request_logging import RequestLoggingMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -76,6 +79,31 @@ app = FastAPI(
     lifespan=lifespan,
     redirect_slashes=False,  # Disable automatic trailing slash redirects to prevent CORS issues
 )
+
+# Request logging middleware - adds request ID and logs requests
+# Should be added early to track all requests
+app.add_middleware(
+    RequestLoggingMiddleware,
+    log_request_body=False,  # Set to True for debugging (security risk)
+    log_response_body=False,  # Set to True for debugging (performance impact)
+    exclude_paths=["/health", "/docs", "/redoc", "/openapi.json"],
+)
+
+# GZip middleware - compresses responses for bandwidth optimization
+# Should be added first to compress all responses
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=1000,  # Only compress responses larger than 1KB
+    compresslevel=6,  # Compression level (1-9, default 6 for balance)
+)
+
+# Trusted Host middleware - protects against Host header attacks
+# In production, only allow specific domains
+if not settings.is_development:
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=settings.TRUSTED_HOSTS,
+    )
 
 # Rate limiting middleware - should be added before CORS
 # Protects against brute force attacks and API abuse

@@ -113,6 +113,14 @@ class Settings(BaseSettings):
     CORS_ALLOW_METHODS: str = Field(default="*")
     CORS_ALLOW_HEADERS: str = Field(default="*")
 
+    # ==========================================================================
+    # Trusted Hosts
+    # ==========================================================================
+    TRUSTED_HOSTS: str = Field(
+        default="localhost,127.0.0.1,0.0.0.0",
+        description="Comma-separated list of allowed hosts. Use '*' to allow all hosts (dev only)",
+    )
+
     @field_validator("CORS_ORIGINS")
     @classmethod
     def parse_cors_origins(cls, v: str) -> list[str]:
@@ -151,6 +159,18 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [header.strip() for header in v.split(",") if header.strip()]
         return ["*"]
+
+    @field_validator("TRUSTED_HOSTS")
+    @classmethod
+    def parse_trusted_hosts(cls, v: str) -> list[str]:
+        """Parse trusted hosts from comma-separated string."""
+        if isinstance(v, list):
+            return v
+        if v == "*":
+            return ["*"]
+        if isinstance(v, str):
+            return [host.strip() for host in v.split(",") if host.strip()]
+        return ["localhost", "127.0.0.1"]
 
     # ==========================================================================
     # Rate Limiting
