@@ -1,7 +1,15 @@
 import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "sonner";
+
+// Conditionally import TanStackRouterDevtools only in development
+const TanStackRouterDevtools = import.meta.env.DEV
+  ? lazy(() =>
+      import("@tanstack/react-router-devtools").then((d) => ({
+        default: d.TanStackRouterDevtools,
+      }))
+    )
+  : null;
 import { Sidebar } from "../components/Sidebar";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { CommandPalette } from "../components/CommandPalette";
@@ -93,7 +101,11 @@ function RootComponent() {
         <Toaster position="top-center" richColors />
 
         {/* DevTools (only in dev) */}
-        <TanStackRouterDevtools />
+        {TanStackRouterDevtools && (
+          <Suspense fallback={null}>
+            <TanStackRouterDevtools />
+          </Suspense>
+        )}
       </div>
     </ErrorBoundary>
   );
