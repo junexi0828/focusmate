@@ -1,6 +1,6 @@
 """Ranking API endpoints."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing_extensions import Annotated
 from typing import List, Literal, Optional, Union
 from uuid import UUID
@@ -255,19 +255,19 @@ async def get_leaderboard(
             response = LeaderboardResponse(
                 ranking_type="team",
                 period=period,
-                updated_at=datetime.now(UTC),
+                updated_at=datetime.now(timezone.utc),
                 leaderboard=[],
             )
             return response.model_dump()
 
         # Calculate date range based on period
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         if period == "weekly":
             start_date = now - timedelta(days=7)
         elif period == "monthly":
             start_date = now - timedelta(days=30)
         else:  # all_time
-            start_date = datetime.min.replace(tzinfo=UTC)
+            start_date = datetime.min.replace(tzinfo=timezone.utc)
 
         # Optimized: Batch query all team stats at once (fixes N+1 problem)
         from app.infrastructure.database.models.ranking import RankingTeamMember
@@ -500,7 +500,7 @@ async def get_leaderboard(
         response = LeaderboardResponse(
             ranking_type="team",
             period=period,
-            updated_at=datetime.now(UTC),
+            updated_at=datetime.now(timezone.utc),
             leaderboard=leaderboard_entries,
         )
 

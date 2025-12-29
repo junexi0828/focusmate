@@ -2,7 +2,7 @@
 
 import secrets
 import string
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -60,7 +60,7 @@ class InvitationService:
         # Calculate expiration
         expires_at = None
         if data.expires_hours:
-            expires_at = datetime.now(UTC) + timedelta(hours=data.expires_hours)
+            expires_at = datetime.now(timezone.utc) + timedelta(hours=data.expires_hours)
 
         # Update room with invitation code
         await self.chat_repo.update_room_invitation(
@@ -85,7 +85,7 @@ class InvitationService:
         # Check expiration
         is_valid = True
         if room.invitation_expires_at:
-            if datetime.now(UTC) > room.invitation_expires_at:
+            if datetime.now(timezone.utc) > room.invitation_expires_at:
                 is_valid = False
 
         # Check max uses

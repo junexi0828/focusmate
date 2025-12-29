@@ -1,6 +1,6 @@
 """Repository for unified chat operations."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -180,7 +180,7 @@ class ChatRepository:
         room = await self.get_room_by_id(message_data["room_id"])
         if room:
             room.last_message_at = message.created_at
-            room.updated_at = datetime.now(UTC)
+            room.updated_at = datetime.now(timezone.utc)
 
         # Increment unread_count for all members except sender
         members_result = await self.session.execute(
@@ -255,7 +255,7 @@ class ChatRepository:
 
         message.content = content
         message.is_edited = True
-        message.updated_at = datetime.now(UTC)
+        message.updated_at = datetime.now(timezone.utc)
 
         await self.session.commit()
         await self.session.refresh(message)
@@ -268,7 +268,7 @@ class ChatRepository:
             return None
 
         message.is_deleted = True
-        message.deleted_at = datetime.now(UTC)
+        message.deleted_at = datetime.now(timezone.utc)
 
         await self.session.commit()
         await self.session.refresh(message)

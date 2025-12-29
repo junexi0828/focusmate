@@ -1,6 +1,6 @@
 """Friend repository."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, select
@@ -78,7 +78,7 @@ class FriendRequestRepository:
         request = await self.get_request_by_id(request_id)
         if request:
             request.status = status
-            request.responded_at = datetime.now(UTC)
+            request.responded_at = datetime.now(timezone.utc)
             await self.session.commit()
             await self.session.refresh(request)
         return request

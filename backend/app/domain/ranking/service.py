@@ -2,7 +2,7 @@
 
 import secrets
 import string
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -220,7 +220,7 @@ class RankingService:
 
         # Check if invitation has expired
 
-        if invitation.expires_at < datetime.now(UTC):
+        if invitation.expires_at < datetime.now(timezone.utc):
             await self.repository.update_invitation_status(invitation_id, "expired")
             return False
 
@@ -363,7 +363,7 @@ class RankingService:
         update_data = {
             "status": "approved" if approved else "rejected",
             "admin_note": admin_note,
-            "reviewed_at": datetime.now(UTC),
+            "reviewed_at": datetime.now(timezone.utc),
             "reviewed_by": admin_id,
         }
 
@@ -521,7 +521,7 @@ class RankingService:
             )
 
             # Calculate streak from today backwards
-            today = datetime.now(UTC).date()
+            today = datetime.now(timezone.utc).date()
             check_date = today
 
             # Check if there's a session today

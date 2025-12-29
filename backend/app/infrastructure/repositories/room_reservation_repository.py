@@ -3,7 +3,7 @@
 Handles database operations for room reservations.
 """
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -80,7 +80,7 @@ class RoomReservationRepository:
         Returns:
             List of upcoming active reservations
         """
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         result = await self.session.execute(
             select(RoomReservation)
             .where(RoomReservation.user_id == user_id)
@@ -150,7 +150,7 @@ class RoomReservationRepository:
         Returns:
             List of active reservations that haven't sent notification yet
         """
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         result = await self.session.execute(
             select(RoomReservation)
             .where(RoomReservation.is_active == True)

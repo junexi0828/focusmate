@@ -1,6 +1,6 @@
 """Messaging domain service - 1:1 conversations and messages."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List
 
 from app.core.exceptions import NotFoundException
@@ -208,7 +208,7 @@ class MessagingService:
             raise NotFoundException(f"Conversation {conversation_id} not found")
 
         # Mark messages as read
-        read_at = datetime.now(UTC)
+        read_at = datetime.now(timezone.utc)
         marked_count = await self.message_repo.mark_as_read(message_ids, read_at)
 
         # Update conversation unread count

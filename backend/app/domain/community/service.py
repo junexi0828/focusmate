@@ -1,6 +1,6 @@
 """Community domain service - posts, comments, and social interactions."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional
 
 from app.core.exceptions import NotFoundException, UnauthorizedException
@@ -112,7 +112,7 @@ class CommunityService:
                     id=generate_uuid(),
                     post_id=post_id,
                     user_id=current_user_id,
-                    read_at=datetime.now(UTC),
+                    read_at=datetime.now(timezone.utc),
                 )
                 await self.post_read_repo.create_or_update(post_read)
                 response.is_read = True
@@ -220,7 +220,7 @@ class CommunityService:
             id=generate_uuid(),
             post_id=post_id,
             user_id=user_id,
-            created_at=datetime.now(UTC),
+            created_at=datetime.now(timezone.utc),
         )
         await self.post_like_repo.create(post_like)
         post.likes += 1
@@ -362,7 +362,7 @@ class CommunityService:
             id=generate_uuid(),
             comment_id=comment_id,
             user_id=user_id,
-            created_at=datetime.now(UTC),
+            created_at=datetime.now(timezone.utc),
         )
         await self.comment_like_repo.create(comment_like)
         comment.likes += 1
