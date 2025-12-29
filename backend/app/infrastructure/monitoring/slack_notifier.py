@@ -31,7 +31,7 @@ class SlackNotifier:
     async def send_message(
         self,
         text: str,
-        blocks: List[Dict[str, Any]] | None = None,
+        blocks: Optional[List[Dict[str, Any]]] = None,
         level: str = "info",
     ) -> bool:
         """Send message to Slack.
@@ -74,7 +74,7 @@ class SlackNotifier:
     async def notify_error(
         self,
         error: Exception,
-        context: Dict[str, Any] | None = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Send error notification to Slack.
 
@@ -129,7 +129,7 @@ class SlackNotifier:
         self,
         service: str,
         status: str,
-        details: Dict[str, Any] | None = None,
+        details: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Send service status notification.
 
@@ -233,13 +233,13 @@ slack_notifier = SlackNotifier()
 
 
 # Convenience functions
-async def notify_error(error: Exception, context: Dict[str, Any] | None = None):
+async def notify_error(error: Exception, context: Optional[Dict[str, Any]] = None):
     """Send error notification (convenience function)."""
     await slack_notifier.notify_error(error, context)
 
 
 async def notify_service_status(
-    service: str, status: str, details: Dict[str, Any] | None = None
+    service: str, status: str, details: Optional[Dict[str, Any]] = None
 ):
     """Send service status notification (convenience function)."""
     await slack_notifier.notify_service_status(service, status, details)

@@ -12,7 +12,7 @@ class MatchingPoolCreate(BaseModel):
 
     member_ids: List[str] = Field(..., min_length=2, max_length=8)
     preferred_match_type: str = Field(..., pattern="^(Union[any, same_department]|major_category)$")
-    preferred_categories: List[str] | None = None
+    preferred_categories: Optional[List[str]] = None
     matching_type: str = Field(..., pattern="^(Union[blind, open])$")
     message: Optional[str] = Field(None, max_length=200)
 
@@ -37,7 +37,7 @@ class MatchingPoolResponse(BaseModel):
     grade: str
     gender: str
     preferred_match_type: str
-    preferred_categories: List[str] | None
+    preferred_categories: Optional[List[str]]
     matching_type: str
     message: Optional[str]
     status: str
