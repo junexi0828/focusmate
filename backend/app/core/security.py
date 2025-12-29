@@ -3,7 +3,7 @@
 Provides authentication and cryptography functions.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any, Dict, Optional
 
 from jose import jwt
@@ -29,7 +29,7 @@ def create_access_token(
         Encoded JWT token
     """
     to_encode = data.copy()
-    expire = datetime.now(UTC) + (
+    expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     to_encode.update({"exp": expire})

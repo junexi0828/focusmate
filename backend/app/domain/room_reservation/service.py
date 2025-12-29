@@ -1,6 +1,6 @@
 """Room Reservation domain service."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List
 
 from app.core.exceptions import NotFoundException
@@ -43,7 +43,7 @@ class RoomReservationService:
         from app.infrastructure.database.models.room_reservation import RoomReservation
 
         # Validate scheduled_at is in the future
-        if data.scheduled_at <= datetime.now(UTC):
+        if data.scheduled_at <= datetime.now(timezone.utc):
             raise ValueError("Scheduled time must be in the future")
 
         # Normalize recurrence_type (handle both Enum and string)
@@ -197,7 +197,7 @@ class RoomReservationService:
         if reservation.user_id != user_id:
             raise ValueError("You can only update your own reservations")
 
-        if data.scheduled_at and data.scheduled_at <= datetime.now(UTC):
+        if data.scheduled_at and data.scheduled_at <= datetime.now(timezone.utc):
             raise ValueError("Scheduled time must be in the future")
 
         if data.scheduled_at:
@@ -242,7 +242,7 @@ class RoomReservationService:
         """
         from datetime import timedelta
 
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         target_time = now + timedelta(minutes=1)
 
         reservations = await self.repository.get_due_reservations(now, target_time)
@@ -318,7 +318,7 @@ class RoomReservationService:
         reservations = await self.repository.get_reservations_needing_notification()
 
         # Filter reservations based on notification_minutes
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         filtered = []
         for r in reservations:
             notification_time = r.scheduled_at - timedelta(minutes=r.notification_minutes)

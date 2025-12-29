@@ -1,6 +1,6 @@
 """User domain service."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from secrets import token_urlsafe
 
 from app.core.config import settings
@@ -200,7 +200,7 @@ class UserService:
         if user:
             # Generate reset token
             reset_token = token_urlsafe(32)
-            expires_at = datetime.now(UTC) + timedelta(hours=1)
+            expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
 
             # Update user with reset token
             user.password_reset_token = reset_token
@@ -247,7 +247,7 @@ FocusMate 팀
             raise ValidationException("token", "Invalid or expired reset token")
 
         # Check if token is expired
-        if not user.password_reset_expires or user.password_reset_expires < datetime.now(UTC):
+        if not user.password_reset_expires or user.password_reset_expires < datetime.now(timezone.utc):
             raise ValidationException("token", "Reset token has expired")
 
         return {"valid": True, "message": "Token is valid"}
@@ -270,7 +270,7 @@ FocusMate 팀
             raise ValidationException("token", "Invalid or expired reset token")
 
         # Check if token is expired
-        if not user.password_reset_expires or user.password_reset_expires < datetime.now(UTC):
+        if not user.password_reset_expires or user.password_reset_expires < datetime.now(timezone.utc):
             raise ValidationException("token", "Reset token has expired")
 
         # Update password

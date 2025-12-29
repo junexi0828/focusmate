@@ -1,6 +1,6 @@
 """Presence repository."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional
 
 from sqlalchemy import select, update
@@ -25,7 +25,7 @@ class PresenceRepository:
         if existing:
             # Update existing
             existing.is_online = is_online
-            existing.last_seen_at = datetime.now(UTC)
+            existing.last_seen_at = datetime.now(timezone.utc)
             if status_message is not None:
                 existing.status_message = status_message
             await self.session.commit()
@@ -35,7 +35,7 @@ class PresenceRepository:
         presence = UserPresence(
             id=user_id,
             is_online=is_online,
-            last_seen_at=datetime.now(UTC),
+            last_seen_at=datetime.now(timezone.utc),
             connection_count=0,
             status_message=status_message,
         )
@@ -65,7 +65,7 @@ class PresenceRepository:
         if presence:
             presence.connection_count += 1
             presence.is_online = True
-            presence.last_seen_at = datetime.now(UTC)
+            presence.last_seen_at = datetime.now(timezone.utc)
             await self.session.commit()
             await self.session.refresh(presence)
             return presence.connection_count
@@ -82,7 +82,7 @@ class PresenceRepository:
 
         if presence and presence.connection_count > 0:
             presence.connection_count -= 1
-            presence.last_seen_at = datetime.now(UTC)
+            presence.last_seen_at = datetime.now(timezone.utc)
 
             # Set offline if no more connections
             if presence.connection_count == 0:
@@ -110,7 +110,7 @@ class PresenceRepository:
         """Clean up stale connections (users online but no recent activity)."""
         from datetime import timedelta
 
-        threshold_time = datetime.now(UTC) - timedelta(minutes=threshold_minutes)
+        threshold_time = datetime.now(timezone.utc) - timedelta(minutes=threshold_minutes)
 
         # Update users who are marked online but haven't been seen recently
         result = await self.session.execute(

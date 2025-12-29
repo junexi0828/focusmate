@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 from typing import Optional
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +38,7 @@ class StatsService:
             room_id=room_id,
             session_type=session_type,
             duration_minutes=duration_minutes,
-            completed_at=datetime.now(UTC),
+            completed_at=datetime.now(timezone.utc),
         )
         await self.repository.create(session)
 
@@ -86,8 +86,8 @@ class StatsService:
             since = start_date
             until = end_date
         else:
-            since = datetime.now(UTC) - timedelta(days=days)
-            until = datetime.now(UTC)
+            since = datetime.now(timezone.utc) - timedelta(days=days)
+            until = datetime.now(timezone.utc)
 
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
@@ -127,8 +127,8 @@ class StatsService:
         Returns:
             Dictionary with hourly focus time distribution (0-23 hours)
         """
-        since = datetime.now(UTC) - timedelta(days=days)
-        until = datetime.now(UTC)
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        until = datetime.now(timezone.utc)
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
         # Initialize hourly buckets (0-23)
@@ -160,8 +160,8 @@ class StatsService:
         Returns:
             Dictionary with monthly statistics
         """
-        since = datetime.now(UTC) - timedelta(days=months * 30)
-        until = datetime.now(UTC)
+        since = datetime.now(timezone.utc) - timedelta(days=months * 30)
+        until = datetime.now(timezone.utc)
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
         # Group by month
@@ -212,7 +212,7 @@ class StatsService:
             Dictionary with current progress, goal, and achievement rate
         """
         # Calculate date range based on period
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         if period == "day":
             since = now.replace(hour=0, minute=0, second=0, microsecond=0)
         elif period == "week":

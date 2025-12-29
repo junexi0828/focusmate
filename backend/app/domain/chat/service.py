@@ -1,6 +1,6 @@
 """Service layer for unified chat system."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Dict, List, Optional
 from uuid import UUID
 
@@ -399,5 +399,5 @@ class ChatService:
     async def mark_as_read(self, room_id: UUID, user_id: str) -> None:
         """Mark all messages as read."""
         await self.repository.update_member_read_status(
-            room_id, user_id, datetime.now(UTC)
+            room_id, user_id, datetime.now(timezone.utc)
         )

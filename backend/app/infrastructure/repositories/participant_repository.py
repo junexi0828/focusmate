@@ -1,6 +1,6 @@
 """Participant repository implementation."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -61,6 +61,6 @@ class ParticipantRepository:
         participant = await self.get_by_id(participant_id)
         if participant:
             participant.is_connected = False
-            participant.left_at = datetime.now(UTC)
+            participant.left_at = datetime.now(timezone.utc)
             return await self.update(participant)
         return None

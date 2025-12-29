@@ -1,6 +1,6 @@
 """Report domain service."""
 
-from datetime import UTC
+from datetime import timezone
 from typing import List, Optional
 from uuid import UUID
 
@@ -89,7 +89,7 @@ class ReportService:
                 raise ValueError(f"Invalid status. Must be one of: {valid_statuses}")
             update_data["status"] = data.status
             update_data["reviewed_by"] = reviewer_id
-            update_data["reviewed_at"] = datetime.now(UTC)
+            update_data["reviewed_at"] = datetime.now(timezone.utc)
 
         if data.admin_note is not None:
             update_data["admin_note"] = data.admin_note

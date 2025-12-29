@@ -1,7 +1,7 @@
 """WebSocket endpoint for real-time communication."""
 
 import logging
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -44,7 +44,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                     "room_id": room_id,
                     "message": "Connected to room",
                 },
-                "timestamp": datetime.now(UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
             websocket,
         )
@@ -59,7 +59,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                         room_id
                     ),
                 },
-                "timestamp": datetime.now(UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
             room_id,
         )
@@ -81,7 +81,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                     await connection_manager.send_personal_message(
                         {
                             "type": "pong",
-                            "timestamp": datetime.now(UTC).isoformat(),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
                         },
                         websocket,
                     )
@@ -92,7 +92,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                     {
                         "type": message_type,
                         "data": data.get("data", {}),
-                        "timestamp": datetime.now(UTC).isoformat(),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
                     room_id,
                 )
@@ -110,7 +110,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                                 "code": "invalid_message",
                                 "message": "Invalid message format",
                             },
-                            "timestamp": datetime.now(UTC).isoformat(),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
                         },
                         websocket,
                     )
@@ -139,7 +139,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                                 "code": "server_error",
                                 "message": "Internal server error",
                             },
-                            "timestamp": datetime.now(UTC).isoformat(),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
                         },
                         websocket,
                     )
@@ -164,7 +164,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                             room_id
                         ),
                     },
-                    "timestamp": datetime.now(UTC).isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 },
                 room_id,
             )

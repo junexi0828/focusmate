@@ -1,6 +1,6 @@
 """Notification repository."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional
 
 from sqlalchemy import select, update
@@ -112,7 +112,7 @@ class NotificationRepository:
         result = await self.db.execute(
             update(Notification)
             .where(Notification.user_id == user_id, Notification.is_read == False)
-            .values(is_read=True, read_at=datetime.now(UTC))
+            .values(is_read=True, read_at=datetime.now(timezone.utc))
         )
         await self.db.commit()
         return result.rowcount
