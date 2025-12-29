@@ -285,3 +285,31 @@ async def naver_oauth_callback(
         return await service.naver_oauth_login(data)
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+
+
+@router.post("/naver/unlink", status_code=status.HTTP_200_OK)
+async def naver_oauth_unlink(
+    naver_id: str,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> dict:
+    """Handle Naver OAuth unlink/disconnect callback.
+
+    This endpoint is called by Naver when a user disconnects their Naver account
+    or withdraws from Naver membership.
+
+    Args:
+        naver_id: Naver OAuth ID (from Naver callback)
+        service: User service
+
+    Returns:
+        Success message
+    """
+    try:
+        return await service.naver_oauth_unlink(naver_id)
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Naver unlink error: {e!s}", exc_info=True)
+        # Always return success to Naver even if user not found
+        return {"message": "Unlink processed"}
