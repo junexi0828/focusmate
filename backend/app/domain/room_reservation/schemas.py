@@ -31,7 +31,7 @@ class RoomReservationCreate(BaseModel):
     recurrence_type: Union[RecurrenceType, str] = Field(
         default=RecurrenceType.NONE, description="Recurrence pattern"
     )
-    recurrence_end_date: Union[datetime, Optional][str] = Field(
+    recurrence_end_date: Optional[datetime] = Field(
         None, description="When to stop creating recurring reservations"
     )
     notification_minutes: int = Field(
