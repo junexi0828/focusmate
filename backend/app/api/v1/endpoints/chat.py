@@ -1,7 +1,8 @@
 """Chat API endpoints."""
 
 import logging
-from typing import Annotated, List, Optional, Union
+from typing import List, Optional, Union
+from typing_extensions import Annotated
 from uuid import UUID
 
 from fastapi import (

@@ -1,6 +1,7 @@
 """API endpoints for matching proposals."""
 
-from typing import Annotated, List
+from typing_extensions import Annotated
+from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

@@ -1,6 +1,7 @@
 """API endpoints for matching pools."""
 
-from typing import Annotated, Optional
+from typing_extensions import Annotated
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status

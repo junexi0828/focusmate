@@ -1,7 +1,7 @@
 """initial_schema
 
 Revision ID: cb008620275b
-Revises: 
+Revises:
 Create Date: 2025-12-12 18:51:33.489616
 
 """
