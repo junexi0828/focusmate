@@ -1,6 +1,7 @@
 """Notification API endpoints."""
 
-from typing import Annotated, List, Optional
+from typing_extensions import Annotated
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,

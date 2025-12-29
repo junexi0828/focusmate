@@ -1,6 +1,7 @@
 """Participant API endpoints."""
 
-from typing import Annotated
+from typing_extensions import Annotated
+from typing import
 
 from fastapi import APIRouter, Depends, HTTPException, status
 

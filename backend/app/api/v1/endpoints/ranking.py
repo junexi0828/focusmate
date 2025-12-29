@@ -1,7 +1,8 @@
 """Ranking API endpoints."""
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, List, Literal, Optional, Union
+from typing_extensions import Annotated
+from typing import List, Literal, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status

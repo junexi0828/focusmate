@@ -1,6 +1,7 @@
 """API dependencies."""
 
-from typing import Annotated, Optional
+from typing_extensions import Annotated
+from typing import Optional
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
