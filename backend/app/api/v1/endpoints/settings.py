@@ -1,7 +1,6 @@
 """User Settings API endpoints."""
 
 from typing_extensions import Annotated
-from typing import
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
