@@ -379,6 +379,23 @@ FocusMate 팀
                     user=UserResponse.model_validate(user),
                 )
 
+    async def naver_oauth_unlink(self, naver_id: str) -> dict:
+        """Unlink Naver OAuth account.
+
+        Args:
+            naver_id: Naver OAuth ID
+
+        Returns:
+            Success message
+        """
+        user = await self.repository.get_by_naver_id(naver_id)
+        if user:
+            # Unlink Naver account (set naver_id to None)
+            user.naver_id = None
+            await self.repository.update(user)
+            return {"message": "Naver account unlinked successfully"}
+        return {"message": "User not found or already unlinked"}
+
             except httpx.HTTPError as e:
                 raise ValidationException("oauth", f"Naver OAuth HTTP error: {e!s}")
             except ValidationException:
