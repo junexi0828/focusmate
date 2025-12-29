@@ -1,7 +1,8 @@
 """Room Reservation API endpoints."""
 
 import logging
-from typing import Annotated, List
+from typing_extensions import Annotated
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 

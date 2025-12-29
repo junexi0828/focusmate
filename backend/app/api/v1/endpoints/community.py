@@ -1,7 +1,8 @@
 """Community API endpoints - posts, comments, likes."""
 
 from datetime import datetime
-from typing import Annotated, Dict, List, Optional
+from typing_extensions import Annotated
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 

@@ -2,7 +2,8 @@
 
 from enum import Enum
 from functools import wraps
-from typing import Annotated
+from typing_extensions import Annotated
+from typing import
 
 from fastapi import Depends, HTTPException, status
 

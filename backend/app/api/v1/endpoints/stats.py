@@ -1,7 +1,8 @@
 """Stats API endpoints."""
 
 from datetime import UTC, datetime
-from typing import Annotated, List, Optional, Union
+from typing_extensions import Annotated
+from typing import List, Optional, Union
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
