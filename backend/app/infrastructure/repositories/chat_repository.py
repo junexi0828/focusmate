@@ -1,6 +1,7 @@
 """Repository for unified chat operations."""
 
 from datetime import UTC, datetime
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
@@ -24,7 +25,7 @@ class ChatRepository:
         await self.session.refresh(room)
         return room
 
-    async def get_room_by_id(self, room_id: UUID) -> ChatRoom | None:
+    async def get_room_by_id(self, room_id: UUID) -> Optional[ChatRoom]:
         """Get room by ID."""
         result = await self.session.execute(
             select(ChatRoom).where(ChatRoom.room_id == room_id)
@@ -32,8 +33,8 @@ class ChatRepository:
         return result.scalar_one_or_none()
 
     async def get_user_rooms(
-        self, user_id: str, room_type: str | None = None
-    ) -> list[ChatRoom]:
+        self, user_id: str, room_type: Optional[str] = None
+    ) -> List[ChatRoom]:
         """Get all rooms for a user."""
         query = (
             select(ChatRoom)
@@ -54,7 +55,7 @@ class ChatRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_direct_room(self, user1_id: str, user2_id: str) -> ChatRoom | None:
+    async def get_direct_room(self, user1_id: str, user2_id: str) -> Optional[ChatRoom]:
         """Get existing direct chat room between two users."""
         # Get all direct rooms and filter in Python (simpler than JSON query)
         result = await self.session.execute(
@@ -71,7 +72,7 @@ class ChatRepository:
 
         return None
 
-    async def update_room(self, room_id: UUID, update_data: dict) -> ChatRoom | None:
+    async def update_room(self, room_id: UUID, update_data: dict) -> Optional[ChatRoom]:
         """Update room."""
         room = await self.get_room_by_id(room_id)
         if not room:
@@ -93,7 +94,7 @@ class ChatRepository:
         await self.session.refresh(member)
         return member
 
-    async def get_room_members(self, room_id: UUID) -> list[ChatMember]:
+    async def get_room_members(self, room_id: UUID) -> List[ChatMember]:
         """Get all members of a room."""
         result = await self.session.execute(
             select(ChatMember)
@@ -102,7 +103,7 @@ class ChatRepository:
         )
         return list(result.scalars().all())
 
-    async def get_member(self, room_id: UUID, user_id: str) -> ChatMember | None:
+    async def get_member(self, room_id: UUID, user_id: str) -> Optional[ChatMember]:
         """Get specific member."""
         result = await self.session.execute(
             select(ChatMember).where(
@@ -155,7 +156,7 @@ class ChatRepository:
 
     async def update_member_read_status(
         self, room_id: UUID, user_id: str, last_read_at: datetime
-    ) -> ChatMember | None:
+    ) -> Optional[ChatMember]:
         """Update member's read status."""
         member = await self.get_member(room_id, user_id)
         if not member:
@@ -203,8 +204,8 @@ class ChatRepository:
         self,
         room_id: UUID,
         limit: int = 50,
-        before_message_id: UUID | None = None,
-    ) -> list[ChatMessage]:
+        before_message_id: Optional[UUID] = None,
+    ) -> List[ChatMessage]:
         """Get messages from a room."""
         query = (
             select(ChatMessage)
@@ -222,14 +223,14 @@ class ChatRepository:
         messages = list(result.scalars().all())
         return list(reversed(messages))  # Return in chronological order
 
-    async def get_message_by_id(self, message_id: UUID) -> ChatMessage | None:
+    async def get_message_by_id(self, message_id: UUID) -> Optional[ChatMessage]:
         """Get message by ID."""
         result = await self.session.execute(
             select(ChatMessage).where(ChatMessage.message_id == message_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_last_message(self, room_id: UUID) -> ChatMessage | None:
+    async def get_last_message(self, room_id: UUID) -> Optional[ChatMessage]:
         """Get the last message in a room."""
         result = await self.session.execute(
             select(ChatMessage)
@@ -246,7 +247,7 @@ class ChatRepository:
 
     async def update_message(
         self, message_id: UUID, content: str
-    ) -> ChatMessage | None:
+    ) -> Optional[ChatMessage]:
         """Update message content."""
         message = await self.get_message_by_id(message_id)
         if not message:
@@ -260,7 +261,7 @@ class ChatRepository:
         await self.session.refresh(message)
         return message
 
-    async def delete_message(self, message_id: UUID) -> ChatMessage | None:
+    async def delete_message(self, message_id: UUID) -> Optional[ChatMessage]:
         """Soft delete message."""
         message = await self.get_message_by_id(message_id)
         if not message:
@@ -313,7 +314,7 @@ class ChatRepository:
 
     async def search_messages(
         self, room_id: UUID, query: str, limit: int = 50
-    ) -> list[ChatMessage]:
+    ) -> List[ChatMessage]:
         """Search messages in a room."""
         result = await self.session.execute(
             select(ChatMessage)
@@ -335,8 +336,8 @@ class ChatRepository:
         self,
         room_id: UUID,
         code: str,
-        expires_at: datetime | None,
-        max_uses: int | None,
+        expires_at: Optional[datetime],
+        max_uses: Optional[int],
     ) -> ChatRoom:
         """Update room invitation code."""
         room = await self.get_room_by_id(room_id)
@@ -352,7 +353,7 @@ class ChatRepository:
         await self.session.refresh(room)
         return room
 
-    async def get_room_by_invitation_code(self, code: str) -> ChatRoom | None:
+    async def get_room_by_invitation_code(self, code: str) -> Optional[ChatRoom]:
         """Get room by invitation code."""
         result = await self.session.execute(
             select(ChatRoom).where(ChatRoom.invitation_code == code)
@@ -370,7 +371,7 @@ class ChatRepository:
         await self.session.refresh(room)
         return room.invitation_use_count
 
-    async def get_direct_room(self, user_id: str, recipient_id: str) -> ChatRoom | None:
+    async def get_direct_room(self, user_id: str, recipient_id: str) -> Optional[ChatRoom]:
         """Get existing direct chat room between two users."""
         result = await self.session.execute(
             select(ChatRoom)

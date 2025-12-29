@@ -5,6 +5,7 @@ Tracks connection status and join/leave timestamps.
 """
 
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -39,7 +40,7 @@ class Participant(Base, TimestampMixin):
         comment="Associated room ID",
     )
 
-    user_id: Mapped[str | None] = mapped_column(
+    user_id: Mapped[Optional[str]] = mapped_column(
         String(36),
         nullable=True,
         index=True,
@@ -73,7 +74,7 @@ class Participant(Base, TimestampMixin):
         comment="Join timestamp",
     )
 
-    left_at: Mapped[datetime | None] = mapped_column(
+    left_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Leave timestamp",

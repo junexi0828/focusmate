@@ -3,6 +3,7 @@
 import secrets
 import string
 from datetime import UTC, datetime
+from typing import List, Optional
 from uuid import UUID
 
 from app.domain.ranking.schemas import (
@@ -21,7 +22,7 @@ class RankingService:
     def __init__(
         self,
         repository: RankingRepository,
-        user_repository: UserRepository | None = None,
+        user_repository: Optional[UserRepository] = None,
     ):
         """Initialize service with repository."""
         self.repository = repository
@@ -59,7 +60,7 @@ class RankingService:
 
         return TeamResponse.model_validate(team)
 
-    async def get_team(self, team_id: UUID) -> TeamResponse | None:
+    async def get_team(self, team_id: UUID) -> Optional[TeamResponse]:
         """Get team by ID."""
         team = await self.repository.get_team_by_id(team_id)
         if not team:
@@ -121,7 +122,7 @@ class RankingService:
         return result
 
     async def get_user_invitations(
-        self, user_id: str, status_filter: str | None = None
+        self, user_id: str, status_filter: Optional[str] = None
     ) -> list:
         """Get all invitations for a user.
 
@@ -147,7 +148,7 @@ class RankingService:
 
     async def update_team(
         self, team_id: UUID, update_data: TeamUpdate, user_id: str
-    ) -> TeamResponse | None:
+    ) -> Optional[TeamResponse]:
         """Update team information (leader only)."""
         # Verify user is team leader
         team = await self.repository.get_team_by_id(team_id)
@@ -171,12 +172,12 @@ class RankingService:
 
         return await self.repository.delete_team(team_id)
 
-    async def get_user_teams(self, user_id: str) -> list[TeamResponse]:
+    async def get_user_teams(self, user_id: str) -> List[TeamResponse]:
         """Get all teams a user is a member of."""
         teams = await self.repository.get_user_teams(user_id)
         return [TeamResponse.model_validate(team) for team in teams]
 
-    async def get_all_teams(self) -> list[TeamResponse]:
+    async def get_all_teams(self) -> List[TeamResponse]:
         """Get all teams (admin only)."""
         teams = await self.repository.get_all_teams()
         return [TeamResponse.model_validate(team) for team in teams]
@@ -314,7 +315,7 @@ class RankingService:
             "submitted_at": request.submitted_at,
         }
 
-    async def get_verification_status(self, team_id: UUID) -> dict | None:
+    async def get_verification_status(self, team_id: UUID) -> Optional[dict]:
         """Get verification status for a team."""
         request = await self.repository.get_verification_request_by_team(team_id)
         if not request:
@@ -329,7 +330,7 @@ class RankingService:
             "admin_note": request.admin_note,
         }
 
-    async def get_pending_verifications(self) -> list[dict]:
+    async def get_pending_verifications(self) -> List[dict]:
         """Get all pending verification requests (admin only)."""
         requests = await self.repository.get_pending_verification_requests()
 
@@ -387,7 +388,7 @@ class RankingService:
 
     # Email notification integration
     async def _send_verification_notification(
-        self, team_id: UUID, status: str, admin_note: str | None = None
+        self, team_id: UUID, status: str, admin_note: Optional[str] = None
     ) -> None:
         """Send email notification for verification status change."""
 
@@ -553,8 +554,8 @@ class RankingService:
         }
 
     async def get_session_history(
-        self, team_id: UUID, user_id: str | None = None, limit: int = 100
-    ) -> list[dict]:
+        self, team_id: UUID, user_id: Optional[str] = None, limit: int = 100
+    ) -> List[dict]:
         """Get session history for a team or user."""
         if user_id:
             sessions = await self.repository.get_user_sessions(user_id, team_id, limit)
@@ -640,13 +641,13 @@ class RankingService:
 
     async def get_mini_game_leaderboard(
         self, game_type: str, limit: int = 10
-    ) -> list[dict]:
+    ) -> List[dict]:
         """Get leaderboard for a specific game type."""
         return await self.repository.get_mini_game_leaderboard(game_type, limit)
 
     async def get_team_mini_game_history(
-        self, team_id: UUID, game_type: str | None = None, limit: int = 50
-    ) -> list[dict]:
+        self, team_id: UUID, game_type: Optional[str] = None, limit: int = 50
+    ) -> List[dict]:
         """Get mini-game history for a team."""
         games = await self.repository.get_team_mini_games(team_id, game_type, limit)
 

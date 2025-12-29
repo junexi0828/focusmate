@@ -4,7 +4,7 @@ Provides authentication and cryptography functions.
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Dict, Optional
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -17,7 +17,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(
-    data: dict[str, Any], expires_delta: timedelta | None = None
+    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
 ) -> str:
     """Create JWT access token.
 
@@ -61,7 +61,7 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def decode_jwt_token(token: str) -> dict[str, Any]:
+def decode_jwt_token(token: str) -> Dict[str, Any]:
     """Decode JWT token.
 
     Args:

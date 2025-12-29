@@ -1,6 +1,6 @@
 """Standard API response utilities."""
 
-from typing import Any
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -12,7 +12,7 @@ class SuccessResponse(BaseModel):
 
     status: str = "success"
     data: Any
-    message: str | None = None
+    message: Optional[str] = None
 
 
 class ErrorResponse(BaseModel):
@@ -21,15 +21,15 @@ class ErrorResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
     status: str = "error"
-    error: dict[str, Any]
+    error: Dict[str, Any]
 
 
-def success_response(data: Any, message: str | None = None) -> dict[str, Any]:
+def success_response(data: Any, message: Optional[str] = None) -> Dict[str, Any]:
     """Create success response."""
     return {"status": "success", "data": data, "message": message}
 
 
-def error_response(code: str, message: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
+def error_response(code: str, message: str, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
     """Create error response."""
     return {
         "status": "error",

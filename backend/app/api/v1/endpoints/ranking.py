@@ -1,7 +1,7 @@
 """Ranking API endpoints."""
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Literal
+from typing import Annotated, List, Literal, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -58,11 +58,11 @@ async def get_team(
     return team
 
 
-@router.get("/teams", response_model=list[TeamResponse])
+@router.get("/teams", response_model=List[TeamResponse])
 async def get_my_teams(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-) -> list[TeamResponse]:
+) -> List[TeamResponse]:
     """Get all teams the current user is a member of."""
     try:
         # Admin can access all teams, regular users only their teams
@@ -534,8 +534,8 @@ async def remove_member(
 @router.post("/verification/request", status_code=status.HTTP_201_CREATED)
 async def submit_verification_request(
     team_id: UUID,
-    documents: list[dict],
-    team_member_list: list[dict],
+    documents: List[dict],
+    team_member_list: List[dict],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
 ) -> dict:
@@ -565,11 +565,11 @@ async def get_verification_status(
     return status_info
 
 
-@router.get("/verifications/pending", response_model=list[VerificationResponse])
+@router.get("/verifications/pending", response_model=List[VerificationResponse])
 async def get_pending_verifications(
     current_user: Annotated[dict, Depends(require_admin)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-) -> list[VerificationResponse]:
+) -> List[VerificationResponse]:
     """Get all pending verifications (Admin only)."""
     return await service.get_pending_verifications()
 
@@ -640,7 +640,7 @@ async def upload_verification_documents(
     team_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    files: list[UploadFile],
+    files: List[UploadFile],
 ) -> dict:
     """Upload verification documents (leader only)."""
     from app.infrastructure.storage.file_upload import FileUploadService
@@ -714,9 +714,9 @@ async def get_team_stats(
 async def get_session_history(
     team_id: UUID,
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    user_id: str | None = None,
+    user_id: Optional[str] = None,
     limit: int = 100,
-) -> list[dict]:
+) -> List[dict]:
     """Get session history for a team or user."""
     return await service.get_session_history(team_id, user_id, limit)
 
@@ -725,7 +725,7 @@ async def get_session_history(
 async def get_user_invitations(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    status_filter: str | None = Query(None, pattern="^(pending|accepted|rejected)$"),
+    status_filter: Optional[str] = Query(None, pattern="^(pending|accepted|rejected)$"),
 ) -> dict:
     """Get all invitations for the current user."""
     try:
@@ -800,7 +800,7 @@ async def get_mini_game_leaderboard(
     game_type: str,
     service: Annotated[RankingService, Depends(get_ranking_service)],
     limit: int = 10,
-) -> list[dict]:
+) -> List[dict]:
     """Get leaderboard for a specific game type."""
     try:
         return await service.get_mini_game_leaderboard(game_type, limit)
@@ -812,9 +812,9 @@ async def get_mini_game_leaderboard(
 async def get_team_mini_games(
     team_id: UUID,
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    game_type: str | None = None,
+    game_type: Optional[str] = None,
     limit: int = 50,
-) -> list[dict]:
+) -> List[dict]:
     """Get mini-game history for a team."""
     return await service.get_team_mini_game_history(team_id, game_type, limit)
 

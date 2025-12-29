@@ -1,6 +1,7 @@
 """Community ORM Models - posts, comments, likes."""
 
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -29,7 +30,7 @@ class Comment(Base, TimestampMixin):
     post_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    parent_comment_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)  # For nested comments
+    parent_comment_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)  # For nested comments
     likes: Mapped[int] = mapped_column(Integer, default=0)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 

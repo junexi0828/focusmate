@@ -1,6 +1,7 @@
 """Room Reservation domain service."""
 
 from datetime import UTC, datetime
+from typing import List
 
 from app.core.exceptions import NotFoundException
 from app.domain.room_reservation.schemas import (
@@ -145,7 +146,7 @@ class RoomReservationService:
 
     async def get_user_reservations(
         self, user_id: str, active_only: bool = True
-    ) -> list[RoomReservationResponse]:
+    ) -> List[RoomReservationResponse]:
         """Get all reservations for a user.
 
         Args:
@@ -160,7 +161,7 @@ class RoomReservationService:
 
     async def get_upcoming_reservations(
         self, user_id: str
-    ) -> list[RoomReservationResponse]:
+    ) -> List[RoomReservationResponse]:
         """Get upcoming reservations for a user.
 
         Args:
@@ -233,7 +234,7 @@ class RoomReservationService:
 
         return await self.repository.delete(reservation_id)
 
-    async def get_due_reservations(self) -> list[RoomReservationResponse]:
+    async def get_due_reservations(self) -> List[RoomReservationResponse]:
         """Get reservations that are due to be processed (within 1 minute).
 
         Returns:
@@ -306,7 +307,7 @@ class RoomReservationService:
 
     async def get_reservations_needing_notification(
         self
-    ) -> list[RoomReservationResponse]:
+    ) -> List[RoomReservationResponse]:
         """Get reservations that need notification sent.
 
         Returns:

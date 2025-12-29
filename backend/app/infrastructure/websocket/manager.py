@@ -1,6 +1,6 @@
 """WebSocket connection manager for real-time communication."""
 
-from typing import Any
+from typing import Any, Dict
 
 from fastapi import WebSocket
 
@@ -33,7 +33,7 @@ class ConnectionManager(BaseConnectionManager[str]):
         """
         self._remove_connection(websocket, room_id)
 
-    async def send_personal_message(self, message: dict[str, Any], websocket: WebSocket) -> None:
+    async def send_personal_message(self, message: Dict[str, Any], websocket: WebSocket) -> None:
         """Send message to specific connection.
 
         Args:
@@ -42,7 +42,7 @@ class ConnectionManager(BaseConnectionManager[str]):
         """
         await self._send_json(websocket, message)
 
-    async def broadcast_to_room(self, message: dict[str, Any], room_id: str) -> None:
+    async def broadcast_to_room(self, message: Dict[str, Any], room_id: str) -> None:
         """Broadcast message to all connections in a room.
 
         Args:

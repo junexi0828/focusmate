@@ -3,6 +3,7 @@
 import secrets
 import string
 from datetime import UTC, datetime, timedelta
+from typing import Optional
 from uuid import UUID
 
 from app.core.config import settings
@@ -24,7 +25,7 @@ class InvitationService:
     def __init__(
         self,
         chat_repo: ChatRepository,
-        friend_repo: FriendRepository | None = None,
+        friend_repo: Optional[FriendRepository] = None,
     ):
         self.chat_repo = chat_repo
         self.friend_repo = friend_repo

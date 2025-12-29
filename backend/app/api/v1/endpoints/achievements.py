@@ -1,6 +1,6 @@
 """Achievement API endpoints."""
 
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -86,10 +86,10 @@ async def create_achievement(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
 
 
-@router.get("/", response_model=list[AchievementResponse])
+@router.get("/", response_model=List[AchievementResponse])
 async def get_all_achievements(
     service: Annotated[AchievementService, Depends(get_achievement_service)],
-) -> list[AchievementResponse]:
+) -> List[AchievementResponse]:
     """Get all active achievements.
 
     Args:
@@ -101,11 +101,11 @@ async def get_all_achievements(
     return await service.get_all_achievements()
 
 
-@router.get("/category/{category}", response_model=list[AchievementResponse])
+@router.get("/category/{category}", response_model=List[AchievementResponse])
 async def get_achievements_by_category(
     category: str,
     service: Annotated[AchievementService, Depends(get_achievement_service)],
-) -> list[AchievementResponse]:
+) -> List[AchievementResponse]:
     """Get achievements by category.
 
     Args:
@@ -128,11 +128,11 @@ async def get_achievements_by_category(
     return await service.get_achievements_by_category(category)
 
 
-@router.get("/user/{user_id}", response_model=list[UserAchievementResponse])
+@router.get("/user/{user_id}", response_model=List[UserAchievementResponse])
 async def get_user_achievements(
     user_id: str,
     service: Annotated[AchievementService, Depends(get_achievement_service)],
-) -> list[UserAchievementResponse]:
+) -> List[UserAchievementResponse]:
     """Get all unlocked achievements for a user.
 
     Args:
@@ -145,11 +145,11 @@ async def get_user_achievements(
     return await service.get_user_achievements(user_id)
 
 
-@router.get("/user/{user_id}/progress", response_model=list[AchievementProgressResponse])
+@router.get("/user/{user_id}/progress", response_model=List[AchievementProgressResponse])
 async def get_user_achievement_progress(
     user_id: str,
     service: Annotated[AchievementService, Depends(get_achievement_service)],
-) -> list[AchievementProgressResponse]:
+) -> List[AchievementProgressResponse]:
     """Get achievement progress for a user across all achievements.
 
     Args:
@@ -162,11 +162,11 @@ async def get_user_achievement_progress(
     return await service.get_user_achievement_progress(user_id)
 
 
-@router.post("/user/{user_id}/check", response_model=list[UserAchievementResponse])
+@router.post("/user/{user_id}/check", response_model=List[UserAchievementResponse])
 async def check_and_unlock_achievements(
     user_id: str,
     service: Annotated[AchievementService, Depends(get_achievement_service)],
-) -> list[UserAchievementResponse]:
+) -> List[UserAchievementResponse]:
     """Check user progress and unlock any newly achieved achievements.
 
     This endpoint should be called after significant user actions

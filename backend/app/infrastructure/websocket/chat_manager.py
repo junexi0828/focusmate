@@ -2,6 +2,7 @@
 
 import logging
 from uuid import UUID
+from typing import Dict
 
 from fastapi import WebSocket
 
@@ -21,9 +22,9 @@ class ChatConnectionManager(BaseConnectionManager[UUID]):
     def __init__(self):
         super().__init__()
         # Override to use Set instead of List for better performance
-        self.active_connections: dict[UUID, set[WebSocket]] = {}
+        self.active_connections: Dict[UUID, Set[WebSocket]] = {}
         # websocket -> user_id mapping
-        self.user_connections: dict[WebSocket, str] = {}
+        self.user_connections: Dict[WebSocket, str] = {}
 
     async def connect(self, websocket: WebSocket, room_id: UUID, user_id: str):
         """Connect user to a room.

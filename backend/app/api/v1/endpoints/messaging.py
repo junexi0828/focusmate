@@ -1,6 +1,6 @@
 """Messaging API endpoints - conversations and 1:1 messages."""
 
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -86,11 +86,11 @@ async def send_message(
 
 
 # Conversation Endpoints
-@router.get("/conversations", response_model=list[ConversationListResponse])
+@router.get("/conversations", response_model=List[ConversationListResponse])
 async def get_user_conversations(
     service: Annotated[MessagingService, Depends(get_messaging_service)],
     user_id: str = Query(..., description="User ID"),
-) -> list[ConversationListResponse]:
+) -> List[ConversationListResponse]:
     """Get all conversations for a user.
 
     Args:

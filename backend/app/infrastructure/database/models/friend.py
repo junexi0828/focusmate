@@ -2,6 +2,7 @@
 
 import enum
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy import Enum as SQLEnum
@@ -28,7 +29,7 @@ class FriendRequest(Base, TimestampMixin):
         nullable=False,
         default=FriendRequestStatus.PENDING
     )
-    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    responded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Friend(Base, TimestampMixin):

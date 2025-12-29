@@ -1,6 +1,7 @@
 """Ranking System ORM Models."""
 
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import (
@@ -79,14 +80,14 @@ class RankingTeam(Base, TimestampMixin):
         comment="Mini-games enabled",
     )
 
-    invite_code: Mapped[str | None] = mapped_column(
+    invite_code: Mapped[Optional[str]] = mapped_column(
         String(10),
         unique=True,
         nullable=True,
         comment="Unique invite code",
     )
 
-    affiliation_info: Mapped[dict | None] = mapped_column(
+    affiliation_info: Mapped[Optional[dict]] = mapped_column(
         JSONB,
         nullable=True,
         comment="School/department information",
@@ -218,7 +219,7 @@ class RankingTeamInvitation(Base):
         comment="Expiration timestamp",
     )
 
-    accepted_at: Mapped[datetime | None] = mapped_column(
+    accepted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Acceptance timestamp",
@@ -361,13 +362,13 @@ class RankingMiniGame(Base):
         comment="Game success status",
     )
 
-    completion_time: Mapped[float | None] = mapped_column(
+    completion_time: Mapped[Optional[float]] = mapped_column(
         Float,
         nullable=True,
         comment="Completion time in seconds",
     )
 
-    game_data: Mapped[dict | None] = mapped_column(
+    game_data: Mapped[Optional[dict]] = mapped_column(
         JSONB,
         nullable=True,
         comment="Game-specific data",
@@ -431,7 +432,7 @@ class RankingVerificationRequest(Base):
         comment="Request status",
     )
 
-    admin_note: Mapped[str | None] = mapped_column(
+    admin_note: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True,
         comment="Admin review note",
@@ -444,13 +445,13 @@ class RankingVerificationRequest(Base):
         comment="Submission timestamp",
     )
 
-    reviewed_at: Mapped[datetime | None] = mapped_column(
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Review timestamp",
     )
 
-    reviewed_by: Mapped[str | None] = mapped_column(
+    reviewed_by: Mapped[Optional[str]] = mapped_column(
         String(36),
         ForeignKey("user.id", ondelete="SET NULL"),
         nullable=True,
@@ -511,14 +512,14 @@ class RankingLeaderboard(Base, TimestampMixin):
         comment="Ranking score",
     )
 
-    rank: Mapped[int | None] = mapped_column(
+    rank: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         index=True,
         comment="Current rank",
     )
 
-    rank_change: Mapped[int | None] = mapped_column(
+    rank_change: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         server_default=text("0"),

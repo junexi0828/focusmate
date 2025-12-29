@@ -3,6 +3,7 @@
 import os
 import uuid
 from datetime import datetime
+from typing import List, Optional, Tuple
 from pathlib import Path
 
 from fastapi import UploadFile
@@ -20,7 +21,7 @@ class FileUploadService:
         self.allowed_extensions = {".jpg", ".jpeg", ".png", ".pdf"}
         self.max_file_size = 10 * 1024 * 1024  # 10MB
 
-    def validate_file(self, file: UploadFile) -> tuple[bool, str | None]:
+    def validate_file(self, file: UploadFile) -> Tuple[bool, Optional[str]]:
         """Validate uploaded file."""
         # Check file extension
         file_ext = Path(file.filename).suffix.lower()
@@ -58,8 +59,8 @@ class FileUploadService:
         return str(file_path.relative_to(self.upload_dir.parent))
 
     async def save_multiple_files(
-        self, files: list[UploadFile], team_id: str
-    ) -> list[str]:
+        self, files: List[UploadFile], team_id: str
+    ) -> List[str]:
         """Save multiple files and return list of file paths."""
         file_paths = []
         for file in files:
@@ -111,7 +112,7 @@ class S3UploadService:
         self.ClientError = ClientError
         self.datetime = datetime
 
-    async def save_file(self, file: UploadFile, user_id: str) -> tuple[str, str]:
+    async def save_file(self, file: UploadFile, user_id: str) -> Tuple[str, str]:
         """Upload file to S3."""
         try:
             # Generate unique filename
@@ -143,8 +144,8 @@ class S3UploadService:
             raise ValueError(f"S3 upload failed: {e}")
 
     async def save_multiple_files(
-        self, files: list[UploadFile], user_id: str
-    ) -> list[tuple[str, str]]:
+        self, files: List[UploadFile], user_id: str
+    ) -> List[Tuple[str, str]]:
         """Upload multiple files to S3."""
         results = []
         for file in files:

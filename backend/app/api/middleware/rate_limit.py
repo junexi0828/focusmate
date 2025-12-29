@@ -6,7 +6,7 @@ or authenticated user within a specified time window.
 
 import time
 from collections.abc import Callable
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import redis.asyncio as aioredis
 from fastapi import Request, Response, status
@@ -112,7 +112,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def is_rate_limited(
         self, client_id: str, path: str
-    ) -> tuple[bool, dict]:
+    ) -> Tuple[bool, Dict]:
         """Check if client has exceeded rate limit.
 
         Uses sliding window algorithm with Redis.

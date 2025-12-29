@@ -2,6 +2,7 @@
 
 import logging
 from datetime import UTC, datetime, timedelta
+from typing import List, Optional
 
 from app.core.exceptions import ValidationException
 from app.domain.achievement.schemas import (
@@ -29,8 +30,8 @@ class AchievementService:
         achievement_repo: AchievementRepository,
         user_achievement_repo: UserAchievementRepository,
         user_repo: UserRepository,
-        post_repo: PostRepository | None = None,
-        session_repo: SessionHistoryRepository | None = None,
+        post_repo: Optional[PostRepository] = None,
+        session_repo: Optional[SessionHistoryRepository] = None,
     ) -> None:
         self.achievement_repo = achievement_repo
         self.user_achievement_repo = user_achievement_repo
@@ -70,17 +71,17 @@ class AchievementService:
         created = await self.achievement_repo.create(achievement)
         return AchievementResponse.model_validate(created)
 
-    async def get_all_achievements(self) -> list[AchievementResponse]:
+    async def get_all_achievements(self) -> List[AchievementResponse]:
         """Get all active achievements."""
         achievements = await self.achievement_repo.get_all_active()
         return [AchievementResponse.model_validate(a) for a in achievements]
 
-    async def get_achievements_by_category(self, category: str) -> list[AchievementResponse]:
+    async def get_achievements_by_category(self, category: str) -> List[AchievementResponse]:
         """Get achievements by category."""
         achievements = await self.achievement_repo.get_by_category(category)
         return [AchievementResponse.model_validate(a) for a in achievements]
 
-    async def get_user_achievements(self, user_id: str) -> list[UserAchievementResponse]:
+    async def get_user_achievements(self, user_id: str) -> List[UserAchievementResponse]:
         """Get all unlocked achievements for a user."""
         user_achievements = await self.user_achievement_repo.get_all_by_user(user_id)
 
@@ -94,7 +95,7 @@ class AchievementService:
 
         return result
 
-    async def get_user_achievement_progress(self, user_id: str) -> list[AchievementProgressResponse]:
+    async def get_user_achievement_progress(self, user_id: str) -> List[AchievementProgressResponse]:
         """Get achievement progress for a user across all achievements.
 
         Args:
@@ -143,7 +144,7 @@ class AchievementService:
 
         return result
 
-    async def check_and_unlock_achievements(self, user_id: str) -> list[UserAchievementResponse]:
+    async def check_and_unlock_achievements(self, user_id: str) -> List[UserAchievementResponse]:
         """Check user progress and unlock any newly achieved achievements.
 
         Args:

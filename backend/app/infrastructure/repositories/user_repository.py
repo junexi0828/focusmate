@@ -1,6 +1,7 @@
 """User repository implementation."""
 
 from sqlalchemy import select
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models.user import User
@@ -19,12 +20,12 @@ class UserRepository:
         await self.db.refresh(user)
         return user
 
-    async def get_by_id(self, user_id: str) -> User | None:
+    async def get_by_id(self, user_id: str) -> Optional[User]:
         """Get user by ID."""
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
-    async def get_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, email: str) -> Optional[User]:
         """Get user by email."""
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
@@ -40,14 +41,14 @@ class UserRepository:
         await self.db.delete(user)
         await self.db.flush()
 
-    async def get_by_password_reset_token(self, token: str) -> User | None:
+    async def get_by_password_reset_token(self, token: str) -> Optional[User]:
         """Get user by password reset token."""
         result = await self.db.execute(
             select(User).where(User.password_reset_token == token)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_naver_id(self, naver_id: str) -> User | None:
+    async def get_by_naver_id(self, naver_id: str) -> Optional[User]:
         """Get user by Naver OAuth ID."""
         result = await self.db.execute(
             select(User).where(User.naver_id == naver_id)

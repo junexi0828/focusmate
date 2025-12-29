@@ -5,7 +5,7 @@ ISO/IEC 25010 Compliance: Maintainability, Reliability
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Dict
 
 from sqlalchemy import DateTime, MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
@@ -44,7 +44,7 @@ class Base(DeclarativeBase):
             ["_" + c.lower() if c.isupper() else c for c in name]
         ).lstrip("_")
 
-    def dict(self) -> dict[str, Any]:
+    def dict(self) -> Dict[str, Any]:
         """Convert model instance to dictionary.
 
         Returns:

@@ -1,6 +1,7 @@
 """Achievement domain schemas."""
 
 from datetime import datetime
+from typing import Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,8 +12,8 @@ class AchievementBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(..., min_length=1)
     icon: str = Field(..., min_length=1, max_length=50)
-    category: str = Field(..., pattern="^(sessions|time|streak|social)$")
-    requirement_type: str = Field(..., pattern="^(total_sessions|total_focus_time|streak_days|community_posts)$")
+    category: str = Field(..., pattern="^(Union[sessions, time]|Union[streak, social])$")
+    requirement_type: str = Field(..., pattern="^(Union[total_sessions, total_focus_time]|Union[streak_days, community_posts])$")
     requirement_value: int = Field(..., gt=0)
     points: int = Field(default=10, ge=0)
 
@@ -43,7 +44,7 @@ class UserAchievementResponse(BaseModel):
     achievement_id: str
     unlocked_at: datetime
     progress: int
-    achievement: AchievementResponse | None = None
+    achievement: Optional[AchievementResponse] = None
 
 
 class AchievementUnlockRequest(BaseModel):
@@ -59,4 +60,4 @@ class AchievementProgressResponse(BaseModel):
     is_unlocked: bool
     progress: int
     progress_percentage: float
-    unlocked_at: datetime | None = None
+    unlocked_at: Optional[datetime] = None

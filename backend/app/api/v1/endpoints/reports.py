@@ -1,6 +1,6 @@
 """Report API endpoints."""
 
-from typing import Annotated
+from typing import Annotated, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -48,12 +48,12 @@ async def create_report(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/my", response_model=list[ReportResponse])
+@router.get("/my", response_model=List[ReportResponse])
 async def get_my_reports(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ReportService, Depends(get_report_service)],
     limit: int = Query(50, ge=1, le=100),
-) -> list[ReportResponse]:
+) -> List[ReportResponse]:
     """Get all reports made by current user.
 
     Args:
@@ -67,12 +67,12 @@ async def get_my_reports(
     return await service.get_user_reports(current_user["id"], limit)
 
 
-@router.get("/pending", response_model=list[ReportResponse])
+@router.get("/pending", response_model=List[ReportResponse])
 async def get_pending_reports(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ReportService, Depends(get_report_service)],
     limit: int = Query(100, ge=1, le=200),
-) -> list[ReportResponse]:
+) -> List[ReportResponse]:
     """Get all pending reports (admin only).
 
     Args:

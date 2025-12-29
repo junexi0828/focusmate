@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class SlackNotifier:
     """Slack webhook notifier for sending alerts and notifications."""
 
-    def __init__(self, webhook_url: str | None = None):
+    def __init__(self, webhook_url: Optional[str] = None):
         """Initialize Slack notifier.
 
         Args:
@@ -31,7 +31,7 @@ class SlackNotifier:
     async def send_message(
         self,
         text: str,
-        blocks: list[dict[str, Any]] | None = None,
+        blocks: List[Dict[str, Any]] | None = None,
         level: str = "info",
     ) -> bool:
         """Send message to Slack.
@@ -74,7 +74,7 @@ class SlackNotifier:
     async def notify_error(
         self,
         error: Exception,
-        context: dict[str, Any] | None = None,
+        context: Dict[str, Any] | None = None,
     ) -> bool:
         """Send error notification to Slack.
 
@@ -129,7 +129,7 @@ class SlackNotifier:
         self,
         service: str,
         status: str,
-        details: dict[str, Any] | None = None,
+        details: Dict[str, Any] | None = None,
     ) -> bool:
         """Send service status notification.
 
@@ -233,13 +233,13 @@ slack_notifier = SlackNotifier()
 
 
 # Convenience functions
-async def notify_error(error: Exception, context: dict[str, Any] | None = None):
+async def notify_error(error: Exception, context: Dict[str, Any] | None = None):
     """Send error notification (convenience function)."""
     await slack_notifier.notify_error(error, context)
 
 
 async def notify_service_status(
-    service: str, status: str, details: dict[str, Any] | None = None
+    service: str, status: str, details: Dict[str, Any] | None = None
 ):
     """Send service status notification (convenience function)."""
     await slack_notifier.notify_service_status(service, status, details)
