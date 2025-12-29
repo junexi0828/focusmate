@@ -8,6 +8,7 @@ import logging
 import time
 import uuid
 from collections.abc import Callable
+from typing import List, Optional
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -24,7 +25,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         app: ASGIApp,
         log_request_body: bool = False,
         log_response_body: bool = False,
-        exclude_paths: list[str] | None = None,
+        exclude_paths: Optional[List[str]] = None,
     ):
         """Initialize request logging middleware.
 
@@ -140,7 +141,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def get_request_id(request: Request) -> str | None:
+def get_request_id(request: Request) -> Optional[str]:
     """Get request ID from request state.
 
     Args:
