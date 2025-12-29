@@ -1,6 +1,6 @@
 """Stats API endpoints."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing_extensions import Annotated
 from typing import List, Optional, Union
 from uuid import uuid4
@@ -413,8 +413,8 @@ async def get_user_goal(
             user_id=user_id,
             daily_goal_minutes=120,
             weekly_goal_sessions=5,
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
     # Use the most recent goal

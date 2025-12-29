@@ -1,6 +1,6 @@
 """Repository for matching pool operations."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -85,7 +85,7 @@ class MatchingPoolRepository:
             .where(MatchingPool.member_count == member_count)
             .where(MatchingPool.gender == opposite_gender)
             .where(MatchingPool.pool_id != exclude_pool_id)
-            .where(MatchingPool.expires_at > datetime.now(UTC))
+            .where(MatchingPool.expires_at > datetime.now(timezone.utc))
         )
         return list(result.scalars().all())
 
@@ -174,7 +174,7 @@ class MatchingPoolRepository:
         avg_wait_result = await self.session.execute(
             select(
                 func.avg(
-                    func.extract("epoch", datetime.now(UTC) - MatchingPool.created_at)
+                    func.extract("epoch", datetime.now(timezone.utc) - MatchingPool.created_at)
                     / 3600
                 )
             ).where(MatchingPool.status == "waiting")
@@ -215,7 +215,7 @@ class MatchingPoolRepository:
         result = await self.session.execute(
             select(MatchingPool)
             .where(MatchingPool.status == "waiting")
-            .where(MatchingPool.expires_at < datetime.now(UTC))
+            .where(MatchingPool.expires_at < datetime.now(timezone.utc))
         )
         expired_pools = result.scalars().all()
 

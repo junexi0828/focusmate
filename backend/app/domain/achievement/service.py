@@ -1,7 +1,7 @@
 """Achievement domain service - gamification and achievement tracking."""
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import List, Optional
 
 from app.core.exceptions import ValidationException
@@ -182,7 +182,7 @@ class AchievementService:
                     id=generate_uuid(),
                     user_id=user_id,
                     achievement_id=achievement.id,
-                    unlocked_at=datetime.now(UTC),
+                    unlocked_at=datetime.now(timezone.utc),
                     progress=current_progress,
                 )
                 created = await self.user_achievement_repo.create(user_achievement)
@@ -241,7 +241,7 @@ class AchievementService:
             return 0
 
         # Get sessions from the last 365 days
-        since = datetime.now(UTC) - timedelta(days=365)
+        since = datetime.now(timezone.utc) - timedelta(days=365)
         sessions = await self.session_repo.get_by_user_since(user_id, since)
 
         if not sessions:
@@ -262,7 +262,7 @@ class AchievementService:
         sorted_dates = sorted(session_dates, reverse=True)
 
         # Calculate streak from today backwards
-        today = datetime.now(UTC).date()
+        today = datetime.now(timezone.utc).date()
         streak = 0
         current_date = today
 

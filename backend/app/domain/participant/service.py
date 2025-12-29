@@ -1,6 +1,6 @@
 """Participant domain service."""
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Optional
 
 from app.core.exceptions import (
@@ -102,7 +102,7 @@ class ParticipantService:
             username=final_username,  # Use username from user info or provided
             is_connected=True,
             is_host=is_host,
-            joined_at=datetime.now(UTC),
+            joined_at=datetime.now(timezone.utc),
         )
 
         created = await self.participant_repo.create(participant)
