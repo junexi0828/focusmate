@@ -1,6 +1,7 @@
 """Community domain service - posts, comments, and social interactions."""
 
 from datetime import UTC, datetime
+from typing import List, Optional
 
 from app.core.exceptions import NotFoundException, UnauthorizedException
 from app.domain.community.schemas import (
@@ -77,7 +78,7 @@ class CommunityService:
 
         return response
 
-    async def get_post(self, post_id: str, current_user_id: str | None = None, mark_as_read: bool = True) -> PostResponse:
+    async def get_post(self, post_id: str, current_user_id: Optional[str] = None, mark_as_read: bool = True) -> PostResponse:
         """Get post by ID with author info and like status.
 
         Args:
@@ -118,7 +119,7 @@ class CommunityService:
 
         return response
 
-    async def get_posts(self, filters: PostFilters, current_user_id: str | None = None) -> PostListResult:
+    async def get_posts(self, filters: PostFilters, current_user_id: Optional[str] = None) -> PostListResult:
         """Get posts with filters, sorting, and pagination."""
         posts, total = await self.post_repo.get_posts(
             category=filters.category,
@@ -266,7 +267,7 @@ class CommunityService:
 
         return response
 
-    async def get_post_comments(self, post_id: str, current_user_id: str | None = None) -> list[CommentResponse]:
+    async def get_post_comments(self, post_id: str, current_user_id: Optional[str] = None) -> List[CommentResponse]:
         """Get all comments for a post with nested replies and like status."""
         comments = await self.comment_repo.get_by_post(post_id)
 

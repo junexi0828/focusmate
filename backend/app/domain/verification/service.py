@@ -2,6 +2,7 @@
 
 import logging
 from datetime import UTC, datetime
+from typing import Optional
 from uuid import UUID
 
 from app.domain.verification.schemas import (
@@ -25,7 +26,7 @@ class VerificationService:
     def __init__(
         self,
         repository: VerificationRepository,
-        user_repository: UserRepository | None = None,
+        user_repository: Optional[UserRepository] = None,
     ):
         self.repository = repository
         self.user_repository = user_repository
@@ -289,7 +290,7 @@ class VerificationService:
         }
 
     async def review_verification(
-        self, verification_id: UUID, approved: bool, admin_note: str | None = None
+        self, verification_id: UUID, approved: bool, admin_note: Optional[str] = None
     ) -> VerificationResponse:
         """Review verification request (admin)."""
         update_data = {

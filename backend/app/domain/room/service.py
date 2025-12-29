@@ -22,7 +22,7 @@ class RoomService:
         """
         self.repository = repository
 
-    async def create_room(self, data: RoomCreate, user_id: str | None = None) -> RoomResponse:
+    async def create_room(self, data: RoomCreate, user_id: Optional[str] = None) -> RoomResponse:
         """Create a new room.
 
         Args:
@@ -74,7 +74,7 @@ class RoomService:
         return RoomResponse.model_validate(room)
 
     async def update_room(
-        self, room_id: str, data: RoomUpdate, user_id: str | None = None
+        self, room_id: str, data: RoomUpdate, user_id: Optional[str] = None
     ) -> RoomResponse:
         """Update room settings.
 
@@ -174,7 +174,7 @@ class RoomService:
 
         return RoomResponse.model_validate(updated_room)
 
-    async def get_all_rooms(self) -> list[RoomResponse]:
+    async def get_all_rooms(self) -> List[RoomResponse]:
         """Get all active rooms.
 
         Returns:
@@ -183,7 +183,7 @@ class RoomService:
         rooms = await self.repository.get_all_active()
         return [RoomResponse.model_validate(room) for room in rooms]
 
-    async def delete_room(self, room_id: str, user_id: str | None = None) -> None:
+    async def delete_room(self, room_id: str, user_id: Optional[str] = None) -> None:
         """Delete (deactivate) a room.
 
         Args:

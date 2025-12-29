@@ -6,6 +6,7 @@ ISO/IEC 25010 Quality Standards Compliant.
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Dict, Union
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -118,7 +119,7 @@ app.add_middleware(
 # CORS middleware - must be added before routes
 # This ensures OPTIONS preflight requests are handled correctly
 # Allow ngrok URLs in development using regex pattern
-ngrok_regex = r"https://.*\.ngrok(-free)?\.(app|io)"
+ngrok_regex = r"https://.*\.ngrok(-free)?\.(Union[app, io])"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -150,7 +151,7 @@ async def app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
 
 # Health check endpoint
 @app.get("/health")
-async def health_check() -> dict[str, str]:
+async def health_check() -> Dict[str, str]:
     """Health check endpoint."""
     return {
         "status": "healthy",

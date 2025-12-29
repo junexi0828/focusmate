@@ -1,6 +1,7 @@
 """Messaging domain service - 1:1 conversations and messages."""
 
 from datetime import UTC, datetime
+from typing import List
 
 from app.core.exceptions import NotFoundException
 from app.domain.messaging.schemas import (
@@ -95,7 +96,7 @@ class MessagingService:
 
         return response
 
-    async def get_user_conversations(self, user_id: str) -> list[ConversationListResponse]:
+    async def get_user_conversations(self, user_id: str) -> List[ConversationListResponse]:
         """Get all conversations for a user."""
         conversations = await self.conversation_repo.get_user_conversations(user_id)
 
@@ -189,7 +190,7 @@ class MessagingService:
         )
 
     async def mark_messages_as_read(
-        self, conversation_id: str, user_id: str, message_ids: list[str]
+        self, conversation_id: str, user_id: str, message_ids: List[str]
     ) -> MarkMessagesReadResponse:
         """Mark messages as read.
 

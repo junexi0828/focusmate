@@ -4,6 +4,7 @@ Represents a team room where users collaborate with synchronized timers.
 """
 
 from sqlalchemy import Boolean, Integer, String
+from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
@@ -64,7 +65,7 @@ class Room(Base, TimestampMixin):
         comment="Room active status",
     )
 
-    host_id: Mapped[str | None] = mapped_column(
+    host_id: Mapped[Optional[str]] = mapped_column(
         String(36),
         nullable=True,
         index=True,

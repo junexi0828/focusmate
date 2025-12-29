@@ -1,6 +1,7 @@
 """Notification domain schemas."""
 
 from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -14,7 +15,7 @@ class NotificationCreate(BaseModel):
     type: str = Field(..., min_length=1, max_length=50)
     title: str = Field(..., min_length=1, max_length=200)
     message: str = Field(..., min_length=1)
-    data: dict | None = None
+    data: Optional[dict] = None
 
 
 class NotificationResponse(BaseModel):
@@ -27,9 +28,9 @@ class NotificationResponse(BaseModel):
     type: str
     title: str
     message: str
-    data: dict | None = None
+    data: Optional[dict] = None
     is_read: bool
-    read_at: datetime | None = None
+    read_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -39,4 +40,4 @@ class NotificationMarkRead(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    notification_ids: list[str] = Field(..., min_items=1)
+    notification_ids: List[str] = Field(..., min_items=1)

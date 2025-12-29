@@ -4,6 +4,7 @@ Handles database operations for room reservations.
 """
 
 from datetime import UTC, datetime
+from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,7 +38,7 @@ class RoomReservationRepository:
         await self.session.refresh(reservation)
         return reservation
 
-    async def get_by_id(self, reservation_id: str) -> RoomReservation | None:
+    async def get_by_id(self, reservation_id: str) -> Optional[RoomReservation]:
         """Get reservation by ID.
 
         Args:
@@ -53,7 +54,7 @@ class RoomReservationRepository:
 
     async def get_by_user_id(
         self, user_id: str, active_only: bool = True
-    ) -> list[RoomReservation]:
+    ) -> List[RoomReservation]:
         """Get all reservations for a user.
 
         Args:
@@ -70,7 +71,7 @@ class RoomReservationRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_upcoming(self, user_id: str) -> list[RoomReservation]:
+    async def get_upcoming(self, user_id: str) -> List[RoomReservation]:
         """Get upcoming reservations for a user.
 
         Args:
@@ -120,7 +121,7 @@ class RoomReservationRepository:
 
     async def get_due_reservations(
         self, start_time: datetime, end_time: datetime
-    ) -> list[RoomReservation]:
+    ) -> List[RoomReservation]:
         """Get reservations due between start and end time.
 
         Args:
@@ -143,7 +144,7 @@ class RoomReservationRepository:
 
     async def get_reservations_needing_notification(
         self
-    ) -> list[RoomReservation]:
+    ) -> List[RoomReservation]:
         """Get reservations that need notification sent.
 
         Returns:

@@ -257,7 +257,7 @@ class NotificationHelper:
         user_id: str,
         title: str,
         message: str,
-        routing_path: str | None = None,
+        routing_path: Optional[str] = None,
     ) -> NotificationCreate:
         """Create a system notification.
 

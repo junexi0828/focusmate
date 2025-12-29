@@ -1,6 +1,7 @@
 """Participant domain service."""
 
 from datetime import UTC, datetime
+from typing import Optional
 
 from app.core.exceptions import (
     ParticipantNotFoundException,
@@ -27,7 +28,7 @@ class ParticipantService:
         self,
         participant_repo: ParticipantRepository,
         room_repo: RoomRepository,
-        user_repo: UserRepository | None = None,
+        user_repo: Optional[UserRepository] = None,
     ) -> None:
         """Initialize service."""
         self.participant_repo = participant_repo

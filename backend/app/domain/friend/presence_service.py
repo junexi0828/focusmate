@@ -35,14 +35,14 @@ class PresenceService:
         """Decrement connection count and return new count."""
         return await self.presence_repo.decrement_connection_count(user_id)
 
-    async def get_user_presence(self, user_id: str) -> FriendPresence | None:
+    async def get_user_presence(self, user_id: str) -> Optional[FriendPresence]:
         """Get presence for a specific user."""
         presence = await self.presence_repo.get_presence(user_id)
         if presence:
             return FriendPresence.model_validate(presence)
         return None
 
-    async def get_friends_presence(self, user_id: str) -> list[FriendPresence]:
+    async def get_friends_presence(self, user_id: str) -> List[FriendPresence]:
         """Get presence information for all friends of a user."""
         # Get user's friends
         friends = await self.friend_repo.get_user_friends(user_id)
@@ -57,13 +57,13 @@ class PresenceService:
         # Convert to response models
         return [FriendPresence.model_validate(p) for p in presences]
 
-    async def get_online_friends(self, user_id: str) -> list[str]:
+    async def get_online_friends(self, user_id: str) -> List[str]:
         """Get list of friend IDs who are currently online."""
         presences = await self.get_friends_presence(user_id)
         return [p.user_id for p in presences if p.is_online]
 
     async def update_status_message(
-        self, user_id: str, status_message: str | None
+        self, user_id: str, status_message: Optional[str]
     ) -> FriendPresence:
         """Update user's status message."""
         presence = await self.presence_repo.get_presence(user_id)
@@ -86,7 +86,7 @@ class PresenceService:
 
     async def broadcast_presence_change(
         self, user_id: str, is_online: bool
-    ) -> list[str]:
+    ) -> List[str]:
         """
         Get list of friend IDs to broadcast presence change to.
         This should be called after presence change to notify friends.

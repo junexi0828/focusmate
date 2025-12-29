@@ -1,6 +1,7 @@
 """Community domain schemas."""
 
 from datetime import datetime
+from typing import List, Optional
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,9 +28,9 @@ class PostCreate(BaseModel):
 class PostUpdate(BaseModel):
     """Schema for updating a post."""
 
-    title: str | None = Field(None, min_length=1, max_length=200)
-    content: str | None = Field(None, min_length=1, max_length=10000)
-    category: str | None = Field(None, min_length=1, max_length=50)
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    content: Optional[str] = Field(None, min_length=1, max_length=10000)
+    category: Optional[str] = Field(None, min_length=1, max_length=50)
 
 
 class PostResponse(BaseModel):
@@ -48,7 +49,7 @@ class PostResponse(BaseModel):
     is_deleted: bool
     created_at: datetime
     updated_at: datetime
-    author_username: str | None = None
+    author_username: Optional[str] = None
     is_liked: bool = False  # Whether current user liked this post
     is_read: bool = False  # Whether current user has read this post
 
@@ -66,7 +67,7 @@ class PostListResponse(BaseModel):
     comment_count: int
     is_pinned: bool
     created_at: datetime
-    author_username: str | None = None
+    author_username: Optional[str] = None
     is_liked: bool = False  # Whether current user liked this post
     is_read: bool = False  # Whether current user has read this post
 
@@ -76,7 +77,7 @@ class CommentCreate(BaseModel):
     """Schema for creating a new comment."""
 
     content: str = Field(..., min_length=1, max_length=5000)
-    parent_comment_id: str | None = Field(None, max_length=36)
+    parent_comment_id: Optional[str] = Field(None, max_length=36)
 
 
 class CommentUpdate(BaseModel):
@@ -94,14 +95,14 @@ class CommentResponse(BaseModel):
     post_id: str
     user_id: str
     content: str
-    parent_comment_id: str | None
+    parent_comment_id: Optional[str]
     likes: int
     is_deleted: bool
     created_at: datetime
     updated_at: datetime
-    author_username: str | None = None
+    author_username: Optional[str] = None
     is_liked: bool = False  # Whether current user liked this comment
-    replies: list["CommentResponse"] = []  # Nested replies
+    replies: List["CommentResponse"] = []  # Nested replies
 
 
 # Like Schemas
@@ -117,12 +118,12 @@ class LikeResponse(BaseModel):
 class PostFilters(BaseModel):
     """Filters for post search."""
 
-    category: str | None = None
-    user_id: str | None = None
-    search: str | None = None  # Search in title and content
-    author_username: str | None = None  # Search by author username
-    date_from: datetime | None = None  # Filter posts from this date
-    date_to: datetime | None = None  # Filter posts until this date
+    category: Optional[str] = None
+    user_id: Optional[str] = None
+    search: Optional[str] = None  # Search in title and content
+    author_username: Optional[str] = None  # Search by author username
+    date_from: Optional[datetime] = None  # Filter posts from this date
+    date_to: Optional[datetime] = None  # Filter posts until this date
     sort_by: PostSortBy = Field(default=PostSortBy.RECENT)  # Sorting option
     limit: int = Field(default=20, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
@@ -131,7 +132,7 @@ class PostFilters(BaseModel):
 class PostListResult(BaseModel):
     """Paginated post list result."""
 
-    posts: list[PostListResponse]
+    posts: List[PostListResponse]
     total: int
     limit: int
     offset: int

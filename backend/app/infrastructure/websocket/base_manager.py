@@ -3,7 +3,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, Dict, Generic, List, TypeVar
 
 from fastapi import WebSocket
 
@@ -24,7 +24,7 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
 
     def __init__(self) -> None:
         """Initialize base connection manager."""
-        self.active_connections: dict[KeyType, list[WebSocket]] = {}
+        self.active_connections: Dict[KeyType, List[WebSocket]] = {}
         logger.info(f"{self.__class__.__name__} initialized")
 
     async def _accept_websocket(self, websocket: WebSocket) -> None:
@@ -65,7 +65,7 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
                 del self.active_connections[key]
                 logger.debug(f"No more connections for key={key}, removed from active connections")
 
-    async def _send_json(self, websocket: WebSocket, message: dict[str, Any]) -> bool:
+    async def _send_json(self, websocket: WebSocket, message: Dict[str, Any]) -> bool:
         """Send JSON message to a WebSocket.
 
         Args:
@@ -84,8 +84,8 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
 
     async def _broadcast_with_cleanup(
         self,
-        connections: list[WebSocket],
-        message: dict[str, Any],
+        connections: List[WebSocket],
+        message: Dict[str, Any],
         key: KeyType
     ) -> None:
         """Broadcast message to connections and clean up failed ones.

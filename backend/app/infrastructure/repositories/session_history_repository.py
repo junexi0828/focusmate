@@ -1,6 +1,7 @@
 """Session history repository."""
 
 from datetime import datetime
+from typing import List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +22,7 @@ class SessionHistoryRepository:
         await self.db.refresh(session)
         return session
 
-    async def get_by_user_since(self, user_id: str, since: datetime) -> list[SessionHistory]:
+    async def get_by_user_since(self, user_id: str, since: datetime) -> List[SessionHistory]:
         """Get user sessions since date."""
         result = await self.db.execute(
             select(SessionHistory)
@@ -36,7 +37,7 @@ class SessionHistoryRepository:
         user_id: str,
         start_date: datetime,
         end_date: datetime,
-    ) -> list[SessionHistory]:
+    ) -> List[SessionHistory]:
         """Get user sessions within date range.
 
         Args:

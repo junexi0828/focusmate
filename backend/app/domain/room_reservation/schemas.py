@@ -1,6 +1,7 @@
 """Room Reservation domain schemas (Request/Response DTOs)."""
 
 from datetime import datetime
+from typing import Optional, Union
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,11 +27,11 @@ class RoomReservationCreate(BaseModel):
     break_duration: int = Field(
         default=5 * 60, ge=60, le=1800, description="Break time in seconds"
     )
-    description: str | None = Field(None, max_length=500, description="Optional description")
-    recurrence_type: RecurrenceType | str = Field(
+    description: Optional[str] = Field(None, max_length=500, description="Optional description")
+    recurrence_type: Union[RecurrenceType, str] = Field(
         default=RecurrenceType.NONE, description="Recurrence pattern"
     )
-    recurrence_end_date: datetime | str | None = Field(
+    recurrence_end_date: Union[datetime, Optional][str] = Field(
         None, description="When to stop creating recurring reservations"
     )
     notification_minutes: int = Field(
@@ -43,12 +44,12 @@ class RoomReservationUpdate(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    scheduled_at: datetime | None = Field(None, description="When the room session should start")
-    work_duration: int | None = Field(None, ge=60, le=3600, description="Focus time in seconds")
-    break_duration: int | None = Field(
+    scheduled_at: Optional[datetime] = Field(None, description="When the room session should start")
+    work_duration: Optional[int] = Field(None, ge=60, le=3600, description="Focus time in seconds")
+    break_duration: Optional[int] = Field(
         None, ge=60, le=1800, description="Break time in seconds"
     )
-    description: str | None = Field(None, max_length=500, description="Optional description")
+    description: Optional[str] = Field(None, max_length=500, description="Optional description")
 
 
 class RoomReservationResponse(BaseModel):
@@ -57,16 +58,16 @@ class RoomReservationResponse(BaseModel):
     model_config = ConfigDict(strict=True, from_attributes=True)
 
     id: str
-    room_id: str | None
+    room_id: Optional[str]
     user_id: str
     scheduled_at: datetime
     work_duration: int
     break_duration: int
-    description: str | None
+    description: Optional[str]
     is_active: bool
     is_completed: bool
-    recurrence_type: str | None = None
-    recurrence_end_date: datetime | None = None
+    recurrence_type: Optional[str] = None
+    recurrence_end_date: Optional[datetime] = None
     notification_minutes: int = 5
     notification_sent: bool = False
     created_at: datetime

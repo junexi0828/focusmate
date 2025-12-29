@@ -1,7 +1,7 @@
 """Stats API endpoints."""
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, List, Optional, Union
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -50,7 +50,7 @@ class UserStatsResponse(BaseModel):
     total_focus_time: int
     total_sessions: int
     average_session: int
-    sessions: list[
+    sessions: List[
         dict
     ]  # List of session records with session_id, user_id, room_id, session_type, duration_minutes, completed_at
 
@@ -58,15 +58,15 @@ class UserStatsResponse(BaseModel):
 class HourlyPatternResponse(BaseModel):
     """Hourly focus pattern response for radar chart."""
 
-    hourly_focus_time: list[int]  # 24 hours (0-23)
+    hourly_focus_time: List[int]  # 24 hours (0-23)
     total_days: int
-    peak_hour: int | None = None
+    peak_hour: Optional[int] = None
 
 
 class MonthlyComparisonResponse(BaseModel):
     """Monthly comparison response for line chart."""
 
-    monthly_data: list[dict]
+    monthly_data: List[dict]
     total_months: int
 
 
@@ -170,10 +170,10 @@ async def get_user_stats(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
     days: int = Query(7, ge=1, le=365),
-    start_date: str | None = Query(
+    start_date: Optional[str] = Query(
         None, description="Start date (ISO format: YYYY-MM-DD)"
     ),
-    end_date: str | None = Query(
+    end_date: Optional[str] = Query(
         None, description="End date (ISO format: YYYY-MM-DD)"
     ),
 ) -> UserStatsResponse:
@@ -466,12 +466,12 @@ async def save_manual_session(
     return ManualSessionResponse.model_validate(new_session)
 
 
-@router.get("/sessions", response_model=list[ManualSessionResponse])
+@router.get("/sessions", response_model=List[ManualSessionResponse])
 async def get_manual_sessions(
     current_user: Annotated[dict, Depends(get_current_user)],
     db: DatabaseSession,
     limit: int = 100,
-) -> list[ManualSessionResponse]:
+) -> List[ManualSessionResponse]:
     """Get user's manual sessions."""
     if not current_user:
         raise HTTPException(

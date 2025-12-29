@@ -1,6 +1,7 @@
 """Participant domain schemas."""
 
 from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,7 +12,7 @@ class ParticipantJoin(BaseModel):
     model_config = ConfigDict(strict=True)
 
     username: str = Field(min_length=1, max_length=50)
-    user_id: str | None = None
+    user_id: Optional[str] = None
 
 
 class ParticipantResponse(BaseModel):
@@ -21,12 +22,12 @@ class ParticipantResponse(BaseModel):
 
     id: str
     room_id: str
-    user_id: str | None
+    user_id: Optional[str]
     username: str
     is_connected: bool
     is_host: bool
     joined_at: datetime
-    left_at: datetime | None
+    left_at: Optional[datetime]
 
 
 class ParticipantListResponse(BaseModel):
@@ -34,5 +35,5 @@ class ParticipantListResponse(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    participants: list[ParticipantResponse]
+    participants: List[ParticipantResponse]
     total: int

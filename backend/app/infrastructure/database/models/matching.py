@@ -1,6 +1,7 @@
 """Matching pool database models."""
 
 from datetime import datetime
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import (
@@ -40,7 +41,7 @@ class MatchingPool(Base):
 
     # Group information
     member_count: Mapped[int] = mapped_column(Integer(), nullable=False)
-    member_ids: Mapped[list[str]] = mapped_column(ARRAY(Text()), nullable=False)
+    member_ids: Mapped[List[str]] = mapped_column(ARRAY(Text()), nullable=False)
 
     # Department information
     department: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -49,7 +50,7 @@ class MatchingPool(Base):
 
     # Matching preferences
     preferred_match_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    preferred_categories: Mapped[list[str] | None] = mapped_column(
+    preferred_categories: Mapped[List[str] | None] = mapped_column(
         ARRAY(Text()), nullable=True
     )
 
@@ -57,7 +58,7 @@ class MatchingPool(Base):
     matching_type: Mapped[str] = mapped_column(String(10), nullable=False)
 
     # Message
-    message: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    message: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
 
     # Status
     status: Mapped[str] = mapped_column(
@@ -124,7 +125,7 @@ class MatchingProposal(Base):
     )
 
     # Chat room
-    chat_room_id: Mapped[UUID | None] = mapped_column(
+    chat_room_id: Mapped[Optional[UUID]] = mapped_column(
         PostgreSQL_UUID(as_uuid=True), nullable=True
     )
 
@@ -137,7 +138,7 @@ class MatchingProposal(Base):
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP + INTERVAL '24 hours'"),
     )
-    matched_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
+    matched_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
@@ -198,10 +199,10 @@ class MatchingChatRoom(Base):
 
     # Relationships
     proposal: Mapped["MatchingProposal"] = relationship("MatchingProposal")
-    members: Mapped[list["MatchingChatMember"]] = relationship(
+    members: Mapped[List["MatchingChatMember"]] = relationship(
         "MatchingChatMember", back_populates="room"
     )
-    messages: Mapped[list["MatchingMessage"]] = relationship(
+    messages: Mapped[List["MatchingMessage"]] = relationship(
         "MatchingMessage", back_populates="room"
     )
 
@@ -235,19 +236,19 @@ class MatchingChatMember(Base):
     member_index: Mapped[int] = mapped_column(Integer(), nullable=False)
 
     # Anonymous name
-    anonymous_name: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    anonymous_name: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     # Status
     is_active: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=text("true")
     )
-    last_read_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
+    last_read_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
 
     # Timestamps
     joined_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    left_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
+    left_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("room_id", "user_id", name="uq_matching_chat_members_room_user"),
@@ -290,7 +291,7 @@ class MatchingMessage(Base):
     content: Mapped[str] = mapped_column(Text(), nullable=False)
 
     # Attachments
-    attachments: Mapped[list[str] | None] = mapped_column(
+    attachments: Mapped[List[str] | None] = mapped_column(
         ARRAY(Text()), nullable=True
     )
 
@@ -301,7 +302,7 @@ class MatchingMessage(Base):
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(), nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
 
     # Relationships
     room: Mapped["MatchingChatRoom"] = relationship(

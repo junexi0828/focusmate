@@ -11,6 +11,7 @@ Improvements:
 import logging
 import time
 from collections import defaultdict
+from typing import List, Optional, Tuple
 from uuid import UUID
 
 from app.domain.matching.schemas import (
@@ -110,7 +111,7 @@ class OptimizedMatchingPoolService:
         pool = await self.pool_repository.create_pool(pool_data)
         return MatchingPoolResponse.model_validate(pool)
 
-    async def get_my_pool(self, user_id: str) -> MatchingPoolResponse | None:
+    async def get_my_pool(self, user_id: str) -> Optional[MatchingPoolResponse]:
         """Get user's active pool."""
         pool = await self.pool_repository.get_user_active_pool(user_id)
         if not pool:
@@ -119,7 +120,7 @@ class OptimizedMatchingPoolService:
 
     async def get_pool(
         self, pool_id: UUID, user_id: str
-    ) -> MatchingPoolResponse | None:
+    ) -> Optional[MatchingPoolResponse]:
         """Get pool by ID."""
         pool = await self.pool_repository.get_pool_by_id(pool_id)
         if not pool:
@@ -242,8 +243,8 @@ class OptimizedMatchingPoolService:
         )
 
     async def find_matching_candidates(
-        self, pool: MatchingPoolResponse, all_pools: list[MatchingPoolResponse]
-    ) -> list[tuple[MatchingPoolResponse, int]]:
+        self, pool: MatchingPoolResponse, all_pools: List[MatchingPoolResponse]
+    ) -> List[Tuple[MatchingPoolResponse, int]]:
         """Find and score matching candidates (optimized in-memory version).
 
         Args:
@@ -280,7 +281,7 @@ class OptimizedMatchingPoolService:
 
         return scored_candidates
 
-    async def run_matching_algorithm(self) -> tuple[list[tuple[UUID, UUID]], dict]:
+    async def run_matching_algorithm(self) -> Tuple[List[Tuple[UUID, UUID]], dict]:
         """Run optimized matching algorithm with performance metrics.
 
         Uses stable matching approach:

@@ -2,6 +2,7 @@
 
 import logging
 from datetime import UTC, datetime
+from typing import List, Optional
 
 from app.domain.notification.schemas import (
     NotificationCreate,
@@ -29,9 +30,9 @@ class NotificationService:
     def __init__(
         self,
         repository: NotificationRepository,
-        settings_repository: UserSettingsRepository | None = None,
-        user_repository: UserRepository | None = None,
-        email_service: EmailService | None = None,
+        settings_repository: Optional[UserSettingsRepository] = None,
+        user_repository: Optional[UserRepository] = None,
+        email_service: Optional[EmailService] = None,
     ) -> None:
         """Initialize service.
 
@@ -100,7 +101,7 @@ class NotificationService:
 
     async def create_notification(
         self, data: NotificationCreate
-    ) -> NotificationResponse | None:
+    ) -> Optional[NotificationResponse]:
         """Create a new notification with user settings check.
 
         Args:
@@ -241,7 +242,7 @@ class NotificationService:
         unread_only: bool = False,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[NotificationResponse]:
+    ) -> List[NotificationResponse]:
         """Get notifications for a user.
 
         Args:
@@ -258,7 +259,7 @@ class NotificationService:
         )
         return [NotificationResponse.model_validate(n) for n in notifications]
 
-    async def mark_as_read(self, notification_ids: list[str]) -> int:
+    async def mark_as_read(self, notification_ids: List[str]) -> int:
         """Mark notifications as read.
 
         Args:
