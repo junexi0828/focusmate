@@ -1,7 +1,7 @@
 """Room Reservation API endpoints."""
 
 import logging
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -52,21 +52,21 @@ async def create_reservation(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/", response_model=list[RoomReservationResponse])
+@router.get("/", response_model=List[RoomReservationResponse])
 async def get_my_reservations(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[RoomReservationService, Depends(get_room_reservation_service)],
     active_only: bool = True,
-) -> list[RoomReservationResponse]:
+) -> List[RoomReservationResponse]:
     """Get all reservations for the current user."""
     return await service.get_user_reservations(current_user["id"], active_only)
 
 
-@router.get("/upcoming", response_model=list[RoomReservationResponse])
+@router.get("/upcoming", response_model=List[RoomReservationResponse])
 async def get_upcoming_reservations(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[RoomReservationService, Depends(get_room_reservation_service)],
-) -> list[RoomReservationResponse]:
+) -> List[RoomReservationResponse]:
     """Get upcoming reservations for the current user."""
     try:
         return await service.get_upcoming_reservations(current_user["id"])

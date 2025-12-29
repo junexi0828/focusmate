@@ -1,6 +1,7 @@
 """Repository for user verification operations."""
 
 from uuid import UUID
+from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +25,7 @@ class VerificationRepository:
 
     async def get_verification_by_id(
         self, verification_id: UUID
-    ) -> UserVerification | None:
+    ) -> Optional[UserVerification]:
         """Get verification by ID."""
         result = await self.session.execute(
             select(UserVerification).where(
@@ -35,7 +36,7 @@ class VerificationRepository:
 
     async def get_verification_by_user(
         self, user_id: str
-    ) -> UserVerification | None:
+    ) -> Optional[UserVerification]:
         """Get verification by user ID."""
         result = await self.session.execute(
             select(UserVerification).where(UserVerification.user_id == user_id)
@@ -44,7 +45,7 @@ class VerificationRepository:
 
     async def get_pending_verifications(
         self, limit: int = 100, offset: int = 0
-    ) -> list[UserVerification]:
+    ) -> List[UserVerification]:
         """Get pending verification requests."""
         result = await self.session.execute(
             select(UserVerification)
@@ -57,7 +58,7 @@ class VerificationRepository:
 
     async def update_verification(
         self, verification_id: UUID, update_data: dict
-    ) -> UserVerification | None:
+    ) -> Optional[UserVerification]:
         """Update verification."""
         verification = await self.get_verification_by_id(verification_id)
         if not verification:
@@ -72,7 +73,7 @@ class VerificationRepository:
 
     async def update_verification_settings(
         self, user_id: str, settings: dict
-    ) -> UserVerification | None:
+    ) -> Optional[UserVerification]:
         """Update verification display settings."""
         verification = await self.get_verification_by_user(user_id)
         if not verification:

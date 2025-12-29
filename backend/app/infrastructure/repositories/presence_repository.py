@@ -1,6 +1,7 @@
 """Presence repository."""
 
 from datetime import UTC, datetime
+from typing import List, Optional
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +16,7 @@ class PresenceRepository:
         self.session = session
 
     async def upsert_presence(
-        self, user_id: str, is_online: bool, status_message: str | None = None
+        self, user_id: str, is_online: bool, status_message: Optional[str] = None
     ) -> UserPresence:
         """Create or update user presence."""
         # Try to get existing presence
@@ -43,14 +44,14 @@ class PresenceRepository:
         await self.session.refresh(presence)
         return presence
 
-    async def get_presence(self, user_id: str) -> UserPresence | None:
+    async def get_presence(self, user_id: str) -> Optional[UserPresence]:
         """Get user presence by user ID."""
         result = await self.session.execute(
             select(UserPresence).where(UserPresence.id == user_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_multiple_presence(self, user_ids: list[str]) -> list[UserPresence]:
+    async def get_multiple_presence(self, user_ids: List[str]) -> List[UserPresence]:
         """Get presence for multiple users."""
         result = await self.session.execute(
             select(UserPresence).where(UserPresence.id.in_(user_ids))

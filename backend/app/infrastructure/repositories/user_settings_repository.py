@@ -2,6 +2,7 @@
 
 
 from sqlalchemy import select
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models.user_settings import UserSettings
@@ -28,7 +29,7 @@ class UserSettingsRepository:
         await self.db.refresh(settings)
         return settings
 
-    async def get_by_user_id(self, user_id: str) -> UserSettings | None:
+    async def get_by_user_id(self, user_id: str) -> Optional[UserSettings]:
         """Get user settings by user ID.
 
         Args:
@@ -42,7 +43,7 @@ class UserSettingsRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_id(self, settings_id: str) -> UserSettings | None:
+    async def get_by_id(self, settings_id: str) -> Optional[UserSettings]:
         """Get user settings by ID.
 
         Args:

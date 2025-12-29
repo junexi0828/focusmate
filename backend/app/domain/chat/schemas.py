@@ -1,7 +1,7 @@
 """Pydantic schemas for unified chat system."""
 
 from datetime import datetime
-from typing import Literal
+from typing import List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -12,9 +12,9 @@ class ChatRoomCreate(BaseModel):
     """Schema for creating a chat room."""
 
     room_type: Literal["direct", "team", "matching"]
-    room_name: str | None = None
-    description: str | None = None
-    metadata: dict | None = None
+    room_name: Optional[str] = None
+    description: Optional[str] = None
+    metadata: Optional[dict] = None
     display_mode: Literal["open", "blind"] | None = None
 
 
@@ -23,26 +23,26 @@ class ChatRoomResponse(BaseModel):
 
     room_id: UUID
     room_type: str
-    room_name: str | None
-    description: str | None
-    metadata: dict | None = Field(
+    room_name: Optional[str]
+    description: Optional[str]
+    metadata: Optional[dict] = Field(
         None, alias="room_metadata"
     )  # Maps from room_metadata
-    display_mode: str | None
+    display_mode: Optional[str]
     is_active: bool
     is_archived: bool
     created_at: datetime
-    last_message_at: datetime | None
-    last_message_content: str | None = None  # Last message preview
-    last_message_sender_id: str | None = None  # Last message sender
+    last_message_at: Optional[datetime]
+    last_message_content: Optional[str] = None  # Last message preview
+    last_message_sender_id: Optional[str] = None  # Last message sender
     unread_count: int = 0  # Calculated field
 
     # Direct chat partner info (for direct chats only)
-    partner_id: str | None = None
-    partner_username: str | None = None
-    partner_email: str | None = None
-    partner_profile_image: str | None = None
-    partner_is_online: bool | None = None
+    partner_id: Optional[str] = None
+    partner_username: Optional[str] = None
+    partner_email: Optional[str] = None
+    partner_profile_image: Optional[str] = None
+    partner_is_online: Optional[bool] = None
 
     class Config:
         from_attributes = True
@@ -52,7 +52,7 @@ class ChatRoomResponse(BaseModel):
 class ChatRoomListResponse(BaseModel):
     """Schema for chat room list response."""
 
-    rooms: list[ChatRoomResponse]
+    rooms: List[ChatRoomResponse]
     total: int
 
 
@@ -63,13 +63,13 @@ class ChatMemberResponse(BaseModel):
     member_id: UUID
     user_id: str
     role: str
-    display_name: str | None
-    anonymous_name: str | None
-    group_label: str | None
-    member_index: int | None
+    display_name: Optional[str]
+    anonymous_name: Optional[str]
+    group_label: Optional[str]
+    member_index: Optional[int]
     is_active: bool
     is_muted: bool
-    last_read_at: datetime | None
+    last_read_at: Optional[datetime]
     unread_count: int
     joined_at: datetime
 
@@ -83,8 +83,8 @@ class MessageCreate(BaseModel):
 
     content: str = Field(..., min_length=1, max_length=5000)
     message_type: Literal["text", "image", "file", "system"] = "text"
-    attachments: list[str] | None = None
-    parent_message_id: UUID | None = None
+    attachments: List[str] | None = None
+    parent_message_id: Optional[UUID] = None
 
 
 class MessageUpdate(BaseModel):
@@ -101,8 +101,8 @@ class MessageResponse(BaseModel):
     sender_id: str
     message_type: str
     content: str
-    attachments: list[str] | None
-    parent_message_id: UUID | None
+    attachments: List[str] | None
+    parent_message_id: Optional[UUID]
     thread_count: int
     reactions: list
     is_edited: bool
@@ -117,7 +117,7 @@ class MessageResponse(BaseModel):
 class MessageListResponse(BaseModel):
     """Schema for message list response."""
 
-    messages: list[MessageResponse]
+    messages: List[MessageResponse]
     total: int
     has_more: bool
 
@@ -135,15 +135,15 @@ class TeamChatCreate(BaseModel):
 
     team_id: UUID
     room_name: str = Field(..., min_length=1, max_length=200)
-    description: str | None = None
+    description: Optional[str] = None
 
 
 class TeamChatCreateByEmail(BaseModel):
     """Schema for creating a team chat by email addresses."""
 
     room_name: str = Field(..., min_length=1, max_length=200)
-    description: str | None = None
-    member_emails: list[str] = Field(..., min_items=1, max_items=50)
+    description: Optional[str] = None
+    member_emails: List[str] = Field(..., min_items=1, max_items=50)
     send_invitations: bool = True  # Whether to send email invitations
 
 
@@ -161,7 +161,7 @@ class MatchingChatInfo(BaseModel):
 class ReadStatusUpdate(BaseModel):
     """Schema for updating read status."""
 
-    last_message_id: UUID | None = None
+    last_message_id: Optional[UUID] = None
 
 
 # Invitation Code Schemas
@@ -170,8 +170,8 @@ class InvitationCodeInfo(BaseModel):
 
     code: str
     room_id: UUID
-    expires_at: datetime | None
-    max_uses: int | None
+    expires_at: Optional[datetime]
+    max_uses: Optional[int]
     current_uses: int
     is_valid: bool
 
@@ -183,7 +183,7 @@ class InvitationCodeCreate(BaseModel):
     """Schema for creating invitation code."""
 
     expires_hours: int = Field(24, ge=1, le=168)  # 1 hour to 7 days
-    max_uses: int | None = Field(None, ge=1, le=100)
+    max_uses: Optional[int] = Field(None, ge=1, le=100)
 
 
 class InvitationJoinRequest(BaseModel):
@@ -195,8 +195,8 @@ class InvitationJoinRequest(BaseModel):
 class FriendRoomCreate(BaseModel):
     """Schema for creating room with friends."""
 
-    friend_ids: list[str] = Field(..., min_length=1, max_length=10)
-    room_name: str | None = Field(None, max_length=200)
-    description: str | None = None
+    friend_ids: List[str] = Field(..., min_length=1, max_length=10)
+    room_name: Optional[str] = Field(None, max_length=200)
+    description: Optional[str] = None
     generate_invitation: bool = False
     invitation_expires_hours: int = Field(24, ge=1, le=168)

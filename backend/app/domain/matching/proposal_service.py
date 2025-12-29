@@ -1,6 +1,7 @@
 """Service layer for matching proposals."""
 
 from datetime import UTC, datetime
+from typing import List, Optional
 from uuid import UUID
 
 from app.domain.chat.schemas import MatchingChatInfo
@@ -31,7 +32,7 @@ class ProposalRepository:
 
     async def get_proposal_by_id(
         self, proposal_id: UUID
-    ) -> MatchingProposal | None:
+    ) -> Optional[MatchingProposal]:
         """Get proposal by ID."""
         from sqlalchemy import select
 
@@ -42,7 +43,7 @@ class ProposalRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_pool_proposals(self, pool_id: UUID) -> list[MatchingProposal]:
+    async def get_pool_proposals(self, pool_id: UUID) -> List[MatchingProposal]:
         """Get all proposals for a pool."""
         from sqlalchemy import or_, select
 
@@ -60,7 +61,7 @@ class ProposalRepository:
 
     async def update_proposal(
         self, proposal_id: UUID, update_data: dict
-    ) -> MatchingProposal | None:
+    ) -> Optional[MatchingProposal]:
         """Update proposal."""
         proposal = await self.get_proposal_by_id(proposal_id)
         if not proposal:
@@ -192,7 +193,7 @@ class ProposalService:
         chat_service = ChatService(self.chat_repo)
         return await chat_service.create_matching_chat(chat_info)
 
-    async def get_my_proposals(self, user_id: str) -> list[ProposalResponse]:
+    async def get_my_proposals(self, user_id: str) -> List[ProposalResponse]:
         """Get proposals for user's pools."""
         # Get user's active pool
         pool = await self.pool_repo.get_user_active_pool(user_id)

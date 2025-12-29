@@ -1,7 +1,7 @@
 """Friend domain schemas."""
 
 from datetime import datetime
-from typing import Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,13 +18,13 @@ class FriendRequestResponse(BaseModel):
     receiver_id: str
     status: str
     created_at: datetime
-    responded_at: datetime | None = None
+    responded_at: Optional[datetime] = None
 
     # Sender/receiver info
-    sender_username: str | None = None
-    sender_profile_image: str | None = None
-    receiver_username: str | None = None
-    receiver_profile_image: str | None = None
+    sender_username: Optional[str] = None
+    sender_profile_image: Optional[str] = None
+    receiver_username: Optional[str] = None
+    receiver_profile_image: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -39,21 +39,21 @@ class FriendResponse(BaseModel):
 
     # Friend user info
     friend_username: str
-    friend_email: str | None = None
-    friend_profile_image: str | None = None
-    friend_bio: str | None = None
+    friend_email: Optional[str] = None
+    friend_profile_image: Optional[str] = None
+    friend_bio: Optional[str] = None
 
     # Presence info
     friend_is_online: bool = False
-    friend_last_seen_at: datetime | None = None
-    friend_status_message: str | None = None
+    friend_last_seen_at: Optional[datetime] = None
+    friend_status_message: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
 
 class FriendListResponse(BaseModel):
     """Schema for friend list response."""
-    friends: list[FriendResponse]
+    friends: List[FriendResponse]
     total: int
 
 
@@ -62,13 +62,13 @@ class FriendPresence(BaseModel):
     user_id: str
     is_online: bool
     last_seen_at: datetime
-    status_message: str | None = None
+    status_message: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
 
 class FriendSearchParams(BaseModel):
     """Schema for friend search parameters."""
-    query: str | None = None
+    query: Optional[str] = None
     filter_type: Literal["all", "online", "blocked"] = "all"
     limit: int = Field(50, ge=1, le=100)

@@ -1,6 +1,7 @@
 """Stats domain service - session tracking and statistics."""
 
 from collections import defaultdict
+from typing import Optional
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +18,7 @@ class StatsService:
     def __init__(
         self,
         repository: SessionHistoryRepository,
-        db: AsyncSession | None = None,
+        db: Optional[AsyncSession] = None,
     ) -> None:
         self.repository = repository
         self.db = db
@@ -67,8 +68,8 @@ class StatsService:
         self,
         user_id: str,
         days: int = 7,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
     ) -> dict:
         """Get user statistics for last N days or date range.
 

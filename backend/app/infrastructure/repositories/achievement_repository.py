@@ -1,6 +1,7 @@
 """Achievement repository."""
 
 from sqlalchemy import select
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models.achievement import Achievement, UserAchievement
@@ -19,28 +20,28 @@ class AchievementRepository:
         await self.db.refresh(achievement)
         return achievement
 
-    async def get_by_id(self, achievement_id: str) -> Achievement | None:
+    async def get_by_id(self, achievement_id: str) -> Optional[Achievement]:
         """Get achievement by ID."""
         result = await self.db.execute(
             select(Achievement).where(Achievement.id == achievement_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_name(self, name: str) -> Achievement | None:
+    async def get_by_name(self, name: str) -> Optional[Achievement]:
         """Get achievement by name."""
         result = await self.db.execute(
             select(Achievement).where(Achievement.name == name)
         )
         return result.scalar_one_or_none()
 
-    async def get_all_active(self) -> list[Achievement]:
+    async def get_all_active(self) -> List[Achievement]:
         """Get all active achievements."""
         result = await self.db.execute(
             select(Achievement).where(Achievement.is_active == True).order_by(Achievement.category, Achievement.requirement_value)
         )
         return list(result.scalars().all())
 
-    async def get_by_category(self, category: str) -> list[Achievement]:
+    async def get_by_category(self, category: str) -> List[Achievement]:
         """Get achievements by category."""
         result = await self.db.execute(
             select(Achievement)
@@ -72,7 +73,7 @@ class UserAchievementRepository:
 
     async def get_by_user_and_achievement(
         self, user_id: str, achievement_id: str
-    ) -> UserAchievement | None:
+    ) -> Optional[UserAchievement]:
         """Get user achievement by user and achievement ID."""
         result = await self.db.execute(
             select(UserAchievement)
@@ -81,7 +82,7 @@ class UserAchievementRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_all_by_user(self, user_id: str) -> list[UserAchievement]:
+    async def get_all_by_user(self, user_id: str) -> List[UserAchievement]:
         """Get all achievements for a user."""
         result = await self.db.execute(
             select(UserAchievement)

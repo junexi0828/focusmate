@@ -1,6 +1,7 @@
 """Report domain service."""
 
 from datetime import UTC
+from typing import List, Optional
 from uuid import UUID
 
 from app.domain.report.schemas import ReportCreate, ReportResponse, ReportUpdate
@@ -49,26 +50,26 @@ class ReportService:
         report = await self.repository.create(report_data)
         return ReportResponse.model_validate(report)
 
-    async def get_report(self, report_id: UUID) -> ReportResponse | None:
+    async def get_report(self, report_id: UUID) -> Optional[ReportResponse]:
         """Get report by ID."""
         report = await self.repository.get_by_id(report_id)
         if not report:
             return None
         return ReportResponse.model_validate(report)
 
-    async def get_user_reports(self, reporter_id: str, limit: int = 50) -> list[ReportResponse]:
+    async def get_user_reports(self, reporter_id: str, limit: int = 50) -> List[ReportResponse]:
         """Get all reports made by a user."""
         reports = await self.repository.get_by_reporter(reporter_id, limit)
         return [ReportResponse.model_validate(r) for r in reports]
 
-    async def get_pending_reports(self, limit: int = 100) -> list[ReportResponse]:
+    async def get_pending_reports(self, limit: int = 100) -> List[ReportResponse]:
         """Get all pending reports (admin only)."""
         reports = await self.repository.get_pending_reports(limit)
         return [ReportResponse.model_validate(r) for r in reports]
 
     async def update_report(
         self, report_id: UUID, reviewer_id: str, data: ReportUpdate
-    ) -> ReportResponse | None:
+    ) -> Optional[ReportResponse]:
         """Update report status (admin only).
 
         Args:

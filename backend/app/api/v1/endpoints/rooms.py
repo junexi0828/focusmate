@@ -1,6 +1,6 @@
 """Room API endpoints."""
 
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -18,20 +18,20 @@ from app.infrastructure.database.session import DatabaseSession
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
 
-@router.get("/", response_model=list[RoomResponse])
+@router.get("/", response_model=List[RoomResponse])
 async def list_rooms(
     service: Annotated[RoomService, Depends(get_room_service)],
-) -> list[RoomResponse]:
+) -> List[RoomResponse]:
     """List all active rooms."""
     return await service.get_all_rooms()
 
 
-@router.get("/my-rooms", response_model=list[RoomResponse])
+@router.get("/my-rooms", response_model=List[RoomResponse])
 async def get_my_rooms(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     db: DatabaseSession,
     service: Annotated[RoomService, Depends(get_room_service)],
-) -> list[RoomResponse]:
+) -> List[RoomResponse]:
     """Get rooms that the current user is participating in."""
     try:
         from app.infrastructure.repositories.participant_repository import (

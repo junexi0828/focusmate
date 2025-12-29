@@ -5,6 +5,7 @@ Server-authoritative design: timer state is managed by backend.
 """
 
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy import Enum as SQLEnum
@@ -78,19 +79,19 @@ class Timer(Base, TimestampMixin):
         comment="Remaining time (seconds)",
     )
 
-    started_at: Mapped[datetime | None] = mapped_column(
+    started_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Start timestamp",
     )
 
-    paused_at: Mapped[datetime | None] = mapped_column(
+    paused_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Pause timestamp",
     )
 
-    completed_at: Mapped[datetime | None] = mapped_column(
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Completion timestamp",

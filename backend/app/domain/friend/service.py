@@ -1,6 +1,7 @@
 """Friend service."""
 
 from uuid import uuid4
+from typing import List, Optional
 
 from app.core.exceptions import ConflictException, NotFoundException, UnauthorizedException
 from app.domain.friend.schemas import (
@@ -25,7 +26,7 @@ class FriendService:
         self,
         friend_request_repo: FriendRequestRepository,
         friend_repo: FriendRepository,
-        presence_repo: PresenceRepository | None = None,
+        presence_repo: Optional[PresenceRepository] = None,
     ):
         self.friend_request_repo = friend_request_repo
         self.friend_repo = friend_repo
@@ -89,7 +90,7 @@ class FriendService:
 
     async def get_received_requests(
         self, user_id: str, pending_only: bool = False
-    ) -> list[FriendRequestResponse]:
+    ) -> List[FriendRequestResponse]:
         """Get friend requests received by user."""
         requests = await self.friend_request_repo.get_user_received_requests(
             user_id, pending_only
@@ -112,7 +113,7 @@ class FriendService:
             )
         return result
 
-    async def get_sent_requests(self, user_id: str) -> list[FriendRequestResponse]:
+    async def get_sent_requests(self, user_id: str) -> List[FriendRequestResponse]:
         """Get friend requests sent by user."""
         requests = await self.friend_request_repo.get_user_sent_requests(user_id)
 

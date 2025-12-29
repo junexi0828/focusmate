@@ -1,6 +1,7 @@
 """Friend repository."""
 
 from datetime import UTC, datetime
+from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,14 +29,14 @@ class FriendRequestRepository:
         await self.session.refresh(request)
         return request
 
-    async def get_request_by_id(self, request_id: str) -> FriendRequest | None:
+    async def get_request_by_id(self, request_id: str) -> Optional[FriendRequest]:
         """Get friend request by ID."""
         result = await self.session.execute(
             select(FriendRequest).where(FriendRequest.id == request_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_pending_request(self, sender_id: str, receiver_id: str) -> FriendRequest | None:
+    async def get_pending_request(self, sender_id: str, receiver_id: str) -> Optional[FriendRequest]:
         """Get pending friend request between two users."""
         result = await self.session.execute(
             select(FriendRequest).where(
@@ -48,7 +49,7 @@ class FriendRequestRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_user_sent_requests(self, user_id: str) -> list[FriendRequest]:
+    async def get_user_sent_requests(self, user_id: str) -> List[FriendRequest]:
         """Get all friend requests sent by user."""
         result = await self.session.execute(
             select(FriendRequest)
@@ -59,7 +60,7 @@ class FriendRequestRepository:
 
     async def get_user_received_requests(
         self, user_id: str, pending_only: bool = False
-    ) -> list[FriendRequest]:
+    ) -> List[FriendRequest]:
         """Get all friend requests received by user."""
         query = select(FriendRequest).where(FriendRequest.receiver_id == user_id)
 
@@ -72,7 +73,7 @@ class FriendRequestRepository:
 
     async def update_request_status(
         self, request_id: str, status: FriendRequestStatus
-    ) -> FriendRequest | None:
+    ) -> Optional[FriendRequest]:
         """Update friend request status."""
         request = await self.get_request_by_id(request_id)
         if request:
@@ -100,7 +101,7 @@ class FriendRepository:
 
     async def create_friendship(
         self, user_id: str, friend_id: str, friendship_id_1: str, friendship_id_2: str
-    ) -> tuple[Friend, Friend]:
+    ) -> Tuple[Friend, Friend]:
         """Create bidirectional friendship."""
         friendship1 = Friend(
             id=friendship_id_1,
@@ -119,7 +120,7 @@ class FriendRepository:
         await self.session.refresh(friendship2)
         return friendship1, friendship2
 
-    async def get_friendship(self, user_id: str, friend_id: str) -> Friend | None:
+    async def get_friendship(self, user_id: str, friend_id: str) -> Optional[Friend]:
         """Get friendship between two users."""
         result = await self.session.execute(
             select(Friend).where(
@@ -131,7 +132,7 @@ class FriendRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_user_friends(self, user_id: str) -> list[Friend]:
+    async def get_user_friends(self, user_id: str) -> List[Friend]:
         """Get all friends of a user."""
         result = await self.session.execute(
             select(Friend)
@@ -193,12 +194,12 @@ class FriendRepository:
             return True
         return False
 
-    async def get_user_by_id(self, user_id: str) -> User | None:
+    async def get_user_by_id(self, user_id: str) -> Optional[User]:
         """Get user by ID."""
         result = await self.session.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
-    async def search_friends(self, user_id: str, query: str) -> list[Friend]:
+    async def search_friends(self, user_id: str, query: str) -> List[Friend]:
         """Search friends by username."""
         from app.infrastructure.database.models.user import User
 
@@ -215,7 +216,7 @@ class FriendRepository:
         )
         return list(result.scalars().all())
 
-    async def get_online_friends(self, user_id: str) -> list[Friend]:
+    async def get_online_friends(self, user_id: str) -> List[Friend]:
         """Get friends who are currently online."""
         from app.infrastructure.database.models.presence import UserPresence
 
@@ -232,7 +233,7 @@ class FriendRepository:
         )
         return list(result.scalars().all())
 
-    async def get_friends_with_presence(self, user_id: str) -> list[tuple[Friend, User, object]]:
+    async def get_friends_with_presence(self, user_id: str) -> List[Tuple[Friend, User, object]]:
         """Get friends with their user info and presence.
 
         Returns list of tuples: (Friend, User, UserPresence or None)

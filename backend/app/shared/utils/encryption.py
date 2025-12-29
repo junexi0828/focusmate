@@ -17,7 +17,7 @@ from app.core.config import settings
 class EncryptionService:
     """Service for encrypting and decrypting sensitive data."""
 
-    def __init__(self, encryption_key: str | None = None) -> None:
+    def __init__(self, encryption_key: Optional[str] = None) -> None:
         """Initialize encryption service.
 
         Args:
@@ -121,7 +121,7 @@ class EncryptionService:
 
 
 # Global encryption service instance
-_encryption_service: EncryptionService | None = None
+_encryption_service: Optional[EncryptionService] = None
 
 
 def get_encryption_service() -> EncryptionService:

@@ -1,6 +1,6 @@
 """Notification API endpoints."""
 
-from typing import Annotated
+from typing import Annotated, List, Optional
 
 from fastapi import (
     APIRouter,
@@ -104,14 +104,14 @@ async def create_notification(
         )
 
 
-@router.get("/list", response_model=list[NotificationResponse])
+@router.get("/list", response_model=List[NotificationResponse])
 async def get_my_notifications(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
     unread_only: bool = Query(False, description="Return only unread notifications"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of notifications"),
     offset: int = Query(0, ge=0, description="Number of notifications to skip"),
-) -> list[NotificationResponse]:
+) -> List[NotificationResponse]:
     """Get notifications for the current user.
 
     Args:
@@ -240,7 +240,7 @@ async def websocket_notifications(
     # Verify token and get user
     try:
         payload = decode_jwt_token(token)
-        user_id: str | None = payload.get("sub")
+        user_id: Optional[str] = payload.get("sub")
         if not user_id:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return

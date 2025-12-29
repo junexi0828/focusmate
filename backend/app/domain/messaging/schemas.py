@@ -1,6 +1,7 @@
 """Messaging domain schemas."""
 
 from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,10 +25,10 @@ class MessageResponse(BaseModel):
     receiver_id: str
     content: str
     is_read: bool
-    read_at: datetime | None
+    read_at: Optional[datetime]
     created_at: datetime
-    sender_username: str | None = None
-    receiver_username: str | None = None
+    sender_username: Optional[str] = None
+    receiver_username: Optional[str] = None
 
 
 # Conversation Schemas
@@ -39,14 +40,14 @@ class ConversationResponse(BaseModel):
     id: str
     user1_id: str
     user2_id: str
-    last_message_at: datetime | None
+    last_message_at: Optional[datetime]
     user1_unread_count: int
     user2_unread_count: int
     created_at: datetime
     updated_at: datetime
-    other_user_id: str | None = None  # The other participant in conversation
-    other_user_username: str | None = None
-    last_message: str | None = None
+    other_user_id: Optional[str] = None  # The other participant in conversation
+    other_user_username: Optional[str] = None
+    last_message: Optional[str] = None
 
 
 class ConversationListResponse(BaseModel):
@@ -54,9 +55,9 @@ class ConversationListResponse(BaseModel):
 
     id: str
     other_user_id: str
-    other_user_username: str | None
-    last_message: str | None
-    last_message_at: datetime | None
+    other_user_username: Optional[str]
+    last_message: Optional[str]
+    last_message_at: Optional[datetime]
     unread_count: int
 
 
@@ -64,14 +65,14 @@ class ConversationDetailResponse(BaseModel):
     """Detailed conversation response with messages."""
 
     conversation: ConversationResponse
-    messages: list[MessageResponse]
+    messages: List[MessageResponse]
 
 
 # Mark as Read
 class MarkMessagesReadRequest(BaseModel):
     """Request to mark messages as read."""
 
-    message_ids: list[str] = Field(..., min_length=1)
+    message_ids: List[str] = Field(..., min_length=1)
 
 
 class MarkMessagesReadResponse(BaseModel):

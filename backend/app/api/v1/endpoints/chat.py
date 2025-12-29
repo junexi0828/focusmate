@@ -1,7 +1,7 @@
 """Chat API endpoints."""
 
 import logging
-from typing import Annotated
+from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
 from fastapi import (
@@ -84,7 +84,7 @@ def get_invitation_service(
 async def get_user_rooms(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-    room_type: str | None = Query(None, pattern="^(direct|team|matching)$"),
+    room_type: Optional[str] = Query(None, pattern="^(direct|team|matching)$"),
 ) -> ChatRoomListResponse:
     """Get all chat rooms for the current user."""
     user_id = current_user["id"]
@@ -170,12 +170,12 @@ async def get_room(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get("/rooms/{room_id}/members", response_model=list[ChatMemberResponse])
+@router.get("/rooms/{room_id}/members", response_model=List[ChatMemberResponse])
 async def get_room_members(
     room_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-) -> list[ChatMemberResponse]:
+) -> List[ChatMemberResponse]:
     """Get all members of a chat room."""
     # Verify user is member
     member = await service.repository.get_member(room_id, current_user["id"])
@@ -197,7 +197,7 @@ async def get_messages(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
     limit: int = Query(50, ge=1, le=100),
-    before_message_id: UUID | None = None,
+    before_message_id: Optional[UUID] = None,
 ) -> MessageListResponse:
     """Get messages from room."""
     try:
@@ -293,7 +293,7 @@ async def upload_files(
     room_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-    files: list[UploadFile] = File(...),
+    files: List[UploadFile] = File(...),
 ) -> dict:
     """Upload files to chat room."""
     # Verify user is member

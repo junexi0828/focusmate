@@ -1,6 +1,7 @@
 """Pydantic schemas for matching proposals and chat."""
 
 from datetime import datetime
+from typing import List, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -16,13 +17,13 @@ class ProposalResponse(BaseModel):
     group_a_status: str
     group_b_status: str
     final_status: str
-    chat_room_id: UUID | None
+    chat_room_id: Optional[UUID]
     created_at: datetime
     expires_at: datetime
-    matched_at: datetime | None
+    matched_at: Optional[datetime]
     # Optional pool information for detail view
-    pool_a: dict | None = None
-    pool_b: dict | None = None
+    pool_a: Optional[dict] = None
+    pool_b: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -31,7 +32,7 @@ class ProposalResponse(BaseModel):
 class ProposalAction(BaseModel):
     """Schema for proposal action (accept/reject)."""
 
-    action: str = Field(..., pattern="^(accept|reject)$")
+    action: str = Field(..., pattern="^(Union[accept, reject])$")
 
 
 # Chat Room Schemas
@@ -55,8 +56,8 @@ class MessageCreate(BaseModel):
     """Schema for creating a message."""
 
     content: str = Field(..., min_length=1, max_length=2000)
-    message_type: str = Field(default="text", pattern="^(text|image|system)$")
-    attachments: list[str] | None = None
+    message_type: str = Field(default="text", pattern="^(Union[text, image]|system)$")
+    attachments: List[str] | None = None
 
 
 class MessageResponse(BaseModel):
@@ -67,9 +68,9 @@ class MessageResponse(BaseModel):
     sender_id: str
     message_type: str
     content: str
-    attachments: list[str] | None
+    attachments: List[str] | None
     created_at: datetime
-    deleted_at: datetime | None
+    deleted_at: Optional[datetime]
 
     class Config:
         from_attributes = True
@@ -78,7 +79,7 @@ class MessageResponse(BaseModel):
 class MessageListResponse(BaseModel):
     """Schema for message list response."""
 
-    messages: list[MessageResponse]
+    messages: List[MessageResponse]
     total: int
     has_more: bool
 
@@ -91,9 +92,9 @@ class ChatMemberResponse(BaseModel):
     user_id: str
     group_label: str
     member_index: int
-    anonymous_name: str | None
+    anonymous_name: Optional[str]
     is_active: bool
-    last_read_at: datetime | None
+    last_read_at: Optional[datetime]
     joined_at: datetime
 
     class Config:

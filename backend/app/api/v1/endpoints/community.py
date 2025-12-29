@@ -1,7 +1,7 @@
 """Community API endpoints - posts, comments, likes."""
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -152,22 +152,22 @@ async def get_posts(
     service: Annotated[CommunityService, Depends(get_community_service)],
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    category: str | None = Query(None, description="Filter by category"),
-    search: str | None = Query(None, description="Search in title and content"),
-    author_username: str | None = Query(
+    category: Optional[str] = Query(None, description="Filter by category"),
+    search: Optional[str] = Query(None, description="Search in title and content"),
+    author_username: Optional[str] = Query(
         None, description="Filter by author username"
     ),
-    date_from: str | None = Query(
+    date_from: Optional[str] = Query(
         None, description="Filter posts from this date (ISO 8601 format)"
     ),
-    date_to: str | None = Query(
+    date_to: Optional[str] = Query(
         None, description="Filter posts until this date (ISO 8601 format)"
     ),
     sort_by: PostSortBy = Query(
         PostSortBy.RECENT,
         description="Sort posts by: recent, popular, trending, or most_commented",
     ),
-    current_user: Annotated[dict | None, Depends(get_current_user)] = None,
+    current_user: Annotated[Optional[dict], Depends(get_current_user)] = None,
 ) -> PostListResult:
     """Get community posts with optional filtering, sorting, and search.
 
@@ -233,7 +233,7 @@ async def get_posts(
 @router.get("/posts/stats/categories")
 async def get_category_stats(
     db: DatabaseSession,
-) -> dict[str, int]:
+) -> Dict[str, int]:
     """Get post count statistics by category.
 
     Returns:
@@ -250,7 +250,7 @@ async def get_post(
     post_id: str,
     db: DatabaseSession,
     service: Annotated[CommunityService, Depends(get_community_service)],
-    current_user: Annotated[dict | None, Depends(get_current_user)] = None,
+    current_user: Annotated[Optional[dict], Depends(get_current_user)] = None,
 ) -> PostResponse:
     """Get a specific post by ID.
 
@@ -385,13 +385,13 @@ async def create_comment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
 
 
-@router.get("/posts/{post_id}/comments", response_model=list[CommentResponse])
+@router.get("/posts/{post_id}/comments", response_model=List[CommentResponse])
 async def get_post_comments(
     post_id: str,
     db: DatabaseSession,
     service: Annotated[CommunityService, Depends(get_community_service)],
-    current_user: Annotated[dict | None, Depends(get_current_user)] = None,
-) -> list[CommentResponse]:
+    current_user: Annotated[Optional[dict], Depends(get_current_user)] = None,
+) -> List[CommentResponse]:
     """Get all comments for a post with nested replies and like status.
 
     Args:

@@ -1,6 +1,7 @@
 """User stats schemas."""
 
 from datetime import datetime
+from typing import Union
 
 from pydantic import BaseModel, Field
 
@@ -29,7 +30,7 @@ class ManualSessionCreate(BaseModel):
     """Schema for creating manual session."""
 
     duration_minutes: int = Field(ge=1, le=480, description="Session duration in minutes")
-    session_type: str = Field(pattern="^(focus|break)$", description="Session type")
+    session_type: str = Field(pattern="^(Union[focus, break])$", description="Session type")
     completed_at: datetime = Field(description="When the session was completed")
 
 

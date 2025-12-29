@@ -1,6 +1,7 @@
 """Participant repository implementation."""
 
 from datetime import UTC, datetime
+from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,14 +22,14 @@ class ParticipantRepository:
         await self.db.refresh(participant)
         return participant
 
-    async def get_by_id(self, participant_id: str) -> Participant | None:
+    async def get_by_id(self, participant_id: str) -> Optional[Participant]:
         """Get participant by ID."""
         result = await self.db.execute(
             select(Participant).where(Participant.id == participant_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_room_id(self, room_id: str, active_only: bool = True) -> list[Participant]:
+    async def get_by_room_id(self, room_id: str, active_only: bool = True) -> List[Participant]:
         """Get all participants in a room."""
         query = select(Participant).where(Participant.room_id == room_id)
         if active_only:
@@ -36,7 +37,7 @@ class ParticipantRepository:
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
-    async def get_by_user_id(self, user_id: str, active_only: bool = True) -> list[Participant]:
+    async def get_by_user_id(self, user_id: str, active_only: bool = True) -> List[Participant]:
         """Get all participants for a user."""
         query = select(Participant).where(Participant.user_id == user_id)
         if active_only:
@@ -55,7 +56,7 @@ class ParticipantRepository:
         await self.db.refresh(participant)
         return participant
 
-    async def mark_disconnected(self, participant_id: str) -> Participant | None:
+    async def mark_disconnected(self, participant_id: str) -> Optional[Participant]:
         """Mark participant as disconnected."""
         participant = await self.get_by_id(participant_id)
         if participant:
