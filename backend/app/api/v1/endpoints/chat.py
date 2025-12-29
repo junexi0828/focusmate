@@ -1,5 +1,6 @@
 """Chat API endpoints."""
 
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -103,6 +104,7 @@ async def get_unread_count(
         return {"count": count}
     except Exception as e:
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Get unread count error: {e!s}", exc_info=True)
         # Return 0 if there's an error (e.g., chat tables don't exist yet)
@@ -149,9 +151,7 @@ async def create_team_chat_by_email(
     """
     try:
         return await service.create_team_chat_by_email(
-            current_user["id"],
-            current_user["username"],
-            data
+            current_user["id"], current_user["username"], data
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -220,23 +220,37 @@ async def send_message(
         message = await service.send_message(room_id, current_user["id"], data)
 
         # Publish to Redis for cross-server synchronization
-        await redis_pubsub_manager.publish_message(
-            room_id,
-            message.model_dump(mode="json"),
-        )
+        try:
+            await redis_pubsub_manager.publish_message(
+                room_id,
+                message.model_dump(mode="json"),
+            )
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Redis publish failed: {e!s}")
 
         # Also broadcast to local WebSocket connections
-        await connection_manager.broadcast_to_room(
-            room_id,
-            {
-                "type": "message",
-                "message": message.model_dump(mode="json"),
-            },
-        )
+        try:
+            await connection_manager.broadcast_to_room(
+                room_id,
+                {
+                    "type": "message",
+                    "message": message.model_dump(mode="json"),
+                },
+            )
+        except Exception as e:
+            logging.getLogger(__name__).error(f"WebSocket broadcast failed: {e!s}")
 
         return message
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logging.getLogger(__name__).error(
+            f"Unexpected error in send_message: {e!s}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}",
+        )
 
 
 @router.patch("/rooms/{room_id}/messages/{message_id}")
@@ -333,7 +347,11 @@ async def add_reaction(
 
     # Check if user already reacted with this emoji
     existing_reaction = next(
-        (r for r in reactions if r.get("emoji") == emoji and user_id in r.get("users", [])),
+        (
+            r
+            for r in reactions
+            if r.get("emoji") == emoji and user_id in r.get("users", [])
+        ),
         None,
     )
 
@@ -350,11 +368,13 @@ async def add_reaction(
         reaction_entry["users"].append(user_id)
         reaction_entry["count"] = len(reaction_entry["users"])
     else:
-        reactions.append({
-            "emoji": emoji,
-            "users": [user_id],
-            "count": 1,
-        })
+        reactions.append(
+            {
+                "emoji": emoji,
+                "users": [user_id],
+                "count": 1,
+            }
+        )
 
     # Update message
     message.reactions = reactions
@@ -514,7 +534,7 @@ async def websocket_chat(
         # For WebSocket, we trust the JWT token for now
         # Full verification can be added if needed
 
-    except Exception:
+    except Exception as e:
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
@@ -523,12 +543,14 @@ async def websocket_chat(
 
     # Send welcome message to confirm connection is established
     try:
-        await websocket.send_json({
-            "type": "connected",
-            "message": "WebSocket connection established",
-            "user_id": user_id
-        })
-    except Exception:
+        await websocket.send_json(
+            {
+                "type": "connected",
+                "message": "WebSocket connection established",
+                "user_id": user_id,
+            }
+        )
+    except Exception as e:
         # If we can't send welcome message, connection is likely broken
         try:
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
@@ -544,6 +566,7 @@ async def websocket_chat(
                 message = await websocket.receive_text()
 
                 import json
+
                 data = json.loads(message)
 
                 # Handle different message types
@@ -554,7 +577,9 @@ async def websocket_chat(
                 elif data.get("type") == "join_room":
                     room_id = UUID(data["room_id"])
                     await connection_manager.connect(websocket, room_id, user_id)
-                    await websocket.send_json({"type": "joined", "room_id": str(room_id)})
+                    await websocket.send_json(
+                        {"type": "joined", "room_id": str(room_id)}
+                    )
 
                 elif data.get("type") == "leave_room":
                     room_id = UUID(data["room_id"])
@@ -575,10 +600,9 @@ async def websocket_chat(
             except json.JSONDecodeError:
                 # Send error response and continue
                 try:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": "Invalid JSON format"
-                    })
+                    await websocket.send_json(
+                        {"type": "error", "message": "Invalid JSON format"}
+                    )
                 except (RuntimeError, ConnectionError, WebSocketDisconnect):
                     # Connection closed - exit loop
                     break
@@ -586,27 +610,41 @@ async def websocket_chat(
             except RuntimeError as e:
                 # Connection was closed - exit loop
                 if 'Cannot call "receive"' in str(e):
-                    logging.getLogger(__name__).error(f"[WebSocket] Connection closed for {user_id}, exiting receive loop")
+                    logging.getLogger(__name__).error(
+                        f"[WebSocket] Connection closed for {user_id}, exiting receive loop"
+                    )
                     break
-                logging.getLogger(__name__).error(f"[WebSocket] RuntimeError from {user_id}: {e!s}")
+                logging.getLogger(__name__).error(
+                    f"[WebSocket] RuntimeError from {user_id}: {e!s}"
+                )
                 continue
             except ValueError as e:
-                logging.getLogger(__name__).error(f"[WebSocket] ValueError from {user_id}: {e!s}")
+                logging.getLogger(__name__).error(
+                    f"[WebSocket] ValueError from {user_id}: {e!s}"
+                )
                 continue
             except Exception as e:
-                logging.getLogger(__name__).error(f"[WebSocket] Error processing message from {user_id}: {e!s}")
+                logging.getLogger(__name__).error(
+                    f"[WebSocket] Error processing message from {user_id}: {e!s}"
+                )
                 import traceback
+
                 traceback.print_exc()
                 continue
 
     except WebSocketDisconnect as e:
-        logging.getLogger(__name__).error(f"[WebSocket] User {user_id} disconnected (code: {e.code})")
+        logging.getLogger(__name__).error(
+            f"[WebSocket] User {user_id} disconnected (code: {e.code})"
+        )
         # Clean up all connections for this websocket
         for room_id in list(connection_manager.active_connections.keys()):
             connection_manager.disconnect(websocket, room_id)
     except Exception as e:
-        logging.getLogger(__name__).error(f"[WebSocket] ERROR: Fatal error for user {user_id}: {e!s}")
+        logging.getLogger(__name__).error(
+            f"[WebSocket] ERROR: Fatal error for user {user_id}: {e!s}"
+        )
         import traceback
+
         traceback.print_exc()
         # Clean up all connections for this websocket
         for room_id in list(connection_manager.active_connections.keys()):
@@ -644,10 +682,7 @@ async def generate_invitation_code(
     try:
         return await service.generate_invitation_code(room_id, data)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/invitations/{code}", response_model=InvitationCodeInfo)
@@ -670,10 +705,7 @@ async def get_invitation_info(
     try:
         return await service.validate_invitation_code(code)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.post("/rooms/join", response_model=ChatRoomResponse)
@@ -698,10 +730,7 @@ async def join_by_invitation(
     try:
         return await service.join_by_invitation_code(current_user["id"], data)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Friend Room Endpoints
@@ -727,7 +756,4 @@ async def create_friend_room(
     try:
         return await service.create_room_with_friends(current_user["id"], data)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
