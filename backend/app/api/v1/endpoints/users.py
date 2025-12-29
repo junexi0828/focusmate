@@ -1,7 +1,6 @@
 """User search and profile API endpoints."""
 
 from typing_extensions import Annotated
-from typing import
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import or_, select

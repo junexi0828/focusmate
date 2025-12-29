@@ -6,7 +6,6 @@ Supports both SQLite (development) and PostgreSQL (production).
 
 from collections.abc import AsyncGenerator
 from typing_extensions import Annotated
-from typing import
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import (
