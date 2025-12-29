@@ -29,7 +29,7 @@ def success_response(data: Any, message: Optional[str] = None) -> Dict[str, Any]
     return {"status": "success", "data": data, "message": message}
 
 
-def error_response(code: str, message: str, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def error_response(code: str, message: str, details: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Create error response."""
     return {
         "status": "error",

@@ -3,7 +3,7 @@
 Provides domain-specific exceptions with error codes.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class AppException(Exception):
@@ -19,7 +19,7 @@ class AppException(Exception):
         self,
         message: str,
         code: str = "APP_ERROR",
-        details: Dict[str, Any] | None = None,
+        details: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize exception.
 

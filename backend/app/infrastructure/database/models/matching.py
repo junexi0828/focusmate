@@ -50,7 +50,7 @@ class MatchingPool(Base):
 
     # Matching preferences
     preferred_match_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    preferred_categories: Mapped[List[str] | None] = mapped_column(
+    preferred_categories: Mapped[Optional[List[str]]] = mapped_column(
         ARRAY(Text()), nullable=True
     )
 
@@ -291,7 +291,7 @@ class MatchingMessage(Base):
     content: Mapped[str] = mapped_column(Text(), nullable=False)
 
     # Attachments
-    attachments: Mapped[List[str] | None] = mapped_column(
+    attachments: Mapped[Optional[List[str]]] = mapped_column(
         ARRAY(Text()), nullable=True
     )
 
