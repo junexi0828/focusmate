@@ -1,22 +1,23 @@
 # ============================================================================
 # Focus Mate Backend Dependencies
-# Python 3.13 Compatible - Last Updated: 2025-12-18
+# Python 3.8+ Compatible - Last Updated: 2025-12-30
+# Supports: Python 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
 # ============================================================================
 
 # Core Framework
-fastapi==0.115.6                    # Web framework (Python 3.13 compatible)
-uvicorn[standard]==0.34.0           # ASGI server with auto-reload
+fastapi==0.115.6                    # Web framework (Python 3.8+ compatible)
+uvicorn[standard]==0.33.0           # ASGI server with auto-reload
 python-multipart==0.0.20            # Form data parsing
 python-dotenv==1.0.1                # Environment variables
 
-# Database - FIXED VERSIONS for Python 3.13
-sqlalchemy[asyncio]>=2.0.35,<2.1    # ORM with async support (Python 3.13 fix)
+# Database - FIXED VERSIONS for Python 3.8+ compatibility
+sqlalchemy[asyncio]>=2.0.35,<2.1    # ORM with async support
 asyncpg==0.30.0                     # PostgreSQL async driver
-psycopg2-binary==2.9.11             # PostgreSQL sync driver (for Alembic)
+psycopg2-binary==2.9.10             # PostgreSQL sync driver (for Alembic)
 alembic==1.14.0                     # Database migrations
 
 # Authentication & Security
-pyjwt==2.10.1                       # JWT tokens
+pyjwt==2.9.0                        # JWT tokens (Python 3.8 compatible)
 passlib[bcrypt]==1.7.4              # Password hashing
 python-jose[cryptography]==3.3.0    # JWT encoding/decoding
 bcrypt==4.2.1                       # Password hashing backend
@@ -28,7 +29,7 @@ email-validator==2.2.0              # Email validation
 
 # HTTP & WebSocket
 httpx==0.28.1                       # Async HTTP client
-websockets==14.1                    # WebSocket support
+websockets==13.1                    # WebSocket support (Python 3.8 compatible)
 python-socketio==5.12.1             # Socket.IO server
 
 # Date & Time
@@ -48,9 +49,11 @@ redis==5.2.1                               # Redis client for caching & pub/sub
 
 # ============================================================================
 # Version Constraints Explanation:
-# - sqlalchemy>=2.0.35,<2.1: Minimum 2.0.35 for Python 3.13 compatibility
+# - sqlalchemy>=2.0.35,<2.1: Minimum 2.0.35 for Python 3.8+ compatibility
 # - typing-extensions>=4.6.0: Required by SQLAlchemy 2.0.35+
 # - greenlet>=3.0.0: Required for async SQLAlchemy operations
-# - All other packages: Fixed to latest stable versions as of 2025-12-18
+# - pyjwt==2.9.0: Latest version compatible with Python 3.8 (2.10.1 requires Python 3.9+)
+# - websockets==13.1: Latest version compatible with Python 3.8 (14.1 requires Python 3.9+)
+# - All other packages: Fixed to latest stable versions compatible with Python 3.8+
 # ============================================================================
 aiosmtplib
