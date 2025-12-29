@@ -5,7 +5,7 @@ ISO/IEC 25010: Maintainability, Security
 """
 
 from functools import lru_cache
-from typing import Literal
+from typing import List, Literal, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -90,7 +90,7 @@ class Settings(BaseSettings):
     BCRYPT_ROUNDS: int = Field(default=12, ge=10, le=14)
 
     # File Encryption (optional - if not set, derives from SECRET_KEY)
-    FILE_ENCRYPTION_KEY: str | None = Field(
+    FILE_ENCRYPTION_KEY: Optional[str] = Field(
         default=None,
         description="Base64-encoded Fernet key for file encryption. If not set, derives from SECRET_KEY.",
     )
@@ -123,7 +123,7 @@ class Settings(BaseSettings):
 
     @field_validator("CORS_ORIGINS")
     @classmethod
-    def parse_cors_origins(cls, v: str) -> list[str]:
+    def parse_cors_origins(cls, v: str) -> List[str]:
         """Parse CORS origins from comma-separated string."""
         if isinstance(v, list):
             return v
@@ -138,7 +138,7 @@ class Settings(BaseSettings):
 
     @field_validator("CORS_ALLOW_METHODS")
     @classmethod
-    def parse_cors_methods(cls, v: str) -> list[str]:
+    def parse_cors_methods(cls, v: str) -> List[str]:
         """Parse CORS methods."""
         if isinstance(v, list):
             return v
@@ -150,7 +150,7 @@ class Settings(BaseSettings):
 
     @field_validator("CORS_ALLOW_HEADERS")
     @classmethod
-    def parse_cors_headers(cls, v: str) -> list[str]:
+    def parse_cors_headers(cls, v: str) -> List[str]:
         """Parse CORS headers."""
         if isinstance(v, list):
             return v
@@ -162,7 +162,7 @@ class Settings(BaseSettings):
 
     @field_validator("TRUSTED_HOSTS")
     @classmethod
-    def parse_trusted_hosts(cls, v: str) -> list[str]:
+    def parse_trusted_hosts(cls, v: str) -> List[str]:
         """Parse trusted hosts from comma-separated string."""
         if isinstance(v, list):
             return v
