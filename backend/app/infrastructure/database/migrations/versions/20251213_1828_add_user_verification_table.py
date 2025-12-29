@@ -14,8 +14,8 @@ from sqlalchemy.dialects import postgresql
 # revision identifiers, used by Alembic.
 revision: str = 'f14ca0bf1539'
 down_revision: Union[str, None] = '20251212_2000'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: Optional[Union[str, Sequence[str]]] = None
+depends_on: Optional[Union[str, Sequence[str]]] = None
 
 
 def upgrade() -> None:
