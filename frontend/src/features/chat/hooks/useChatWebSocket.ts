@@ -25,7 +25,9 @@ export function useChatWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [messages, setMessages] = useState<Map<string, Message[]>>(new Map());
-  const [typingUsers, setTypingUsers] = useState<Map<string, Set<string>>>(new Map()); // room_id -> Set of user_ids
+  const [typingUsers, setTypingUsers] = useState<Map<string, Set<string>>>(
+    new Map()
+  ); // room_id -> Set of user_ids
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -85,11 +87,15 @@ export function useChatWebSocket() {
     }
 
     const token = authService.getToken();
-    if (!token || !shouldReconnectRef.current) return;
+    if (!token || !shouldReconnectRef.current) {
+      return;
+    }
 
     // Check if token is expired
     if (authService.isTokenExpired()) {
-      console.warn("Chat WebSocket: Token expired, stopping reconnection attempts");
+      console.warn(
+        "Chat WebSocket: Token expired, stopping reconnection attempts"
+      );
       shouldReconnectRef.current = false;
       setIsConnecting(false);
       setIsConnected(false);
@@ -145,7 +151,9 @@ export function useChatWebSocket() {
 
       connectionTimeRef.current = Date.now();
       console.log("Chat WebSocket connected");
+      console.log("[DEBUG] Setting isConnected to true");
       setIsConnected(true);
+      console.log("[DEBUG] isConnected state updated");
       setIsConnecting(false);
       reconnectAttemptsRef.current = 0; // Reset on successful connection
       consecutive1005ErrorsRef.current = 0; // Reset consecutive 1005 errors on successful connection
@@ -199,7 +207,10 @@ export function useChatWebSocket() {
               (m) => m.message_id === message.message_id
             );
             if (exists) return prev;
-            return new Map(prev).set(message.room_id, [...roomMessages, message]);
+            return new Map(prev).set(message.room_id, [
+              ...roomMessages,
+              message,
+            ]);
           });
         } else if (data.type === "message_updated" && data.message) {
           const message: Message = data.message;
@@ -243,7 +254,8 @@ export function useChatWebSocket() {
             // Set timeout to remove typing indicator after 3 seconds
             const timeout = setTimeout(() => {
               setTypingUsers((current) => {
-                const currentRoomTyping = current.get(data.room_id) || new Set();
+                const currentRoomTyping =
+                  current.get(data.room_id) || new Set();
                 currentRoomTyping.delete(data.user_id);
                 const updatedMap = new Map(current);
                 if (currentRoomTyping.size === 0) {
@@ -283,6 +295,7 @@ export function useChatWebSocket() {
         timestamp: new Date().toISOString(),
       });
 
+      console.log("[DEBUG] Setting isConnected to false, code:", event.code);
       setIsConnected(false);
       setIsConnecting(false);
       clearTimers();
@@ -291,7 +304,7 @@ export function useChatWebSocket() {
       if (connectionDuration > 0 && connectionDuration < 100) {
         console.warn(
           `Chat WebSocket: Connection closed very quickly (${connectionDuration}ms), ` +
-          "likely due to React StrictMode double-mount. This is normal in development."
+            "likely due to React StrictMode double-mount. This is normal in development."
         );
         // Don't reconnect if it was a very short connection (likely cleanup)
         if (isCleaningUpRef.current) {
@@ -305,7 +318,9 @@ export function useChatWebSocket() {
       if (event.code === 1005) {
         // Check if token is expired first
         if (authService.isTokenExpired()) {
-          console.warn("Chat WebSocket: Token expired (code 1005), stopping reconnection");
+          console.warn(
+            "Chat WebSocket: Token expired (code 1005), stopping reconnection"
+          );
           shouldReconnectRef.current = false;
           authService.logout();
           window.location.href = "/login";
@@ -320,7 +335,7 @@ export function useChatWebSocket() {
         if (consecutive1005ErrorsRef.current >= 3) {
           console.warn(
             `Chat WebSocket: ${consecutive1005ErrorsRef.current} consecutive 1005 closures. ` +
-            "This might indicate a server-side issue. Will attempt reconnection."
+              "This might indicate a server-side issue. Will attempt reconnection."
           );
           // Don't stop reconnecting, just log the warning
         } else {
@@ -476,14 +491,20 @@ export function useChatWebSocket() {
     connect();
 
     return () => {
-      // React StrictMode 대응: 마운트 후 200ms 이내 cleanup은 무시
       const timeSinceMount = Date.now() - mountTime;
+      console.log(
+        `[DEBUG] useEffect cleanup called, timeSinceMount: ${timeSinceMount}ms, isConnected: ${isConnected}`
+      );
+      // React StrictMode 대응: 마운트 후 200ms 이내 cleanup은 무시
       if (timeSinceMount < 200 && !isConnected) {
-        console.log(`[Chat WS] Skipping cleanup - React StrictMode double-mount detected (${timeSinceMount}ms)`);
+        console.log(
+          `[Chat WS] Skipping cleanup - React StrictMode double-mount detected (${timeSinceMount}ms)`
+        );
         hasInitializedRef.current = false;
         return;
       }
 
+      console.log("[DEBUG] Executing cleanup - calling disconnect");
       shouldReconnectRef.current = false;
       // cleanup이 완료될 때까지 짧은 대기 후 disconnect
       setTimeout(() => {
@@ -506,4 +527,3 @@ export function useChatWebSocket() {
     maxReconnectAttempts: MAX_RECONNECT_ATTEMPTS,
   };
 }
-

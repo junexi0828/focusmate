@@ -36,7 +36,9 @@ function RootComponent() {
         root.classList.add("light");
       } else {
         // Fallback to system preference if no specific theme is saved
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        ).matches;
         root.classList.add(prefersDark ? "dark" : "light");
       }
     };

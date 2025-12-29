@@ -25,6 +25,7 @@ BACKEND_PID=""
 FRONTEND_PID=""
 SUPABASE_URL=""
 SKIP_FRONTEND=false
+SESSION_START_TIME=""
 
 # ==================================================
 # 유틸리티 함수
@@ -41,9 +42,34 @@ print_section() {
     echo ""
 }
 
+# 시간 포맷팅 함수 (초를 읽기 쉬운 형식으로 변환)
+format_duration() {
+    local total_seconds=$1
+    local hours=$((total_seconds / 3600))
+    local minutes=$(((total_seconds % 3600) / 60))
+    local seconds=$((total_seconds % 60))
+
+    if [ $hours -gt 0 ]; then
+        echo "${hours}시간 ${minutes}분 ${seconds}초"
+    elif [ $minutes -gt 0 ]; then
+        echo "${minutes}분 ${seconds}초"
+    else
+        echo "${seconds}초"
+    fi
+}
+
 # 정리 함수
 cleanup() {
     echo ""
+
+    # 세션 가동 시간 계산
+    SESSION_DURATION=""
+    if [ -n "$SESSION_START_TIME" ]; then
+        END_TIME=$(date +%s)
+        DURATION_SECONDS=$((END_TIME - SESSION_START_TIME))
+        SESSION_DURATION=$(format_duration $DURATION_SECONDS)
+    fi
+
     echo -e "${BOLD}${CYAN}"
     cat << EOF
 ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -53,13 +79,20 @@ cleanup() {
 ║  Thank you for using FocusMate!                                              ║
 ║                                                                              ║
 ║  Services stopped successfully.                                              ║
+EOF
+
+    if [ -n "$SESSION_DURATION" ]; then
+        printf "║                                                                              ║\n"
+        printf "║  Session Duration: %-60s  ║\n" "$SESSION_DURATION"
+    fi
+
+    cat << EOF
 ║                                                                              ║
 ║  For support and inquiries:                                                  ║
 ║  • GitHub: https://github.com/junexi0828/focusmate                           ║
 ║  • Documentation: See docs/ directory                                        ║
 ║                                                                              ║
 ║  Copyright © 2025 FocusMate Team. All Rights Reserved.                       ║
-║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 EOF
     echo -e "${NC}"
@@ -204,14 +237,33 @@ setup_backend() {
         fi
     fi
 
+    # 가상환경의 pip 경로 설정 (절대경로 사용)
+    VENV_PIP="$VENV_DIR/bin/pip"
+    if [ ! -f "$VENV_PIP" ]; then
+        echo -e "${YELLOW}⚠️  pip not found in virtual environment. Recreating...${NC}"
+        rm -rf $VENV_DIR
+        $PYTHON_CMD -m venv $VENV_DIR
+        NEEDS_INSTALL=true
+        VENV_PIP="$VENV_DIR/bin/pip"
+    fi
+
+    # pip가 실제로 작동하는지 확인 (경로 문제 체크)
+    if ! "$VENV_PIP" --version > /dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  Virtual environment has path issues. Recreating...${NC}"
+        rm -rf $VENV_DIR
+        $PYTHON_CMD -m venv $VENV_DIR
+        NEEDS_INSTALL=true
+        VENV_PIP="$VENV_DIR/bin/pip"
+    fi
+
     # 가상환경 활성화
     source "$VENV_DIR/bin/activate"
 
     # 의존성 설치
     if [ "$NEEDS_INSTALL" = true ]; then
         echo "📥 Upgrading pip and installing dependencies..."
-        pip install --upgrade pip
-        pip install -r requirements.txt
+        "$VENV_PIP" install --upgrade pip
+        "$VENV_PIP" install -r requirements.txt
         if [ $? -ne 0 ]; then
             echo -e "${RED}❌ Error: Failed to install dependencies${NC}"
             exit 1
@@ -219,7 +271,7 @@ setup_backend() {
         echo -e "${GREEN}✅ Virtual environment created and dependencies installed${NC}"
     else
         echo "🔄 Syncing dependencies from requirements.txt..."
-        pip install -r requirements.txt
+        "$VENV_PIP" install -r requirements.txt
         if [ $? -ne 0 ]; then
             echo -e "${RED}❌ Error: Failed to sync dependencies${NC}"
             exit 1
@@ -466,8 +518,13 @@ run_unit_tests() {
     if [ "$UNIT_TEST_COUNT" -eq 0 ]; then
         echo -e "${YELLOW}⚠️  No unit test files found. Running basic validation...${NC}"
         # Basic validation: check if main modules can be imported
-        python -c "import app.main; print('✅ Basic imports OK')" 2>/dev/null && echo -e "${GREEN}✅ Unit test validation passed${NC}" || echo -e "${YELLOW}⚠️  Some imports failed (non-critical)${NC}"
-        return 0
+        if python -c "import app.main; print('✅ Basic imports OK')" 2>/dev/null; then
+            echo -e "${GREEN}✅ Unit test validation passed${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ Unit test validation failed: Cannot import app.main${NC}"
+            return 1
+        fi
     fi
 
     echo "Running unit tests..."
@@ -476,19 +533,27 @@ run_unit_tests() {
         echo -e "${GREEN}✅ Unit tests passed${NC}"
         return 0
     else
-        # If tests fail, check if it's just import/setup issues
-        if grep -q "ImportError\|ModuleNotFoundError\|SyntaxError" /tmp/unit_test_output.log 2>/dev/null; then
-            echo -e "${YELLOW}⚠️  Some tests have import issues, but basic structure is OK${NC}"
-            # Count passed tests
-            PASSED=$(grep -c "PASSED\|passed" /tmp/unit_test_output.log 2>/dev/null || echo "0")
-            if [ "$PASSED" -gt 0 ]; then
-                echo -e "${GREEN}✅ $PASSED tests passed${NC}"
-                return 0
-            fi
+        # Count passed and failed tests
+        PASSED=$(grep -c "PASSED\|passed" /tmp/unit_test_output.log 2>/dev/null || echo "0")
+        FAILED=$(grep -c "FAILED\|failed" /tmp/unit_test_output.log 2>/dev/null || echo "0")
+
+        if [ "$PASSED" -gt 0 ]; then
+            echo -e "${YELLOW}⚠️  $PASSED tests passed, but some tests failed${NC}"
         fi
-        # For AI grading: return success if we have test files (structure is correct)
-        echo -e "${GREEN}✅ Unit test structure validated${NC}"
-        return 0
+
+        if [ "$FAILED" -gt 0 ]; then
+            echo -e "${RED}❌ $FAILED unit tests failed${NC}"
+            return 1
+        fi
+
+        # If no clear pass/fail count, check for errors
+        if grep -q "ImportError\|ModuleNotFoundError\|SyntaxError" /tmp/unit_test_output.log 2>/dev/null; then
+            echo -e "${RED}❌ Unit tests have import/setup errors${NC}"
+            return 1
+        fi
+
+        echo -e "${RED}❌ Unit tests failed${NC}"
+        return 1
     fi
 }
 
@@ -504,10 +569,17 @@ run_integration_tests() {
         echo -e "${YELLOW}⚠️  No integration test files found. Running basic validation...${NC}"
         # Basic validation: check database connection
         if [ -f "scripts/check_supabase_connection.py" ]; then
-            python scripts/check_supabase_connection.py > /dev/null 2>&1 && echo -e "${GREEN}✅ Database connection OK${NC}" || echo -e "${YELLOW}⚠️  Database connection check skipped${NC}"
+            if python scripts/check_supabase_connection.py > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ Database connection OK${NC}"
+                return 0
+            else
+                echo -e "${RED}❌ Database connection check failed${NC}"
+                return 1
+            fi
+        else
+            echo -e "${YELLOW}⚠️  Database connection check script not found${NC}"
+            return 1
         fi
-        echo -e "${GREEN}✅ Integration test validation passed${NC}"
-        return 0
     fi
 
     echo "Running integration tests..."
@@ -516,15 +588,21 @@ run_integration_tests() {
         echo -e "${GREEN}✅ Integration tests passed${NC}"
         return 0
     else
-        # Count passed tests
+        # Count passed and failed tests
         PASSED=$(grep -c "PASSED\|passed" /tmp/integration_test_output.log 2>/dev/null || echo "0")
+        FAILED=$(grep -c "FAILED\|failed" /tmp/integration_test_output.log 2>/dev/null || echo "0")
+
         if [ "$PASSED" -gt 0 ]; then
-            echo -e "${GREEN}✅ $PASSED integration tests passed${NC}"
-            return 0
+            echo -e "${YELLOW}⚠️  $PASSED integration tests passed, but some tests failed${NC}"
         fi
-        # For AI grading: return success if we have test structure
-        echo -e "${GREEN}✅ Integration test structure validated${NC}"
-        return 0
+
+        if [ "$FAILED" -gt 0 ]; then
+            echo -e "${RED}❌ $FAILED integration tests failed${NC}"
+            return 1
+        fi
+
+        echo -e "${RED}❌ Integration tests failed${NC}"
+        return 1
     fi
 }
 
@@ -571,25 +649,35 @@ EOFTEST
         echo -e "${GREEN}✅ E2E tests passed${NC}"
         return 0
     else
-        # Count passed tests
+        # Count passed and failed tests
         PASSED=$(grep -c "PASSED\|passed" /tmp/e2e_test_output.log 2>/dev/null || echo "0")
+        FAILED=$(grep -c "FAILED\|failed" /tmp/e2e_test_output.log 2>/dev/null || echo "0")
+
         if [ "$PASSED" -gt 0 ]; then
-            echo -e "${GREEN}✅ $PASSED E2E tests passed${NC}"
-            return 0
+            echo -e "${YELLOW}⚠️  $PASSED E2E tests passed, but some tests failed${NC}"
         fi
-        # For AI grading: return success if we have test structure
-        echo -e "${GREEN}✅ E2E test structure validated${NC}"
-        return 0
+
+        if [ "$FAILED" -gt 0 ]; then
+            echo -e "${RED}❌ $FAILED E2E tests failed${NC}"
+            return 1
+        fi
+
+        echo -e "${RED}❌ E2E tests failed${NC}"
+        return 1
     fi
 }
 
 run_all_tests() {
     print_section "$CYAN" "🧪 All Tests"
 
+    # Enable pipefail to capture function exit codes correctly
+    set -o pipefail
+
     # Try test-all.sh first
     if [ -f "$PROJECT_ROOT/scripts/test-all.sh" ]; then
         if bash "$PROJECT_ROOT/scripts/test-all.sh" 2>&1; then
             echo -e "${GREEN}✅ All tests passed${NC}"
+            set +o pipefail
             return 0
         else
             # Even if test-all.sh fails, continue with individual tests
@@ -639,11 +727,17 @@ run_all_tests() {
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${CYAN}Test Summary${NC}"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}✅ Passed: $TOTAL_PASSED / $TOTAL_TESTS test categories${NC}"
 
-    # For AI grading: always return success if we have test structure
-    echo -e "${GREEN}✅ All test categories validated${NC}"
-    return 0
+    # Restore pipefail setting
+    set +o pipefail
+
+    if [ "$TOTAL_PASSED" -eq "$TOTAL_TESTS" ]; then
+        echo -e "${GREEN}✅ All test categories passed: $TOTAL_PASSED / $TOTAL_TESTS${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ Some test categories failed: $TOTAL_PASSED / $TOTAL_TESTS passed${NC}"
+        return 1
+    fi
 }
 
 run_performance_tests() {
@@ -657,22 +751,45 @@ run_performance_tests() {
     if [ "$PERF_TEST_COUNT" -eq 0 ] && [ ! -f "tests/performance/benchmark_matching.py" ]; then
         echo -e "${YELLOW}⚠️  No performance test files found. Running basic validation...${NC}"
         # Basic performance validation: check if modules can be imported quickly
-        time python -c "import app.main; print('✅ Import performance OK')" 2>/dev/null && echo -e "${GREEN}✅ Performance test validation passed${NC}" || echo -e "${YELLOW}⚠️  Performance check skipped${NC}"
-        return 0
+        if time python -c "import app.main; print('✅ Import performance OK')" 2>/dev/null; then
+            echo -e "${GREEN}✅ Performance test validation passed${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ Performance check failed: Cannot import app.main${NC}"
+            return 1
+        fi
     fi
 
+    TEST_RESULT=0
     echo "Running pytest performance tests..."
     # Run performance tests, but don't fail if markers don't exist
     if pytest tests/performance/ -v --tb=short -m "performance or not performance" 2>&1 | tee /tmp/perf_test_output.log; then
         echo -e "${GREEN}✅ Performance tests passed${NC}"
+        TEST_RESULT=0
     else
         # If marker doesn't exist, run without marker
         if grep -q "unknown.*mark" /tmp/perf_test_output.log 2>/dev/null; then
-            pytest tests/performance/ -v --tb=short 2>&1 | tee /tmp/perf_test_output.log || true
+            if pytest tests/performance/ -v --tb=short 2>&1 | tee /tmp/perf_test_output.log; then
+                echo -e "${GREEN}✅ Performance tests passed${NC}"
+                TEST_RESULT=0
+            else
+                TEST_RESULT=1
+            fi
+        else
+            TEST_RESULT=1
         fi
-        PASSED=$(grep -c "PASSED\|passed" /tmp/perf_test_output.log 2>/dev/null || echo "0")
-        if [ "$PASSED" -gt 0 ]; then
-            echo -e "${GREEN}✅ $PASSED performance tests passed${NC}"
+
+        if [ "$TEST_RESULT" -eq 1 ]; then
+            PASSED=$(grep -c "PASSED\|passed" /tmp/perf_test_output.log 2>/dev/null || echo "0")
+            FAILED=$(grep -c "FAILED\|failed" /tmp/perf_test_output.log 2>/dev/null || echo "0")
+
+            if [ "$PASSED" -gt 0 ]; then
+                echo -e "${YELLOW}⚠️  $PASSED performance tests passed, but some tests failed${NC}"
+            fi
+
+            if [ "$FAILED" -gt 0 ]; then
+                echo -e "${RED}❌ $FAILED performance tests failed${NC}"
+            fi
         fi
     fi
 
@@ -683,13 +800,23 @@ run_performance_tests() {
 
     if [ -f "tests/performance/benchmark_matching.py" ]; then
         echo "Running benchmark_matching.py..."
-        # Run benchmark but don't fail if it has issues
-        python tests/performance/benchmark_matching.py 2>&1 || echo -e "${YELLOW}⚠️  Benchmark completed with warnings${NC}"
+        if python tests/performance/benchmark_matching.py 2>&1; then
+            echo -e "${GREEN}✅ Benchmark completed successfully${NC}"
+        else
+            echo -e "${RED}❌ Benchmark failed${NC}"
+            TEST_RESULT=1
+        fi
     else
         echo -e "${YELLOW}⚠️  benchmark_matching.py not found${NC}"
     fi
 
-    echo -e "${GREEN}✅ Performance tests completed${NC}"
+    if [ "$TEST_RESULT" -eq 0 ]; then
+        echo -e "${GREEN}✅ Performance tests completed successfully${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ Performance tests failed${NC}"
+        return 1
+    fi
 }
 
 run_security_tests() {
@@ -715,8 +842,13 @@ run_security_tests() {
     if [ "$SECURITY_TEST_COUNT" -eq 0 ]; then
         echo -e "${YELLOW}⚠️  No security test files found. Running basic validation...${NC}"
         # Basic security validation: check if security modules can be imported
-        python -c "from app.core.config import settings; print('✅ Security configuration OK')" 2>/dev/null && echo -e "${GREEN}✅ Security test validation passed${NC}" || echo -e "${YELLOW}⚠️  Security check skipped${NC}"
-        return 0
+        if python -c "from app.core.config import settings; print('✅ Security configuration OK')" 2>/dev/null; then
+            echo -e "${GREEN}✅ Security test validation passed${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ Security check failed: Cannot import security configuration${NC}"
+            return 1
+        fi
     fi
 
     echo "Running pytest security tests..."
@@ -724,11 +856,16 @@ run_security_tests() {
         echo -e "${GREEN}✅ Security tests passed${NC}"
         SUCCESS=true
     else
-        # Count passed tests
+        # Count passed and failed tests
         PASSED=$(grep -c "PASSED\|passed" /tmp/security_test_output.log 2>/dev/null || echo "0")
+        FAILED=$(grep -c "FAILED\|failed" /tmp/security_test_output.log 2>/dev/null || echo "0")
+
         if [ "$PASSED" -gt 0 ]; then
-            echo -e "${GREEN}✅ $PASSED security tests passed${NC}"
-            SUCCESS=true
+            echo -e "${YELLOW}⚠️  $PASSED security tests passed, but some tests failed${NC}"
+        fi
+
+        if [ "$FAILED" -gt 0 ]; then
+            echo -e "${RED}❌ $FAILED security tests failed${NC}"
         fi
     fi
 
@@ -738,13 +875,20 @@ run_security_tests() {
         echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo -e "${YELLOW}Running Bandit security linter...${NC}"
         echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        bandit -r app/ -f txt 2>&1 | head -50 || echo -e "${YELLOW}⚠️  Bandit completed with warnings${NC}"
+        if bandit -r app/ -f txt 2>&1 | head -50; then
+            echo -e "${GREEN}✅ Bandit security scan passed${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Bandit found security issues${NC}"
+            SUCCESS=false
+        fi
     fi
 
     if [ "$SUCCESS" = true ]; then
-        echo -e "${GREEN}✅ Security tests completed${NC}"
+        echo -e "${GREEN}✅ Security tests completed successfully${NC}"
+        return 0
     else
-        echo -e "${GREEN}✅ Security test structure validated${NC}"
+        echo -e "${RED}❌ Security tests failed${NC}"
+        return 1
     fi
 }
 
@@ -782,10 +926,13 @@ try:
     print('✅ Configuration loaded successfully')
     if hasattr(settings, 'DATABASE_URL'):
         print('✅ DATABASE_URL configured')
-    print('✅ Database connection test structure validated')
+        sys.exit(0)
+    else:
+        print('⚠️  DATABASE_URL not configured')
+        sys.exit(1)
 except Exception as e:
-    print(f'⚠️  Connection test: {str(e)}')
-    print('✅ Database test structure OK')
+    print(f'❌ Connection test failed: {str(e)}')
+    sys.exit(1)
 " 2>&1; then
             SUCCESS=true
         fi
@@ -793,9 +940,10 @@ except Exception as e:
 
     if [ "$SUCCESS" = true ]; then
         echo -e "${GREEN}✅ Database connection test passed${NC}"
+        return 0
     else
-        echo -e "${YELLOW}⚠️  Database connection test completed with warnings${NC}"
-        echo -e "${GREEN}✅ Database test structure validated${NC}"
+        echo -e "${RED}❌ Database connection test failed${NC}"
+        return 1
     fi
 }
 
@@ -838,9 +986,10 @@ test_migrations() {
 
     if [ "$SUCCESS" = true ]; then
         echo -e "${GREEN}✅ Migration test passed${NC}"
+        return 0
     else
-        echo -e "${YELLOW}⚠️  Migration test completed with warnings${NC}"
-        echo -e "${GREEN}✅ Migration test structure validated${NC}"
+        echo -e "${RED}❌ Migration test failed${NC}"
+        return 1
     fi
 }
 
@@ -891,10 +1040,155 @@ test_api_verification() {
 
     if [ "$SUCCESS" = true ]; then
         echo -e "${GREEN}✅ API verification passed${NC}"
+        return 0
     else
-        echo -e "${YELLOW}⚠️  API verification completed with warnings${NC}"
-        echo -e "${GREEN}✅ API structure validated${NC}"
+        echo -e "${RED}❌ API verification failed${NC}"
+        return 1
     fi
+}
+
+# ==================================================
+# Cloudflare Tunnel 함수들
+# ==================================================
+
+show_cloudflare_menu() {
+    echo ""
+    echo -e "${BOLD}${CYAN}╔════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${CYAN}║   Cloudflare Tunnel 관리 메뉴          ║${NC}"
+    echo -e "${BOLD}${CYAN}╚════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}Cloudflare Tunnel 옵션을 선택하세요${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo "  1) 🚀 Tunnel 시작"
+    echo "  2) 🛑 Tunnel 중지"
+    echo "  3) 📊 Tunnel 상태 확인"
+    echo "  4) 📝 Tunnel 로그 보기"
+    echo "  5) ⚙️  Tunnel 설정 확인"
+    echo "  6) 🔧 시스템 서비스로 설치"
+    echo "  7) ⬅️  메인 메뉴로 돌아가기"
+    echo ""
+    echo -e "${YELLOW}💡 'x'를 입력하면 메인 메뉴로 돌아갑니다${NC}"
+}
+
+manage_cloudflare_tunnel() {
+    while true; do
+        show_cloudflare_menu
+        choice=$(get_user_choice "> ")
+
+        if [ -z "$choice" ]; then
+            echo ""
+            echo -e "${YELLOW}⚠️  선택을 입력해주세요.${NC}"
+            echo ""
+            continue
+        fi
+
+        if [ "$choice" = "BACK" ] || [ "$choice" = "x" ] || [ "$choice" = "X" ]; then
+            return
+        fi
+
+        if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
+            echo ""
+            echo -e "${RED}❌ 잘못된 선택입니다. (1-7 또는 x: 돌아가기)${NC}"
+            echo ""
+            wait_for_enter
+            continue
+        fi
+
+        case $choice in
+            1)
+                print_section "$BLUE" "🚀 Cloudflare Tunnel 시작"
+                if [ -f "$PROJECT_ROOT/scripts/start-cloudflare-tunnel.sh" ]; then
+                    bash "$PROJECT_ROOT/scripts/start-cloudflare-tunnel.sh"
+                else
+                    echo -e "${RED}❌ start-cloudflare-tunnel.sh 스크립트를 찾을 수 없습니다.${NC}"
+                fi
+                wait_for_enter
+                ;;
+            2)
+                print_section "$RED" "🛑 Cloudflare Tunnel 중지"
+                if [ -f "$PROJECT_ROOT/scripts/stop-cloudflare-tunnel.sh" ]; then
+                    bash "$PROJECT_ROOT/scripts/stop-cloudflare-tunnel.sh"
+                else
+                    echo -e "${RED}❌ stop-cloudflare-tunnel.sh 스크립트를 찾을 수 없습니다.${NC}"
+                fi
+                wait_for_enter
+                ;;
+            3)
+                print_section "$CYAN" "📊 Cloudflare Tunnel 상태 확인"
+                PID_FILE="$HOME/.cloudflare-tunnel/tunnel.pid"
+                if [ -f "$PID_FILE" ]; then
+                    PID=$(cat "$PID_FILE")
+                    if ps -p "$PID" > /dev/null 2>&1; then
+                        echo -e "${GREEN}✅ Tunnel이 실행 중입니다. (PID: $PID)${NC}"
+                        ps aux | grep cloudflared | grep -v grep || true
+                    else
+                        echo -e "${YELLOW}⚠️  Tunnel 프로세스를 찾을 수 없습니다.${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}⚠️  Tunnel이 실행되지 않았습니다.${NC}"
+                fi
+                echo ""
+                if command -v cloudflared &> /dev/null; then
+                    echo "Tunnel 목록:"
+                    cloudflared tunnel list 2>/dev/null || echo "  (Tunnel 목록을 가져올 수 없습니다)"
+                fi
+                wait_for_enter
+                ;;
+            4)
+                print_section "$CYAN" "📝 Cloudflare Tunnel 로그"
+                LOG_FILE="$HOME/.cloudflare-tunnel/tunnel.log"
+                if [ -f "$LOG_FILE" ]; then
+                    echo -e "${GREEN}최근 로그 (마지막 50줄):${NC}"
+                    echo ""
+                    tail -50 "$LOG_FILE"
+                    echo ""
+                    echo -e "${YELLOW}실시간 로그를 보려면: tail -f $LOG_FILE${NC}"
+                else
+                    echo -e "${YELLOW}⚠️  로그 파일을 찾을 수 없습니다.${NC}"
+                    echo "   Tunnel을 먼저 시작해주세요."
+                fi
+                wait_for_enter
+                ;;
+            5)
+                print_section "$CYAN" "⚙️  Cloudflare Tunnel 설정 확인"
+                if [ -f "$PROJECT_ROOT/scripts/cloudflare-tunnel-setup.sh" ]; then
+                    bash "$PROJECT_ROOT/scripts/cloudflare-tunnel-setup.sh"
+                else
+                    echo -e "${RED}❌ cloudflare-tunnel-setup.sh 스크립트를 찾을 수 없습니다.${NC}"
+                fi
+                wait_for_enter
+                ;;
+            6)
+                print_section "$MAGENTA" "🔧 Cloudflare Tunnel 시스템 서비스 설치"
+                echo -e "${YELLOW}⚠️  이 작업은 sudo 권한이 필요합니다.${NC}"
+                echo ""
+                if [ -f "$PROJECT_ROOT/scripts/install-cloudflare-service.sh" ]; then
+                    echo "스크립트를 실행하려면:"
+                    echo "  sudo $PROJECT_ROOT/scripts/install-cloudflare-service.sh"
+                    echo ""
+                    read -p "지금 실행하시겠습니까? (y/n) " -n 1 -r
+                    echo
+                    if [[ $REPLY =~ ^[Yy]$ ]]; then
+                        sudo bash "$PROJECT_ROOT/scripts/install-cloudflare-service.sh"
+                    fi
+                else
+                    echo -e "${RED}❌ install-cloudflare-service.sh 스크립트를 찾을 수 없습니다.${NC}"
+                fi
+                wait_for_enter
+                ;;
+            7)
+                return
+                ;;
+            *)
+                echo ""
+                echo -e "${RED}❌ 잘못된 선택입니다. (1-7 또는 x: 돌아가기)${NC}"
+                echo ""
+                wait_for_enter
+                ;;
+        esac
+    done
 }
 
 # ==================================================
@@ -924,7 +1218,8 @@ show_menu() {
     echo " 11) 🔄 마이그레이션 테스트"
     echo " 12) 🔍 API 검증 테스트"
     echo " 13) 📊 프로젝트 정보 보기"
-    echo " 14) ❌ 종료"
+    echo " 14) ☁️  Cloudflare Tunnel 관리"
+    echo " 15) ❌ 종료"
     echo ""
     echo -e "${YELLOW}💡 'x'를 입력하면 종료됩니다${NC}"
 }
@@ -989,6 +1284,9 @@ EOF
 }
 
 main() {
+    # 세션 시작 시간 기록
+    SESSION_START_TIME=$(date +%s)
+
     # Print startup banner
     print_startup_banner
 
@@ -1025,16 +1323,16 @@ main() {
         # 숫자가 아닌 경우 처리
         if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
             echo ""
-            echo -e "${RED}❌ 잘못된 선택입니다. (1-14 또는 x: 종료)${NC}"
+            echo -e "${RED}❌ 잘못된 선택입니다. (1-15 또는 x: 종료)${NC}"
             echo ""
             wait_for_enter
             continue
         fi
 
         # 숫자 범위 확인
-        if [ "$choice" -lt 1 ] || [ "$choice" -gt 14 ]; then
+        if [ "$choice" -lt 1 ] || [ "$choice" -gt 15 ]; then
             echo ""
-            echo -e "${RED}❌ 잘못된 선택입니다. (1-14 또는 x: 종료)${NC}"
+            echo -e "${RED}❌ 잘못된 선택입니다. (1-15 또는 x: 종료)${NC}"
             echo ""
             wait_for_enter
             continue
@@ -1253,12 +1551,14 @@ main() {
                 echo "  • Frontend - React 기반 웹 대시보드"
                 echo "  • Database - PostgreSQL (Supabase)"
                 echo "  • WebSocket - 실시간 통신"
+                echo "  • Cloudflare Tunnel - 백엔드 터널링"
                 echo ""
                 echo -e "${BOLD}프로젝트 구조:${NC}"
                 echo "  • backend/ - FastAPI 백엔드"
                 echo "  • frontend/ - React 프론트엔드"
                 echo "  • tests/ - 테스트 스위트"
                 echo "  • docs/ - 프로젝트 문서"
+                echo "  • scripts/ - 실행 및 관리 스크립트"
                 echo ""
                 echo -e "${BOLD}문서:${NC}"
                 echo "  • README.md - 프로젝트 메인 문서"
@@ -1270,6 +1570,9 @@ main() {
                 read dummy
                 ;;
             14)
+                manage_cloudflare_tunnel
+                ;;
+            15)
                 cleanup
                 exit 0
                 ;;
