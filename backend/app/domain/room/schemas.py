@@ -1,5 +1,6 @@
 """Room domain schemas (Request/Response DTOs)."""
 
+
 from datetime import datetime
 from typing import Optional
 
@@ -47,18 +48,18 @@ class RoomUpdate(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    work_duration: Optional[int] = Field(
+    work_duration: int | None = Field(
         None,
         ge=MIN_WORK_DURATION * 60,  # Convert minutes to seconds
         le=MAX_WORK_DURATION * 60,  # Convert minutes to seconds
     )
-    break_duration: Optional[int] = Field(
+    break_duration: int | None = Field(
         None,
         ge=MIN_BREAK_DURATION * 60,  # Convert minutes to seconds
         le=MAX_BREAK_DURATION * 60,  # Convert minutes to seconds
     )
-    auto_start_break: Optional[bool] = None
-    remove_on_leave: Optional[bool] = Field(
+    auto_start_break: bool | None = None
+    remove_on_leave: bool | None = Field(
         None,
         description="If true, participants are removed from room list when they leave. If false, participants remain visible even after leaving.",
     )
@@ -75,7 +76,7 @@ class RoomResponse(BaseModel):
     break_duration: int
     auto_start_break: bool
     is_active: bool
-    host_id: Optional[str]
+    host_id: str | None
     remove_on_leave: bool = False
     created_at: datetime
     updated_at: datetime
