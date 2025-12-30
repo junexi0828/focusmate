@@ -1,7 +1,7 @@
 """Service layer for user verification."""
 
+from datetime import UTC, datetime
 import logging
-from datetime import timezone, datetime
 from typing import Optional
 from uuid import UUID
 
@@ -26,7 +26,7 @@ class VerificationService:
     def __init__(
         self,
         repository: VerificationRepository,
-        user_repository: Optional[UserRepository] = None,
+        user_repository: UserRepository | None = None,
     ):
         self.repository = repository
         self.user_repository = user_repository
@@ -172,7 +172,7 @@ class VerificationService:
                     verification.verification_id,
                     {
                         "verification_status": "approved",
-                        "verified_at": datetime.now(timezone.utc),
+                        "verified_at": datetime.now(UTC),
                         "admin_note": "SMTP 전송 성공으로 자동 승인되었습니다.",
                     },
                 )
@@ -290,13 +290,13 @@ class VerificationService:
         }
 
     async def review_verification(
-        self, verification_id: UUID, approved: bool, admin_note: Optional[str] = None
+        self, verification_id: UUID, approved: bool, admin_note: str | None = None
     ) -> VerificationResponse:
         """Review verification request (admin)."""
         update_data = {
             "verification_status": "approved" if approved else "rejected",
             "admin_note": admin_note,
-            "verified_at": datetime.now(timezone.utc) if approved else None,
+            "verified_at": datetime.now(UTC) if approved else None,
         }
 
         verification = await self.repository.update_verification(
