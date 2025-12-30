@@ -5,8 +5,8 @@ Revises: 20251212_1852
 Create Date: 2025-12-12 20:00:00.000000
 
 """
-from typing import Sequence, Union
 
+from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql

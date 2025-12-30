@@ -1,9 +1,9 @@
 """Redis Pub/Sub integration for chat system."""
 
+from typing import Optional
 import asyncio
 import json
 from uuid import UUID
-from typing import Optional
 
 import redis.asyncio as aioredis
 
@@ -16,12 +16,12 @@ import logging
 class RedisPubSubManager:
     """Manages Redis Pub/Sub for cross-server message synchronization."""
 
-    def __init__(self, redis_url: Optional[str] = None):
+    def __init__(self, redis_url: str | None = None):
         self.redis_url = redis_url or settings.REDIS_URL
-        self.redis: aioredis.Optional[Redis] = None
-        self.pubsub: aioredis.client.Optional[PubSub] = None
-        self.subscriptions: Set[str] = set()
-        self._listener_task: asyncio.Optional[Task] = None
+        self.redis: aioredis.Redis | None = None
+        self.pubsub: aioredis.client.PubSub | None = None
+        self.subscriptions: set[str] = set()
+        self._listener_task: asyncio.Task | None = None
 
     async def connect(self):
         """Connect to Redis."""
@@ -116,7 +116,7 @@ class RedisPubSubManager:
         asyncio.create_task(self.listen())
 
     # Presence operations
-    async def publish_presence(self, user_id: str, is_online: bool, metadata: Optional[dict] = None):
+    async def publish_presence(self, user_id: str, is_online: bool, metadata: dict | None = None):
         """Publish presence change to all servers.
 
         Args:
@@ -172,7 +172,7 @@ class RedisPubSubManager:
 
         await self.redis.srem("presence:online_users", user_id)
 
-    async def get_online_users(self) -> Set[str]:
+    async def get_online_users(self) -> set[str]:
         """Get set of online user IDs from Redis.
 
         Returns:
@@ -205,7 +205,7 @@ class RedisPubSubManager:
         await self.redis.hset(key, mapping=presence_data)
         await self.redis.expire(key, ttl_seconds)
 
-    async def get_cached_presence(self, user_id: str) -> Optional[dict]:
+    async def get_cached_presence(self, user_id: str) -> dict | None:
         """Get cached presence data from Redis.
 
         Args:

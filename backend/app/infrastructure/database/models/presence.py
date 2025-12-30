@@ -1,12 +1,12 @@
 """User presence tracking database models."""
 
-from datetime import datetime
-from typing import Optional
 
+from typing import Optional
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base
+from datetime import datetime
 
 
 class UserPresence(Base):
@@ -39,7 +39,7 @@ class UserPresence(Base):
     )
 
     # Optional status message
-    status_message: Mapped[Optional[str]] = mapped_column(
+    status_message: Mapped[str | None] = mapped_column(
         String(200), nullable=True
     )
 

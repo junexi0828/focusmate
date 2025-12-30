@@ -15,7 +15,7 @@ class ChatRoomCreate(BaseModel):
     room_name: Optional[str] = None
     description: Optional[str] = None
     metadata: Optional[dict] = None
-    display_mode: Optional[Literal["open", "blind"]] = None
+    display_mode: Literal["open", "blind"] | None = None
 
 
 class ChatRoomResponse(BaseModel):
@@ -83,7 +83,7 @@ class MessageCreate(BaseModel):
 
     content: str = Field(..., min_length=1, max_length=5000)
     message_type: Literal["text", "image", "file", "system"] = "text"
-    attachments: Optional[List[str]] = None
+    attachments: List[str] | None = None
     parent_message_id: Optional[UUID] = None
 
 
@@ -101,7 +101,7 @@ class MessageResponse(BaseModel):
     sender_id: str
     message_type: str
     content: str
-    attachments: Optional[List[str]]
+    attachments: List[str] | None
     parent_message_id: Optional[UUID]
     thread_count: int
     reactions: list

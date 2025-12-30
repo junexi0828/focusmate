@@ -75,7 +75,7 @@ FocusMate 시스템
         to_email: str,
         team_name: str,
         username: str,
-        admin_note: Optional[str] = None,
+        admin_note: str | None = None,
     ) -> bool:
         """Send verification approval email with HTML template."""
         subject = f"[Focus Mate] {team_name} 팀 인증 승인"
@@ -187,7 +187,7 @@ FocusMate 시스템
         to_email: str,
         team_name: str,
         username: str,
-        admin_note: Optional[str] = None,
+        admin_note: str | None = None,
     ) -> bool:
         """Send verification rejection email with HTML template."""
         subject = f"[Focus Mate] {team_name} 팀 인증 거부"
@@ -416,7 +416,7 @@ FocusMate 시스템
         to_email: str,
         subject: str,
         text_content: str,
-        html_content: Optional[str] = None,
+        html_content: str | None = None,
     ) -> bool:
         """Send email using aiosmtplib.
 

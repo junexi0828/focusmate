@@ -1,7 +1,7 @@
 """Timer repository implementation."""
 
-from sqlalchemy import select
 from typing import Optional
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models import Timer
@@ -20,7 +20,7 @@ class TimerRepository:
         await self.db.refresh(timer)
         return timer
 
-    async def get_by_room_id(self, room_id: str) -> Optional[Timer]:
+    async def get_by_room_id(self, room_id: str) -> Timer | None:
         """Get timer by room ID."""
         result = await self.db.execute(select(Timer).where(Timer.room_id == room_id))
         return result.scalar_one_or_none()

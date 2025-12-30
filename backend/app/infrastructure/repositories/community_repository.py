@@ -1,8 +1,7 @@
 """Community repository - posts, comments, and likes."""
 
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
 
+from typing import Dict, List, Optional, Tuple
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +14,7 @@ from app.infrastructure.database.models.community import (
     PostRead,
 )
 from app.infrastructure.database.models.user import User
+from datetime import datetime
 
 
 class PostRepository:
@@ -30,7 +30,7 @@ class PostRepository:
         await self.db.refresh(post)
         return post
 
-    async def get_by_id(self, post_id: str) -> Optional[Post]:
+    async def get_by_id(self, post_id: str) -> Post | None:
         """Get post by ID."""
         result = await self.db.execute(
             select(Post).where(Post.id == post_id).where(Post.is_deleted == False)
@@ -41,14 +41,14 @@ class PostRepository:
         self,
         limit: int = 20,
         offset: int = 0,
-        category: Optional[str] = None,
-        user_id: Optional[str] = None,
-        search_query: Optional[str] = None,
-        author_username: Optional[str] = None,
-        date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None,
+        category: str | None = None,
+        user_id: str | None = None,
+        search_query: str | None = None,
+        author_username: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
         sort_by: PostSortBy = PostSortBy.RECENT,
-    ) -> Tuple[List[Post], int]:
+    ) -> tuple[list[Post], int]:
         """Get posts with optional filtering, search, and sorting."""
         # Join with User table for author username search
         query = select(Post).join(User, Post.user_id == User.id).where(Post.is_deleted == False)
@@ -104,7 +104,7 @@ class PostRepository:
 
         return posts, total
 
-    async def get_category_counts(self) -> Dict[str, int]:
+    async def get_category_counts(self) -> dict[str, int]:
         """Get count of posts per category."""
         from sqlalchemy import func
 
@@ -180,7 +180,7 @@ class CommentRepository:
         await self.db.refresh(comment)
         return comment
 
-    async def get_by_id(self, comment_id: str) -> Optional[Comment]:
+    async def get_by_id(self, comment_id: str) -> Comment | None:
         """Get comment by ID."""
         result = await self.db.execute(
             select(Comment)
@@ -189,7 +189,7 @@ class CommentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_post(self, post_id: str) -> List[Comment]:
+    async def get_by_post(self, post_id: str) -> list[Comment]:
         """Get all comments for a post."""
         result = await self.db.execute(
             select(Comment)
@@ -199,7 +199,7 @@ class CommentRepository:
         )
         return list(result.scalars().all())
 
-    async def get_replies(self, parent_comment_id: str) -> List[Comment]:
+    async def get_replies(self, parent_comment_id: str) -> list[Comment]:
         """Get replies to a comment."""
         result = await self.db.execute(
             select(Comment)
@@ -234,7 +234,7 @@ class PostLikeRepository:
         await self.db.refresh(post_like)
         return post_like
 
-    async def get_by_post_and_user(self, post_id: str, user_id: str) -> Optional[PostLike]:
+    async def get_by_post_and_user(self, post_id: str, user_id: str) -> PostLike | None:
         """Check if user already liked post."""
         result = await self.db.execute(
             select(PostLike)
@@ -264,7 +264,7 @@ class CommentLikeRepository:
 
     async def get_by_comment_and_user(
         self, comment_id: str, user_id: str
-    ) -> Optional[CommentLike]:
+    ) -> CommentLike | None:
         """Check if user already liked comment."""
         result = await self.db.execute(
             select(CommentLike)
@@ -301,7 +301,7 @@ class PostReadRepository:
         await self.db.refresh(post_read)
         return post_read
 
-    async def get_by_post_and_user(self, post_id: str, user_id: str) -> Optional[PostRead]:
+    async def get_by_post_and_user(self, post_id: str, user_id: str) -> PostRead | None:
         """Check if user has read the post."""
         result = await self.db.execute(
             select(PostRead)
@@ -310,7 +310,7 @@ class PostReadRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_read_posts_by_user(self, user_id: str) -> List[str]:
+    async def get_read_posts_by_user(self, user_id: str) -> list[str]:
         """Get list of post IDs that user has read."""
         result = await self.db.execute(
             select(PostRead.post_id).where(PostRead.user_id == user_id)
@@ -318,8 +318,8 @@ class PostReadRepository:
         return [row[0] for row in result.all()]
 
     async def get_read_status_for_posts(
-        self, post_ids: List[str], user_id: str
-    ) -> Dict[str, bool]:
+        self, post_ids: list[str], user_id: str
+    ) -> dict[str, bool]:
         """Get read status for multiple posts."""
         if not post_ids:
             return {}

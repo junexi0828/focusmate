@@ -1,11 +1,11 @@
 """SessionHistory ORM Model - stores completed pomodoro sessions."""
 
-from datetime import datetime
 
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
+from datetime import datetime
 
 
 class SessionHistory(Base, TimestampMixin):

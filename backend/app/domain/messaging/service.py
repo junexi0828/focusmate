@@ -1,8 +1,7 @@
 """Messaging domain service - 1:1 conversations and messages."""
 
-from datetime import timezone, datetime
-from typing import List
 
+from typing import List
 from app.core.exceptions import NotFoundException
 from app.domain.messaging.schemas import (
     ConversationDetailResponse,
@@ -19,6 +18,7 @@ from app.infrastructure.repositories.messaging_repository import (
 )
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.shared.utils.uuid import generate_uuid
+from datetime import UTC, datetime
 
 
 class MessagingService:
@@ -96,7 +96,7 @@ class MessagingService:
 
         return response
 
-    async def get_user_conversations(self, user_id: str) -> List[ConversationListResponse]:
+    async def get_user_conversations(self, user_id: str) -> list[ConversationListResponse]:
         """Get all conversations for a user."""
         conversations = await self.conversation_repo.get_user_conversations(user_id)
 
@@ -190,7 +190,7 @@ class MessagingService:
         )
 
     async def mark_messages_as_read(
-        self, conversation_id: str, user_id: str, message_ids: List[str]
+        self, conversation_id: str, user_id: str, message_ids: list[str]
     ) -> MarkMessagesReadResponse:
         """Mark messages as read.
 
@@ -208,7 +208,7 @@ class MessagingService:
             raise NotFoundException(f"Conversation {conversation_id} not found")
 
         # Mark messages as read
-        read_at = datetime.now(timezone.utc)
+        read_at = datetime.now(UTC)
         marked_count = await self.message_repo.mark_as_read(message_ids, read_at)
 
         # Update conversation unread count

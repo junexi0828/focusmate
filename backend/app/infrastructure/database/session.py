@@ -4,8 +4,8 @@ This module provides SQLAlchemy async session management.
 Supports both SQLite (development) and PostgreSQL (production).
 """
 
+from typing import Annotated
 from collections.abc import AsyncGenerator
-from typing_extensions import Annotated
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import (

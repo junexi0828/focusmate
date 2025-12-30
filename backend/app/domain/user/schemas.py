@@ -1,9 +1,9 @@
 """User domain schemas."""
 
-from datetime import datetime
-from typing import Optional
 
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from datetime import datetime
 
 
 class UserRegister(BaseModel):
@@ -36,9 +36,9 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     is_admin: bool = False
-    bio: Optional[str]
-    school: Optional[str] = None
-    profile_image: Optional[str] = None
+    bio: str | None
+    school: str | None = None
+    profile_image: str | None = None
     total_focus_time: int
     total_sessions: int
     created_at: datetime
@@ -50,10 +50,10 @@ class UserProfileUpdate(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    username: Optional[str] = Field(None, min_length=2, max_length=50)
-    bio: Optional[str] = Field(None, max_length=500)
-    school: Optional[str] = Field(None, max_length=100)
-    profile_image: Optional[str] = Field(None, max_length=500)
+    username: str | None = Field(None, min_length=2, max_length=50)
+    bio: str | None = Field(None, max_length=500)
+    school: str | None = Field(None, max_length=100)
+    profile_image: str | None = Field(None, max_length=500)
 
 
 class TokenResponse(BaseModel):
@@ -97,4 +97,4 @@ class NaverOAuthCallback(BaseModel):
     model_config = ConfigDict(strict=True)
 
     code: str
-    state: Optional[str] = None
+    state: str | None = None

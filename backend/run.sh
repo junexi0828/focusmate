@@ -1,6 +1,15 @@
 #!/bin/bash
 # Focus Mate Backend - Quick Start Script
 
+# dev version running script.
+# This script is used to start the backend server.
+# It will check if the Python version is compatible and install the dependencies.
+# It will then run the migrations and start the server.
+# It will also check if the .env file exists and create it if it doesn't.
+# It will also check if the virtual environment exists and create it if it doesn't.
+# It will also check if the uvicorn is available and install it if it isn't.
+# It will also run the migrations if alembic is available.
+# It will also start the server.
 set -e
 
 # Change to backend directory (script is in backend/)

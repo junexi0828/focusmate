@@ -1,9 +1,9 @@
 """Messaging domain schemas."""
 
-from datetime import datetime
-from typing import List, Optional
 
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
+from datetime import datetime
 
 
 # Message Schemas
@@ -25,10 +25,10 @@ class MessageResponse(BaseModel):
     receiver_id: str
     content: str
     is_read: bool
-    read_at: Optional[datetime]
+    read_at: datetime | None
     created_at: datetime
-    sender_username: Optional[str] = None
-    receiver_username: Optional[str] = None
+    sender_username: str | None = None
+    receiver_username: str | None = None
 
 
 # Conversation Schemas
@@ -40,14 +40,14 @@ class ConversationResponse(BaseModel):
     id: str
     user1_id: str
     user2_id: str
-    last_message_at: Optional[datetime]
+    last_message_at: datetime | None
     user1_unread_count: int
     user2_unread_count: int
     created_at: datetime
     updated_at: datetime
-    other_user_id: Optional[str] = None  # The other participant in conversation
-    other_user_username: Optional[str] = None
-    last_message: Optional[str] = None
+    other_user_id: str | None = None  # The other participant in conversation
+    other_user_username: str | None = None
+    last_message: str | None = None
 
 
 class ConversationListResponse(BaseModel):
@@ -55,9 +55,9 @@ class ConversationListResponse(BaseModel):
 
     id: str
     other_user_id: str
-    other_user_username: Optional[str]
-    last_message: Optional[str]
-    last_message_at: Optional[datetime]
+    other_user_username: str | None
+    last_message: str | None
+    last_message_at: datetime | None
     unread_count: int
 
 
@@ -65,14 +65,14 @@ class ConversationDetailResponse(BaseModel):
     """Detailed conversation response with messages."""
 
     conversation: ConversationResponse
-    messages: List[MessageResponse]
+    messages: list[MessageResponse]
 
 
 # Mark as Read
 class MarkMessagesReadRequest(BaseModel):
     """Request to mark messages as read."""
 
-    message_ids: List[str] = Field(..., min_length=1)
+    message_ids: list[str] = Field(..., min_length=1)
 
 
 class MarkMessagesReadResponse(BaseModel):

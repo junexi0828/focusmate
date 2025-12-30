@@ -126,27 +126,25 @@ SECRET_KEY=your-secret-key-here
 # ... 나머지 설정
 ```
 
-### 5. 백엔드 실행 스크립트 생성
+### 5. 백엔드 실행 스크립트 확인
+
+**NAS 프로덕션 스크립트** `backend/start-nas.sh` 스크립트가 rsync를 통해 NAS에 자동으로 동기화됩니다.
+
+스크립트 위치: `/volume1/web/focusmate-backend/start-nas.sh`
+
+**수동으로 실행 권한 부여 (필요한 경우):**
 
 ```bash
-# 실행 스크립트 생성
-nano /volume1/web/focusmate-backend/start.sh
+chmod +x /volume1/web/focusmate-backend/start-nas.sh
 ```
 
-`start.sh` 내용:
+**스크립트 기능:**
 
-```bash
-#!/bin/bash
-cd /volume1/web/focusmate-backend
-source venv/bin/activate
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-실행 권한 부여:
-
-```bash
-chmod +x /volume1/web/focusmate-backend/start.sh
-```
+- 가상환경 자동 활성화
+- uvicorn으로 백엔드 실행 (프로덕션 모드)
+- 로그 파일 자동 생성 (`logs/app.log`)
+- PID 파일 생성 (`app.pid`)
+- 백그라운드 실행
 
 ### 6. 자동 시작 설정 (Task Scheduler)
 
@@ -158,23 +156,42 @@ chmod +x /volume1/web/focusmate-backend/start.sh
    - **Schedule**: `Boot-up` (부팅 시 자동 시작)
    - **Run command**:
      ```bash
-     /volume1/web/focusmate-backend/start.sh
+     /volume1/web/focusmate-backend/start-nas.sh
      ```
 4. **Save** 클릭
 
-**또는 수동 시작 스크립트:**
+**수동 실행:**
 
 ```bash
-# 시작 스크립트
-nano /usr/local/bin/focusmate-start.sh
+# SSH 접속
+ssh juns@192.168.45.58
+
+# 백엔드 + Cloudflare Tunnel 자동 실행
+cd /volume1/web/focusmate-backend
+./start-nas.sh
+
+# 로그 확인
+tail -f logs/app.log                    # 백엔드 로그
+tail -f /volume1/web/cloudflare-tunnel/tunnel.log  # Tunnel 로그
+
+# 중지 (백엔드 + Tunnel 모두 중지)
+./stop-nas.sh
 ```
 
+**개별 실행 (백엔드만):**
+
 ```bash
-#!/bin/bash
 cd /volume1/web/focusmate-backend
-source venv/bin/activate
-nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /volume1/web/focusmate-backend/logs/app.log 2>&1 &
-echo $! > /volume1/web/focusmate-backend/app.pid
+# start-nas.sh는 백엔드와 Tunnel을 함께 시작하므로,
+# 백엔드만 실행하려면 직접 uvicorn 실행
+```
+
+**개별 실행 (Cloudflare Tunnel만):**
+
+```bash
+cd /volume1/web/cloudflare-tunnel
+nohup cloudflared tunnel run focusmate-backend > tunnel.log 2>&1 &
+echo $! > tunnel.pid
 ```
 
 ## Cloudflare Tunnel 설정 (NAS에서 실행)
@@ -201,11 +218,19 @@ cloudflared --version
 
 #### Zero Trust 대시보드에서 Tunnel 생성
 
+**⚠️ 중요: 기존 macOS용 Tunnel(`focusmate-backend`)과 별도로 NAS용 Tunnel을 생성하거나 하나만 실행.**
+
 1. https://one.dash.cloudflare.com/ 접속
 2. Networks → Tunnels → Create a tunnel
-3. Tunnel 이름: `focusmate-nas-backend`
+3. Tunnel 이름: `focusmate-nas-backend` (기존 `focusmate-backend`와 구분)
 4. Connector: `cloudflared` 선택
 5. 설치 명령어 복사
+
+**왜 별도 Tunnel이 필요한가요?**
+
+- 같은 Tunnel을 여러 곳에서 실행하면 충돌 발생
+- macOS용: 로컬 개발용 (`focusmate-backend`)
+- NAS용: 프로덕션 서버용 (`focusmate-nas-backend`)
 
 #### NAS에서 Tunnel 실행
 
@@ -232,15 +257,27 @@ cloudflared tunnel route dns focusmate-nas-backend api.eieconcierge.com
 
 ### 3. Public Hostname 설정
 
+**⚠️ 중요: NAS용 Tunnel에 별도의 Public Hostname을 설정해야 합니다.**
+
 Zero Trust 대시보드에서:
 
-1. Tunnel 선택 → **Public Hostname** 탭
+1. **NAS용 Tunnel 선택** (`focusmate-nas-backend`) → **Public Hostname** 탭
 2. **Add a public hostname**
 3. 설정:
-   - **Subdomain**: `api` (또는 원하는 이름)
+   - **Subdomain**: `api-nas` 또는 `api` (기존 macOS Tunnel과 구분)
    - **Domain**: `eieconcierge.com` (Cloudflare에서 관리하는 도메인)
    - **Service**: `http://localhost:8000`
 4. **Save hostname**
+
+**옵션 1: 별도 서브도메인 사용 (권장)**
+
+- `api-nas.eieconcierge.com` → NAS 백엔드
+- `api.eieconcierge.com` → macOS 개발용 (또는 제거)
+
+**옵션 2: 같은 서브도메인 사용**
+
+- macOS Tunnel을 중지하고 NAS Tunnel만 사용
+- `api.eieconcierge.com` → NAS 백엔드
 
 ### 4. DNS 레코드 (커스텀 도메인 사용 시)
 
@@ -276,6 +313,45 @@ echo $! > /volume1/web/cloudflare-tunnel/tunnel.pid
 Task Scheduler에 등록:
 
 - **Boot-up** 스케줄로 설정
+
+### 6. Tunnel 수동 실행/중지
+
+**Tunnel 실행:**
+
+```bash
+# 방법 1: Tunnel 이름으로 실행 (권장)
+cd /volume1/web/cloudflare-tunnel
+nohup cloudflared tunnel run focusmate-backend > tunnel.log 2>&1 &
+echo $! > tunnel.pid
+
+# 방법 2: 토큰으로 실행 (Zero Trust 대시보드에서 토큰 복사)
+cloudflared tunnel run --token [토큰] > tunnel.log 2>&1 &
+```
+
+**Tunnel 중지:**
+
+```bash
+# PID 파일이 있는 경우
+PID=$(cat /volume1/web/cloudflare-tunnel/tunnel.pid)
+kill $PID
+
+# PID 파일이 없는 경우 (프로세스 직접 찾기)
+PID=$(ps aux | grep '[c]loudflared tunnel' | awk '{print $2}' | head -1)
+kill $PID
+
+# 강제 종료 (필요시)
+kill -9 $PID
+```
+
+**Tunnel 상태 확인:**
+
+```bash
+# 실행 중인 Tunnel 확인
+ps aux | grep cloudflared
+
+# 로그 확인
+tail -f /volume1/web/cloudflare-tunnel/tunnel.log
+```
 
 ## 설정 체크리스트
 

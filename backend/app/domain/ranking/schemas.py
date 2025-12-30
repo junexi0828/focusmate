@@ -203,7 +203,7 @@ class TeamStatsResponse(BaseModel):
     total_sessions: int
     current_streak: int
     mini_game_score: int
-    member_breakdown: Optional[List[dict]] = None
+    member_breakdown: List[dict] | None = None
 
     class Config:
         from_attributes = True

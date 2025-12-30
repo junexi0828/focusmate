@@ -1,7 +1,7 @@
 """Report repository for database operations."""
 
-from uuid import UUID
 from typing import List, Optional
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,14 +24,14 @@ class ReportRepository:
         await self.session.refresh(report)
         return report
 
-    async def get_by_id(self, report_id: UUID) -> Optional[Report]:
+    async def get_by_id(self, report_id: UUID) -> Report | None:
         """Get report by ID."""
         result = await self.session.execute(
             select(Report).where(Report.report_id == report_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_reporter(self, reporter_id: str, limit: int = 50) -> List[Report]:
+    async def get_by_reporter(self, reporter_id: str, limit: int = 50) -> list[Report]:
         """Get all reports made by a user."""
         result = await self.session.execute(
             select(Report)
@@ -41,7 +41,7 @@ class ReportRepository:
         )
         return list(result.scalars().all())
 
-    async def get_pending_reports(self, limit: int = 100) -> List[Report]:
+    async def get_pending_reports(self, limit: int = 100) -> list[Report]:
         """Get all pending reports (admin only)."""
         result = await self.session.execute(
             select(Report)
@@ -51,7 +51,7 @@ class ReportRepository:
         )
         return list(result.scalars().all())
 
-    async def get_by_proposal(self, proposal_id: UUID) -> List[Report]:
+    async def get_by_proposal(self, proposal_id: UUID) -> list[Report]:
         """Get all reports for a specific proposal."""
         result = await self.session.execute(
             select(Report)
@@ -60,7 +60,7 @@ class ReportRepository:
         )
         return list(result.scalars().all())
 
-    async def get_by_pool(self, pool_id: UUID) -> List[Report]:
+    async def get_by_pool(self, pool_id: UUID) -> list[Report]:
         """Get all reports for a specific pool."""
         result = await self.session.execute(
             select(Report)
@@ -69,7 +69,7 @@ class ReportRepository:
         )
         return list(result.scalars().all())
 
-    async def update(self, report_id: UUID, update_data: dict) -> Optional[Report]:
+    async def update(self, report_id: UUID, update_data: dict) -> Report | None:
         """Update report."""
         report = await self.get_by_id(report_id)
         if not report:

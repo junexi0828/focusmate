@@ -1,8 +1,7 @@
 """Achievement domain service - gamification and achievement tracking."""
 
-import logging
-from datetime import timezone, datetime, timedelta
 from typing import List, Optional
+import logging
 
 from app.core.exceptions import ValidationException
 from app.domain.achievement.schemas import (
@@ -20,6 +19,7 @@ from app.infrastructure.repositories.community_repository import PostRepository
 from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.shared.utils.uuid import generate_uuid
+from datetime import UTC, datetime, timedelta
 
 
 class AchievementService:
@@ -30,8 +30,8 @@ class AchievementService:
         achievement_repo: AchievementRepository,
         user_achievement_repo: UserAchievementRepository,
         user_repo: UserRepository,
-        post_repo: Optional[PostRepository] = None,
-        session_repo: Optional[SessionHistoryRepository] = None,
+        post_repo: PostRepository | None = None,
+        session_repo: SessionHistoryRepository | None = None,
     ) -> None:
         self.achievement_repo = achievement_repo
         self.user_achievement_repo = user_achievement_repo
@@ -71,17 +71,17 @@ class AchievementService:
         created = await self.achievement_repo.create(achievement)
         return AchievementResponse.model_validate(created)
 
-    async def get_all_achievements(self) -> List[AchievementResponse]:
+    async def get_all_achievements(self) -> list[AchievementResponse]:
         """Get all active achievements."""
         achievements = await self.achievement_repo.get_all_active()
         return [AchievementResponse.model_validate(a) for a in achievements]
 
-    async def get_achievements_by_category(self, category: str) -> List[AchievementResponse]:
+    async def get_achievements_by_category(self, category: str) -> list[AchievementResponse]:
         """Get achievements by category."""
         achievements = await self.achievement_repo.get_by_category(category)
         return [AchievementResponse.model_validate(a) for a in achievements]
 
-    async def get_user_achievements(self, user_id: str) -> List[UserAchievementResponse]:
+    async def get_user_achievements(self, user_id: str) -> list[UserAchievementResponse]:
         """Get all unlocked achievements for a user."""
         user_achievements = await self.user_achievement_repo.get_all_by_user(user_id)
 
@@ -95,7 +95,7 @@ class AchievementService:
 
         return result
 
-    async def get_user_achievement_progress(self, user_id: str) -> List[AchievementProgressResponse]:
+    async def get_user_achievement_progress(self, user_id: str) -> list[AchievementProgressResponse]:
         """Get achievement progress for a user across all achievements.
 
         Args:
@@ -144,7 +144,7 @@ class AchievementService:
 
         return result
 
-    async def check_and_unlock_achievements(self, user_id: str) -> List[UserAchievementResponse]:
+    async def check_and_unlock_achievements(self, user_id: str) -> list[UserAchievementResponse]:
         """Check user progress and unlock any newly achieved achievements.
 
         Args:
@@ -182,7 +182,7 @@ class AchievementService:
                     id=generate_uuid(),
                     user_id=user_id,
                     achievement_id=achievement.id,
-                    unlocked_at=datetime.now(timezone.utc),
+                    unlocked_at=datetime.now(UTC),
                     progress=current_progress,
                 )
                 created = await self.user_achievement_repo.create(user_achievement)
@@ -241,7 +241,7 @@ class AchievementService:
             return 0
 
         # Get sessions from the last 365 days
-        since = datetime.now(timezone.utc) - timedelta(days=365)
+        since = datetime.now(UTC) - timedelta(days=365)
         sessions = await self.session_repo.get_by_user_since(user_id, since)
 
         if not sessions:
@@ -262,7 +262,7 @@ class AchievementService:
         sorted_dates = sorted(session_dates, reverse=True)
 
         # Calculate streak from today backwards
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         streak = 0
         current_date = today
 

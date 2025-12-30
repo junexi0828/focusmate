@@ -1,8 +1,7 @@
 """Stats domain service - session tracking and statistics."""
 
-from collections import defaultdict
 from typing import Optional
-from datetime import timezone, datetime, timedelta
+from collections import defaultdict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +9,7 @@ from app.infrastructure.database.models.session_history import SessionHistory
 from app.infrastructure.repositories.ranking_repository import RankingRepository
 from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 from app.shared.utils.uuid import generate_uuid
+from datetime import UTC, datetime, timedelta
 
 
 class StatsService:
@@ -18,7 +18,7 @@ class StatsService:
     def __init__(
         self,
         repository: SessionHistoryRepository,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> None:
         self.repository = repository
         self.db = db
@@ -38,7 +38,7 @@ class StatsService:
             room_id=room_id,
             session_type=session_type,
             duration_minutes=duration_minutes,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         await self.repository.create(session)
 
@@ -68,8 +68,8 @@ class StatsService:
         self,
         user_id: str,
         days: int = 7,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> dict:
         """Get user statistics for last N days or date range.
 
@@ -86,8 +86,8 @@ class StatsService:
             since = start_date
             until = end_date
         else:
-            since = datetime.now(timezone.utc) - timedelta(days=days)
-            until = datetime.now(timezone.utc)
+            since = datetime.now(UTC) - timedelta(days=days)
+            until = datetime.now(UTC)
 
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
@@ -127,8 +127,8 @@ class StatsService:
         Returns:
             Dictionary with hourly focus time distribution (0-23 hours)
         """
-        since = datetime.now(timezone.utc) - timedelta(days=days)
-        until = datetime.now(timezone.utc)
+        since = datetime.now(UTC) - timedelta(days=days)
+        until = datetime.now(UTC)
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
         # Initialize hourly buckets (0-23)
@@ -160,8 +160,8 @@ class StatsService:
         Returns:
             Dictionary with monthly statistics
         """
-        since = datetime.now(timezone.utc) - timedelta(days=months * 30)
-        until = datetime.now(timezone.utc)
+        since = datetime.now(UTC) - timedelta(days=months * 30)
+        until = datetime.now(UTC)
         sessions = await self.repository.get_by_user_date_range(user_id, since, until)
 
         # Group by month
@@ -212,7 +212,7 @@ class StatsService:
             Dictionary with current progress, goal, and achievement rate
         """
         # Calculate date range based on period
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if period == "day":
             since = now.replace(hour=0, minute=0, second=0, microsecond=0)
         elif period == "week":

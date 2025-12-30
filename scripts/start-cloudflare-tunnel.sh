@@ -10,8 +10,28 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Tunnel 토큰 (Zero Trust 대시보드에서 생성)
-TUNNEL_TOKEN="eyJhIjoiZWQyNzU0OGI3ZjNlNTUxY2Y0ZjliM2M4YmFmMzk0MmUiLCJ0IjoiMDI0MWY0MTMtMDBmNS00NmY2LWE3MDUtZjU1ZGI1MjdjYjc4IiwicyI6IlltTTFaVFEwWm1VdFlXSmpZUzAwTldJeExUaG1ZMlF0TnpCbVptWTRNVFJrTkRRNSJ9"
+# .env 파일에서 Cloudflare Tunnel 토큰 로드
+ENV_FILE="$PROJECT_ROOT/backend/.env"
+TUNNEL_TOKEN=""
+if [ -f "$ENV_FILE" ]; then
+    # .env 파일에서 CLOUDFLARE_TUNNEL_TOKEN 추출
+    while IFS='=' read -r key value; do
+        key=$(echo "$key" | sed 's/#.*$//' | xargs)
+        value=$(echo "$value" | sed 's/#.*$//' | xargs)
+        if [ -n "$key" ] && [ "$key" = "CLOUDFLARE_TUNNEL_TOKEN" ]; then
+            TUNNEL_TOKEN="$value"
+            break
+        fi
+    done < <(grep -E '^CLOUDFLARE_TUNNEL_TOKEN=' "$ENV_FILE" 2>/dev/null || true)
+fi
+
+# 토큰 확인
+if [ -z "$TUNNEL_TOKEN" ]; then
+    echo "❌ Error: CLOUDFLARE_TUNNEL_TOKEN이 .env 파일에 없습니다."
+    echo "   backend/.env 파일에 다음을 추가하세요:"
+    echo "   CLOUDFLARE_TUNNEL_TOKEN=your-tunnel-token-here"
+    exit 1
+fi
 
 LOG_DIR="$HOME/.cloudflare-tunnel"
 LOG_FILE="$LOG_DIR/tunnel.log"

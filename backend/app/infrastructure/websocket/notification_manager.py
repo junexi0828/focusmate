@@ -1,7 +1,7 @@
 """WebSocket connection manager for real-time notifications."""
 
-import logging
 from typing import Any, Dict, List
+import logging
 
 from fastapi import WebSocket
 
@@ -37,7 +37,7 @@ class NotificationWebSocketManager(BaseConnectionManager[str]):
         """
         self._remove_connection(websocket, user_id)
 
-    async def send_notification(self, notification: Dict[str, Any], user_id: str) -> bool:
+    async def send_notification(self, notification: dict[str, Any], user_id: str) -> bool:
         """Send notification to all connections for a specific user.
 
         Args:
@@ -59,7 +59,7 @@ class NotificationWebSocketManager(BaseConnectionManager[str]):
         logger.info(f"Notification sent to user {user_id}")
         return True
 
-    async def broadcast_notification(self, notification: Dict[str, Any], user_ids: List[str]) -> None:
+    async def broadcast_notification(self, notification: dict[str, Any], user_ids: list[str]) -> None:
         """Broadcast notification to multiple users.
 
         Args:
@@ -81,7 +81,7 @@ class NotificationWebSocketManager(BaseConnectionManager[str]):
         """
         return user_id in self.active_connections and len(self.active_connections[user_id]) > 0
 
-    def get_online_users(self) -> List[str]:
+    def get_online_users(self) -> list[str]:
         """Get list of all online user IDs.
 
         Returns:

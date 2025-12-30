@@ -1,8 +1,7 @@
 """Ranking API endpoints."""
 
-from datetime import timezone, datetime, timedelta
-from typing_extensions import Annotated
-from typing import List, Literal, Optional, Union
+from datetime import UTC, datetime, timedelta
+from typing import Annotated, List, Literal, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -255,19 +254,19 @@ async def get_leaderboard(
             response = LeaderboardResponse(
                 ranking_type="team",
                 period=period,
-                updated_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(UTC),
                 leaderboard=[],
             )
             return response.model_dump()
 
         # Calculate date range based on period
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if period == "weekly":
             start_date = now - timedelta(days=7)
         elif period == "monthly":
             start_date = now - timedelta(days=30)
         else:  # all_time
-            start_date = datetime.min.replace(tzinfo=timezone.utc)
+            start_date = datetime.min.replace(tzinfo=UTC)
 
         # Optimized: Batch query all team stats at once (fixes N+1 problem)
         from app.infrastructure.database.models.ranking import RankingTeamMember
@@ -500,7 +499,7 @@ async def get_leaderboard(
         response = LeaderboardResponse(
             ranking_type="team",
             period=period,
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
             leaderboard=leaderboard_entries,
         )
 
@@ -726,7 +725,7 @@ async def get_session_history(
 async def get_user_invitations(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    status_filter: Optional[str] = Query(None, pattern="^(pending|accepted|rejected)$"),
+    status_filter: Optional[str] = Query(None, pattern="^(Union[pending, accepted]|rejected)$"),
 ) -> dict:
     """Get all invitations for the current user."""
     try:

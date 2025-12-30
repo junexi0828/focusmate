@@ -3,14 +3,14 @@
 Handles database operations for room reservations.
 """
 
-from datetime import timezone, datetime
-from typing import List, Optional
 
+from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models.room_reservation import RoomReservation
 from app.infrastructure.database.session import DatabaseSession
+from datetime import UTC, datetime
 
 
 class RoomReservationRepository:
@@ -38,7 +38,7 @@ class RoomReservationRepository:
         await self.session.refresh(reservation)
         return reservation
 
-    async def get_by_id(self, reservation_id: str) -> Optional[RoomReservation]:
+    async def get_by_id(self, reservation_id: str) -> RoomReservation | None:
         """Get reservation by ID.
 
         Args:
@@ -54,7 +54,7 @@ class RoomReservationRepository:
 
     async def get_by_user_id(
         self, user_id: str, active_only: bool = True
-    ) -> List[RoomReservation]:
+    ) -> list[RoomReservation]:
         """Get all reservations for a user.
 
         Args:
@@ -71,7 +71,7 @@ class RoomReservationRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_upcoming(self, user_id: str) -> List[RoomReservation]:
+    async def get_upcoming(self, user_id: str) -> list[RoomReservation]:
         """Get upcoming reservations for a user.
 
         Args:
@@ -80,7 +80,7 @@ class RoomReservationRepository:
         Returns:
             List of upcoming active reservations
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         result = await self.session.execute(
             select(RoomReservation)
             .where(RoomReservation.user_id == user_id)
@@ -121,7 +121,7 @@ class RoomReservationRepository:
 
     async def get_due_reservations(
         self, start_time: datetime, end_time: datetime
-    ) -> List[RoomReservation]:
+    ) -> list[RoomReservation]:
         """Get reservations due between start and end time.
 
         Args:
@@ -144,13 +144,13 @@ class RoomReservationRepository:
 
     async def get_reservations_needing_notification(
         self
-    ) -> List[RoomReservation]:
+    ) -> list[RoomReservation]:
         """Get reservations that need notification sent.
 
         Returns:
             List of active reservations that haven't sent notification yet
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         result = await self.session.execute(
             select(RoomReservation)
             .where(RoomReservation.is_active == True)

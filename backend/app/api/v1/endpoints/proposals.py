@@ -1,7 +1,6 @@
 """API endpoints for matching proposals."""
 
-from typing_extensions import Annotated
-from typing import List
+from typing import Annotated, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -28,7 +27,7 @@ def get_proposal_service(
     return ProposalService(proposal_repo, pool_repo, chat_repo)
 
 
-@router.get("/my", response_model=List[ProposalResponse])
+@router.get("/my", response_model=list[ProposalResponse])
 async def get_my_proposals(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ProposalService, Depends(get_proposal_service)],

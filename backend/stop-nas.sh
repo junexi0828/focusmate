@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# PATH에 /usr/local/bin 추가 (cloudflared 경로)
+export PATH="/usr/local/bin:$PATH"
+
 # Focus Mate Backend - NAS 중지 스크립트 (Miniconda 환경)
 # NAS에서 백엔드를 안전하게 중지하기 위한 스크립트
 
@@ -98,4 +101,24 @@ fi
 # PID 파일 삭제
 rm -f "$PID_FILE"
 echo ""
+
+# Cloudflare Tunnel 중지
+TUNNEL_DIR="/volume1/web/cloudflare-tunnel"
+TUNNEL_PID_FILE="$TUNNEL_DIR/tunnel.pid"
+
+if [ -f "$TUNNEL_PID_FILE" ]; then
+    TUNNEL_PID=$(cat "$TUNNEL_PID_FILE" 2>/dev/null || echo "")
+    if [ -n "$TUNNEL_PID" ] && ps -p "$TUNNEL_PID" > /dev/null 2>&1; then
+        echo "🛑 Cloudflare Tunnel (PID: $TUNNEL_PID) 중지 중..."
+        kill "$TUNNEL_PID" 2>/dev/null || true
+        sleep 2
+        if ps -p "$TUNNEL_PID" > /dev/null 2>&1; then
+            kill -9 "$TUNNEL_PID" 2>/dev/null || true
+        fi
+        rm -f "$TUNNEL_PID_FILE"
+        echo "✅ Cloudflare Tunnel이 중지되었습니다."
+    else
+        rm -f "$TUNNEL_PID_FILE"
+    fi
+fi
 

@@ -7,9 +7,38 @@ set -e
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="$PROJECT_ROOT/backend"
-NAS_USER="juns"
-NAS_IP="192.168.45.58"
-NAS_PATH="/volume1/web/focusmate-backend"
+
+# 백엔드 .env 파일에서 NAS 설정 로드
+ENV_FILE="$PROJECT_ROOT/backend/.env"
+if [ -f "$ENV_FILE" ]; then
+    # .env 파일에서 NAS 관련 변수만 추출하여 export
+    # 주석과 빈 줄을 제외하고 NAS_로 시작하는 변수만 로드
+    while IFS='=' read -r key value; do
+        # 주석 제거 및 공백 제거
+        key=$(echo "$key" | sed 's/#.*$//' | xargs)
+        value=$(echo "$value" | sed 's/#.*$//' | xargs)
+        # 빈 줄이나 주석만 있는 줄 건너뛰기
+        if [ -n "$key" ] && [[ "$key" =~ ^NAS_ ]]; then
+            export "$key=$value"
+        fi
+    done < <(grep -E '^NAS_' "$ENV_FILE" 2>/dev/null || true)
+else
+    echo "⚠️  Warning: $ENV_FILE 파일을 찾을 수 없습니다."
+    echo "   기본값을 사용합니다."
+fi
+
+# 환경변수 기본값 설정 (env 파일에 없을 경우)
+# 보안상 실제 IP 주소는 기본값으로 설정하지 않음
+if [ -z "$NAS_USER" ] || [ -z "$NAS_IP" ] || [ -z "$NAS_BACKEND_PATH" ]; then
+    echo "❌ Error: NAS 설정이 .env 파일에 없습니다."
+    echo "   backend/.env 파일에 다음 설정을 추가하세요:"
+    echo "   NAS_USER=your-nas-username"
+    echo "   NAS_IP=192.168.x.x"
+    echo "   NAS_BACKEND_PATH=/volume1/web/focusmate-backend"
+    exit 1
+fi
+
+NAS_PATH="$NAS_BACKEND_PATH"
 
 echo "╔══════════════════════════════════════════════════════════════════════════╗"
 echo "║                    NAS 동기화 테스트                                     ║"

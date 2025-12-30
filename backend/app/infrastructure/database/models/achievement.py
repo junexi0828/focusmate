@@ -1,11 +1,11 @@
 """Achievement ORM Model - stores gamification achievements."""
 
-from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
+from datetime import datetime
 
 
 class Achievement(Base, TimestampMixin):

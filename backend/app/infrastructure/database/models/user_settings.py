@@ -1,7 +1,7 @@
 """User Settings ORM Model."""
 
-from sqlalchemy import JSON, Boolean, ForeignKey, String
 from typing import Optional
+from sqlalchemy import JSON, Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
@@ -93,13 +93,13 @@ class UserSettings(Base, TimestampMixin):
     )
 
     # Do not disturb settings
-    do_not_disturb_start: Mapped[Optional[str]] = mapped_column(
+    do_not_disturb_start: Mapped[str | None] = mapped_column(
         String(5),
         nullable=True,
         comment="Do not disturb start time (HH:MM)",
     )
 
-    do_not_disturb_end: Mapped[Optional[str]] = mapped_column(
+    do_not_disturb_end: Mapped[str | None] = mapped_column(
         String(5),
         nullable=True,
         comment="Do not disturb end time (HH:MM)",
@@ -114,7 +114,7 @@ class UserSettings(Base, TimestampMixin):
     )
 
     # Custom settings (JSON)
-    custom_settings: Mapped[Optional[dict]] = mapped_column(
+    custom_settings: Mapped[dict | None] = mapped_column(
         JSON,
         nullable=True,
         comment="Additional custom settings",

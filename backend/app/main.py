@@ -3,10 +3,10 @@
 ISO/IEC 25010 Quality Standards Compliant.
 """
 
+from typing import Dict, Union
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Dict, Union
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -151,7 +151,7 @@ async def app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
 
 # Health check endpoint
 @app.get("/health")
-async def health_check() -> Dict[str, str]:
+async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {
         "status": "healthy",
