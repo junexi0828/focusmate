@@ -1,7 +1,7 @@
 """Room repository implementation."""
 
-from sqlalchemy import select
 from typing import List, Optional
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models import Room
@@ -32,7 +32,7 @@ class RoomRepository:
         await self.db.refresh(room)
         return room
 
-    async def get_by_id(self, room_id: str) -> Optional[Room]:
+    async def get_by_id(self, room_id: str) -> Room | None:
         """Get room by ID.
 
         Args:
@@ -44,7 +44,7 @@ class RoomRepository:
         result = await self.db.execute(select(Room).where(Room.id == room_id))
         return result.scalar_one_or_none()
 
-    async def get_by_name(self, name: str, active_only: bool = True) -> Optional[Room]:
+    async def get_by_name(self, name: str, active_only: bool = True) -> Room | None:
         """Get room by name.
 
         Args:
@@ -73,7 +73,7 @@ class RoomRepository:
         await self.db.refresh(room)
         return room
 
-    async def get_all_active(self) -> List[Room]:
+    async def get_all_active(self) -> list[Room]:
         """Get all active rooms.
 
         Returns:

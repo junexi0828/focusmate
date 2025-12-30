@@ -15,7 +15,7 @@ class VerificationSubmit(BaseModel):
     major_category: Optional[str] = Field(None, max_length=50)
     grade: str = Field(..., min_length=1, max_length=20)
     student_id: Optional[str] = Field(None, max_length=20)
-    gender: str = Field(..., pattern="^(male|female|other)$")
+    gender: str = Field(..., pattern="^(Union[male, female]|other)$")
     documents: List[str] = Field(default_factory=list)
 
     @field_validator("documents")

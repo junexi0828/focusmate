@@ -5,7 +5,6 @@ Uses Fernet symmetric encryption from the encryption service.
 """
 
 from collections.abc import Callable
-from typing import List, Optional
 
 from fastapi import Request, Response, UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -20,8 +19,8 @@ class FileEncryptionMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        encrypt_paths: Optional[List[str]] = None,
-        decrypt_paths: Optional[List[str]] = None,
+        encrypt_paths: list[str] | None = None,
+        decrypt_paths: list[str] | None = None,
     ):
         """Initialize middleware.
 

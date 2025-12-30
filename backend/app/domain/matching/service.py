@@ -1,8 +1,8 @@
 """Service layer for matching pool."""
 
+from typing import List, Optional, Tuple
 import random
 from uuid import UUID
-from typing import List, Optional, Tuple
 
 from app.domain.matching.schemas import (
     MatchingPoolCreate,
@@ -83,7 +83,7 @@ class MatchingPoolService:
         pool = await self.pool_repository.create_pool(pool_data)
         return MatchingPoolResponse.model_validate(pool)
 
-    async def get_my_pool(self, user_id: str) -> Optional[MatchingPoolResponse]:
+    async def get_my_pool(self, user_id: str) -> MatchingPoolResponse | None:
         """Get user's active pool."""
         pool = await self.pool_repository.get_user_active_pool(user_id)
         if not pool:
@@ -92,7 +92,7 @@ class MatchingPoolService:
 
     async def get_pool(
         self, pool_id: UUID, user_id: str
-    ) -> Optional[MatchingPoolResponse]:
+    ) -> MatchingPoolResponse | None:
         """Get pool by ID (user must be a member or admin)."""
         pool = await self.pool_repository.get_pool_by_id(pool_id)
         if not pool:
@@ -153,7 +153,7 @@ class MatchingPoolService:
 
     async def find_matching_candidates(
         self, pool: MatchingPoolResponse
-    ) -> List[MatchingPoolResponse]:
+    ) -> list[MatchingPoolResponse]:
         """Find matching candidates for a pool."""
         # Get pools with same member count and opposite gender
         candidates = await self.pool_repository.get_matching_candidates(
@@ -221,7 +221,7 @@ class MatchingPoolService:
             set(pool_a.preferred_categories) & set(pool_b.preferred_categories)
         )
 
-    async def run_matching_algorithm(self) -> List[Tuple[UUID, UUID]]:
+    async def run_matching_algorithm(self) -> list[tuple[UUID, UUID]]:
         """Run matching algorithm for all waiting pools."""
         waiting_pools = await self.pool_repository.get_waiting_pools()
         matches = []

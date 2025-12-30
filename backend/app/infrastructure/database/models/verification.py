@@ -46,7 +46,7 @@ class UserVerification(Base):
     verification_status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'pending'")
     )
-    submitted_documents: Mapped[Optional[List[str]]] = mapped_column(
+    submitted_documents: Mapped[List[str] | None] = mapped_column(
         ARRAY(Text()), nullable=True
     )
     admin_note: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)

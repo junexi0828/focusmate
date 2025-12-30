@@ -1,8 +1,7 @@
 """Friend API endpoints."""
 
-from typing_extensions import Annotated
-from typing import List
 
+from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import get_current_user
@@ -90,12 +89,12 @@ async def send_friend_request(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=e.message)
 
 
-@router.get("/requests/received", response_model=List[FriendRequestResponse])
+@router.get("/requests/received", response_model=list[FriendRequestResponse])
 async def get_received_requests(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[FriendService, Depends(get_friend_service)],
     pending_only: bool = Query(False, description="Only show pending requests"),
-) -> List[FriendRequestResponse]:
+) -> list[FriendRequestResponse]:
     """Get friend requests received by current user.
 
     Args:
@@ -109,11 +108,11 @@ async def get_received_requests(
     return await service.get_received_requests(current_user["id"], pending_only)
 
 
-@router.get("/requests/sent", response_model=List[FriendRequestResponse])
+@router.get("/requests/sent", response_model=list[FriendRequestResponse])
 async def get_sent_requests(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[FriendService, Depends(get_friend_service)],
-) -> List[FriendRequestResponse]:
+) -> list[FriendRequestResponse]:
     """Get friend requests sent by current user.
 
     Args:
@@ -301,11 +300,11 @@ async def unblock_friend(
 
 
 # Presence Endpoints
-@router.get("/presence", response_model=List[FriendPresence])
+@router.get("/presence", response_model=list[FriendPresence])
 async def get_friends_presence(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[PresenceService, Depends(get_presence_service)],
-) -> List[FriendPresence]:
+) -> list[FriendPresence]:
     """Get presence information for all friends.
 
     Returns:

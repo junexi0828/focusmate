@@ -1,9 +1,9 @@
 """Achievement domain schemas."""
 
-from datetime import datetime
-from typing import Optional, Union
 
+from typing import Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
+from datetime import datetime
 
 
 class AchievementBase(BaseModel):
@@ -44,7 +44,7 @@ class UserAchievementResponse(BaseModel):
     achievement_id: str
     unlocked_at: datetime
     progress: int
-    achievement: Optional[AchievementResponse] = None
+    achievement: AchievementResponse | None = None
 
 
 class AchievementUnlockRequest(BaseModel):
@@ -60,4 +60,4 @@ class AchievementProgressResponse(BaseModel):
     is_unlocked: bool
     progress: int
     progress_percentage: float
-    unlocked_at: Optional[datetime] = None
+    unlocked_at: datetime | None = None

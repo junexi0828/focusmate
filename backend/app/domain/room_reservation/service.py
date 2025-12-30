@@ -1,8 +1,7 @@
 """Room Reservation domain service."""
 
-from datetime import timezone, datetime
-from typing import List
 
+from typing import List
 from app.core.exceptions import NotFoundException
 from app.domain.room_reservation.schemas import (
     RecurrenceType,
@@ -14,6 +13,7 @@ from app.infrastructure.repositories.room_reservation_repository import (
     RoomReservationRepository,
 )
 from app.shared.utils.uuid import generate_uuid
+from datetime import UTC, datetime
 
 
 class RoomReservationService:
@@ -43,7 +43,7 @@ class RoomReservationService:
         from app.infrastructure.database.models.room_reservation import RoomReservation
 
         # Validate scheduled_at is in the future
-        if data.scheduled_at <= datetime.now(timezone.utc):
+        if data.scheduled_at <= datetime.now(UTC):
             raise ValueError("Scheduled time must be in the future")
 
         # Normalize recurrence_type (handle both Enum and string)
@@ -146,7 +146,7 @@ class RoomReservationService:
 
     async def get_user_reservations(
         self, user_id: str, active_only: bool = True
-    ) -> List[RoomReservationResponse]:
+    ) -> list[RoomReservationResponse]:
         """Get all reservations for a user.
 
         Args:
@@ -161,7 +161,7 @@ class RoomReservationService:
 
     async def get_upcoming_reservations(
         self, user_id: str
-    ) -> List[RoomReservationResponse]:
+    ) -> list[RoomReservationResponse]:
         """Get upcoming reservations for a user.
 
         Args:
@@ -197,7 +197,7 @@ class RoomReservationService:
         if reservation.user_id != user_id:
             raise ValueError("You can only update your own reservations")
 
-        if data.scheduled_at and data.scheduled_at <= datetime.now(timezone.utc):
+        if data.scheduled_at and data.scheduled_at <= datetime.now(UTC):
             raise ValueError("Scheduled time must be in the future")
 
         if data.scheduled_at:
@@ -234,7 +234,7 @@ class RoomReservationService:
 
         return await self.repository.delete(reservation_id)
 
-    async def get_due_reservations(self) -> List[RoomReservationResponse]:
+    async def get_due_reservations(self) -> list[RoomReservationResponse]:
         """Get reservations that are due to be processed (within 1 minute).
 
         Returns:
@@ -242,7 +242,7 @@ class RoomReservationService:
         """
         from datetime import timedelta
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         target_time = now + timedelta(minutes=1)
 
         reservations = await self.repository.get_due_reservations(now, target_time)
@@ -307,7 +307,7 @@ class RoomReservationService:
 
     async def get_reservations_needing_notification(
         self
-    ) -> List[RoomReservationResponse]:
+    ) -> list[RoomReservationResponse]:
         """Get reservations that need notification sent.
 
         Returns:
@@ -318,7 +318,7 @@ class RoomReservationService:
         reservations = await self.repository.get_reservations_needing_notification()
 
         # Filter reservations based on notification_minutes
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         filtered = []
         for r in reservations:
             notification_time = r.scheduled_at - timedelta(minutes=r.notification_minutes)

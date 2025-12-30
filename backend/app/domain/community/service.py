@@ -1,8 +1,7 @@
 """Community domain service - posts, comments, and social interactions."""
 
-from datetime import timezone, datetime
-from typing import List, Optional
 
+from typing import List, Optional
 from app.core.exceptions import NotFoundException, UnauthorizedException
 from app.domain.community.schemas import (
     CommentCreate,
@@ -32,6 +31,7 @@ from app.infrastructure.repositories.community_repository import (
 )
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.shared.utils.uuid import generate_uuid
+from datetime import UTC, datetime
 
 
 class CommunityService:
@@ -78,7 +78,7 @@ class CommunityService:
 
         return response
 
-    async def get_post(self, post_id: str, current_user_id: Optional[str] = None, mark_as_read: bool = True) -> PostResponse:
+    async def get_post(self, post_id: str, current_user_id: str | None = None, mark_as_read: bool = True) -> PostResponse:
         """Get post by ID with author info and like status.
 
         Args:
@@ -112,14 +112,14 @@ class CommunityService:
                     id=generate_uuid(),
                     post_id=post_id,
                     user_id=current_user_id,
-                    read_at=datetime.now(timezone.utc),
+                    read_at=datetime.now(UTC),
                 )
                 await self.post_read_repo.create_or_update(post_read)
                 response.is_read = True
 
         return response
 
-    async def get_posts(self, filters: PostFilters, current_user_id: Optional[str] = None) -> PostListResult:
+    async def get_posts(self, filters: PostFilters, current_user_id: str | None = None) -> PostListResult:
         """Get posts with filters, sorting, and pagination."""
         posts, total = await self.post_repo.get_posts(
             category=filters.category,
@@ -220,7 +220,7 @@ class CommunityService:
             id=generate_uuid(),
             post_id=post_id,
             user_id=user_id,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         await self.post_like_repo.create(post_like)
         post.likes += 1
@@ -267,7 +267,7 @@ class CommunityService:
 
         return response
 
-    async def get_post_comments(self, post_id: str, current_user_id: Optional[str] = None) -> List[CommentResponse]:
+    async def get_post_comments(self, post_id: str, current_user_id: str | None = None) -> list[CommentResponse]:
         """Get all comments for a post with nested replies and like status."""
         comments = await self.comment_repo.get_by_post(post_id)
 
@@ -362,7 +362,7 @@ class CommunityService:
             id=generate_uuid(),
             comment_id=comment_id,
             user_id=user_id,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         await self.comment_like_repo.create(comment_like)
         comment.likes += 1

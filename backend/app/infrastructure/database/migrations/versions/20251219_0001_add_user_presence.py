@@ -6,8 +6,8 @@ Create Date: 2025-12-19
 
 """
 
-from alembic import op
 from typing import Optional
+from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 

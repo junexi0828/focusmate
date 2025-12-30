@@ -190,7 +190,7 @@ class ChatMessage(Base):
     content: Mapped[str] = mapped_column(Text(), nullable=False)
 
     # Attachments
-    attachments: Mapped[Optional[List[str]]] = mapped_column(
+    attachments: Mapped[List[str] | None] = mapped_column(
         ARRAY(Text()), nullable=True
     )
 

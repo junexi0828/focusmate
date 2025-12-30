@@ -1,8 +1,7 @@
 """Notification domain service."""
 
-import logging
-from datetime import timezone, datetime
 from typing import List, Optional
+import logging
 
 from app.domain.notification.schemas import (
     NotificationCreate,
@@ -19,6 +18,7 @@ from app.infrastructure.repositories.user_settings_repository import (
 )
 from app.infrastructure.websocket.notification_manager import notification_ws_manager
 from app.shared.utils.uuid import generate_uuid
+from datetime import UTC, datetime
 
 
 logger = logging.getLogger(__name__)
@@ -30,9 +30,9 @@ class NotificationService:
     def __init__(
         self,
         repository: NotificationRepository,
-        settings_repository: Optional[UserSettingsRepository] = None,
-        user_repository: Optional[UserRepository] = None,
-        email_service: Optional[EmailService] = None,
+        settings_repository: UserSettingsRepository | None = None,
+        user_repository: UserRepository | None = None,
+        email_service: EmailService | None = None,
     ) -> None:
         """Initialize service.
 
@@ -101,7 +101,7 @@ class NotificationService:
 
     async def create_notification(
         self, data: NotificationCreate
-    ) -> Optional[NotificationResponse]:
+    ) -> NotificationResponse | None:
         """Create a new notification with user settings check.
 
         Args:
@@ -242,7 +242,7 @@ class NotificationService:
         unread_only: bool = False,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[NotificationResponse]:
+    ) -> list[NotificationResponse]:
         """Get notifications for a user.
 
         Args:
@@ -259,7 +259,7 @@ class NotificationService:
         )
         return [NotificationResponse.model_validate(n) for n in notifications]
 
-    async def mark_as_read(self, notification_ids: List[str]) -> int:
+    async def mark_as_read(self, notification_ids: list[str]) -> int:
         """Mark notifications as read.
 
         Args:
@@ -273,7 +273,7 @@ class NotificationService:
             notification = await self.repository.get_by_id(notification_id)
             if notification and not notification.is_read:
                 notification.is_read = True
-                notification.read_at = datetime.now(timezone.utc)
+                notification.read_at = datetime.now(UTC)
                 await self.repository.update(notification)
                 count += 1
         return count

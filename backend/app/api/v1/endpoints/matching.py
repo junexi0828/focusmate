@@ -1,7 +1,6 @@
 """API endpoints for matching pools."""
 
-from typing_extensions import Annotated
-from typing import Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -56,7 +55,7 @@ async def get_my_matching_pool(
     service: Annotated[
         OptimizedMatchingPoolService, Depends(get_matching_pool_service)
     ],
-) -> Optional[MatchingPoolResponse]:
+) -> MatchingPoolResponse | None:
     """Get current user's active matching pool."""
     try:
         if not current_user or not current_user.get("id"):

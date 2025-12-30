@@ -57,7 +57,7 @@ class MessageCreate(BaseModel):
 
     content: str = Field(..., min_length=1, max_length=2000)
     message_type: str = Field(default="text", pattern="^(Union[text, image]|system)$")
-    attachments: Optional[List[str]] = None
+    attachments: List[str] | None = None
 
 
 class MessageResponse(BaseModel):
@@ -68,7 +68,7 @@ class MessageResponse(BaseModel):
     sender_id: str
     message_type: str
     content: str
-    attachments: Optional[List[str]]
+    attachments: List[str] | None
     created_at: datetime
     deleted_at: Optional[datetime]
 

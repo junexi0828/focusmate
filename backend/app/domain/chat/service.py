@@ -1,6 +1,5 @@
 """Service layer for unified chat system."""
 
-from datetime import timezone, datetime
 from typing import Dict, List, Optional
 from uuid import UUID
 
@@ -17,6 +16,7 @@ from app.domain.chat.schemas import (
 from app.infrastructure.email.email_service import EmailService
 from app.infrastructure.repositories.chat_repository import ChatRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+from datetime import UTC, datetime
 
 
 class ChatService:
@@ -25,8 +25,8 @@ class ChatService:
     def __init__(
         self,
         repository: ChatRepository,
-        user_repository: Optional[UserRepository] = None,
-        email_service: Optional[EmailService] = None,
+        user_repository: UserRepository | None = None,
+        email_service: EmailService | None = None,
     ):
         self.repository = repository
         self.user_repository = user_repository
@@ -238,8 +238,8 @@ class ChatService:
 
     # Room operations
     async def get_user_rooms(
-        self, user_id: str, room_type: Optional[str] = None
-    ) -> List[ChatRoomResponse]:
+        self, user_id: str, room_type: str | None = None
+    ) -> list[ChatRoomResponse]:
         """Get all chat rooms for a user."""
         rooms = await self.repository.get_user_rooms(user_id, room_type)
         room_responses = []
@@ -252,11 +252,11 @@ class ChatService:
             unread_count = await self.repository.get_room_unread_count(room.room_id, user_id)
 
             room_dict = ChatRoomResponse.model_validate(room).model_dump()
-            room_Dict["unread_count"] = unread_count
+            room_dict["unread_count"] = unread_count
 
             if last_message:
-                room_Dict["last_message_content"] = last_message.content
-                room_Dict["last_message_sender_id"] = str(last_message.sender_id)
+                room_dict["last_message_content"] = last_message.content
+                room_dict["last_message_sender_id"] = str(last_message.sender_id)
 
             # For direct chats, add partner information
             if room.room_type == "direct" and self.user_repository:
@@ -268,17 +268,17 @@ class ChatService:
                     # Get partner user details
                     partner_user = await self.user_repository.get_by_id(partner.user_id)
                     if partner_user:
-                        room_Dict["partner_id"] = partner_user.id
-                        room_Dict["partner_username"] = partner_user.username
-                        room_Dict["partner_email"] = partner_user.email
-                        room_Dict["partner_profile_image"] = partner_user.profile_image
+                        room_dict["partner_id"] = partner_user.id
+                        room_dict["partner_username"] = partner_user.username
+                        room_dict["partner_email"] = partner_user.email
+                        room_dict["partner_profile_image"] = partner_user.profile_image
                         # Get online status from presence system
                         try:
                             from app.infrastructure.redis.presence_manager import presence_manager
-                            room_Dict["partner_is_online"] = await presence_manager.is_user_online(partner.user_id)
+                            room_dict["partner_is_online"] = await presence_manager.is_user_online(partner.user_id)
                         except Exception:
                             # Fallback to False if presence system unavailable
-                            room_Dict["partner_is_online"] = False
+                            room_dict["partner_is_online"] = False
 
             room_responses.append(ChatRoomResponse(**room_dict))
 
@@ -301,7 +301,7 @@ class ChatService:
 
         unread_count = await self.repository.get_room_unread_count(room_id, user_id)
         room_dict = ChatRoomResponse.model_validate(room).model_dump()
-        room_Dict["unread_count"] = unread_count
+        room_dict["unread_count"] = unread_count
 
         # For direct chats, add partner information
         if room.room_type == "direct" and self.user_repository:
@@ -313,17 +313,17 @@ class ChatService:
                 # Get partner user details
                 partner_user = await self.user_repository.get_by_id(partner.user_id)
                 if partner_user:
-                    room_Dict["partner_id"] = partner_user.id
-                    room_Dict["partner_username"] = partner_user.username
-                    room_Dict["partner_email"] = partner_user.email
-                    room_Dict["partner_profile_image"] = partner_user.profile_image
+                    room_dict["partner_id"] = partner_user.id
+                    room_dict["partner_username"] = partner_user.username
+                    room_dict["partner_email"] = partner_user.email
+                    room_dict["partner_profile_image"] = partner_user.profile_image
                     # Get online status from presence system
                     try:
                         from app.infrastructure.redis.presence_manager import presence_manager
-                        room_Dict["partner_is_online"] = await presence_manager.is_user_online(partner.user_id)
+                        room_dict["partner_is_online"] = await presence_manager.is_user_online(partner.user_id)
                     except Exception:
                         # Fallback to False if presence system unavailable
-                        room_Dict["partner_is_online"] = False
+                        room_dict["partner_is_online"] = False
 
         return ChatRoomResponse(**room_dict)
 
@@ -354,7 +354,7 @@ class ChatService:
         room_id: UUID,
         user_id: str,
         limit: int = 50,
-        before_message_id: Optional[UUID] = None,
+        before_message_id: UUID | None = None,
     ) -> MessageListResponse:
         """Get messages from room."""
         # Verify user is member
@@ -399,5 +399,5 @@ class ChatService:
     async def mark_as_read(self, room_id: UUID, user_id: str) -> None:
         """Mark all messages as read."""
         await self.repository.update_member_read_status(
-            room_id, user_id, datetime.now(timezone.utc)
+            room_id, user_id, datetime.now(UTC)
         )

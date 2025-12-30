@@ -1,12 +1,12 @@
 """User ORM Model."""
 
-from datetime import datetime
-from typing import Optional
 
+from typing import Optional
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.base import Base, TimestampMixin
+from datetime import datetime
 
 
 class User(Base, TimestampMixin):
@@ -73,19 +73,19 @@ class User(Base, TimestampMixin):
         comment="Admin user status",
     )
 
-    bio: Mapped[Optional[str]] = mapped_column(
+    bio: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
         comment="User bio",
     )
 
-    school: Mapped[Optional[str]] = mapped_column(
+    school: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
         comment="User school/university",
     )
 
-    profile_image: Mapped[Optional[str]] = mapped_column(
+    profile_image: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
         comment="Profile image URL",
@@ -104,20 +104,20 @@ class User(Base, TimestampMixin):
     )
 
     # Password reset
-    password_reset_token: Mapped[Optional[str]] = mapped_column(
+    password_reset_token: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         index=True,
         comment="Password reset token",
     )
-    password_reset_expires: Mapped[Optional[datetime]] = mapped_column(
+    password_reset_expires: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Password reset token expiration",
     )
 
     # Social login
-    naver_id: Mapped[Optional[str]] = mapped_column(
+    naver_id: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
         unique=True,

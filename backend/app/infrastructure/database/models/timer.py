@@ -4,15 +4,15 @@ Represents the timer state for a room.
 Server-authoritative design: timer state is managed by backend.
 """
 
-from datetime import datetime
-from typing import Optional
 
+from typing import Optional
 from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
 from app.shared.constants.timer import TimerPhase, TimerStatus
+from datetime import datetime
 
 
 class Timer(Base, TimestampMixin):
@@ -79,19 +79,19 @@ class Timer(Base, TimestampMixin):
         comment="Remaining time (seconds)",
     )
 
-    started_at: Mapped[Optional[datetime]] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Start timestamp",
     )
 
-    paused_at: Mapped[Optional[datetime]] = mapped_column(
+    paused_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Pause timestamp",
     )
 
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="Completion timestamp",

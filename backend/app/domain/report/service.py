@@ -1,11 +1,11 @@
 """Report domain service."""
 
-from datetime import timezone
 from typing import List, Optional
 from uuid import UUID
 
 from app.domain.report.schemas import ReportCreate, ReportResponse, ReportUpdate
 from app.infrastructure.repositories.report_repository import ReportRepository
+from datetime import UTC
 
 
 class ReportService:
@@ -50,26 +50,26 @@ class ReportService:
         report = await self.repository.create(report_data)
         return ReportResponse.model_validate(report)
 
-    async def get_report(self, report_id: UUID) -> Optional[ReportResponse]:
+    async def get_report(self, report_id: UUID) -> ReportResponse | None:
         """Get report by ID."""
         report = await self.repository.get_by_id(report_id)
         if not report:
             return None
         return ReportResponse.model_validate(report)
 
-    async def get_user_reports(self, reporter_id: str, limit: int = 50) -> List[ReportResponse]:
+    async def get_user_reports(self, reporter_id: str, limit: int = 50) -> list[ReportResponse]:
         """Get all reports made by a user."""
         reports = await self.repository.get_by_reporter(reporter_id, limit)
         return [ReportResponse.model_validate(r) for r in reports]
 
-    async def get_pending_reports(self, limit: int = 100) -> List[ReportResponse]:
+    async def get_pending_reports(self, limit: int = 100) -> list[ReportResponse]:
         """Get all pending reports (admin only)."""
         reports = await self.repository.get_pending_reports(limit)
         return [ReportResponse.model_validate(r) for r in reports]
 
     async def update_report(
         self, report_id: UUID, reviewer_id: str, data: ReportUpdate
-    ) -> Optional[ReportResponse]:
+    ) -> ReportResponse | None:
         """Update report status (admin only).
 
         Args:
@@ -89,7 +89,7 @@ class ReportService:
                 raise ValueError(f"Invalid status. Must be one of: {valid_statuses}")
             update_data["status"] = data.status
             update_data["reviewed_by"] = reviewer_id
-            update_data["reviewed_at"] = datetime.now(timezone.utc)
+            update_data["reviewed_at"] = datetime.now(UTC)
 
         if data.admin_note is not None:
             update_data["admin_note"] = data.admin_note
