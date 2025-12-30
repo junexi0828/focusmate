@@ -1,7 +1,7 @@
 """Achievement API endpoints."""
 
-from typing import List
 from typing_extensions import Annotated
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
