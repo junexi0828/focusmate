@@ -1,11 +1,12 @@
 """Service layer for matching proposals."""
 
-from datetime import timezone, datetime
 from typing import List, Optional
 from uuid import UUID
 
 from app.domain.chat.schemas import MatchingChatInfo
 from app.domain.chat.service import ChatService
+from datetime import UTC, datetime
+
 from app.domain.matching.proposal_schemas import ProposalAction, ProposalResponse
 from app.infrastructure.database.models.matching import MatchingProposal
 from app.infrastructure.repositories.chat_repository import ChatRepository
@@ -32,7 +33,7 @@ class ProposalRepository:
 
     async def get_proposal_by_id(
         self, proposal_id: UUID
-    ) -> Optional[MatchingProposal]:
+    ) -> MatchingProposal | None:
         """Get proposal by ID."""
         from sqlalchemy import select
 
@@ -43,7 +44,7 @@ class ProposalRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_pool_proposals(self, pool_id: UUID) -> List[MatchingProposal]:
+    async def get_pool_proposals(self, pool_id: UUID) -> list[MatchingProposal]:
         """Get all proposals for a pool."""
         from sqlalchemy import or_, select
 
@@ -61,7 +62,7 @@ class ProposalRepository:
 
     async def update_proposal(
         self, proposal_id: UUID, update_data: dict
-    ) -> Optional[MatchingProposal]:
+    ) -> MatchingProposal | None:
         """Update proposal."""
         proposal = await self.get_proposal_by_id(proposal_id)
         if not proposal:
@@ -148,7 +149,7 @@ class ProposalService:
         ):
             # Both accepted - create chat room
             update_data["final_status"] = "matched"
-            update_data["matched_at"] = datetime.now(timezone.utc)
+            update_data["matched_at"] = datetime.now(UTC)
 
             # Create chat room
             chat_room = await self._create_matching_chat_room(proposal)
@@ -193,7 +194,7 @@ class ProposalService:
         chat_service = ChatService(self.chat_repo)
         return await chat_service.create_matching_chat(chat_info)
 
-    async def get_my_proposals(self, user_id: str) -> List[ProposalResponse]:
+    async def get_my_proposals(self, user_id: str) -> list[ProposalResponse]:
         """Get proposals for user's pools."""
         # Get user's active pool
         pool = await self.pool_repo.get_user_active_pool(user_id)
@@ -205,7 +206,7 @@ class ProposalService:
 
     async def get_proposal_statistics(self) -> dict:
         """Get comprehensive proposal statistics."""
-        from datetime import timezone, datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
         from sqlalchemy import func, select
 
@@ -277,7 +278,7 @@ class ProposalService:
         max_matching_time_hours = max_match_time_result.scalar() or 0.0
 
         # Daily matches (last 30 days)
-        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
         date_expr = func.date(MatchingProposal.matched_at).label("date")
         daily_matches_result = await self.proposal_repo.session.execute(
             select(
@@ -297,7 +298,7 @@ class ProposalService:
         ]
 
         # Weekly matches (last 12 weeks)
-        twelve_weeks_ago = datetime.now(timezone.utc) - timedelta(weeks=12)
+        twelve_weeks_ago = datetime.now(UTC) - timedelta(weeks=12)
         week_expr = func.date_trunc("week", MatchingProposal.matched_at).label("week")
         weekly_matches_result = await self.proposal_repo.session.execute(
             select(
@@ -317,7 +318,7 @@ class ProposalService:
         ]
 
         # Monthly matches (last 12 months)
-        twelve_months_ago = datetime.now(timezone.utc) - timedelta(days=365)
+        twelve_months_ago = datetime.now(UTC) - timedelta(days=365)
         month_expr = func.date_trunc("month", MatchingProposal.matched_at).label("month")
         monthly_matches_result = await self.proposal_repo.session.execute(
             select(
