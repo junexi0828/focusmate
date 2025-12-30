@@ -9,11 +9,42 @@
 # set -e 제거: y/n 선택 시 메뉴로 돌아가기 위해 에러로 종료하지 않음
 # set -e
 
-NAS_USER="juns"
-NAS_IP="192.168.45.58"
-NAS_PATH="/volume1/web/focusmate-backend"
-LOCAL_PATH="/Users/juns/code/personal/notion/juns_workspace/FocusMate/backend"
-PROJECT_ROOT="/Users/juns/code/personal/notion/juns_workspace/FocusMate"
+# 프로젝트 루트 및 백엔드 경로 설정
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+LOCAL_PATH="$PROJECT_ROOT/backend"
+
+# 백엔드 .env 파일에서 NAS 설정 로드
+ENV_FILE="$PROJECT_ROOT/backend/.env"
+if [ -f "$ENV_FILE" ]; then
+    # .env 파일에서 NAS 관련 변수만 추출하여 export
+    # 주석과 빈 줄을 제외하고 NAS_로 시작하는 변수만 로드
+    while IFS='=' read -r key value; do
+        # 주석 제거 및 공백 제거
+        key=$(echo "$key" | sed 's/#.*$//' | xargs)
+        value=$(echo "$value" | sed 's/#.*$//' | xargs)
+        # 빈 줄이나 주석만 있는 줄 건너뛰기
+        if [ -n "$key" ] && [[ "$key" =~ ^NAS_ ]]; then
+            export "$key=$value"
+        fi
+    done < <(grep -E '^NAS_' "$ENV_FILE" 2>/dev/null || true)
+else
+    echo "⚠️  Warning: $ENV_FILE 파일을 찾을 수 없습니다."
+    echo "   기본값을 사용합니다."
+fi
+
+# 환경변수 기본값 설정 (env 파일에 없을 경우)
+# 보안상 실제 IP 주소는 기본값으로 설정하지 않음
+if [ -z "$NAS_USER" ] || [ -z "$NAS_IP" ] || [ -z "$NAS_BACKEND_PATH" ]; then
+    echo "❌ Error: NAS 설정이 .env 파일에 없습니다."
+    echo "   backend/.env 파일에 다음 설정을 추가하세요:"
+    echo "   NAS_USER=your-nas-username"
+    echo "   NAS_IP=192.168.x.x"
+    echo "   NAS_BACKEND_PATH=/volume1/web/focusmate-backend"
+    exit 1
+fi
+
+NAS_PATH="$NAS_BACKEND_PATH"
 
 echo "╔══════════════════════════════════════════════════════════════════════════╗"
 echo "║                    NAS 초기 설정 스크립트                                 ║"
@@ -88,6 +119,9 @@ SSH_CMD="ssh ${SSH_OPTS}"
 # --rsync-path="/usr/bin/rsync": 원격 서버의 rsync 경로 명시 (절대 경로)
 # -e "${SSH_CMD}": SSH 옵션으로 키 인증만 사용
 # --inplace: 파일을 직접 수정 (호환성 향상)
+# rsync 실행 (Google Drive처럼 완전 동기화 - .env 포함)
+# ⚠️  주의: .env 파일도 동기화되므로 민감한 정보가 NAS로 전송됩니다.
+#     NAS 접근 권한이 안전한지 확인하세요.
 RSYNC_OUTPUT=$(rsync -avz \
   --progress \
   --rsync-path="/usr/bin/rsync" \
@@ -95,8 +129,6 @@ RSYNC_OUTPUT=$(rsync -avz \
   -e "${SSH_CMD}" \
   --exclude 'venv' \
   --exclude '__pycache__' \
-  --exclude '.env' \
-  --exclude '.env.local' \
   --exclude '*.pyc' \
   --exclude '*.pyo' \
   --exclude '.pytest_cache' \
@@ -158,33 +190,30 @@ else
 fi
 echo ""
 
-# 3. .env 파일 안내
-echo "⚙️  3/4 .env 파일 설정 필요"
-echo "   NAS에 접속하여 .env 파일을 생성하세요:"
-echo ""
-echo "   ssh ${NAS_USER}@${NAS_IP}"
-echo "   cd ${NAS_PATH}"
-echo "   nano .env  # 또는 vi .env"
-echo ""
-echo "   로컬의 .env 파일 내용을 복사하여 붙여넣으세요."
+# 3. .env 파일 확인
+echo "⚙️  3/4 .env 파일 확인"
+echo "   .env 파일이 rsync를 통해 자동으로 동기화되었습니다."
 echo ""
 echo "   ⚠️  중요: CORS 설정 확인 필수!"
-echo "   CORS_ORIGINS에 다음이 포함되어 있어야 합니다:"
+echo "   NAS의 .env 파일에서 CORS_ORIGINS에 다음이 포함되어 있는지 확인하세요:"
 echo "   - https://eieconcierge.com"
 echo "   - https://www.eieconcierge.com"
+echo ""
+echo "   확인 방법:"
+echo "   ssh ${NAS_USER}@${NAS_IP}"
+echo "   cd ${NAS_PATH}"
+echo "   grep CORS_ORIGINS .env"
 echo ""
 echo "   예시:"
 echo "   CORS_ORIGINS=http://localhost:3000,http://localhost:5173,https://eieconcierge.com,https://www.eieconcierge.com"
 echo ""
-echo "   (특히 DATABASE_URL, SECRET_KEY, CORS_ORIGINS 등 중요 설정 확인)"
-echo ""
 while true; do
-  read -p "   .env 파일을 생성하셨나요? (y/n) " -n 1 -r
+  read -p "   .env 파일의 CORS 설정을 확인하셨나요? (y/n) " -n 1 -r
   echo ""
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     break
   elif [[ $REPLY =~ ^[Nn]$ ]]; then
-    echo "⚠️  .env 파일을 생성한 후 다시 실행하세요."
+    echo "⚠️  .env 파일의 CORS 설정을 확인한 후 다시 실행하세요."
     echo ""
     echo "   메뉴로 돌아갑니다."
     exit 0
