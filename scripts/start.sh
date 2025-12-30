@@ -1219,7 +1219,8 @@ show_menu() {
     echo " 12) 🔍 API 검증 테스트"
     echo " 13) 📊 프로젝트 정보 보기"
     echo " 14) ☁️  Cloudflare Tunnel 관리"
-    echo " 15) ❌ 종료"
+    echo " 15) 🏠 NAS 초기 설치 마법사"
+    echo " 16) ❌ 종료"
     echo ""
     echo -e "${YELLOW}💡 'x'를 입력하면 종료됩니다${NC}"
 }
@@ -1323,16 +1324,16 @@ main() {
         # 숫자가 아닌 경우 처리
         if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
             echo ""
-            echo -e "${RED}❌ 잘못된 선택입니다. (1-15 또는 x: 종료)${NC}"
+            echo -e "${RED}❌ 잘못된 선택입니다. (1-16 또는 x: 종료)${NC}"
             echo ""
             wait_for_enter
             continue
         fi
 
         # 숫자 범위 확인
-        if [ "$choice" -lt 1 ] || [ "$choice" -gt 15 ]; then
+        if [ "$choice" -lt 1 ] || [ "$choice" -gt 16 ]; then
             echo ""
-            echo -e "${RED}❌ 잘못된 선택입니다. (1-15 또는 x: 종료)${NC}"
+            echo -e "${RED}❌ 잘못된 선택입니다. (1-16 또는 x: 종료)${NC}"
             echo ""
             wait_for_enter
             continue
@@ -1573,6 +1574,94 @@ main() {
                 manage_cloudflare_tunnel
                 ;;
             15)
+                while true; do
+                    echo ""
+                    print_section "$CYAN" "🏠 NAS 초기 설치 마법사"
+                    echo -e "${BOLD}NAS 관련 작업을 선택하세요:${NC}"
+                    echo ""
+                    echo "  1) 📦 NAS 초기 설치"
+                    echo "  2) 🧪 NAS 동기화 테스트"
+                    echo "  3) ⬅️  뒤로 가기"
+                    echo ""
+                    echo -n "선택: "
+                    read nas_choice
+
+                    case $nas_choice in
+                        1)
+                            echo ""
+                            print_section "$CYAN" "📦 NAS 초기 설치"
+                            echo -e "${YELLOW}NAS 초기 설정을 시작합니다...${NC}"
+                            echo ""
+
+                            # NAS 초기 설정 스크립트 실행 (에러 시 메뉴로 돌아감)
+                            if [ -f "$PROJECT_ROOT/scripts/setup-nas-initial.sh" ]; then
+                                # 스크립트를 직접 실행 (출력 캡처하지 않음 - 사용자 입력을 위해)
+                                # 성공 여부는 스크립트 내부에서 "초기 설정 완료" 메시지로 판단
+                                if bash "$PROJECT_ROOT/scripts/setup-nas-initial.sh"; then
+                                    # exit 0으로 종료된 경우, 완료 메시지가 있었는지 확인
+                                    # (스크립트 내부에서 완료 메시지를 출력하므로 여기서는 추가 메시지 없음)
+                                    :
+                                else
+                                    # exit code가 0이 아닌 경우 (실제로는 모든 경우 exit 0이지만)
+                                    echo ""
+                                    echo -e "${YELLOW}⚠️  NAS 초기 설정이 중단되었습니다.${NC}"
+                                    echo -e "${YELLOW}   메뉴로 돌아갑니다.${NC}"
+                                    echo ""
+                                fi
+                            else
+                                echo -e "${RED}❌ NAS 초기 설정 스크립트를 찾을 수 없습니다.${NC}"
+                                echo -e "${YELLOW}   경로: $PROJECT_ROOT/scripts/setup-nas-initial.sh${NC}"
+                                echo ""
+                            fi
+
+                            # 입력 버퍼 비우기
+                            while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                            echo -n "계속하려면 Enter를 누르세요... "
+                            read dummy
+                            break
+                            ;;
+                        2)
+                            echo ""
+                            print_section "$CYAN" "🧪 NAS 동기화 테스트"
+                            echo -e "${YELLOW}Git hook을 통한 NAS 동기화를 테스트합니다...${NC}"
+                            echo ""
+
+                            # NAS 동기화 테스트 스크립트 실행
+                            if [ -f "$PROJECT_ROOT/scripts/test-nas-sync.sh" ]; then
+                                if bash "$PROJECT_ROOT/scripts/test-nas-sync.sh" 2>&1; then
+                                    echo ""
+                                    echo -e "${GREEN}✅ NAS 동기화 테스트가 완료되었습니다.${NC}"
+                                else
+                                    echo ""
+                                    echo -e "${RED}❌ NAS 동기화 테스트가 실패했습니다.${NC}"
+                                    echo -e "${YELLOW}   로그를 확인하세요.${NC}"
+                                fi
+                            else
+                                echo -e "${RED}❌ NAS 동기화 테스트 스크립트를 찾을 수 없습니다.${NC}"
+                                echo -e "${YELLOW}   경로: $PROJECT_ROOT/scripts/test-nas-sync.sh${NC}"
+                            fi
+
+                            echo ""
+                            # 입력 버퍼 비우기
+                            while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                            echo -n "계속하려면 Enter를 누르세요... "
+                            read dummy
+                            break
+                            ;;
+                        3)
+                            # 뒤로 가기
+                            break
+                            ;;
+                        *)
+                            echo ""
+                            echo -e "${RED}❌ 잘못된 선택입니다.${NC}"
+                            echo ""
+                            sleep 1
+                            ;;
+                    esac
+                done
+                ;;
+            16)
                 cleanup
                 exit 0
                 ;;
