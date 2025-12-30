@@ -221,10 +221,10 @@ async def send_message(
 
         # Publish to Redis for cross-server synchronization
         try:
-        await redis_pubsub_manager.publish_message(
-            room_id,
-            message.model_dump(mode="json"),
-        )
+            await redis_pubsub_manager.publish_message(
+                room_id,
+                message.model_dump(mode="json"),
+            )
         except Exception as e:
             logging.getLogger(__name__).error(f"Redis publish failed: {e!s}")
 
