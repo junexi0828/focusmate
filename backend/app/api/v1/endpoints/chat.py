@@ -230,7 +230,7 @@ async def send_message(
 
         # Also broadcast to local WebSocket connections
         try:
-        await connection_manager.broadcast_to_room(
+            await connection_manager.broadcast_to_room(
             room_id,
             {
                 "type": "message",
