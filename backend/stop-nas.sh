@@ -64,15 +64,37 @@ echo "   PID: $PID"
 echo "   프로세스: $PROCESS_INFO"
 echo ""
 
+# 프로세스 그룹 ID 가져오기 (uvicorn은 여러 워커 프로세스를 생성할 수 있음)
+PGID=$(ps -p "$PID" -o pgid= 2>/dev/null | tr -d ' ' || echo "")
+
 # 정상 종료 시도 (SIGTERM)
 echo "   정상 종료 신호 전송 중..."
-kill "$PID" 2>/dev/null || true
+
+# 프로세스 그룹 전체에 종료 신호 전송 (모든 워커 프로세스 포함)
+if [ -n "$PGID" ] && [ "$PGID" != "0" ]; then
+    # 프로세스 그룹 전체 종료 (더 확실함)
+    kill -TERM -"$PGID" 2>/dev/null || kill "$PID" 2>/dev/null || true
+else
+    # 프로세스 그룹을 찾을 수 없으면 메인 PID만 종료
+    kill "$PID" 2>/dev/null || true
+fi
+
+# uvicorn의 모든 워커 프로세스도 찾아서 종료
+UVICORN_PIDS=$(ps aux | grep '[u]vicorn.*app.main:app' | awk '{print $2}' || echo "")
+if [ -n "$UVICORN_PIDS" ]; then
+    for UVICORN_PID in $UVICORN_PIDS; do
+        if [ "$UVICORN_PID" != "$PID" ]; then
+            kill "$UVICORN_PID" 2>/dev/null || true
+        fi
+    done
+fi
 
 # 프로세스가 종료될 때까지 대기 (최대 10초)
 TIMEOUT=10
 ELAPSED=0
 while [ $ELAPSED -lt $TIMEOUT ]; do
-    if ! ps -p "$PID" > /dev/null 2>&1; then
+    # 메인 프로세스와 모든 uvicorn 프로세스가 종료되었는지 확인
+    if ! ps -p "$PID" > /dev/null 2>&1 && [ -z "$(ps aux | grep '[u]vicorn.*app.main:app' | awk '{print $2}')" ]; then
         echo "✅ 백엔드가 정상적으로 중지되었습니다."
         rm -f "$PID_FILE"
         exit 0
@@ -84,14 +106,31 @@ done
 echo ""
 
 # 정상 종료 실패 시 강제 종료
-if ps -p "$PID" > /dev/null 2>&1; then
+REMAINING_PIDS=$(ps aux | grep '[u]vicorn.*app.main:app' | awk '{print $2}' || echo "")
+if [ -n "$REMAINING_PIDS" ] || ps -p "$PID" > /dev/null 2>&1; then
     echo "⚠️  정상 종료 실패. 강제 종료 중..."
+
+    # 프로세스 그룹 전체 강제 종료
+    if [ -n "$PGID" ] && [ "$PGID" != "0" ]; then
+        kill -9 -"$PGID" 2>/dev/null || true
+    fi
+
+    # 남은 모든 uvicorn 프로세스 강제 종료
+    for REMAINING_PID in $REMAINING_PIDS; do
+        kill -9 "$REMAINING_PID" 2>/dev/null || true
+    done
+
+    # 메인 PID도 강제 종료
     kill -9 "$PID" 2>/dev/null || true
+
     sleep 1
 
-    if ps -p "$PID" > /dev/null 2>&1; then
-        echo "❌ 프로세스 종료 실패"
-        echo "   수동으로 종료하세요: kill -9 $PID"
+    # 최종 확인
+    FINAL_REMAINING=$(ps aux | grep '[u]vicorn.*app.main:app' | awk '{print $2}' || echo "")
+    if [ -n "$FINAL_REMAINING" ] || ps -p "$PID" > /dev/null 2>&1; then
+        echo "❌ 일부 프로세스 종료 실패"
+        echo "   남은 프로세스: $FINAL_REMAINING $PID"
+        echo "   수동으로 종료하세요: kill -9 $FINAL_REMAINING $PID"
         exit 1
     else
         echo "✅ 백엔드가 강제 종료되었습니다."
