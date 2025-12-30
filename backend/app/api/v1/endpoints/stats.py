@@ -290,11 +290,11 @@ async def get_goal_achievement(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
     goal_type: str = Query(
-        ..., pattern="^(Union[focus_time, sessions])$", description="Type of goal"
+        ..., pattern="^(focus_time|sessions)$", description="Type of goal"
     ),
     goal_value: int = Query(..., gt=0, description="Target value for the goal"),
     period: str = Query(
-        "week", pattern="^(Union[day, week]|month)$", description="Time period"
+        "week", pattern="^(day|week|month)$", description="Time period"
     ),
 ) -> GoalAchievementResponse:
     """Get goal achievement rate for progress ring.
