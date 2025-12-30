@@ -1,8 +1,7 @@
 """Chat API endpoints."""
 
 import logging
-from typing import List, Optional, Union
-from typing_extensions import Annotated
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import (
@@ -85,7 +84,7 @@ def get_invitation_service(
 async def get_user_rooms(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-    room_type: Optional[str] = Query(None, pattern="^(direct|team|matching)$"),
+    room_type: str | None = Query(None, pattern="^(direct|team|matching)$"),
 ) -> ChatRoomListResponse:
     """Get all chat rooms for the current user."""
     user_id = current_user["id"]
@@ -171,12 +170,12 @@ async def get_room(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get("/rooms/{room_id}/members", response_model=List[ChatMemberResponse])
+@router.get("/rooms/{room_id}/members", response_model=list[ChatMemberResponse])
 async def get_room_members(
     room_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-) -> List[ChatMemberResponse]:
+) -> list[ChatMemberResponse]:
     """Get all members of a chat room."""
     # Verify user is member
     member = await service.repository.get_member(room_id, current_user["id"])
@@ -198,7 +197,7 @@ async def get_messages(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
     limit: int = Query(50, ge=1, le=100),
-    before_message_id: Optional[UUID] = None,
+    before_message_id: UUID | None = None,
 ) -> MessageListResponse:
     """Get messages from room."""
     try:
@@ -222,22 +221,22 @@ async def send_message(
 
         # Publish to Redis for cross-server synchronization
         try:
-            await redis_pubsub_manager.publish_message(
-                room_id,
-                message.model_dump(mode="json"),
-            )
+        await redis_pubsub_manager.publish_message(
+            room_id,
+            message.model_dump(mode="json"),
+        )
         except Exception as e:
             logging.getLogger(__name__).error(f"Redis publish failed: {e!s}")
 
         # Also broadcast to local WebSocket connections
         try:
-            await connection_manager.broadcast_to_room(
-                room_id,
-                {
-                    "type": "message",
-                    "message": message.model_dump(mode="json"),
-                },
-            )
+        await connection_manager.broadcast_to_room(
+            room_id,
+            {
+                "type": "message",
+                "message": message.model_dump(mode="json"),
+            },
+        )
         except Exception as e:
             logging.getLogger(__name__).error(f"WebSocket broadcast failed: {e!s}")
 
@@ -294,7 +293,7 @@ async def upload_files(
     room_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
-    files: List[UploadFile] = File(...),
+    files: list[UploadFile] = File(...),
 ) -> dict:
     """Upload files to chat room."""
     # Verify user is member
@@ -371,9 +370,9 @@ async def add_reaction(
     else:
         reactions.append(
             {
-                "emoji": emoji,
-                "users": [user_id],
-                "count": 1,
+            "emoji": emoji,
+            "users": [user_id],
+            "count": 1,
             }
         )
 
@@ -546,8 +545,8 @@ async def websocket_chat(
     try:
         await websocket.send_json(
             {
-                "type": "connected",
-                "message": "WebSocket connection established",
+            "type": "connected",
+            "message": "WebSocket connection established",
                 "user_id": user_id,
             }
         )
