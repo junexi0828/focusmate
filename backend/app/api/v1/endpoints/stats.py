@@ -1,8 +1,7 @@
 """Stats API endpoints."""
 
-from datetime import timezone, datetime
-from typing_extensions import Annotated
-from typing import List, Optional, Union
+from datetime import UTC, datetime
+from typing import Annotated, List, Optional, Union
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -34,7 +33,7 @@ class SessionRecordRequest(BaseModel):
 
     user_id: str = Field(..., min_length=1, max_length=36)
     room_id: str = Field(..., min_length=1, max_length=36)
-    session_type: str = Field(..., pattern="^(work|break)$")
+    session_type: str = Field(..., pattern="^(Union[work, break])$")
     duration_minutes: int = Field(..., gt=0, le=120)
 
 
@@ -291,11 +290,11 @@ async def get_goal_achievement(
     user_id: str,
     service: Annotated[StatsService, Depends(get_stats_service)],
     goal_type: str = Query(
-        ..., pattern="^(focus_time|sessions)$", description="Type of goal"
+        ..., pattern="^(Union[focus_time, sessions])$", description="Type of goal"
     ),
     goal_value: int = Query(..., gt=0, description="Target value for the goal"),
     period: str = Query(
-        "week", pattern="^(day|week|month)$", description="Time period"
+        "week", pattern="^(Union[day, week]|month)$", description="Time period"
     ),
 ) -> GoalAchievementResponse:
     """Get goal achievement rate for progress ring.
@@ -413,8 +412,8 @@ async def get_user_goal(
             user_id=user_id,
             daily_goal_minutes=120,
             weekly_goal_sessions=5,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
 
     # Use the most recent goal

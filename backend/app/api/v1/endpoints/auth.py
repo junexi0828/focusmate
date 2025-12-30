@@ -1,7 +1,7 @@
 """Authentication and User Profile API endpoints."""
 
-from typing_extensions import Annotated
 
+from typing import Annotated
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.api.deps import get_current_user

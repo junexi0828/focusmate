@@ -1,7 +1,7 @@
 """Presence WebSocket connection manager."""
 
-import logging
 from typing import Any, Dict, List
+import logging
 
 from fastapi import WebSocket
 
@@ -22,7 +22,7 @@ class PresenceConnectionManager(BaseConnectionManager[str]):
         """Initialize presence connection manager."""
         super().__init__()
         # Track user_id for each websocket
-        self.websocket_to_user: Dict[WebSocket, str] = {}
+        self.websocket_to_user: dict[WebSocket, str] = {}
 
     async def connect(self, websocket: WebSocket, user_id: str) -> None:
         """Accept and register a WebSocket connection for a user.
@@ -48,7 +48,7 @@ class PresenceConnectionManager(BaseConnectionManager[str]):
             del self.websocket_to_user[websocket]
         logger.info(f"User {user_id} disconnected from presence manager")
 
-    async def send_to_user(self, user_id: str, message: Dict[str, Any]) -> int:
+    async def send_to_user(self, user_id: str, message: dict[str, Any]) -> int:
         """Send message to all connections of a specific user.
 
         Args:
@@ -77,8 +77,8 @@ class PresenceConnectionManager(BaseConnectionManager[str]):
         return success_count
 
     async def broadcast_to_users(
-        self, user_ids: List[str], message: Dict[str, Any]
-    ) -> Dict[str, int]:
+        self, user_ids: list[str], message: dict[str, Any]
+    ) -> dict[str, int]:
         """Broadcast message to multiple users.
 
         Args:
@@ -96,8 +96,8 @@ class PresenceConnectionManager(BaseConnectionManager[str]):
         return results
 
     async def broadcast_presence_update(
-        self, user_id: str, friend_ids: List[str], is_online: bool
-    ) -> Dict[str, int]:
+        self, user_id: str, friend_ids: list[str], is_online: bool
+    ) -> dict[str, int]:
         """Broadcast presence update to all friends.
 
         Args:

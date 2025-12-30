@@ -1,8 +1,7 @@
 """Participant domain service."""
 
-from datetime import timezone, datetime
-from typing import Optional
 
+from typing import Optional
 from app.core.exceptions import (
     ParticipantNotFoundException,
     RoomFullException,
@@ -19,6 +18,7 @@ from app.infrastructure.repositories.room_repository import RoomRepository
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.shared.constants.timer import MAX_PARTICIPANTS_PER_ROOM
 from app.shared.utils.uuid import generate_uuid
+from datetime import UTC, datetime
 
 
 class ParticipantService:
@@ -28,7 +28,7 @@ class ParticipantService:
         self,
         participant_repo: ParticipantRepository,
         room_repo: RoomRepository,
-        user_repo: Optional[UserRepository] = None,
+        user_repo: UserRepository | None = None,
     ) -> None:
         """Initialize service."""
         self.participant_repo = participant_repo
@@ -102,7 +102,7 @@ class ParticipantService:
             username=final_username,  # Use username from user info or provided
             is_connected=True,
             is_host=is_host,
-            joined_at=datetime.now(timezone.utc),
+            joined_at=datetime.now(UTC),
         )
 
         created = await self.participant_repo.create(participant)

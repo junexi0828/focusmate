@@ -1,14 +1,14 @@
 """Friend ORM Models - friend relationships and requests."""
 
-import enum
-from datetime import datetime
 from typing import Optional
+import enum
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
+from datetime import datetime
 
 
 class FriendRequestStatus(str, enum.Enum):
@@ -29,7 +29,7 @@ class FriendRequest(Base, TimestampMixin):
         nullable=False,
         default=FriendRequestStatus.PENDING
     )
-    responded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Friend(Base, TimestampMixin):

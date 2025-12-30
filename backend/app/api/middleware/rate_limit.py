@@ -6,7 +6,6 @@ or authenticated user within a specified time window.
 
 import time
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple
 
 import redis.asyncio as aioredis
 from fastapi import Request, Response, status
@@ -25,10 +24,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
         requests_per_minute: int = 60,
-        burst_limit: Optional[int] = None,
-        exempt_paths: Optional[List[str]] = None,
+        burst_limit: int | None = None,
+        exempt_paths: list[str] | None = None,
     ):
         """Initialize rate limiting middleware.
 
@@ -41,7 +40,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
         self.redis_url = redis_url or settings.REDIS_URL
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: aioredis.Redis | None = None
         self.requests_per_minute = requests_per_minute
         self.burst_limit = burst_limit or (requests_per_minute * 2)
         self.exempt_paths = exempt_paths or ["/health", "/docs", "/redoc", "/openapi.json"]
@@ -112,7 +111,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def is_rate_limited(
         self, client_id: str, path: str
-    ) -> Tuple[bool, Dict]:
+    ) -> tuple[bool, dict[str, int]]:
         """Check if client has exceeded rate limit.
 
         Uses sliding window algorithm with Redis.

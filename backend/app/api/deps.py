@@ -1,8 +1,7 @@
 """API dependencies."""
 
-from typing_extensions import Annotated
-from typing import Optional
 
+from typing import Annotated, Optional
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -23,8 +22,8 @@ security = HTTPBearer(auto_error=False)
 
 async def get_current_user(
     db: DatabaseSession,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-) -> Optional[dict]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> dict | None:
     """Get current authenticated user from JWT token.
 
     Args:
@@ -70,7 +69,7 @@ async def get_current_user(
 
 
 async def get_current_user_required(
-    current_user: Optional[dict] = Depends(get_current_user),
+    current_user: dict | None = Depends(get_current_user),
 ) -> dict:
     """Get current authenticated user (required).
 

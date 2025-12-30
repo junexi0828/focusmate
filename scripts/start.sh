@@ -1061,13 +1061,20 @@ show_cloudflare_menu() {
     echo -e "${CYAN}Cloudflare Tunnel 옵션을 선택하세요${NC}"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo "  1) 🚀 Tunnel 시작"
-    echo "  2) 🛑 Tunnel 중지"
-    echo "  3) 📊 Tunnel 상태 확인"
-    echo "  4) 📝 Tunnel 로그 보기"
-    echo "  5) ⚙️  Tunnel 설정 확인"
-    echo "  6) 🔧 시스템 서비스로 설치"
-    echo "  7) ⬅️  메인 메뉴로 돌아가기"
+    echo -e "${BOLD}로컬 (macOS):${NC}"
+    echo "  1) 🚀 로컬 Tunnel 시작"
+    echo "  2) 🛑 로컬 Tunnel 중지"
+    echo ""
+    echo -e "${BOLD}NAS (원격):${NC}"
+    echo "  3) 🚀 NAS Tunnel 시작"
+    echo "  4) 🛑 NAS Tunnel 중지"
+    echo ""
+    echo -e "${BOLD}공통:${NC}"
+    echo "  5) 📊 Tunnel 상태 확인 (로컬 + NAS)"
+    echo "  6) 📝 Tunnel 로그 보기 (로컬 + NAS)"
+    echo "  7) ⚙️  Tunnel 설정 확인"
+    echo "  8) 🔧 시스템 서비스로 설치"
+    echo "  9) ⬅️  메인 메뉴로 돌아가기"
     echo ""
     echo -e "${YELLOW}💡 'x'를 입력하면 메인 메뉴로 돌아갑니다${NC}"
 }
@@ -1090,15 +1097,27 @@ manage_cloudflare_tunnel() {
 
         if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
             echo ""
-            echo -e "${RED}❌ 잘못된 선택입니다. (1-7 또는 x: 돌아가기)${NC}"
+            echo -e "${RED}❌ 잘못된 선택입니다. (1-9 또는 x: 돌아가기)${NC}"
             echo ""
             wait_for_enter
             continue
         fi
 
+        # NAS 설정 로드 (공통)
+        ENV_FILE="$PROJECT_ROOT/backend/.env"
+        if [ -f "$ENV_FILE" ]; then
+            while IFS='=' read -r key value; do
+                key=$(echo "$key" | sed 's/#.*$//' | xargs)
+                value=$(echo "$value" | sed 's/#.*$//' | xargs)
+                if [ -n "$key" ] && [[ "$key" =~ ^NAS_ ]]; then
+                    export "$key=$value"
+                fi
+            done < <(grep -E '^NAS_' "$ENV_FILE" 2>/dev/null || true)
+        fi
+
         case $choice in
             1)
-                print_section "$BLUE" "🚀 Cloudflare Tunnel 시작"
+                print_section "$BLUE" "🚀 로컬 Cloudflare Tunnel 시작"
                 if [ -f "$PROJECT_ROOT/scripts/start-cloudflare-tunnel.sh" ]; then
                     bash "$PROJECT_ROOT/scripts/start-cloudflare-tunnel.sh"
                 else
@@ -1107,7 +1126,7 @@ manage_cloudflare_tunnel() {
                 wait_for_enter
                 ;;
             2)
-                print_section "$RED" "🛑 Cloudflare Tunnel 중지"
+                print_section "$RED" "🛑 로컬 Cloudflare Tunnel 중지"
                 if [ -f "$PROJECT_ROOT/scripts/stop-cloudflare-tunnel.sh" ]; then
                     bash "$PROJECT_ROOT/scripts/stop-cloudflare-tunnel.sh"
                 else
@@ -1116,42 +1135,232 @@ manage_cloudflare_tunnel() {
                 wait_for_enter
                 ;;
             3)
-                print_section "$CYAN" "📊 Cloudflare Tunnel 상태 확인"
-                PID_FILE="$HOME/.cloudflare-tunnel/tunnel.pid"
-                if [ -f "$PID_FILE" ]; then
-                    PID=$(cat "$PID_FILE")
-                    if ps -p "$PID" > /dev/null 2>&1; then
-                        echo -e "${GREEN}✅ Tunnel이 실행 중입니다. (PID: $PID)${NC}"
-                        ps aux | grep cloudflared | grep -v grep || true
-                    else
-                        echo -e "${YELLOW}⚠️  Tunnel 프로세스를 찾을 수 없습니다.${NC}"
-                    fi
-                else
-                    echo -e "${YELLOW}⚠️  Tunnel이 실행되지 않았습니다.${NC}"
+                print_section "$BLUE" "🚀 NAS Cloudflare Tunnel 시작"
+
+                # NAS 설정 확인
+                if [ -z "$NAS_USER" ] || [ -z "$NAS_IP" ] || [ -z "$NAS_TUNNEL_PATH" ]; then
+                    echo -e "${RED}❌ Error: NAS 설정이 .env 파일에 없습니다.${NC}"
+                    echo "   backend/.env 파일에 다음 설정을 추가하세요:"
+                    echo "   NAS_USER=your-nas-username"
+                    echo "   NAS_IP=192.168.x.x"
+                    echo "   NAS_TUNNEL_PATH=/volume1/web/cloudflare-tunnel"
+                    wait_for_enter
+                    continue
                 fi
-                echo ""
-                if command -v cloudflared &> /dev/null; then
-                    echo "Tunnel 목록:"
-                    cloudflared tunnel list 2>/dev/null || echo "  (Tunnel 목록을 가져올 수 없습니다)"
+
+                NAS_TUNNEL_PID_FILE="${NAS_TUNNEL_PID_FILE:-${NAS_TUNNEL_PATH}/tunnel.pid}"
+                NAS_TUNNEL_LOG_FILE="${NAS_TUNNEL_LOG_FILE:-${NAS_TUNNEL_PATH}/tunnel.log}"
+
+                # 이미 실행 중인지 확인
+                if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "test -f ${NAS_TUNNEL_PID_FILE}" 2>/dev/null; then
+                    NAS_PID=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "cat ${NAS_TUNNEL_PID_FILE}" 2>/dev/null)
+                    if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "ps -p ${NAS_PID} > /dev/null 2>&1" 2>/dev/null; then
+                        echo -e "${YELLOW}⚠️  NAS Tunnel이 이미 실행 중입니다. (PID: $NAS_PID)${NC}"
+                        wait_for_enter
+                        continue
+                    fi
+                fi
+
+                # cloudflared 확인
+                if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "command -v cloudflared > /dev/null 2>&1" 2>/dev/null; then
+                    echo -e "${RED}❌ Error: NAS에 cloudflared가 설치되어 있지 않습니다.${NC}"
+                    echo "   NAS에서 다음 명령어로 설치하세요:"
+                    echo "   cd /tmp"
+                    echo "   wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
+                    echo "   sudo mv cloudflared-linux-arm64 /usr/local/bin/cloudflared"
+                    echo "   sudo chmod +x /usr/local/bin/cloudflared"
+                    wait_for_enter
+                    continue
+                fi
+
+                # 디렉토리 생성
+                ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "mkdir -p ${NAS_TUNNEL_PATH}" 2>/dev/null
+
+                # Tunnel 시작 스크립트 확인 및 실행
+                # 방법 1: /usr/local/bin/cloudflare-tunnel-start.sh 확인
+                if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "test -f /usr/local/bin/cloudflare-tunnel-start.sh" 2>/dev/null; then
+                    echo "📋 NAS Tunnel 시작 스크립트 실행 중..."
+                    ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "bash /usr/local/bin/cloudflare-tunnel-start.sh" 2>&1
+                    if [ $? -eq 0 ]; then
+                        echo -e "${GREEN}✅ NAS Tunnel이 시작되었습니다.${NC}"
+                    else
+                        echo -e "${RED}❌ NAS Tunnel 시작 실패${NC}"
+                    fi
+                # 방법 2: 직접 cloudflared 실행 (토큰 방식 또는 설정 파일 방식)
+                else
+                    echo "📋 NAS에서 Tunnel 직접 실행 중..."
+                    # Tunnel 이름 확인 (기본값: focusmate-nas-backend)
+                    TUNNEL_NAME="focusmate-nas-backend"
+
+                    # Tunnel 실행 (백그라운드)
+                    ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "cd ${NAS_TUNNEL_PATH} && nohup cloudflared tunnel run ${TUNNEL_NAME} > ${NAS_TUNNEL_LOG_FILE} 2>&1 & echo \$! > ${NAS_TUNNEL_PID_FILE}" 2>&1
+
+                    sleep 2
+
+                    # 실행 확인
+                    if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "test -f ${NAS_TUNNEL_PID_FILE}" 2>/dev/null; then
+                        NAS_PID=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "cat ${NAS_TUNNEL_PID_FILE}" 2>/dev/null)
+                        if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "ps -p ${NAS_PID} > /dev/null 2>&1" 2>/dev/null; then
+                            echo -e "${GREEN}✅ NAS Tunnel이 시작되었습니다. (PID: $NAS_PID)${NC}"
+                            echo "   로그: ssh ${NAS_USER}@${NAS_IP} 'tail -f ${NAS_TUNNEL_LOG_FILE}'"
+                        else
+                            echo -e "${RED}❌ NAS Tunnel 시작 실패 (프로세스가 실행되지 않음)${NC}"
+                            echo "   로그 확인: ssh ${NAS_USER}@${NAS_IP} 'cat ${NAS_TUNNEL_LOG_FILE}'"
+                        fi
+                    else
+                        echo -e "${RED}❌ NAS Tunnel 시작 실패 (PID 파일 생성 실패)${NC}"
+                    fi
                 fi
                 wait_for_enter
                 ;;
             4)
-                print_section "$CYAN" "📝 Cloudflare Tunnel 로그"
-                LOG_FILE="$HOME/.cloudflare-tunnel/tunnel.log"
-                if [ -f "$LOG_FILE" ]; then
-                    echo -e "${GREEN}최근 로그 (마지막 50줄):${NC}"
-                    echo ""
-                    tail -50 "$LOG_FILE"
-                    echo ""
-                    echo -e "${YELLOW}실시간 로그를 보려면: tail -f $LOG_FILE${NC}"
+                print_section "$RED" "🛑 NAS Cloudflare Tunnel 중지"
+
+                # NAS 설정 확인
+                if [ -z "$NAS_USER" ] || [ -z "$NAS_IP" ] || [ -z "$NAS_TUNNEL_PATH" ]; then
+                    echo -e "${RED}❌ Error: NAS 설정이 .env 파일에 없습니다.${NC}"
+                    echo "   backend/.env 파일에 다음 설정을 추가하세요:"
+                    echo "   NAS_USER=your-nas-username"
+                    echo "   NAS_IP=192.168.x.x"
+                    echo "   NAS_TUNNEL_PATH=/volume1/web/cloudflare-tunnel"
+                    wait_for_enter
+                    continue
+                fi
+
+                NAS_TUNNEL_PID_FILE="${NAS_TUNNEL_PID_FILE:-${NAS_TUNNEL_PATH}/tunnel.pid}"
+
+                # PID 파일 확인
+                if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "test -f ${NAS_TUNNEL_PID_FILE}" 2>/dev/null; then
+                    NAS_PID=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "cat ${NAS_TUNNEL_PID_FILE}" 2>/dev/null)
+                    if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "ps -p ${NAS_PID} > /dev/null 2>&1" 2>/dev/null; then
+                        echo "🛑 NAS Tunnel (PID: $NAS_PID) 중지 중..."
+                        ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "kill ${NAS_PID}" 2>&1
+                        sleep 2
+
+                        # 중지 확인
+                        if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "ps -p ${NAS_PID} > /dev/null 2>&1" 2>/dev/null; then
+                            echo -e "${YELLOW}⚠️  정상 종료되지 않았습니다. 강제 종료 중...${NC}"
+                            ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "kill -9 ${NAS_PID}" 2>&1
+                        fi
+
+                        ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "rm -f ${NAS_TUNNEL_PID_FILE}" 2>/dev/null
+                        echo -e "${GREEN}✅ NAS Tunnel이 중지되었습니다.${NC}"
+                    else
+                        echo -e "${YELLOW}⚠️  NAS Tunnel 프로세스가 실행 중이지 않습니다.${NC}"
+                        ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "rm -f ${NAS_TUNNEL_PID_FILE}" 2>/dev/null
+                    fi
                 else
-                    echo -e "${YELLOW}⚠️  로그 파일을 찾을 수 없습니다.${NC}"
-                    echo "   Tunnel을 먼저 시작해주세요."
+                    # PID 파일이 없으면 cloudflared 프로세스 직접 찾기
+                    echo "🔍 PID 파일이 없습니다. cloudflared 프로세스를 찾는 중..."
+                    NAS_PID=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "ps aux | grep '[c]loudflared tunnel' | awk '{print \$2}' | head -1" 2>/dev/null)
+                    if [ -n "$NAS_PID" ]; then
+                        echo "🛑 NAS Tunnel (PID: $NAS_PID) 중지 중..."
+                        ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "kill ${NAS_PID}" 2>&1
+                        sleep 2
+                        if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "ps -p ${NAS_PID} > /dev/null 2>&1" 2>/dev/null; then
+                            ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "kill -9 ${NAS_PID}" 2>&1
+                        fi
+                        echo -e "${GREEN}✅ NAS Tunnel이 중지되었습니다.${NC}"
+                    else
+                        echo -e "${YELLOW}⚠️  실행 중인 NAS Tunnel을 찾을 수 없습니다.${NC}"
+                    fi
                 fi
                 wait_for_enter
                 ;;
             5)
+                print_section "$CYAN" "📊 Cloudflare Tunnel 상태 확인"
+
+                # NAS 정보 확인 (기본값 없음 - 보안상 안전)
+                if [ -z "$NAS_USER" ] || [ -z "$NAS_IP" ] || [ -z "$NAS_TUNNEL_PATH" ]; then
+                    echo -e "${YELLOW}⚠️  Warning: NAS 설정이 .env 파일에 없습니다.${NC}"
+                    echo "   로컬 Tunnel 상태만 확인합니다."
+                    echo ""
+                fi
+
+                # 로컬 Tunnel 상태 확인
+                echo -e "${BOLD}로컬 (macOS) Tunnel 상태:${NC}"
+                LOCAL_PID_FILE="$HOME/.cloudflare-tunnel/tunnel.pid"
+                if [ -f "$LOCAL_PID_FILE" ]; then
+                    LOCAL_PID=$(cat "$LOCAL_PID_FILE")
+                    if ps -p "$LOCAL_PID" > /dev/null 2>&1; then
+                        echo -e "${GREEN}✅ 로컬 Tunnel이 실행 중입니다. (PID: $LOCAL_PID)${NC}"
+                        ps aux | grep cloudflared | grep -v grep || true
+                    else
+                        echo -e "${YELLOW}⚠️  로컬 Tunnel 프로세스를 찾을 수 없습니다.${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}⚠️  로컬 Tunnel이 실행되지 않았습니다.${NC}"
+                fi
+                echo ""
+
+                # NAS Tunnel 상태 확인 (설정이 있는 경우만)
+                if [ -n "$NAS_USER" ] && [ -n "$NAS_IP" ] && [ -n "$NAS_TUNNEL_PATH" ]; then
+                    NAS_TUNNEL_PID_FILE="${NAS_TUNNEL_PID_FILE:-${NAS_TUNNEL_PATH}/tunnel.pid}"
+                    echo -e "${BOLD}NAS (${NAS_IP}) Tunnel 상태:${NC}"
+                    if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "test -f ${NAS_TUNNEL_PID_FILE}" 2>/dev/null; then
+                        NAS_PID=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "cat ${NAS_TUNNEL_PID_FILE}" 2>/dev/null)
+                        if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "ps -p ${NAS_PID} > /dev/null 2>&1" 2>/dev/null; then
+                            echo -e "${GREEN}✅ NAS Tunnel이 실행 중입니다. (PID: $NAS_PID)${NC}"
+                            echo "   프로세스 정보:"
+                            ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "ps -p ${NAS_PID} -o pid,comm,args" 2>/dev/null || true
+                        else
+                            echo -e "${YELLOW}⚠️  NAS Tunnel 프로세스를 찾을 수 없습니다. (PID 파일은 있지만 프로세스 없음)${NC}"
+                        fi
+                    else
+                        echo -e "${YELLOW}⚠️  NAS Tunnel이 실행되지 않았습니다. (PID 파일 없음)${NC}"
+                    fi
+                    echo ""
+                fi
+
+                # Tunnel 목록 (로컬에서만 가능)
+                if command -v cloudflared &> /dev/null; then
+                    echo -e "${BOLD}로컬 Tunnel 목록:${NC}"
+                    cloudflared tunnel list 2>/dev/null || echo "  (Tunnel 목록을 가져올 수 없습니다)"
+                fi
+                wait_for_enter
+                ;;
+            6)
+                print_section "$CYAN" "📝 Cloudflare Tunnel 로그"
+
+                # NAS 정보 확인 (기본값 없음 - 보안상 안전)
+                if [ -z "$NAS_USER" ] || [ -z "$NAS_IP" ] || [ -z "$NAS_TUNNEL_PATH" ]; then
+                    echo -e "${YELLOW}⚠️  Warning: NAS 설정이 .env 파일에 없습니다.${NC}"
+                    echo "   로컬 Tunnel 로그만 확인합니다."
+                    echo ""
+                fi
+
+                echo -e "${BOLD}로컬 (macOS) Tunnel 로그:${NC}"
+                LOCAL_LOG_FILE="$HOME/.cloudflare-tunnel/tunnel.log"
+                if [ -f "$LOCAL_LOG_FILE" ]; then
+                    echo -e "${GREEN}최근 로그 (마지막 30줄):${NC}"
+                    echo ""
+                    tail -30 "$LOCAL_LOG_FILE"
+                    echo ""
+                    echo -e "${YELLOW}실시간 로그를 보려면: tail -f $LOCAL_LOG_FILE${NC}"
+                else
+                    echo -e "${YELLOW}⚠️  로컬 로그 파일을 찾을 수 없습니다.${NC}"
+                    echo "   Tunnel을 먼저 시작해주세요."
+                fi
+                echo ""
+
+                # NAS Tunnel 로그 확인 (설정이 있는 경우만)
+                if [ -n "$NAS_USER" ] && [ -n "$NAS_IP" ] && [ -n "$NAS_TUNNEL_PATH" ]; then
+                    NAS_TUNNEL_LOG_FILE="${NAS_TUNNEL_LOG_FILE:-${NAS_TUNNEL_PATH}/tunnel.log}"
+                    echo -e "${BOLD}NAS (${NAS_IP}) Tunnel 로그:${NC}"
+                    if ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "test -f ${NAS_TUNNEL_LOG_FILE}" 2>/dev/null; then
+                        echo -e "${GREEN}최근 로그 (마지막 30줄):${NC}"
+                        echo ""
+                        ssh -o BatchMode=yes -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "tail -30 ${NAS_TUNNEL_LOG_FILE}" 2>/dev/null || echo "  (로그를 읽을 수 없습니다)"
+                        echo ""
+                        echo -e "${YELLOW}실시간 로그를 보려면: ssh ${NAS_USER}@${NAS_IP} 'tail -f ${NAS_TUNNEL_LOG_FILE}'${NC}"
+                    else
+                        echo -e "${YELLOW}⚠️  NAS 로그 파일을 찾을 수 없습니다.${NC}"
+                        echo "   NAS에서 Tunnel을 먼저 시작해주세요."
+                    fi
+                fi
+                wait_for_enter
+                ;;
+            7)
                 print_section "$CYAN" "⚙️  Cloudflare Tunnel 설정 확인"
                 if [ -f "$PROJECT_ROOT/scripts/cloudflare-tunnel-setup.sh" ]; then
                     bash "$PROJECT_ROOT/scripts/cloudflare-tunnel-setup.sh"
@@ -1160,7 +1369,7 @@ manage_cloudflare_tunnel() {
                 fi
                 wait_for_enter
                 ;;
-            6)
+            8)
                 print_section "$MAGENTA" "🔧 Cloudflare Tunnel 시스템 서비스 설치"
                 echo -e "${YELLOW}⚠️  이 작업은 sudo 권한이 필요합니다.${NC}"
                 echo ""
@@ -1178,12 +1387,12 @@ manage_cloudflare_tunnel() {
                 fi
                 wait_for_enter
                 ;;
-            7)
+            9)
                 return
                 ;;
             *)
                 echo ""
-                echo -e "${RED}❌ 잘못된 선택입니다. (1-7 또는 x: 돌아가기)${NC}"
+                echo -e "${RED}❌ 잘못된 선택입니다. (1-9 또는 x: 돌아가기)${NC}"
                 echo ""
                 wait_for_enter
                 ;;

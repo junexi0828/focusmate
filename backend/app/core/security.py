@@ -3,13 +3,13 @@
 Provides authentication and cryptography functions.
 """
 
-from datetime import timezone, datetime, timedelta
-from typing import Any, Dict, Optional
 
+from typing import Any, Dict, Optional
 from jose import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
+from datetime import UTC, datetime, timedelta
 
 
 # Password hashing context
@@ -17,7 +17,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(
-    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+    data: dict[str, Any], expires_delta: timedelta | None = None
 ) -> str:
     """Create JWT access token.
 
@@ -29,7 +29,7 @@ def create_access_token(
         Encoded JWT token
     """
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
+    expire = datetime.now(UTC) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     to_encode.update({"exp": expire})
@@ -61,7 +61,7 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def decode_jwt_token(token: str) -> Dict[str, Any]:
+def decode_jwt_token(token: str) -> dict[str, Any]:
     """Decode JWT token.
 
     Args:

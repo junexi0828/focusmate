@@ -1,9 +1,8 @@
 """API endpoints for user verification."""
 
+from typing import Annotated, List
 import logging
 from pathlib import Path
-from typing_extensions import Annotated
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
@@ -120,7 +119,7 @@ async def update_verification_settings(
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 async def upload_verification_documents(
-    files: List[UploadFile],
+    files: list[UploadFile],
     current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
     """Upload verification documents (encrypted)."""

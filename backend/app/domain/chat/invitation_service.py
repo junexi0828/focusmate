@@ -1,9 +1,8 @@
 """Invitation service for managing room invitation codes."""
 
+from typing import Optional
 import secrets
 import string
-from datetime import timezone, datetime, timedelta
-from typing import Optional
 from uuid import UUID
 
 from app.core.config import settings
@@ -17,6 +16,7 @@ from app.domain.chat.schemas import (
 )
 from app.infrastructure.repositories.chat_repository import ChatRepository
 from app.infrastructure.repositories.friend_repository import FriendRepository
+from datetime import UTC, datetime, timedelta
 
 
 class InvitationService:
@@ -25,7 +25,7 @@ class InvitationService:
     def __init__(
         self,
         chat_repo: ChatRepository,
-        friend_repo: Optional[FriendRepository] = None,
+        friend_repo: FriendRepository | None = None,
     ):
         self.chat_repo = chat_repo
         self.friend_repo = friend_repo
@@ -60,7 +60,7 @@ class InvitationService:
         # Calculate expiration
         expires_at = None
         if data.expires_hours:
-            expires_at = datetime.now(timezone.utc) + timedelta(hours=data.expires_hours)
+            expires_at = datetime.now(UTC) + timedelta(hours=data.expires_hours)
 
         # Update room with invitation code
         await self.chat_repo.update_room_invitation(
@@ -85,7 +85,7 @@ class InvitationService:
         # Check expiration
         is_valid = True
         if room.invitation_expires_at:
-            if datetime.now(timezone.utc) > room.invitation_expires_at:
+            if datetime.now(UTC) > room.invitation_expires_at:
                 is_valid = False
 
         # Check max uses

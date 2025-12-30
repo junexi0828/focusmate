@@ -1,14 +1,14 @@
 """File upload service for chat attachments."""
 
-import uuid
-from datetime import datetime
 from typing import List, Tuple, Union
+import uuid
 from pathlib import Path
 
 from fastapi import UploadFile
 
 
 import logging
+from datetime import datetime
 
 class ChatFileUploadService:
     """Service for handling chat file uploads."""
@@ -38,7 +38,7 @@ class ChatFileUploadService:
         self.max_image_size = 10 * 1024 * 1024  # 10MB
         self.max_file_size = 50 * 1024 * 1024  # 50MB
 
-    def validate_file(self, file: UploadFile) -> Tuple[bool, str]:
+    def validate_file(self, file: UploadFile) -> tuple[bool, str]:
         """Validate uploaded file."""
         # Check file type
         if file.content_type not in (
@@ -58,7 +58,7 @@ class ChatFileUploadService:
 
     async def save_file(
         self, file: UploadFile, user_id: str, room_id: str
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         """Save uploaded file and return (file_path, file_url)."""
         # Validate
         is_valid, error = self.validate_file(file)
@@ -99,8 +99,8 @@ class ChatFileUploadService:
         return str(file_path), file_url
 
     async def save_multiple_files(
-        self, files: List[UploadFile], user_id: str, room_id: str
-    ) -> List[Tuple[str, str]]:
+        self, files: list[UploadFile], user_id: str, room_id: str
+    ) -> list[tuple[str, str]]:
         """Save multiple files and return list of (file_path, file_url)."""
         results = []
         for file in files:

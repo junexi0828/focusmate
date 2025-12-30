@@ -4,11 +4,11 @@ This module provides the SQLAlchemy declarative base for ORM models.
 ISO/IEC 25010 Compliance: Maintainability, Reliability
 """
 
-from datetime import datetime
-from typing import Any, Dict
 
+from typing import Any, Dict
 from sqlalchemy import DateTime, MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
+from datetime import datetime
 
 
 # Naming convention for constraints (required for Alembic auto-generation)
@@ -44,7 +44,7 @@ class Base(DeclarativeBase):
             ["_" + c.lower() if c.isupper() else c for c in name]
         ).lstrip("_")
 
-    def dict(self) -> Dict[str, Any]:
+    def dict(self) -> dict[str, Any]:
         """Convert model instance to dictionary.
 
         Returns:

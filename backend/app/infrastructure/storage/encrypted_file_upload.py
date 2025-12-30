@@ -1,8 +1,8 @@
 """Encrypted file upload service for verification documents."""
 
+from typing import List
 import uuid
 from pathlib import Path
-from typing import List
 
 from fastapi import UploadFile
 
@@ -98,8 +98,8 @@ class EncryptedFileUploadService(FileUploadService):
         return content
 
     async def save_multiple_files(
-        self, files: List[UploadFile], user_id: str
-    ) -> List[str]:
+        self, files: list[UploadFile], user_id: str
+    ) -> list[str]:
         """Save multiple files with encryption.
 
         Args:

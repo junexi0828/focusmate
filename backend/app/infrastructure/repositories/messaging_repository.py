@@ -1,12 +1,12 @@
 """Messaging repository - conversations and messages."""
 
-from datetime import datetime
-from typing import List, Optional
 
+from typing import List, Optional
 from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models.message import Conversation, Message
+from datetime import datetime
 
 
 class ConversationRepository:
@@ -22,14 +22,14 @@ class ConversationRepository:
         await self.db.refresh(conversation)
         return conversation
 
-    async def get_by_id(self, conversation_id: str) -> Optional[Conversation]:
+    async def get_by_id(self, conversation_id: str) -> Conversation | None:
         """Get conversation by ID."""
         result = await self.db.execute(
             select(Conversation).where(Conversation.id == conversation_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_participants(self, user1_id: str, user2_id: str) -> Optional[Conversation]:
+    async def get_by_participants(self, user1_id: str, user2_id: str) -> Conversation | None:
         """Get conversation between two users (order independent)."""
         result = await self.db.execute(
             select(Conversation).where(
@@ -41,7 +41,7 @@ class ConversationRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_user_conversations(self, user_id: str) -> List[Conversation]:
+    async def get_user_conversations(self, user_id: str) -> list[Conversation]:
         """Get all conversations for a user."""
         result = await self.db.execute(
             select(Conversation)
@@ -75,7 +75,7 @@ class MessageRepository:
         await self.db.refresh(message)
         return message
 
-    async def get_by_id(self, message_id: str) -> Optional[Message]:
+    async def get_by_id(self, message_id: str) -> Message | None:
         """Get message by ID."""
         result = await self.db.execute(
             select(Message).where(Message.id == message_id)
@@ -84,7 +84,7 @@ class MessageRepository:
 
     async def get_by_conversation(
         self, conversation_id: str, limit: int = 50, offset: int = 0
-    ) -> List[Message]:
+    ) -> list[Message]:
         """Get messages in a conversation with pagination."""
         result = await self.db.execute(
             select(Message)
@@ -96,7 +96,7 @@ class MessageRepository:
         messages = list(result.scalars().all())
         return list(reversed(messages))  # Reverse to show oldest first
 
-    async def get_unread_by_receiver(self, receiver_id: str, conversation_id: str) -> List[Message]:
+    async def get_unread_by_receiver(self, receiver_id: str, conversation_id: str) -> list[Message]:
         """Get unread messages for a receiver in a conversation."""
         result = await self.db.execute(
             select(Message)
@@ -107,7 +107,7 @@ class MessageRepository:
         )
         return list(result.scalars().all())
 
-    async def mark_as_read(self, message_ids: List[str], read_at: datetime) -> int:
+    async def mark_as_read(self, message_ids: list[str], read_at: datetime) -> int:
         """Mark multiple messages as read.
 
         Returns:

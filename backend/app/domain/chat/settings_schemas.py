@@ -1,8 +1,8 @@
 """Chat room settings schema and endpoints."""
 
 
-from pydantic import BaseModel
 from typing import Optional
+from pydantic import BaseModel
 
 
 class ChatRoomSettings(BaseModel):
@@ -30,13 +30,13 @@ class ChatRoomSettings(BaseModel):
 class ChatRoomSettingsUpdate(BaseModel):
     """Update chat room settings."""
 
-    notifications_enabled: Optional[bool] = None
-    mention_notifications: Optional[bool] = None
-    allow_invites: Optional[bool] = None
-    require_approval: Optional[bool] = None
-    allow_reactions: Optional[bool] = None
-    allow_threads: Optional[bool] = None
-    allow_file_uploads: Optional[bool] = None
-    max_file_size_mb: Optional[int] = None
-    slow_mode_seconds: Optional[int] = None
-    link_preview_enabled: Optional[bool] = None
+    notifications_enabled: bool | None = None
+    mention_notifications: bool | None = None
+    allow_invites: bool | None = None
+    require_approval: bool | None = None
+    allow_reactions: bool | None = None
+    allow_threads: bool | None = None
+    allow_file_uploads: bool | None = None
+    max_file_size_mb: int | None = None
+    slow_mode_seconds: int | None = None
+    link_preview_enabled: bool | None = None

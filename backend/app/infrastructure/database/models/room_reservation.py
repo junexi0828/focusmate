@@ -3,13 +3,13 @@
 Represents a scheduled room reservation for future sessions.
 """
 
-from datetime import datetime
-from typing import Optional
 
+from typing import Optional
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin
+from datetime import datetime
 
 
 class RoomReservation(Base, TimestampMixin):
@@ -35,7 +35,7 @@ class RoomReservation(Base, TimestampMixin):
         comment="Unique reservation identifier (UUID)",
     )
 
-    room_id: Mapped[Optional[str]] = mapped_column(
+    room_id: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
         index=True,
@@ -70,7 +70,7 @@ class RoomReservation(Base, TimestampMixin):
         comment="Break time in seconds",
     )
 
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Optional description/notes",
@@ -92,14 +92,14 @@ class RoomReservation(Base, TimestampMixin):
         comment="Whether the session has been completed",
     )
 
-    recurrence_type: Mapped[Optional[str]] = mapped_column(
+    recurrence_type: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,
         default="none",
         comment="Recurrence pattern: none, daily, weekly, monthly",
     )
 
-    recurrence_end_date: Mapped[Optional[datetime]] = mapped_column(
+    recurrence_end_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         comment="When to stop creating recurring reservations",

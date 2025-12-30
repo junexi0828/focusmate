@@ -1,7 +1,7 @@
 """Timer API endpoints."""
 
-from typing_extensions import Annotated
 
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import get_room_repository, get_timer_repository

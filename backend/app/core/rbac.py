@@ -1,8 +1,8 @@
 """Admin role-based access control (RBAC) system."""
 
+from typing import Annotated
 from enum import Enum
 from functools import wraps
-from typing_extensions import Annotated
 
 from fastapi import Depends, HTTPException, status
 
