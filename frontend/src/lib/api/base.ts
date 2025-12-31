@@ -137,14 +137,28 @@ export class BaseApiClient {
       }
 
       if (!response.ok) {
-        // FastAPI error format: {detail: "error message"} or {detail: {code: "...", message: "..."}}
+        // FastAPI error format: {detail: "error message"} or {detail: [{type, loc, msg, ...}]} for validation errors
         const errorDetail = data.detail || data.error || data;
-        const errorMessage =
-          typeof errorDetail === "string"
-            ? errorDetail
-            : errorDetail?.message ||
-              errorDetail?.detail ||
-              `HTTP ${response.status}: ${response.statusText}`;
+        let errorMessage: string;
+
+        if (typeof errorDetail === "string") {
+          errorMessage = errorDetail;
+        } else if (Array.isArray(errorDetail)) {
+          // FastAPI validation errors are arrays of error objects
+          errorMessage = errorDetail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (errorDetail?.message) {
+          errorMessage = errorDetail.message;
+        } else if (errorDetail?.detail) {
+          errorMessage = errorDetail.detail;
+        } else {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+
         const errorCode =
           errorDetail?.code || this.getErrorCodeFromStatus(response.status);
 

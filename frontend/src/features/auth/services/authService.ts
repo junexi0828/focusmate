@@ -77,10 +77,25 @@ class AuthService {
       }
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "로그인에 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "로그인에 실패했습니다",
+          message: errorMessage,
         },
       };
     }
@@ -95,10 +110,25 @@ class AuthService {
       }
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "회원가입에 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "회원가입에 실패했습니다",
+          message: errorMessage,
         },
       };
     }
@@ -111,10 +141,25 @@ class AuthService {
       const response = await api.post("/auth/password-reset/request", data);
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "요청에 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "요청에 실패했습니다",
+          message: errorMessage,
         },
       };
     }
@@ -127,10 +172,25 @@ class AuthService {
       const response = await api.post("/auth/password-reset/verify", data);
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "토큰 검증에 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "토큰 검증에 실패했습니다",
+          message: errorMessage,
         },
       };
     }
@@ -143,10 +203,25 @@ class AuthService {
       const response = await api.post("/auth/password-reset/complete", data);
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "비밀번호 재설정에 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "비밀번호 재설정에 실패했습니다",
+          message: errorMessage,
         },
       };
     }
@@ -159,10 +234,25 @@ class AuthService {
       const response = await api.get("/auth/naver/login");
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "네이버 로그인 URL을 가져오는데 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "네이버 로그인 URL을 가져오는데 실패했습니다",
+          message: errorMessage,
         },
       };
     }
@@ -177,10 +267,25 @@ class AuthService {
       }
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "네이버 로그인에 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "네이버 로그인에 실패했습니다",
+          message: errorMessage,
         },
       };
     }
@@ -191,10 +296,25 @@ class AuthService {
       const response = await api.get(`/auth/profile/${userId}`);
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "프로필을 가져오는데 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "프로필을 가져오는데 실패했습니다",
+          message: errorMessage,
         },
       };
     }
@@ -211,10 +331,25 @@ class AuthService {
       }
       return { status: "success", data: response.data };
     } catch (error: any) {
+      // Handle FastAPI validation errors (array format)
+      let errorMessage = "프로필 업데이트에 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((err: any) => {
+              const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : "필드";
+              return `${field}: ${err.msg || err.message || "유효성 검사 실패"}`;
+            })
+            .join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
       return {
         status: "error",
         error: {
-          message: error?.response?.data?.detail || "프로필 업데이트에 실패했습니다",
+          message: errorMessage,
         },
       };
     }
