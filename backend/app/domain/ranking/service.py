@@ -58,6 +58,33 @@ class RankingService:
             }
         )
 
+        # ✅ 팀 채팅방 자동 생성
+        try:
+            from app.domain.chat.service import ChatService
+            from app.domain.chat.schemas import TeamChatCreate
+            from app.infrastructure.repositories.chat_repository import ChatRepository
+
+            # repository.session을 통해 db 세션 접근
+            chat_repo = ChatRepository(self.repository.session)
+            chat_service = ChatService(chat_repo)
+
+            team_chat = await chat_service.create_team_chat(
+                user_id=leader_id,
+                data=TeamChatCreate(
+                    team_id=team.team_id,
+                    room_name=f"{team.team_name} 채팅방",
+                    description=f"{team.team_name} 팀 전용 채팅방입니다.",
+                )
+            )
+
+            # 리더를 채팅방 멤버로 추가 (이미 create_team_chat에서 추가되지만 확실히 하기 위해)
+            import logging
+            logging.info(f"Team chat room created for team {team.team_id}: {team_chat.room_id}")
+        except Exception as e:
+            # 채팅방 생성 실패해도 팀 생성은 성공
+            import logging
+            logging.warning(f"Failed to create team chat room for team {team.team_id}: {e}")
+
         return TeamResponse.model_validate(team)
 
     async def get_team(self, team_id: UUID) -> TeamResponse | None:
@@ -239,6 +266,48 @@ class RankingService:
                 "role": "member",
             }
         )
+
+        # ✅ 팀 채팅방에 멤버 자동 추가
+        try:
+            from app.infrastructure.repositories.chat_repository import ChatRepository
+            from app.infrastructure.database.models.chat import ChatRoom
+            from sqlalchemy import select
+
+            chat_repo = ChatRepository(self.repository.session)
+
+            # team_id로 채팅방 직접 찾기 (room_metadata에서 team_id 검색)
+            result = await self.repository.session.execute(
+                select(ChatRoom).where(
+                    ChatRoom.room_type == "team",
+                    ChatRoom.is_active == True
+                )
+            )
+            all_team_rooms = result.scalars().all()
+
+            # team_id로 필터링
+            team_chat_room = None
+            for room in all_team_rooms:
+                if (room.room_metadata and
+                    room.room_metadata.get("type") == "team" and
+                    room.room_metadata.get("team_id") == str(invitation.team_id)):
+                    team_chat_room = room
+                    break
+
+            # 채팅방이 있으면 멤버 추가
+            if team_chat_room:
+                # 이미 멤버인지 확인
+                existing_member = await chat_repo.get_member(team_chat_room.room_id, user_id)
+                if not existing_member:
+                    await chat_repo.add_member({
+                        "room_id": team_chat_room.room_id,
+                        "user_id": user_id,
+                        "role": "member",
+                        "is_active": True,
+                    })
+        except Exception as e:
+            # 채팅방 멤버 추가 실패해도 초대 수락은 성공
+            import logging
+            logging.warning(f"Failed to add user to team chat room: {e}")
 
         # Update invitation status
         await self.repository.update_invitation_status(invitation_id, "accepted")

@@ -131,11 +131,27 @@ if ! command -v uvicorn &> /dev/null; then
     fi
 fi
 
-# Run migrations if alembic is available
-if command -v alembic &> /dev/null; then
-    echo ""
-    echo "🗄️  Running database migrations..."
-    alembic upgrade head 2>/dev/null || echo "⚠️  Migration skipped"
+# Run migrations (use smart_migrate.py if available, otherwise use alembic directly)
+echo ""
+echo "🗄️  Running database migrations..."
+if [ -f "scripts/database/smart_migrate.py" ]; then
+    # Use smart migration script (handles existing tables gracefully)
+    if python scripts/database/smart_migrate.py; then
+        echo "✅ Migrations completed successfully"
+    else
+        echo "⚠️  Migration completed with warnings (this may be normal)"
+    fi
+elif command -v alembic &> /dev/null; then
+    # Fallback to direct alembic command
+    if alembic upgrade head; then
+        echo "✅ Migrations completed successfully"
+    else
+        echo "⚠️  Migration failed or already up to date"
+        echo "   If this is a new database, check your DATABASE_URL in .env"
+    fi
+else
+    echo "⚠️  Alembic not found, skipping migrations"
+    echo "   Install dependencies: pip install -r requirements.txt"
 fi
 
 echo ""

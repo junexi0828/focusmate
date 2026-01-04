@@ -57,7 +57,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """Connect to Redis if not already connected."""
         if not self.redis:
             try:
-                self.redis = await aioredis.from_url(
+                # aioredis.from_url() returns a Redis client directly, no await needed
+                self.redis = aioredis.from_url(
                     self.redis_url,
                     encoding="utf-8",
                     decode_responses=True,

@@ -374,6 +374,7 @@ async def create_friend_chat(
     friend_id: str,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[FriendService, Depends(get_friend_service)],
+    db: DatabaseSession,
 ) -> dict:
     """Create or get direct chat with a friend.
 
@@ -392,7 +393,7 @@ async def create_friend_chat(
         HTTPException: If friendship not found or blocked
     """
     try:
-        return await service.create_friend_chat(current_user["id"], friend_id)
+        return await service.create_friend_chat(current_user["id"], friend_id, db)
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
     except ConflictException as e:

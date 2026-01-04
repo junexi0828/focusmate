@@ -25,7 +25,8 @@ class RedisPubSubManager:
 
     async def connect(self):
         """Connect to Redis."""
-        self.redis = await aioredis.from_url(
+        # aioredis.from_url() returns a Redis client directly, no await needed
+        self.redis = aioredis.from_url(
             self.redis_url,
             encoding="utf-8",
             decode_responses=True,
@@ -34,6 +35,9 @@ class RedisPubSubManager:
 
     async def disconnect(self):
         """Disconnect from Redis."""
+        # Stop listener task first
+        await self.stop_listener()
+
         if self.pubsub:
             await self.pubsub.close()
         if self.redis:
@@ -113,7 +117,18 @@ class RedisPubSubManager:
 
     async def start_listener(self):
         """Start background listener task."""
-        asyncio.create_task(self.listen())
+        if self._listener_task is None or self._listener_task.done():
+            self._listener_task = asyncio.create_task(self.listen())
+
+    async def stop_listener(self):
+        """Stop background listener task."""
+        if self._listener_task and not self._listener_task.done():
+            self._listener_task.cancel()
+            try:
+                await self._listener_task
+            except asyncio.CancelledError:
+                pass
+            self._listener_task = None
 
     # Presence operations
     async def publish_presence(self, user_id: str, is_online: bool, metadata: dict | None = None):

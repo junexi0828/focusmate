@@ -19,12 +19,16 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.middleware.rate_limit import RateLimitMiddleware
-from app.api.middleware.request_logging import RequestLoggingMiddleware
+from app.api.middleware.request_logging import RequestLoggingMiddleware, get_request_id
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppException
+from app.core.logging_config import setup_logging
 from app.infrastructure.database.session import close_db, init_db
 from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+
+# 로깅 설정 초기화
+setup_logging()
 
 
 @asynccontextmanager
@@ -42,9 +46,13 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.DEV_RESET_DB and settings.is_development:
         logger.warning("⚠️ Resetting database (development only)...")
 
-    # Initialize database
-    await init_db()
-    logger.info("✅ Database initialized")
+    # Initialize database (only in development to avoid schema drift)
+    # In production, use Alembic migrations instead
+    if settings.is_development:
+        await init_db()
+        logger.info("✅ Database initialized (development mode)")
+    else:
+        logger.info("✅ Database ready (using Alembic migrations in production)")
 
     # Initialize Redis Pub/Sub
     try:
@@ -110,21 +118,31 @@ if not settings.is_development:
 
 # Rate limiting middleware - should be added before CORS
 # Protects against brute force attacks and API abuse
-app.add_middleware(
-    RateLimitMiddleware,
-    requests_per_minute=60,  # Default: 60 requests per minute
-    exempt_paths=["/health", "/docs", "/redoc", "/openapi.json"],
-)
+if settings.RATE_LIMIT_ENABLED:
+    app.add_middleware(
+        RateLimitMiddleware,
+        requests_per_minute=settings.RATE_LIMIT_PER_MINUTE,
+        exempt_paths=["/health", "/docs", "/redoc", "/openapi.json"],
+    )
 
 # CORS middleware - must be added before routes
 # This ensures OPTIONS preflight requests are handled correctly
-# Allow ngrok URLs in development using regex pattern
-ngrok_regex = r"https://.*\.ngrok(-free)?\.(Union[app, io])"
+# Allow ngrok URLs in development using regex pattern (fixed regex)
+ngrok_regex = r"https://.*\.ngrok(-free)?\.(app|io)"
+# Handle CORS_ORIGINS="*" case: cannot use allow_credentials=True with "*"
+cors_origins = settings.CORS_ORIGINS
+allow_credentials = settings.CORS_ALLOW_CREDENTIALS
+# Check if CORS_ORIGINS contains "*" (validator converts to list)
+if isinstance(cors_origins, list) and len(cors_origins) == 1 and cors_origins[0] == "*":
+    # When using "*", credentials must be False
+    allow_credentials = False
+    logger.warning("⚠️ CORS_ORIGINS='*' detected, setting allow_credentials=False for security")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_origin_regex=ngrok_regex if settings.is_development else None,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],  # Allow all headers including Authorization
     expose_headers=["*"],  # Expose all headers
@@ -134,10 +152,42 @@ app.add_middleware(
 
 # Exception handler for custom exceptions
 @app.exception_handler(AppException)
-async def app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
-    """Handle custom application exceptions."""
+async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+    """Handle custom application exceptions with enhanced logging."""
+    import logging
+
+    logger = logging.getLogger("app")
+    request_id = getattr(request.state, "request_id", None)
+
+    # Determine status code based on exception type
+    status_code = 400
+    if exc.code == "NOT_FOUND":
+        status_code = 404
+    elif exc.code == "UNAUTHORIZED":
+        status_code = 401
+    elif exc.code == "FORBIDDEN":
+        status_code = 403
+    elif exc.code == "CONFLICT":
+        status_code = 409
+    elif exc.code == "VALIDATION_ERROR":
+        status_code = 422
+
+    # Log error with context
+    logger.warning(
+        f"Application error: code={exc.code} message={exc.message} "
+        f"path={request.url.path} method={request.method} request_id={request_id}",
+        extra={
+            "error_code": exc.code,
+            "error_message": exc.message,
+            "error_details": exc.details,
+            "request_path": request.url.path,
+            "request_method": request.method,
+            "request_id": request_id,
+        },
+    )
+
     return JSONResponse(
-        status_code=400,
+        status_code=status_code,
         content={
             "status": "error",
             "error": {
@@ -145,6 +195,51 @@ async def app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
                 "message": exc.message,
                 "details": exc.details,
             },
+            "request_id": request_id,
+        },
+    )
+
+
+# Global exception handler for unhandled exceptions
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Handle all unhandled exceptions with proper logging."""
+    import logging
+    import traceback
+
+    logger = logging.getLogger("app")
+    request_id = getattr(request.state, "request_id", None)
+
+    # Log full exception with traceback
+    logger.error(
+        f"Unhandled exception: {type(exc).__name__}: {str(exc)} "
+        f"path={request.url.path} method={request.method} request_id={request_id}",
+        exc_info=True,
+        extra={
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
+            "request_path": request.url.path,
+            "request_method": request.method,
+            "request_id": request_id,
+            "traceback": traceback.format_exc(),
+        },
+    )
+
+    # In production, don't expose internal error details
+    if settings.is_development:
+        error_message = f"{type(exc).__name__}: {str(exc)}"
+    else:
+        error_message = "An internal server error occurred"
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": error_message,
+            },
+            "request_id": request_id,
         },
     )
 
