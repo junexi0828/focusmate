@@ -482,3 +482,244 @@ def is_db_connection_error(response) -> bool:
         return True
 
     return False
+
+
+# =============================================================================
+# N+1 Query Test Fixtures (Phase 2)
+# =============================================================================
+
+@pytest_asyncio.fixture
+async def sample_posts(db_session):
+    """Create 50 sample posts for N+1 query testing.
+
+    Returns:
+        List of 50 Post objects with different authors
+    """
+    from app.infrastructure.database.models.community import Post
+    from app.infrastructure.database.models.user import User
+
+    # Create 10 users
+    users = []
+    for i in range(10):
+        user = User(
+            id=f"user_{i}",
+            email=f"user{i}@test.com",
+            username=f"user{i}",
+            hashed_password="hashed",
+        )
+        db_session.add(user)
+        users.append(user)
+
+    await db_session.flush()
+
+    # Create 50 posts (each user writes 5 posts)
+    posts = []
+    for i in range(50):
+        post = Post(
+            id=f"post_{i}",
+            user_id=users[i % 10].id,
+            title=f"Test Post {i}",
+            content=f"Content for post {i}",
+            category="general",
+        )
+        db_session.add(post)
+        posts.append(post)
+
+    await db_session.commit()
+    return posts
+
+
+@pytest_asyncio.fixture
+async def sample_post_with_comments(db_session):
+    """Create a post with 50 comments for N+1 query testing.
+
+    Returns:
+        Post object with 50 comments
+    """
+    from app.infrastructure.database.models.community import Post, Comment
+    from app.infrastructure.database.models.user import User
+
+    # Create 10 users
+    users = []
+    for i in range(10):
+        user = User(
+            id=f"comment_user_{i}",
+            email=f"commenter{i}@test.com",
+            username=f"commenter{i}",
+            hashed_password="hashed",
+        )
+        db_session.add(user)
+        users.append(user)
+
+    await db_session.flush()
+
+    # Create post
+    post = Post(
+        id="post_with_comments",
+        user_id=users[0].id,
+        title="Post with Many Comments",
+        content="This post has 50 comments",
+        category="general",
+    )
+    db_session.add(post)
+    await db_session.flush()
+
+    # Create 50 comments
+    for i in range(50):
+        comment = Comment(
+            id=f"comment_{i}",
+            post_id=post.id,
+            user_id=users[i % 10].id,
+            content=f"Comment {i}",
+        )
+        db_session.add(comment)
+
+    await db_session.commit()
+    return post
+
+
+@pytest_asyncio.fixture
+async def sample_conversations(db_session):
+    """Create 20 sample conversations for N+1 query testing.
+
+    Returns:
+        List of 20 Conversation objects
+    """
+    from app.infrastructure.database.models.message import Conversation, Message
+    from app.infrastructure.database.models.user import User
+    from datetime import datetime, UTC
+
+    # Create main user
+    main_user = User(
+        id="main_user",
+        email="main@test.com",
+        username="mainuser",
+        hashed_password="hashed",
+    )
+    db_session.add(main_user)
+
+    # Create 20 other users
+    users = []
+    for i in range(20):
+        user = User(
+            id=f"conv_user_{i}",
+            email=f"convuser{i}@test.com",
+            username=f"convuser{i}",
+            hashed_password="hashed",
+        )
+        db_session.add(user)
+        users.append(user)
+
+    await db_session.flush()
+
+    # Create 20 conversations
+    conversations = []
+    for i, user in enumerate(users):
+        conv = Conversation(
+            id=f"conversation_{i}",
+            user1_id=main_user.id,
+            user2_id=user.id,
+            last_message_at=datetime.now(UTC),
+        )
+        db_session.add(conv)
+        conversations.append(conv)
+
+        # Add a last message to each conversation
+        message = Message(
+            id=f"last_msg_{i}",
+            conversation_id=conv.id,
+            sender_id=user.id,
+            receiver_id=main_user.id,
+            content=f"Last message in conversation {i}",
+        )
+        db_session.add(message)
+
+    await db_session.commit()
+    return conversations
+
+
+@pytest_asyncio.fixture
+async def sample_conversation_with_messages(db_session):
+    """Create a conversation with 50 messages for N+1 query testing.
+
+    Returns:
+        Conversation object with 50 messages
+    """
+    from app.infrastructure.database.models.message import Conversation, Message
+    from app.infrastructure.database.models.user import User
+    from datetime import datetime, UTC
+
+    # Create 2 users
+    user1 = User(
+        id="msg_user_1",
+        email="msguser1@test.com",
+        username="msguser1",
+        hashed_password="hashed",
+    )
+    user2 = User(
+        id="msg_user_2",
+        email="msguser2@test.com",
+        username="msguser2",
+        hashed_password="hashed",
+    )
+    db_session.add(user1)
+    db_session.add(user2)
+    await db_session.flush()
+
+    # Create conversation
+    conv = Conversation(
+        id="conversation_with_messages",
+        user1_id=user1.id,
+        user2_id=user2.id,
+        last_message_at=datetime.now(UTC),
+    )
+    db_session.add(conv)
+    await db_session.flush()
+
+    # Create 50 messages (alternating between users)
+    for i in range(50):
+        sender = user1 if i % 2 == 0 else user2
+        receiver = user2 if i % 2 == 0 else user1
+
+        message = Message(
+            id=f"message_{i}",
+            conversation_id=conv.id,
+            sender_id=sender.id,
+            receiver_id=receiver.id,
+            content=f"Message {i}",
+        )
+        db_session.add(message)
+
+    await db_session.commit()
+    return conv
+
+
+@pytest_asyncio.fixture
+async def sample_post(db_session):
+    """Create a single post for testing.
+
+    Returns:
+        Single Post object
+    """
+    from app.infrastructure.database.models.community import Post
+    from app.infrastructure.database.models.user import User
+
+    user = User(
+        id="single_post_user",
+        email="singlepost@test.com",
+        username="singlepostuser",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    post = Post(
+        id="single_post",
+        user_id=user.id,
+        title="Single Test Post",
+        content="Content for single post",
+        category="general",
+    )
+    db_session.add(post)
+    await db_session.commit()
+    return post
