@@ -45,32 +45,34 @@ export function NotificationBell() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch notifications from API
+  // Fetch notifications from API (initial load only - WebSocket handles updates)
   const { data: apiNotifications = [], refetch } = useQuery<Notification[]>({
     queryKey: ["notifications"],
     queryFn: async () => {
       const response = await api.get<Notification[]>("/notifications/list");
       return response.data;
     },
-    refetchInterval: isOpen ? 5000 : 30000, // Refetch more frequently when open
+    refetchInterval: false, // Disabled: WebSocket handles real-time updates
+    staleTime: Infinity, // Data is always fresh via WebSocket
     enabled: authService.isAuthenticated() && !authService.isTokenExpired(), // Only fetch when authenticated and token is valid
     retry: 1,
   });
 
-  // Get unread count
+  // Get unread count (initial load only - WebSocket handles updates)
   const { data: unreadData } = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: async () => {
       const response = await api.get<{ unread_count: number }>("/notifications/unread-count");
       return response.data;
     },
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: false, // Disabled: WebSocket handles real-time updates
+    staleTime: Infinity, // Data is always fresh via WebSocket
     enabled: authService.isAuthenticated() && !authService.isTokenExpired(), // Only fetch when authenticated and token is valid
     retry: 1,
   });
 
   // WebSocket for real-time updates
-  const { isConnected, notifications: wsNotifications } = useNotifications((notification) => {
+  const { isConnected } = useNotifications(() => {
     // Refetch when new notification arrives
     refetch();
   });

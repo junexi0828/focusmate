@@ -31,14 +31,15 @@ export function Sidebar() {
   const user = authService.getCurrentUser();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // 실제 읽지 않은 메시지 수 가져오기
+  // 실제 읽지 않은 메시지 수 가져오기 (initial load only - WebSocket handles updates)
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["unreadMessages"],
     queryFn: async () => {
       const { getUnreadMessageCount } = await import("../api/chat");
       return getUnreadMessageCount();
     },
-    refetchInterval: 30000, // 30초마다 갱신
+    refetchInterval: false, // Disabled: Chat WebSocket handles real-time updates
+    staleTime: 1000 * 60 * 5, // 5 minutes - message count changes infrequently
     retry: 1,
     enabled: !!user && !authService.isTokenExpired(), // Only fetch when user is logged in and token is valid
   });

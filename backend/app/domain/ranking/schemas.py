@@ -35,6 +35,7 @@ class TeamResponse(BaseModel):
     mini_game_enabled: bool
     invite_code: Optional[str]
     affiliation_info: Optional[dict]
+    total_points: int = 0
     created_at: datetime
     updated_at: datetime
 

@@ -59,7 +59,7 @@ function RankingComponent() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
-  // Fetch user's teams with auto-refresh
+  // Fetch user's teams (manual refresh via pull-to-refresh or button)
   const { data: teams, isLoading } = useQuery({
     queryKey: ["my-teams"],
     queryFn: async () => {
@@ -70,9 +70,9 @@ function RankingComponent() {
       return response.data || [];
     },
     initialData: initialTeams,
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: false, // Disabled: Teams don't change frequently
     refetchOnWindowFocus: true, // Refresh when window gains focus
-    staleTime: 10000, // Consider data stale after 10 seconds
+    staleTime: 1000 * 60 * 2, // 2 minutes - teams change slowly
   });
 
   const createTeamMutation = useMutation({

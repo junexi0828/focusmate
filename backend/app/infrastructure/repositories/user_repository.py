@@ -25,6 +25,26 @@ class UserRepository:
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
+    async def get_by_ids(self, user_ids: list[str]) -> list[User]:
+        """Get multiple users by IDs in a single query.
+
+        This method prevents N+1 query problems by fetching all users at once.
+        Industry standard pattern (DataLoader-inspired).
+
+        Args:
+            user_ids: List of user IDs to fetch
+
+        Returns:
+            List of User objects (may be fewer than requested if some don't exist)
+        """
+        if not user_ids:
+            return []
+
+        result = await self.db.execute(
+            select(User).where(User.id.in_(user_ids))
+        )
+        return list(result.scalars().all())
+
     async def get_by_email(self, email: str) -> User | None:
         """Get user by email."""
         result = await self.db.execute(select(User).where(User.email == email))

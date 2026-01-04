@@ -42,12 +42,13 @@ export default function Matching() {
     retry: false,
   });
 
-  // Fetch proposals with real-time polling
+  // Fetch proposals (manual refresh recommended)
   const { data: proposals = [] } = useQuery({
     queryKey: ["my-proposals"],
     queryFn: matchingApi.getMyProposals,
     enabled: verification?.status === "approved",
-    refetchInterval: 15000, // Poll every 15 seconds for new proposals
+    refetchInterval: false, // Disabled: Proposals don't need real-time polling
+    staleTime: 1000 * 60, // 1 minute
   });
 
   // Fetch stats
