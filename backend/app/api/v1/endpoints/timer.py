@@ -129,11 +129,11 @@ async def complete_phase(
             from app.domain.stats.service import StatsService
             from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 
-            # 타이머 정보 가져오기
-            timer = await service.timer_repo.get_by_room_id(room_id)
-            room = await service.room_repo.get_by_id(room_id)
+            # ✅ 최적화: JOIN을 사용하여 단일 쿼리로 timer와 room 조회
+            result = await service.timer_repo.get_with_room_by_room_id(room_id)
 
-            if timer and room:
+            if result:
+                timer, room = result
                 # 세션 기록
                 session_repo = SessionHistoryRepository(db)
                 stats_service = StatsService(session_repo, db)
@@ -149,6 +149,7 @@ async def complete_phase(
                     # 세션 기록 실패해도 타이머 완료는 성공으로 처리
                     import logging
                     logging.warning(f"Failed to record session after timer completion: {e}")
+
 
         return timer_response
     except TimerNotFoundException as e:

@@ -133,22 +133,49 @@ class CommunityService:
             offset=filters.offset,
         )
 
-        # Convert to list responses with author info and like status
+        # ✅ Early return if no posts (defensive coding)
+        if not posts:
+            return PostListResult(
+                posts=[],
+                total=total,
+                limit=filters.limit,
+                offset=filters.offset,
+            )
+
+        # ✅ Batch load all users (prevents N+1 query)
+        # Use set() to deduplicate - same user may have written multiple posts
+        user_ids = list(set(post.user_id for post in posts))
+        users = await self.user_repo.get_by_ids(user_ids)
+        user_map = {user.id: user for user in users}
+
+        # ✅ Batch load likes and reads if current_user_id (prevents N+1 queries)
+        like_map = {}
+        read_map = {}
+        if current_user_id:
+            post_ids = [post.id for post in posts]
+
+            # Batch load likes
+            likes = await self.post_like_repo.get_by_posts_and_user(post_ids, current_user_id)
+            like_map = {like.post_id: like for like in likes}
+
+            # Batch load reads
+            reads = await self.post_read_repo.get_by_posts_and_user(post_ids, current_user_id)
+            read_map = {read.post_id: read for read in reads}
+
+        # Build responses using pre-loaded data
         post_responses = []
         for post in posts:
             response = PostListResponse.model_validate(post)
-            user = await self.user_repo.get_by_id(post.user_id)
+
+            # Get user from map (no query!)
+            user = user_map.get(post.user_id)
             if user:
                 response.author_username = user.username
 
-            # Check if current user liked this post
+            # Check like/read status from maps (no queries!)
             if current_user_id:
-                existing_like = await self.post_like_repo.get_by_post_and_user(post.id, current_user_id)
-                response.is_liked = existing_like is not None
-
-                # Check if current user has read this post
-                existing_read = await self.post_read_repo.get_by_post_and_user(post.id, current_user_id)
-                response.is_read = existing_read is not None
+                response.is_liked = post.id in like_map
+                response.is_read = post.id in read_map
 
             post_responses.append(response)
 
@@ -271,18 +298,31 @@ class CommunityService:
         """Get all comments for a post with nested replies and like status."""
         comments = await self.comment_repo.get_by_post(post_id)
 
-        # Build comment map
+        # ✅ Batch load all users (prevents N+1 query)
+        user_ids = list(set(comment.user_id for comment in comments))
+        users = await self.user_repo.get_by_ids(user_ids)
+        user_map = {user.id: user for user in users}
+
+        # ✅ Batch load likes if current_user_id (prevents N+1 queries)
+        like_map = {}
+        if current_user_id and comments:
+            comment_ids = [comment.id for comment in comments]
+            likes = await self.comment_like_repo.get_by_comments_and_user(comment_ids, current_user_id)
+            like_map = {like.comment_id: like for like in likes}
+
+        # Build comment map using pre-loaded data
         comment_map = {}
         for comment in comments:
             response = CommentResponse.model_validate(comment)
-            user = await self.user_repo.get_by_id(comment.user_id)
+
+            # Get user from map (no query!)
+            user = user_map.get(comment.user_id)
             if user:
                 response.author_username = user.username
 
-            # Check if current user liked this comment
+            # Check like status from map (no query!)
             if current_user_id:
-                existing_like = await self.comment_like_repo.get_by_comment_and_user(comment.id, current_user_id)
-                response.is_liked = existing_like is not None
+                response.is_liked = comment.id in like_map
 
             comment_map[comment.id] = response
 

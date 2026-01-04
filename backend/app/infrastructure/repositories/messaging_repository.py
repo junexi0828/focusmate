@@ -124,7 +124,45 @@ class MessageRepository:
         await self.db.flush()
         return count
 
+    async def get_last_messages_by_conversations(self, conversation_ids: list[str]) -> list[Message]:
+        """Get last message for each conversation in a single query.
+
+        Prevents N+1 query problem when fetching last messages for multiple conversations.
+        Uses window function to efficiently get the most recent message per conversation.
+
+        Args:
+            conversation_ids: List of conversation IDs
+
+        Returns:
+            List of Message objects (one per conversation)
+        """
+        if not conversation_ids:
+            return []
+
+        from sqlalchemy import func, over
+
+        # Use ROW_NUMBER window function to get last message per conversation
+        subquery = (
+            select(
+                Message,
+                func.row_number().over(
+                    partition_by=Message.conversation_id,
+                    order_by=Message.created_at.desc()
+                ).label('rn')
+            )
+            .where(Message.conversation_id.in_(conversation_ids))
+        ).subquery()
+
+        # Select only rows where row_number = 1 (most recent message)
+        result = await self.db.execute(
+            select(Message)
+            .select_from(subquery)
+            .where(subquery.c.rn == 1)
+        )
+        return list(result.scalars().all())
+
     async def update(self, message: Message) -> Message:
+
         """Update message."""
         await self.db.flush()
         await self.db.refresh(message)
