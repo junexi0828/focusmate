@@ -10,7 +10,7 @@ Creates complete sample data for ALL implemented features:
 - Room Management (rooms, participants, timers)
 - Notifications (various types)
 
-Run with: python scripts/seed_comprehensive.py
+Run with: python scripts/database/seed_comprehensive.py
 """
 
 import asyncio
