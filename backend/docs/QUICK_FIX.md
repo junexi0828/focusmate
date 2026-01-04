@@ -12,7 +12,7 @@ Python 3.14를 사용하면 `pydantic-core` 빌드가 실패합니다.
 
 ```bash
 cd backend
-./scripts/fix-python.sh
+./scripts/tools/fix-python.sh
 ```
 
 이 스크립트는:

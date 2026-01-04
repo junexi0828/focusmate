@@ -330,11 +330,20 @@ class FriendService:
 
         return FriendListResponse(friends=friends, total=len(friends))
 
-    async def create_friend_chat(self, user_id: str, friend_id: str):
+    async def create_friend_chat(self, user_id: str, friend_id: str, db=None):
         """Create or get direct chat with a friend.
 
-        Note: This method returns the ChatRoomResponse from chat service.
-        This is a placeholder that will be implemented when chat service is integrated.
+        Args:
+            user_id: User identifier
+            friend_id: Friend identifier
+            db: Database session (optional, will use friend_repo session if not provided)
+
+        Returns:
+            ChatRoomResponse from chat service
+
+        Raises:
+            NotFoundException: If friendship not found
+            ConflictException: If friend is blocked
         """
         # Verify friendship exists
         friendship = await self.friend_repo.get_friendship(user_id, friend_id)
@@ -344,6 +353,24 @@ class FriendService:
         if friendship.is_blocked:
             raise ConflictException("Cannot create chat with blocked friend")
 
-        # This will be implemented in the chat API endpoint
-        # by calling chat service's create_direct_chat method
-        return {"user_id": user_id, "friend_id": friend_id}
+        # ✅ ChatService를 통해 직접 채팅방 생성
+        from app.domain.chat.service import ChatService
+        from app.domain.chat.schemas import DirectChatCreate
+        from app.infrastructure.repositories.chat_repository import ChatRepository
+
+        # db 세션 가져오기 (friend_repo에서 가져오거나 전달받은 것 사용)
+        if db is None:
+            # friend_repo의 session 사용
+            if hasattr(self.friend_repo, 'session'):
+                db = self.friend_repo.session
+            else:
+                raise ValueError("Database session required for creating chat room")
+
+        chat_repo = ChatRepository(db)
+        chat_service = ChatService(chat_repo)
+
+        # ChatService의 create_direct_chat이 이미 중복 체크를 하므로 직접 호출
+        return await chat_service.create_direct_chat(
+            user_id=user_id,
+            data=DirectChatCreate(recipient_id=friend_id)
+        )

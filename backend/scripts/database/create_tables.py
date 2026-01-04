@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.infrastructure.database.base import Base
 
 # Import all models to register them with Base
+import app.infrastructure.database.models  # noqa: F401
+
 from app.infrastructure.database.session import engine
 
 
@@ -39,7 +41,7 @@ async def create_all_tables():
     print("   - notification")
     print("=" * 70)
     print("\n🎯 Next step: Run seed script")
-    print("   python scripts/seed_comprehensive.py")
+    print("   python scripts/database/seed_comprehensive.py")
 
 
 if __name__ == "__main__":

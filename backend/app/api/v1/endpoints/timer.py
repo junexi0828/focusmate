@@ -4,7 +4,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import get_room_repository, get_timer_repository
+from app.api.deps import DatabaseSession, get_current_user_required, get_room_repository, get_timer_repository
 from app.core.exceptions import (
     InvalidTimerStateException,
     RoomNotFoundException,
@@ -111,15 +111,46 @@ async def reset_timer(
 @router.post("/{room_id}/complete", response_model=TimerStateResponse)
 async def complete_phase(
     room_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[TimerService, Depends(get_timer_service)],
+    db: DatabaseSession,
 ) -> TimerStateResponse:
     """Complete current phase and transition to next phase.
 
     Transitions from WORK → BREAK or BREAK → WORK.
     Auto-starts break if auto_start_break is enabled.
+    Automatically records session to session_history when work phase completes.
     """
     try:
-        return await service.complete_phase(room_id)
+        timer_response = await service.complete_phase(room_id)
+
+        # ✅ 자동 세션 기록: WORK 단계 완료 시 세션 기록
+        if timer_response.phase == "break":  # WORK → BREAK 전환 시
+            from app.domain.stats.service import StatsService
+            from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
+
+            # 타이머 정보 가져오기
+            timer = await service.timer_repo.get_by_room_id(room_id)
+            room = await service.room_repo.get_by_id(room_id)
+
+            if timer and room:
+                # 세션 기록
+                session_repo = SessionHistoryRepository(db)
+                stats_service = StatsService(session_repo, db)
+
+                try:
+                    await stats_service.record_session(
+                        user_id=current_user["id"],
+                        room_id=room_id,
+                        session_type="work",
+                        duration_minutes=room.work_duration,
+                    )
+                except Exception as e:
+                    # 세션 기록 실패해도 타이머 완료는 성공으로 처리
+                    import logging
+                    logging.warning(f"Failed to record session after timer completion: {e}")
+
+        return timer_response
     except TimerNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except RoomNotFoundException as e:

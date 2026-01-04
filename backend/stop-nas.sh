@@ -141,6 +141,24 @@ fi
 rm -f "$PID_FILE"
 echo ""
 
+# GitHub Webhook Listener 중지
+WEBHOOK_PID_FILE="$PROJECT_DIR/webhook-listener.pid"
+if [ -f "$WEBHOOK_PID_FILE" ]; then
+    WEBHOOK_PID=$(cat "$WEBHOOK_PID_FILE" 2>/dev/null || echo "")
+    if [ -n "$WEBHOOK_PID" ] && ps -p "$WEBHOOK_PID" > /dev/null 2>&1; then
+        echo "🛑 GitHub Webhook Listener (PID: $WEBHOOK_PID) 중지 중..."
+        kill "$WEBHOOK_PID" 2>/dev/null || true
+        sleep 1
+        if ps -p "$WEBHOOK_PID" > /dev/null 2>&1; then
+            kill -9 "$WEBHOOK_PID" 2>/dev/null || true
+        fi
+        rm -f "$WEBHOOK_PID_FILE"
+        echo "✅ GitHub Webhook Listener가 중지되었습니다."
+    else
+        rm -f "$WEBHOOK_PID_FILE"
+    fi
+fi
+
 # Cloudflare Tunnel 중지
 TUNNEL_DIR="/volume1/web/cloudflare-tunnel"
 TUNNEL_PID_FILE="$TUNNEL_DIR/tunnel.pid"

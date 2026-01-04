@@ -29,7 +29,7 @@ The script will automatically:
 
 > ⚠️ **Note**: Python 3.14 is not fully supported yet. Use Python 3.12 or 3.13 for best compatibility.
 >
-> **If you have Python 3.14 issues**: Run `./scripts/fix-python.sh` to recreate venv with compatible Python version.
+> **If you have Python 3.14 issues**: Run `./scripts/tools/fix-python.sh` to recreate venv with compatible Python version.
 
 ### Manual Installation
 

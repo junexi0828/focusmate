@@ -65,6 +65,53 @@ if ! $CONDA_PYTHON -m uvicorn --version &> /dev/null; then
     exit 1
 fi
 
+# alembic 확인
+if ! $CONDA_PYTHON -m alembic --version &> /dev/null; then
+    echo "⚠️  Warning: alembic이 설치되어 있지 않습니다."
+    echo "   마이그레이션을 실행할 수 없습니다."
+    echo "   다음 명령어로 설치하세요:"
+    echo "   conda activate $CONDA_ENV"
+    echo "   pip install -r requirements.txt"
+fi
+
+# 데이터베이스 마이그레이션 실행
+echo ""
+echo "🗄️  데이터베이스 마이그레이션 실행 중..."
+cd "$PROJECT_DIR"
+
+# Conda 환경의 bin 디렉토리를 PATH에 추가 (alembic 명령어를 찾기 위해)
+CONDA_BIN_DIR="$MINICONDA_BASE/envs/$CONDA_ENV/bin"
+export PATH="$CONDA_BIN_DIR:$PATH"
+
+if [ -f "$PROJECT_DIR/scripts/database/smart_migrate.py" ]; then
+    # Smart migration script 사용 (기존 테이블이 있어도 안전하게 처리)
+    # PATH에 conda bin이 추가되어 있으므로 alembic 명령어를 찾을 수 있음
+    if $CONDA_PYTHON "$PROJECT_DIR/scripts/database/smart_migrate.py"; then
+        echo "✅ 마이그레이션 완료"
+    else
+        echo "⚠️  마이그레이션 완료 (경고가 있을 수 있지만 정상일 수 있음)"
+        echo "   데이터베이스 연결 및 .env 파일을 확인하세요"
+    fi
+elif command -v alembic &> /dev/null || $CONDA_PYTHON -m alembic --version &> /dev/null; then
+    # Fallback: 직접 alembic 명령어 사용
+    if command -v alembic &> /dev/null; then
+        ALEMBIC_CMD="alembic"
+    else
+        ALEMBIC_CMD="$CONDA_PYTHON -m alembic"
+    fi
+
+    if $ALEMBIC_CMD upgrade head; then
+        echo "✅ 마이그레이션 완료"
+    else
+        echo "⚠️  마이그레이션 실패 또는 이미 최신 상태"
+        echo "   데이터베이스 연결을 확인하세요 (DATABASE_URL in .env)"
+    fi
+else
+    echo "⚠️  Alembic을 찾을 수 없어 마이그레이션을 건너뜁니다."
+    echo "   의존성을 설치하세요: pip install -r requirements.txt"
+fi
+echo ""
+
 # 이미 실행 중인지 확인
 if [ -f "app.pid" ]; then
     PID=$(cat app.pid)
@@ -112,6 +159,24 @@ else
     echo "   로그를 확인하세요: cat logs/app.log"
     rm -f app.pid
     exit 1
+fi
+
+# GitHub Webhook Listener 자동 시작
+WEBHOOK_SCRIPT="$PROJECT_DIR/scripts/deployment/start-webhook-listener.sh"
+WEBHOOK_PID_FILE="$PROJECT_DIR/webhook-listener.pid"
+
+if [ -f "$WEBHOOK_SCRIPT" ]; then
+    if [ ! -f "$WEBHOOK_PID_FILE" ] || ! ps -p "$(cat "$WEBHOOK_PID_FILE" 2>/dev/null)" > /dev/null 2>&1; then
+        echo "🚀 GitHub Webhook Listener 시작 중..."
+        if bash "$WEBHOOK_SCRIPT"; then
+            echo "✅ GitHub Webhook Listener가 시작되었습니다."
+        else
+            echo "⚠️  GitHub Webhook Listener 시작 실패 (계속 진행)"
+        fi
+    else
+        echo "⚠️  GitHub Webhook Listener가 이미 실행 중입니다."
+    fi
+    echo ""
 fi
 
 # Cloudflare Tunnel 자동 시작

@@ -79,7 +79,7 @@ source venv/bin/activate
 alembic upgrade head
 
 # Seed test data
-python scripts/seed_comprehensive.py
+python scripts/database/seed_comprehensive.py
 
 # Now ALL tests will pass
 pytest tests/ -v
@@ -186,7 +186,7 @@ ForeignKeyViolationError: Key (user_id)=(test_user_123) is not present in table 
 **How to Fix**:
 ```bash
 # Seed test data
-python scripts/seed_comprehensive.py
+python scripts/database/seed_comprehensive.py
 
 # Re-run test
 pytest tests/integration/test_chat_api.py::TestChatRoomEndpoints::test_create_direct_chat -v
@@ -281,7 +281,7 @@ sleep 5
 cd backend
 source venv/bin/activate
 alembic upgrade head
-python scripts/seed_comprehensive.py
+python scripts/database/seed_comprehensive.py
 
 # Run all tests
 pytest tests/ -v
