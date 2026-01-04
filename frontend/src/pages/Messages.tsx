@@ -81,7 +81,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
   } = useChatWebSocket();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Fetch rooms
+  // Fetch rooms (initial load only - WebSocket handles updates)
   const { data: roomsData, isLoading } = useQuery({
     queryKey: ["chat-rooms", activeTab],
     queryFn: async () => {
@@ -92,7 +92,8 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
         ? response.data
         : { rooms: [], total: 0 };
     },
-    refetchInterval: 30000, // Refetch every 30 seconds to update unread counts
+    refetchInterval: false, // Disabled: Chat WebSocket handles real-time updates
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Fetch friends for new chat dialog

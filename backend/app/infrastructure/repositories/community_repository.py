@@ -243,6 +243,28 @@ class PostLikeRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_posts_and_user(self, post_ids: list[str], user_id: str) -> list[PostLike]:
+        """Get likes for multiple posts by a user in a single query.
+
+        Prevents N+1 query problem when checking like status for multiple posts.
+
+        Args:
+            post_ids: List of post IDs
+            user_id: User ID
+
+        Returns:
+            List of PostLike objects
+        """
+        if not post_ids:
+            return []
+
+        result = await self.db.execute(
+            select(PostLike)
+            .where(PostLike.post_id.in_(post_ids))
+            .where(PostLike.user_id == user_id)
+        )
+        return list(result.scalars().all())
+
     async def delete(self, post_like: PostLike) -> None:
         """Remove post like."""
         await self.db.delete(post_like)
@@ -272,6 +294,28 @@ class CommentLikeRepository:
             .where(CommentLike.user_id == user_id)
         )
         return result.scalar_one_or_none()
+
+    async def get_by_comments_and_user(self, comment_ids: list[str], user_id: str) -> list[CommentLike]:
+        """Get likes for multiple comments by a user in a single query.
+
+        Prevents N+1 query problem when checking like status for multiple comments.
+
+        Args:
+            comment_ids: List of comment IDs
+            user_id: User ID
+
+        Returns:
+            List of CommentLike objects
+        """
+        if not comment_ids:
+            return []
+
+        result = await self.db.execute(
+            select(CommentLike)
+            .where(CommentLike.comment_id.in_(comment_ids))
+            .where(CommentLike.user_id == user_id)
+        )
+        return list(result.scalars().all())
 
     async def delete(self, comment_like: CommentLike) -> None:
         """Remove comment like."""
@@ -309,6 +353,28 @@ class PostReadRepository:
             .where(PostRead.user_id == user_id)
         )
         return result.scalar_one_or_none()
+
+    async def get_by_posts_and_user(self, post_ids: list[str], user_id: str) -> list[PostRead]:
+        """Get read status for multiple posts by a user in a single query.
+
+        Prevents N+1 query problem when checking read status for multiple posts.
+
+        Args:
+            post_ids: List of post IDs
+            user_id: User ID
+
+        Returns:
+            List of PostRead objects
+        """
+        if not post_ids:
+            return []
+
+        result = await self.db.execute(
+            select(PostRead)
+            .where(PostRead.post_id.in_(post_ids))
+            .where(PostRead.user_id == user_id)
+        )
+        return list(result.scalars().all())
 
     async def get_read_posts_by_user(self, user_id: str) -> list[str]:
         """Get list of post IDs that user has read."""

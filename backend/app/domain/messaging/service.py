@@ -100,23 +100,43 @@ class MessagingService:
         """Get all conversations for a user."""
         conversations = await self.conversation_repo.get_user_conversations(user_id)
 
+        # ✅ Early return if no conversations (defensive coding)
+        if not conversations:
+            return []
+
+        # ✅ Batch load all other users (prevents N+1 query)
+        # Use set() to deduplicate - same user may appear in multiple conversations
+        other_user_ids = list(set(
+            conv.user2_id if conv.user1_id == user_id else conv.user1_id
+            for conv in conversations
+        ))
+        users = await self.user_repo.get_by_ids(other_user_ids)
+        user_map = {user.id: user for user in users}
+
+        # ✅ Batch load last messages (prevents N+1 queries)
+        conv_ids = [conv.id for conv in conversations if conv.last_message_at]
+        if conv_ids:  # Only query if there are conversations with messages
+            last_messages = await self.message_repo.get_last_messages_by_conversations(conv_ids)
+            message_map = {msg.conversation_id: msg for msg in last_messages}
+        else:
+            message_map = {}
+
+        # Build responses using pre-loaded data
         result = []
         for conv in conversations:
             # Determine the other user
             other_user_id = conv.user2_id if conv.user1_id == user_id else conv.user1_id
-            other_user = await self.user_repo.get_by_id(other_user_id)
+            other_user = user_map.get(other_user_id)
 
             # Get unread count for this user
             unread_count = (
                 conv.user1_unread_count if conv.user1_id == user_id else conv.user2_unread_count
             )
 
-            # Get last message
+            # Get last message from map (O(1) lookup, no query!)
             last_message = None
-            if conv.last_message_at:
-                messages = await self.message_repo.get_by_conversation(conv.id, limit=1)
-                if messages:
-                    last_message = messages[-1].content[:50]  # Truncate to 50 chars
+            if conv.id in message_map:
+                last_message = message_map[conv.id].content[:50]  # Truncate to 50 chars
 
             list_response = ConversationListResponse(
                 id=conv.id,
@@ -154,14 +174,43 @@ class MessagingService:
             conversation_id, limit=limit, offset=offset
         )
 
-        # Build message responses
+        # ✅ Early return if no messages (defensive coding)
+        if not messages:
+            # Still return conversation info even if no messages
+            conv_response = ConversationResponse.model_validate(conversation)
+            other_user_id = (
+                conversation.user2_id if conversation.user1_id == user_id else conversation.user1_id
+            )
+            # Note: We still need to fetch the other user for conversation info
+            other_user = await self.user_repo.get_by_id(other_user_id)
+            conv_response.other_user_id = other_user_id
+            conv_response.other_user_username = other_user.username if other_user else None
+            conv_response.last_message = None
+
+            return ConversationDetailResponse(
+                conversation=conv_response,
+                messages=[],
+            )
+
+        # ✅ Batch load all unique users (prevents N+1 queries)
+        # Usually just 2 users (sender and receiver) for 1:1 conversations!
+        # Use set() to deduplicate
+        user_ids = list(set(
+            user_id
+            for msg in messages
+            for user_id in [msg.sender_id, msg.receiver_id]
+        ))
+        users = await self.user_repo.get_by_ids(user_ids)
+        user_map = {user.id: user for user in users}
+
+        # Build message responses using pre-loaded data
         message_responses = []
         for msg in messages:
             response = MessageResponse.model_validate(msg)
 
-            # Add usernames
-            sender = await self.user_repo.get_by_id(msg.sender_id)
-            receiver = await self.user_repo.get_by_id(msg.receiver_id)
+            # Get users from map (O(1) lookup, no queries!)
+            sender = user_map.get(msg.sender_id)
+            receiver = user_map.get(msg.receiver_id)
             if sender:
                 response.sender_username = sender.username
             if receiver:
@@ -172,11 +221,11 @@ class MessagingService:
         # Build conversation response
         conv_response = ConversationResponse.model_validate(conversation)
 
-        # Add other user info
+        # Add other user info from map (O(1) lookup!)
         other_user_id = (
             conversation.user2_id if conversation.user1_id == user_id else conversation.user1_id
         )
-        other_user = await self.user_repo.get_by_id(other_user_id)
+        other_user = user_map.get(other_user_id)
         conv_response.other_user_id = other_user_id
         conv_response.other_user_username = other_user.username if other_user else None
 
