@@ -86,8 +86,10 @@ export function RankingPage({
       }
       return response.data;
     },
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
-    refetchOnWindowFocus: true,
+    // Removed refetchInterval and refetchOnWindowFocus
+    // Global config already disables these for better performance
+    //refetchInterval: 30000, // Auto-refresh every 30 seconds
+    //refetchOnWindowFocus: true,
   });
 
   const handleCopyCode = async (code: string) => {
