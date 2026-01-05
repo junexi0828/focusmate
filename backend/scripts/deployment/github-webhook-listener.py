@@ -127,11 +127,22 @@ class WebhookHandler(BaseHTTPRequestHandler):
                 self.log_message("✅ Git pull successful")
                 self.log_message(f"Output: {result.stdout}")
 
-                # 마이그레이션 실행 (필요시)
-                self.run_migrations()
+                # 실제로 변경사항이 있는지 확인
+                output_lower = result.stdout.lower()
+                has_changes = not ("already up to date" in output_lower or "already up-to-date" in output_lower)
 
-                # 서버 재시작 (선택적 - 주석 해제하여 사용)
-                # self.restart_server()
+                if has_changes:
+                    self.log_message("🔄 Code changes detected, updating server...")
+
+                    # 마이그레이션 실행 (필요시)
+                    self.run_migrations()
+
+                    # ⚠️ 개발 환경용: 서버 자동 재시작 활성화
+                    # 🚨 실운영 배포 전 반드시 주석 처리 필요!
+                    # 실운영에서는 무중단 배포 또는 수동 재시작 권장
+                    self.restart_server()
+                else:
+                    self.log_message("✅ Already up to date, no restart needed")
             else:
                 self.log_message(f"❌ Git pull failed: {result.stderr}")
 

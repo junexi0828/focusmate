@@ -97,6 +97,16 @@ python scripts/database/verify_database.py
 ./scripts/deployment/check_webhook_setup.sh
 ```
 
+> [!CAUTION]
+> **실운영 배포 전 필수 확인!**
+>
+> 현재 `github-webhook-listener.py`는 개발 환경용으로 **서버 자동 재시작이 활성화**되어 있습니다.
+>
+> 실운영 환경에 배포하기 전 반드시 `scripts/deployment/github-webhook-listener.py` 파일에서 `self.restart_server()` 줄을 주석 처리하세요.
+>
+> 자세한 내용은 `docs/03_deployment/DEPLOY-013_GitHub_Webhook_Setup.md`의 "실운영 배포 전 필수 체크리스트" 섹션을 참고하세요.
+
+
 ## 📝 참고
 
 - 모든 스크립트는 `backend/` 디렉토리에서 실행해야 합니다.
