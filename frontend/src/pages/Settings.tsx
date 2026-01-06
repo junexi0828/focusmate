@@ -21,6 +21,7 @@ import {
 import { UserSettings } from "../types/settings";
 import { toast } from "sonner";
 import { Loader2, Settings as SettingsIcon, Lock, Bell, Palette } from "lucide-react";
+import { getErrorMessage } from "../utils/error";
 
 export default function Settings() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -80,7 +81,7 @@ export default function Settings() {
       setSettings(data);
     } catch (error: any) {
       console.error("Failed to load settings:", error);
-      const errorMessage = error?.response?.data?.detail || error?.message || "설정을 불러오는데 실패했습니다";
+      const errorMessage = getErrorMessage(error, "설정을 불러오는데 실패했습니다");
       toast.error(errorMessage);
       // If unauthorized, redirect to login
       if (error?.response?.status === 401) {
@@ -108,7 +109,7 @@ export default function Settings() {
 
       toast.success("설정이 저장되었습니다");
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "설정 저장에 실패했습니다");
+      toast.error(getErrorMessage(error, "설정 저장에 실패했습니다"));
     } finally {
       setSaving(false);
     }
@@ -139,7 +140,7 @@ export default function Settings() {
         confirm_password: "",
       });
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "비밀번호 변경에 실패했습니다");
+      toast.error(getErrorMessage(error, "비밀번호 변경에 실패했습니다"));
     }
   };
 
@@ -154,7 +155,7 @@ export default function Settings() {
       toast.success("이메일이 변경되었습니다. 새 이메일을 인증해주세요.");
       setEmailForm({ new_email: "", password: "" });
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "이메일 변경에 실패했습니다");
+      toast.error(getErrorMessage(error, "이메일 변경에 실패했습니다"));
     }
   };
 

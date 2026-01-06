@@ -2,6 +2,7 @@
 
 
 from typing import Dict, List, Optional, Tuple
+import logging
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +16,8 @@ from app.infrastructure.database.models.community import (
 )
 from app.infrastructure.database.models.user import User
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class PostRepository:
@@ -84,15 +87,19 @@ class PostRepository:
         order_clauses = [desc(Post.is_pinned)]
 
         # Add sorting based on sort_by parameter
-        if sort_by == PostSortBy.RECENT:
+        # Ensure consistency by using string values
+        sort_val = sort_by.value if hasattr(sort_by, 'value') else str(sort_by)
+        logger.info(f"Sorting posts by: {sort_val}")
+
+        if sort_val == "recent":
             order_clauses.append(desc(Post.created_at))
-        elif sort_by == PostSortBy.POPULAR:
+        elif sort_val == "popular":
             order_clauses.extend([desc(Post.likes), desc(Post.created_at)])
-        elif sort_by == PostSortBy.TRENDING:
+        elif sort_val == "trending":
             # Trending: weighted score (likes * 0.3 + comment_count * 0.7)
             trending_score = (Post.likes * 0.3) + (Post.comment_count * 0.7)
             order_clauses.extend([desc(trending_score), desc(Post.created_at)])
-        elif sort_by == PostSortBy.MOST_COMMENTED:
+        elif sort_val == "most_commented":
             order_clauses.extend([desc(Post.comment_count), desc(Post.created_at)])
 
         query = query.order_by(*order_clauses)
