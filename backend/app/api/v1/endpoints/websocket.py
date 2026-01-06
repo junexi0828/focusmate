@@ -39,7 +39,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
         # Send welcome message
         await connection_manager.send_personal_message(
             {
-                "type": "connected",
+                "event": "connected",
                 "data": {
                     "room_id": room_id,
                     "message": "Connected to room",
@@ -52,12 +52,15 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
         # Notify others of new connection
         await connection_manager.broadcast_to_room(
             {
-                "type": "participant_joined",
+                "event": "participant_update",  # Changed from participant_joined
                 "data": {
+                    "action": "joined",  # Added action field
+                    "participant": {
+                        "id": current_user.id,
+                        "username": current_user.username,
+                        "name": current_user.name,
+                    },
                     "room_id": room_id,
-                    "connection_count": connection_manager.get_room_connection_count(
-                        room_id
-                    ),
                 },
                 "timestamp": datetime.now(UTC).isoformat(),
             },
@@ -80,7 +83,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                 if message_type == "ping":
                     await connection_manager.send_personal_message(
                         {
-                            "type": "pong",
+                            "event": "pong",
                             "timestamp": datetime.now(UTC).isoformat(),
                         },
                         websocket,
@@ -90,7 +93,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                 # Broadcast timer actions to all in room
                 await connection_manager.broadcast_to_room(
                     {
-                        "type": message_type,
+                        "event": message_type,
                         "data": data.get("data", {}),
                         "timestamp": datetime.now(UTC).isoformat(),
                     },
@@ -105,7 +108,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                 try:
                     await connection_manager.send_personal_message(
                         {
-                            "type": "error",
+                            "event": "error",
                             "error": {
                                 "code": "invalid_message",
                                 "message": "Invalid message format",
@@ -134,7 +137,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
                 try:
                     await connection_manager.send_personal_message(
                         {
-                            "type": "error",
+                            "event": "error",
                             "error": {
                                 "code": "server_error",
                                 "message": "Internal server error",
@@ -157,12 +160,11 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
         try:
             await connection_manager.broadcast_to_room(
                 {
-                    "type": "participant_left",
+                    "event": "participant_update",  # Changed from participant_left
                     "data": {
+                        "action": "left",  # Added action field
+                        "participant_id": current_user.id,
                         "room_id": room_id,
-                        "connection_count": connection_manager.get_room_connection_count(
-                            room_id
-                        ),
                     },
                     "timestamp": datetime.now(UTC).isoformat(),
                 },

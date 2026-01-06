@@ -673,15 +673,15 @@ run_all_tests() {
     # Enable pipefail to capture function exit codes correctly
     set -o pipefail
 
-    # Try test-all.sh first
-    if [ -f "$PROJECT_ROOT/scripts/test-all.sh" ]; then
-        if bash "$PROJECT_ROOT/scripts/test-all.sh" 2>&1; then
+    # Try AI Testing Automation script first
+    if [ -f "$PROJECT_ROOT/scripts/testing/run_ai_testing.sh" ]; then
+        if bash "$PROJECT_ROOT/scripts/testing/run_ai_testing.sh" 2>&1; then
             echo -e "${GREEN}✅ All tests passed${NC}"
             set +o pipefail
             return 0
         else
-            # Even if test-all.sh fails, continue with individual tests
-            echo -e "${YELLOW}⚠️  test-all.sh completed with warnings, running individual tests...${NC}"
+            # Even if run_ai_testing.sh fails, continue with individual tests
+            echo -e "${YELLOW}⚠️  AI Testing Automation completed with warnings, running individual tests...${NC}"
         fi
     fi
 
@@ -824,16 +824,15 @@ run_security_tests() {
     cd "$PROJECT_ROOT/backend"
     source venv/bin/activate 2>/dev/null || setup_backend
 
+    # Run security tests using pytest directly
+    cd "$PROJECT_ROOT/backend"
+    source venv/bin/activate 2>/dev/null || setup_backend
+
     SUCCESS=false
 
-    # Method 1: Use test_security.sh if available
-    if [ -f "$PROJECT_ROOT/scripts/test_security.sh" ]; then
-        if bash "$PROJECT_ROOT/scripts/test_security.sh" 2>&1; then
-            SUCCESS=true
-        else
-            # Even if script fails, continue with pytest
-            echo -e "${YELLOW}⚠️  test_security.sh completed with warnings, running pytest tests...${NC}"
-        fi
+    # Run pytest security tests
+    if pytest tests/security/ -v --tb=short 2>&1; then
+        SUCCESS=true
     fi
 
     # Method 2: Run pytest security tests
@@ -999,8 +998,8 @@ test_api_verification() {
     SUCCESS=false
 
     # Method 1: Use verify_api.sh if available
-    if [ -f "$PROJECT_ROOT/scripts/verify_api.sh" ]; then
-        if bash "$PROJECT_ROOT/scripts/verify_api.sh" 2>&1; then
+    if [ -f "$PROJECT_ROOT/scripts/testing/verify_api.sh" ]; then
+        if bash "$PROJECT_ROOT/scripts/testing/verify_api.sh" 2>&1; then
             SUCCESS=true
         fi
     fi
@@ -1118,8 +1117,8 @@ manage_cloudflare_tunnel() {
         case $choice in
             1)
                 print_section "$BLUE" "🚀 로컬 Cloudflare Tunnel 시작"
-                if [ -f "$PROJECT_ROOT/scripts/start-cloudflare-tunnel.sh" ]; then
-                    bash "$PROJECT_ROOT/scripts/start-cloudflare-tunnel.sh"
+                if [ -f "$PROJECT_ROOT/scripts/infrastructure/cloudflare-start.sh" ]; then
+                    bash "$PROJECT_ROOT/scripts/infrastructure/cloudflare-start.sh"
                 else
                     echo -e "${RED}❌ start-cloudflare-tunnel.sh 스크립트를 찾을 수 없습니다.${NC}"
                 fi
@@ -1127,8 +1126,8 @@ manage_cloudflare_tunnel() {
                 ;;
             2)
                 print_section "$RED" "🛑 로컬 Cloudflare Tunnel 중지"
-                if [ -f "$PROJECT_ROOT/scripts/stop-cloudflare-tunnel.sh" ]; then
-                    bash "$PROJECT_ROOT/scripts/stop-cloudflare-tunnel.sh"
+                if [ -f "$PROJECT_ROOT/scripts/infrastructure/cloudflare-stop.sh" ]; then
+                    bash "$PROJECT_ROOT/scripts/infrastructure/cloudflare-stop.sh"
                 else
                     echo -e "${RED}❌ stop-cloudflare-tunnel.sh 스크립트를 찾을 수 없습니다.${NC}"
                 fi
@@ -1362,8 +1361,8 @@ manage_cloudflare_tunnel() {
                 ;;
             7)
                 print_section "$CYAN" "⚙️  Cloudflare Tunnel 설정 확인"
-                if [ -f "$PROJECT_ROOT/scripts/cloudflare-tunnel-setup.sh" ]; then
-                    bash "$PROJECT_ROOT/scripts/cloudflare-tunnel-setup.sh"
+                if [ -f "$PROJECT_ROOT/scripts/infrastructure/cloudflare-setup.sh" ]; then
+                    bash "$PROJECT_ROOT/scripts/infrastructure/cloudflare-setup.sh"
                 else
                     echo -e "${RED}❌ cloudflare-tunnel-setup.sh 스크립트를 찾을 수 없습니다.${NC}"
                 fi
@@ -1380,7 +1379,7 @@ manage_cloudflare_tunnel() {
                     read -p "지금 실행하시겠습니까? (y/n) " -n 1 -r
                     echo
                     if [[ $REPLY =~ ^[Yy]$ ]]; then
-                        sudo bash "$PROJECT_ROOT/scripts/install-cloudflare-service.sh"
+                        sudo bash "$PROJECT_ROOT/scripts/infrastructure/cloudflare-install-service.sh"
                     fi
                 else
                     echo -e "${RED}❌ install-cloudflare-service.sh 스크립트를 찾을 수 없습니다.${NC}"
@@ -1404,6 +1403,433 @@ manage_cloudflare_tunnel() {
 # 메인 메뉴
 # ==================================================
 
+# ==================================================
+# 서브메뉴 함수들
+# ==================================================
+
+# 서비스 실행 서브메뉴
+show_services_menu() {
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}╔════════════════════════════════════════╗${NC}"
+        echo -e "${BOLD}${CYAN}║        🚀 서비스 실행 메뉴             ║${NC}"
+        echo -e "${BOLD}${CYAN}╚════════════════════════════════════════╝${NC}"
+        echo ""
+        print_section "$CYAN" "서비스 실행 옵션"
+        echo "  1) 🚀 백엔드 & 프론트엔드 실행"
+        echo "  2) 🔧 백엔드만 실행"
+        echo "  3) 🎨 프론트엔드만 실행"
+        echo ""
+        echo "  4) ← 메인 메뉴로 돌아가기"
+        echo ""
+
+        read -p "> " choice
+
+        # x 키로 메인 메뉴로 돌아가기
+        if [ "$choice" = "x" ] || [ "$choice" = "X" ]; then
+            break
+        fi
+
+        case $choice in
+            1)
+                echo ""
+                echo -e "${GREEN}백엔드 & 프론트엔드 실행을 시작합니다...${NC}"
+                echo ""
+                setup_backend
+                start_backend
+                start_frontend
+                run_services
+                ;;
+            2)
+                echo ""
+                echo -e "${GREEN}백엔드만 실행을 시작합니다...${NC}"
+                echo ""
+                setup_backend
+                start_backend
+                print_section "$GREEN" "🎉 Backend Service Running"
+                echo -e "${WHITE}📋 Service Status:${NC}"
+                echo -e "   ${CYAN}Backend:${NC}  http://localhost:8000"
+                echo -e "   ${CYAN}API Docs:${NC} http://localhost:8000/docs"
+                echo ""
+                echo -e "${YELLOW}Press Ctrl+C to stop the service${NC}"
+                wait $BACKEND_PID
+                ;;
+            3)
+                echo ""
+                echo -e "${GREEN}프론트엔드만 실행을 시작합니다...${NC}"
+                echo ""
+                start_frontend
+                if [ -n "$FRONTEND_PID" ]; then
+                    echo ""
+                    echo -e "${GREEN}✅ Frontend is running${NC}"
+                    echo -e "${YELLOW}Press Ctrl+C to stop the service${NC}"
+                    wait $FRONTEND_PID
+                fi
+                ;;
+            4)
+                break
+                ;;
+            *)
+                echo ""
+                echo -e "${RED}❌ 잘못된 선택입니다.${NC}"
+                echo ""
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# 테스트 실행 서브메뉴
+show_testing_menu() {
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}╔════════════════════════════════════════╗${NC}"
+        echo -e "${BOLD}${CYAN}║        🧪 테스트 실행 메뉴             ║${NC}"
+        echo -e "${BOLD}${CYAN}╚════════════════════════════════════════╝${NC}"
+        echo ""
+        print_section "$CYAN" "테스트 실행 옵션"
+        echo "  1) 📋 전체 테스트 실행 (All Tests)"
+        echo "  2) 🧪 단위 테스트 (Unit Tests)"
+        echo "  3) 🔗 통합 테스트 (Integration Tests)"
+        echo "  4) 🌐 E2E 테스트 (End-to-End Tests)"
+        echo "  5) ⚡ 성능 테스트 (Performance Tests)"
+        echo "  6) 🔒 보안 테스트 (Security Tests)"
+        echo "  7) 🔍 API 검증 테스트"
+        echo ""
+        echo "  8) ← 메인 메뉴로 돌아가기"
+        echo ""
+
+        read -p "> " choice
+
+        # x 키로 메인 메뉴로 돌아가기
+        if [ "$choice" = "x" ] || [ "$choice" = "X" ]; then
+            break
+        fi
+
+        case $choice in
+            1)
+                echo ""
+                echo -e "${GREEN}전체 테스트를 실행합니다...${NC}"
+                echo ""
+                run_all_tests
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ 전체 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            2)
+                echo ""
+                echo -e "${GREEN}단위 테스트를 실행합니다...${NC}"
+                echo ""
+                run_unit_tests
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ 단위 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            3)
+                echo ""
+                echo -e "${GREEN}통합 테스트를 실행합니다...${NC}"
+                echo ""
+                run_integration_tests
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ 통합 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            4)
+                echo ""
+                echo -e "${GREEN}E2E 테스트를 실행합니다...${NC}"
+                echo ""
+                run_e2e_tests
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ E2E 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            5)
+                echo ""
+                echo -e "${GREEN}성능 테스트를 실행합니다...${NC}"
+                echo ""
+                run_performance_tests
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ 성능 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            6)
+                echo ""
+                echo -e "${GREEN}보안 테스트를 실행합니다...${NC}"
+                echo ""
+                run_security_tests
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ 보안 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            7)
+                echo ""
+                echo -e "${GREEN}API 검증 테스트를 실행합니다...${NC}"
+                echo ""
+                test_api_verification
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ API 검증 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            8)
+                break
+                ;;
+            *)
+                echo ""
+                echo -e "${RED}❌ 잘못된 선택입니다.${NC}"
+                echo ""
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# 데이터베이스 서브메뉴
+show_database_menu() {
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}╔════════════════════════════════════════╗${NC}"
+        echo -e "${BOLD}${CYAN}║        🗄️  데이터베이스 메뉴           ║${NC}"
+        echo -e "${BOLD}${CYAN}╚════════════════════════════════════════╝${NC}"
+        echo ""
+        print_section "$CYAN" "데이터베이스 관리 옵션"
+        echo "  1) 🗄️  데이터베이스 연결 테스트"
+        echo "  2) 🔄 마이그레이션 테스트"
+        echo ""
+        echo "  3) ← 메인 메뉴로 돌아가기"
+        echo ""
+
+        read -p "> " choice
+
+        # x 키로 메인 메뉴로 돌아가기
+        if [ "$choice" = "x" ] || [ "$choice" = "X" ]; then
+            break
+        fi
+
+        case $choice in
+            1)
+                echo ""
+                echo -e "${GREEN}데이터베이스 연결 테스트를 실행합니다...${NC}"
+                echo ""
+                test_database_connection
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ 데이터베이스 연결 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            2)
+                echo ""
+                echo -e "${GREEN}마이그레이션 테스트를 실행합니다...${NC}"
+                echo ""
+                test_migrations
+                echo ""
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${GREEN}✅ 마이그레이션 테스트 완료${NC}"
+                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                echo -n "계속하려면 Enter를 누르세요... "
+                read dummy
+                ;;
+            3)
+                break
+                ;;
+            *)
+                echo ""
+                echo -e "${RED}❌ 잘못된 선택입니다.${NC}"
+                echo ""
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# 인프라 관리 서브메뉴
+show_infrastructure_menu() {
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}╔════════════════════════════════════════╗${NC}"
+        echo -e "${BOLD}${CYAN}║        ⚙️  인프라 관리 메뉴            ║${NC}"
+        echo -e "${BOLD}${CYAN}╚════════════════════════════════════════╝${NC}"
+        echo ""
+        print_section "$CYAN" "인프라 관리 옵션"
+        echo "  1) ☁️  Cloudflare Tunnel 관리"
+        echo "  2) 🏠 NAS 초기 설치 마법사"
+        echo ""
+        echo "  3) ← 메인 메뉴로 돌아가기"
+        echo ""
+
+        read -p "> " choice
+
+        # x 키로 메인 메뉴로 돌아가기
+        if [ "$choice" = "x" ] || [ "$choice" = "X" ]; then
+            break
+        fi
+
+        case $choice in
+            1)
+                manage_cloudflare_tunnel
+                ;;
+            2)
+                # NAS 설치 마법사 (기존 코드 유지)
+                while true; do
+                    echo ""
+                    print_section "$CYAN" "🏠 NAS 초기 설치 마법사"
+                    echo -e "${BOLD}NAS 관련 작업을 선택하세요:${NC}"
+                    echo ""
+                    echo "  1) 📦 NAS 초기 설치"
+                    echo "  2) 🧪 NAS 동기화 테스트"
+                    echo "  3) ⬅️  뒤로 가기"
+                    echo ""
+                    echo -n "선택: "
+                    read nas_choice
+
+                    case $nas_choice in
+                        1)
+                            echo ""
+                            print_section "$CYAN" "📦 NAS 초기 설치"
+                            echo -e "${YELLOW}NAS 초기 설정을 시작합니다...${NC}"
+                            echo ""
+                            if [ -f "$PROJECT_ROOT/scripts/infrastructure/nas-setup-initial.sh" ]; then
+                                if bash "$PROJECT_ROOT/scripts/infrastructure/nas-setup-initial.sh"; then
+                                    :
+                                else
+                                    echo ""
+                                    echo -e "${YELLOW}⚠️  NAS 초기 설정이 중단되었습니다.${NC}"
+                                    echo -e "${YELLOW}   메뉴로 돌아갑니다.${NC}"
+                                    echo ""
+                                fi
+                            else
+                                echo -e "${RED}❌ NAS 초기 설정 스크립트를 찾을 수 없습니다.${NC}"
+                                echo ""
+                            fi
+                            while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                            echo -n "계속하려면 Enter를 누르세요... "
+                            read dummy
+                            break
+                            ;;
+                        2)
+                            echo ""
+                            print_section "$CYAN" "🧪 NAS 동기화 테스트"
+                            echo -e "${YELLOW}Git hook을 통한 NAS 동기화를 테스트합니다...${NC}"
+                            echo ""
+                            if [ -f "$PROJECT_ROOT/scripts/infrastructure/nas-test-sync.sh" ]; then
+                                if bash "$PROJECT_ROOT/scripts/infrastructure/nas-test-sync.sh" 2>&1; then
+                                    echo ""
+                                    echo -e "${GREEN}✅ NAS 동기화 테스트가 완료되었습니다.${NC}"
+                                else
+                                    echo ""
+                                    echo -e "${RED}❌ NAS 동기화 테스트가 실패했습니다.${NC}"
+                                    echo -e "${YELLOW}   로그를 확인하세요.${NC}"
+                                fi
+                            else
+                                echo -e "${RED}❌ NAS 동기화 테스트 스크립트를 찾을 수 없습니다.${NC}"
+                            fi
+                            echo ""
+                            while read -t 0.1 dummy 2>/dev/null; do :; done || true
+                            echo -n "계속하려면 Enter를 누르세요... "
+                            read dummy
+                            break
+                            ;;
+                        3)
+                            break
+                            ;;
+                        *)
+                            echo ""
+                            echo -e "${RED}❌ 잘못된 선택입니다.${NC}"
+                            echo ""
+                            sleep 1
+                            ;;
+                    esac
+                done
+                ;;
+            3)
+                break
+                ;;
+            *)
+                echo ""
+                echo -e "${RED}❌ 잘못된 선택입니다.${NC}"
+                echo ""
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# 프로젝트 정보 표시
+show_project_info() {
+    echo ""
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}프로젝트 정보${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${BOLD}FocusMate - 집중 학습 메이트 플랫폼${NC}"
+    echo ""
+    echo -e "${BOLD}주요 구성 요소:${NC}"
+    echo "  • Backend API - FastAPI 기반 REST API"
+    echo "  • Frontend - React 기반 웹 대시보드"
+    echo "  • Database - PostgreSQL (Supabase)"
+    echo "  • WebSocket - 실시간 통신"
+    echo "  • Cloudflare Tunnel - 백엔드 터널링"
+    echo ""
+    echo -e "${BOLD}프로젝트 구조:${NC}"
+    echo "  • backend/ - FastAPI 백엔드"
+    echo "  • frontend/ - React 프론트엔드"
+    echo "  • tests/ - 테스트 스위트"
+    echo "  • docs/ - 프로젝트 문서"
+    echo "  • scripts/ - 실행 및 관리 스크립트"
+    echo ""
+    echo -e "${BOLD}문서:${NC}"
+    echo "  • README.md - 프로젝트 메인 문서"
+    echo "  • docs/ - 상세 문서"
+    echo ""
+    while read -t 0.1 dummy 2>/dev/null; do :; done || true
+    echo -n "계속하려면 Enter를 누르세요... "
+    read dummy
+}
+
+# ==================================================
+# 메인 메뉴
+# ==================================================
+
 show_menu() {
     echo ""
     echo -e "${BOLD}${CYAN}╔════════════════════════════════════════╗${NC}"
@@ -1411,25 +1837,16 @@ show_menu() {
     echo -e "${BOLD}${CYAN}╚════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${CYAN}실행 옵션을 선택하세요${NC}"
+    echo -e "${CYAN}메뉴 카테고리를 선택하세요${NC}"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo "  1) 🚀 백엔드 & 프론트엔드 실행"
-    echo "  2) 🔧 백엔드만 실행"
-    echo "  3) 🎨 프론트엔드만 실행"
-    echo "  4) 🧪 단위 테스트 실행 (Unit Tests)"
-    echo "  5) 🔗 통합 테스트 실행 (Integration Tests)"
-    echo "  6) 🌐 E2E 테스트 실행 (End-to-End Tests)"
-    echo "  7) 📋 전체 테스트 실행 (All Tests)"
-    echo "  8) ⚡ 성능 테스트 실행 (Performance Tests)"
-    echo "  9) 🔒 보안 테스트 실행 (Security Tests)"
-    echo " 10) 🗄️  데이터베이스 연결 테스트"
-    echo " 11) 🔄 마이그레이션 테스트"
-    echo " 12) 🔍 API 검증 테스트"
-    echo " 13) 📊 프로젝트 정보 보기"
-    echo " 14) ☁️  Cloudflare Tunnel 관리"
-    echo " 15) 🏠 NAS 초기 설치 마법사"
-    echo " 16) ❌ 종료"
+    echo "  1) 🚀 서비스 실행 (Services)"
+    echo "  2) 🧪 테스트 실행 (Testing)"
+    echo "  3) 🗄️  데이터베이스 (Database)"
+    echo "  4) ⚙️  인프라 관리 (Infrastructure)"
+    echo ""
+    echo "  5) 📊 프로젝트 정보 보기"
+    echo "  6) ❌ 종료"
     echo ""
     echo -e "${YELLOW}💡 'x'를 입력하면 종료됩니다${NC}"
 }
@@ -1533,16 +1950,16 @@ main() {
         # 숫자가 아닌 경우 처리
         if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
             echo ""
-            echo -e "${RED}❌ 잘못된 선택입니다. (1-16 또는 x: 종료)${NC}"
+            echo -e "${RED}❌ 잘못된 선택입니다. (1-6 또는 x: 종료)${NC}"
             echo ""
             wait_for_enter
             continue
         fi
 
         # 숫자 범위 확인
-        if [ "$choice" -lt 1 ] || [ "$choice" -gt 16 ]; then
+        if [ "$choice" -lt 1 ] || [ "$choice" -gt 6 ]; then
             echo ""
-            echo -e "${RED}❌ 잘못된 선택입니다. (1-16 또는 x: 종료)${NC}"
+            echo -e "${RED}❌ 잘못된 선택입니다. (1-6 또는 x: 종료)${NC}"
             echo ""
             wait_for_enter
             continue
@@ -1550,327 +1967,21 @@ main() {
 
         case $choice in
             1)
-                echo ""
-                echo -e "${GREEN}백엔드 & 프론트엔드 실행을 시작합니다...${NC}"
-                echo ""
-                setup_backend
-                start_backend
-                start_frontend
-                run_services
+                show_services_menu
                 ;;
             2)
-                echo ""
-                echo -e "${GREEN}백엔드만 실행을 시작합니다...${NC}"
-                echo ""
-                setup_backend
-                start_backend
-                print_section "$GREEN" "🎉 Backend Service Running"
-                echo -e "${WHITE}📋 Service Status:${NC}"
-                echo -e "   ${CYAN}Backend:${NC}  http://localhost:8000"
-                echo -e "   ${CYAN}API Docs:${NC} http://localhost:8000/docs"
-                echo ""
-                echo -e "${YELLOW}Press Ctrl+C to stop the service${NC}"
-                wait $BACKEND_PID
+                show_testing_menu
                 ;;
             3)
-                echo ""
-                echo -e "${GREEN}프론트엔드만 실행을 시작합니다...${NC}"
-                echo ""
-                start_frontend
-                if [ -n "$FRONTEND_PID" ]; then
-                    echo ""
-                    echo -e "${GREEN}✅ Frontend is running${NC}"
-                    echo -e "${YELLOW}Press Ctrl+C to stop the service${NC}"
-                    wait $FRONTEND_PID
-                fi
+                show_database_menu
                 ;;
             4)
-                echo ""
-                echo -e "${GREEN}단위 테스트를 실행합니다...${NC}"
-                echo ""
-                run_unit_tests
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ 단위 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
+                show_infrastructure_menu
                 ;;
             5)
-                echo ""
-                echo -e "${GREEN}통합 테스트를 실행합니다...${NC}"
-                echo ""
-                run_integration_tests
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ 통합 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
+                show_project_info
                 ;;
             6)
-                echo ""
-                echo -e "${GREEN}E2E 테스트를 실행합니다...${NC}"
-                echo ""
-                run_e2e_tests
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ E2E 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            7)
-                echo ""
-                echo -e "${GREEN}전체 테스트를 실행합니다...${NC}"
-                echo ""
-                run_all_tests
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ 전체 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            8)
-                echo ""
-                echo -e "${GREEN}성능 테스트를 실행합니다...${NC}"
-                echo ""
-                run_performance_tests
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ 성능 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            9)
-                echo ""
-                echo -e "${GREEN}보안 테스트를 실행합니다...${NC}"
-                echo ""
-                run_security_tests
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ 보안 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            10)
-                echo ""
-                echo -e "${GREEN}데이터베이스 연결 테스트를 실행합니다...${NC}"
-                echo ""
-                test_database_connection
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ 데이터베이스 연결 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            11)
-                echo ""
-                echo -e "${GREEN}마이그레이션 테스트를 실행합니다...${NC}"
-                echo ""
-                test_migrations
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ 마이그레이션 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            12)
-                echo ""
-                echo -e "${GREEN}API 검증 테스트를 실행합니다...${NC}"
-                echo ""
-                test_api_verification
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${GREEN}✅ API 검증 테스트 완료${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            13)
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${CYAN}프로젝트 정보${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                echo -e "${BOLD}FocusMate - 집중 학습 메이트 플랫폼${NC}"
-                echo ""
-                echo -e "${BOLD}주요 구성 요소:${NC}"
-                echo "  • Backend API - FastAPI 기반 REST API"
-                echo "  • Frontend - React 기반 웹 대시보드"
-                echo "  • Database - PostgreSQL (Supabase)"
-                echo "  • WebSocket - 실시간 통신"
-                echo ""
-                echo -e "${BOLD}프로젝트 구조:${NC}"
-                echo "  • backend/ - FastAPI 백엔드"
-                echo "  • frontend/ - React 프론트엔드"
-                echo "  • tests/ - 테스트 스위트"
-                echo "  • docs/ - 프로젝트 문서"
-                echo ""
-                echo -e "${BOLD}문서:${NC}"
-                echo "  • README.md - 프로젝트 메인 문서"
-                echo "  • docs/ - 상세 문서"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            13)
-                echo ""
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo -e "${CYAN}프로젝트 정보${NC}"
-                echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-                echo ""
-                echo -e "${BOLD}FocusMate - 집중 학습 메이트 플랫폼${NC}"
-                echo ""
-                echo -e "${BOLD}주요 구성 요소:${NC}"
-                echo "  • Backend API - FastAPI 기반 REST API"
-                echo "  • Frontend - React 기반 웹 대시보드"
-                echo "  • Database - PostgreSQL (Supabase)"
-                echo "  • WebSocket - 실시간 통신"
-                echo "  • Cloudflare Tunnel - 백엔드 터널링"
-                echo ""
-                echo -e "${BOLD}프로젝트 구조:${NC}"
-                echo "  • backend/ - FastAPI 백엔드"
-                echo "  • frontend/ - React 프론트엔드"
-                echo "  • tests/ - 테스트 스위트"
-                echo "  • docs/ - 프로젝트 문서"
-                echo "  • scripts/ - 실행 및 관리 스크립트"
-                echo ""
-                echo -e "${BOLD}문서:${NC}"
-                echo "  • README.md - 프로젝트 메인 문서"
-                echo "  • docs/ - 상세 문서"
-                echo ""
-                # 입력 버퍼 비우기
-                while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                echo -n "계속하려면 Enter를 누르세요... "
-                read dummy
-                ;;
-            14)
-                manage_cloudflare_tunnel
-                ;;
-            15)
-                while true; do
-                    echo ""
-                    print_section "$CYAN" "🏠 NAS 초기 설치 마법사"
-                    echo -e "${BOLD}NAS 관련 작업을 선택하세요:${NC}"
-                    echo ""
-                    echo "  1) 📦 NAS 초기 설치"
-                    echo "  2) 🧪 NAS 동기화 테스트"
-                    echo "  3) ⬅️  뒤로 가기"
-                    echo ""
-                    echo -n "선택: "
-                    read nas_choice
-
-                    case $nas_choice in
-                        1)
-                            echo ""
-                            print_section "$CYAN" "📦 NAS 초기 설치"
-                            echo -e "${YELLOW}NAS 초기 설정을 시작합니다...${NC}"
-                            echo ""
-
-                            # NAS 초기 설정 스크립트 실행 (에러 시 메뉴로 돌아감)
-                            if [ -f "$PROJECT_ROOT/scripts/setup-nas-initial.sh" ]; then
-                                # 스크립트를 직접 실행 (출력 캡처하지 않음 - 사용자 입력을 위해)
-                                # 성공 여부는 스크립트 내부에서 "초기 설정 완료" 메시지로 판단
-                                if bash "$PROJECT_ROOT/scripts/setup-nas-initial.sh"; then
-                                    # exit 0으로 종료된 경우, 완료 메시지가 있었는지 확인
-                                    # (스크립트 내부에서 완료 메시지를 출력하므로 여기서는 추가 메시지 없음)
-                                    :
-                                else
-                                    # exit code가 0이 아닌 경우 (실제로는 모든 경우 exit 0이지만)
-                                    echo ""
-                                    echo -e "${YELLOW}⚠️  NAS 초기 설정이 중단되었습니다.${NC}"
-                                    echo -e "${YELLOW}   메뉴로 돌아갑니다.${NC}"
-                                    echo ""
-                                fi
-                            else
-                                echo -e "${RED}❌ NAS 초기 설정 스크립트를 찾을 수 없습니다.${NC}"
-                                echo -e "${YELLOW}   경로: $PROJECT_ROOT/scripts/setup-nas-initial.sh${NC}"
-                                echo ""
-                            fi
-
-                            # 입력 버퍼 비우기
-                            while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                            echo -n "계속하려면 Enter를 누르세요... "
-                            read dummy
-                            break
-                            ;;
-                        2)
-                            echo ""
-                            print_section "$CYAN" "🧪 NAS 동기화 테스트"
-                            echo -e "${YELLOW}Git hook을 통한 NAS 동기화를 테스트합니다...${NC}"
-                            echo ""
-
-                            # NAS 동기화 테스트 스크립트 실행
-                            if [ -f "$PROJECT_ROOT/scripts/test-nas-sync.sh" ]; then
-                                if bash "$PROJECT_ROOT/scripts/test-nas-sync.sh" 2>&1; then
-                                    echo ""
-                                    echo -e "${GREEN}✅ NAS 동기화 테스트가 완료되었습니다.${NC}"
-                                else
-                                    echo ""
-                                    echo -e "${RED}❌ NAS 동기화 테스트가 실패했습니다.${NC}"
-                                    echo -e "${YELLOW}   로그를 확인하세요.${NC}"
-                                fi
-                            else
-                                echo -e "${RED}❌ NAS 동기화 테스트 스크립트를 찾을 수 없습니다.${NC}"
-                                echo -e "${YELLOW}   경로: $PROJECT_ROOT/scripts/test-nas-sync.sh${NC}"
-                            fi
-
-                            echo ""
-                            # 입력 버퍼 비우기
-                            while read -t 0.1 dummy 2>/dev/null; do :; done || true
-                            echo -n "계속하려면 Enter를 누르세요... "
-                            read dummy
-                            break
-                            ;;
-                        3)
-                            # 뒤로 가기
-                            break
-                            ;;
-                        *)
-                            echo ""
-                            echo -e "${RED}❌ 잘못된 선택입니다.${NC}"
-                            echo ""
-                            sleep 1
-                            ;;
-                    esac
-                done
-                ;;
-            16)
                 cleanup
                 exit 0
                 ;;

@@ -291,9 +291,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     isLoading: isTimerLoading,
     timerState,
     startTimer,
-    pauseTimer,
     resumeTimer,
+    pauseTimer,  // Added missing pauseTimer
     resetTimer,
+    completeSession,
     updateTimerState,
   } = useServerTimer({
     roomId: roomId || "",
@@ -435,10 +436,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 }
                 return [...prev, newParticipant];
               });
-              // Reload to get updated host status
-              if (roomId) {
-                loadParticipants(roomId);
-              }
+              // Removed redundant loadParticipants() call - trust WS data
             } else if (message.data.action === "left") {
               setParticipants((prev) =>
                 prev.filter((p) => p.id !== message.data.participant_id)
@@ -799,11 +797,24 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
             {status === "completed" && (
               <Button
                 variant="secondary"
-                onClick={() => {
+                onClick={async () => {
                   const nextSessionType =
                     sessionType === "work" ? "break" : "work";
-                  startTimer(nextSessionType);
-                  wsClient.sendStartTimer(nextSessionType);
+
+                  // 1. Complete Session (Record Stats + Switch Phase)
+                  const newState = await completeSession();
+
+                  // 2. Start Next Phase (if not auto-started)
+                  if (newState) {
+                      if (newState.status === "idle") {
+                          // Manual start required
+                          await startTimer(nextSessionType);
+                          wsClient.sendStartTimer(nextSessionType);
+                      } else if (newState.status === "running") {
+                          // Auto-started
+                          wsClient.sendStartTimer(nextSessionType);
+                      }
+                  }
                 }}
                 className="mt-4"
                 disabled={isTimerLoading}

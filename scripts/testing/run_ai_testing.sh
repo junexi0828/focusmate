@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# AI 체점 시나리오 실행 스크립트 (V-Model 테스트 통합)
+# AI Testing Automation (V-Model 테스트 통합)
 # Focus Mate 프로젝트용
 #
 # 사용법:
-#   ./scripts/run_grading_scenario.sh [--docker|--local]
+#   ./scripts/run_ai_testing.sh [--docker|--local]
 #
 # V-Model 테스트 단계:
 #   1. 단위 테스트 (Unit Tests) - Verification
@@ -68,17 +68,17 @@ ACCEPTANCE_TESTS_PASSED=false
 PERFORMANCE_TESTS_PASSED=false
 
 log_info "=========================================="
-log_info "Focus Mate AI 체점 시나리오 시작"
+log_info "Focus Mate AI Testing Automation"
 log_info "V-Model 테스트 통합 실행"
 log_info "=========================================="
 log_info ""
 
 # 1. 환경 설정
 log_step "1/7: 환경 설정 중..."
-if [ -f "$SCRIPT_DIR/setup_grading_env.sh" ]; then
-    bash "$SCRIPT_DIR/setup_grading_env.sh" "$MODE"
-else
-    log_warn "setup_grading_env.sh를 찾을 수 없습니다. 수동 설정이 필요할 수 있습니다."
+# Environment setup is handled by start.sh
+log_info "환경 설정 확인 중..."
+if [ ! -d "$PROJECT_ROOT/backend/venv" ]; then
+    log_warn "가상환경이 없습니다. start.sh를 먼저 실행하세요."
 fi
 
 log_info ""
@@ -234,7 +234,7 @@ if [ "$HEALTH_CHECK_PASSED" = true ]; then
 
     # API 검증 스크립트 실행
     if [ -f "$PROJECT_ROOT/scripts/verify_api.sh" ]; then
-        bash "$PROJECT_ROOT/scripts/verify_api.sh" > "$SYSTEM_TEST_REPORT" 2>&1
+        bash "$PROJECT_ROOT/scripts/testing/verify_api.sh" > "$SYSTEM_TEST_REPORT" 2>&1
         if [ $? -eq 0 ]; then
             log_info "✅ 시스템 테스트 통과"
             SYSTEM_TESTS_PASSED=true
@@ -367,10 +367,10 @@ log_info ""
 
 log_step "최종 리포트 생성 중..."
 
-FINAL_REPORT="$REPORTS_DIR/grading_report_$(date +%Y%m%d_%H%M%S).md"
-JSON_REPORT="$REPORTS_DIR/grading_result.json"
+FINAL_REPORT="$REPORTS_DIR/test_automation_report_$(date +%Y%m%d_%H%M%S).md"
+JSON_REPORT="$REPORTS_DIR/automation_result.json"
 
-# JSON 리포트 생성 (AI 체점관용)
+# JSON 리포트 생성 (CI/CD 자동화용)
 cat > "$JSON_REPORT" << EOF
 {
   "project": "Focus Mate",
@@ -408,7 +408,7 @@ EOF
 
 # 마크다운 리포트 생성
 cat > "$FINAL_REPORT" << EOF
-# Focus Mate AI 체점 리포트 (V-Model 테스트 통합)
+# Focus Mate AI Testing Automation Report (V-Model 테스트 통합)
 
 **생성 시간**: $(date)
 **실행 모드**: $MODE
@@ -470,7 +470,7 @@ cat > "$FINAL_REPORT" << EOF
    - 인수 테스트: \`cat $ACCEPTANCE_TEST_REPORT\`
    - 성능 테스트: \`cat $PERFORMANCE_TEST_REPORT\`
 
-2. JSON 리포트 (AI 체점관용): \`$JSON_REPORT\`
+2. JSON 리포트 (CI/CD 자동화용): \`$JSON_REPORT\`
 
 3. 서비스 로그 확인:
    - Docker 모드: \`docker-compose logs\`
@@ -485,7 +485,7 @@ log_info "JSON 리포트: $JSON_REPORT"
 log_info ""
 
 log_info "=========================================="
-log_info "✅ AI 체점 시나리오 완료"
+log_info "✅ AI Testing Automation 완료"
 log_info "=========================================="
 log_info ""
 

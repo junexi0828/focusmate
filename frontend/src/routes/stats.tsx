@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatsPage } from "../pages/Stats";
 import { authService } from "../features/auth/services/authService";
 import { statsService } from "../features/stats/services/statsService";
@@ -33,6 +34,26 @@ function StatsComponent() {
 
 function StatsPageWithData({ userId }: { userId: string }) {
   const isAdmin = authService.isAdmin();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const handleStatsUpdate = () => {
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === "stats" &&
+          query.queryKey[2] === userId,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["user-goal", userId],
+      });
+    };
+
+    window.addEventListener("stats_update", handleStatsUpdate);
+    return () => {
+      window.removeEventListener("stats_update", handleStatsUpdate);
+    };
+  }, [queryClient, userId]);
 
   // 기본 통계 데이터 (최근 7일)
   // Admin can access even with no data

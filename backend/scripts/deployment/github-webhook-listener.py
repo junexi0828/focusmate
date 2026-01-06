@@ -134,6 +134,9 @@ class WebhookHandler(BaseHTTPRequestHandler):
                 if has_changes:
                     self.log_message("🔄 Code changes detected, updating server...")
 
+                    # 의존성 설치 (requirements.txt 변경 감지)
+                    self.install_dependencies()
+
                     # 마이그레이션 실행 (필요시)
                     self.run_migrations()
 
@@ -150,6 +153,50 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.log_message("❌ Git pull timeout")
         except Exception as e:
             self.log_message(f"❌ Error during git pull: {e}")
+
+    def install_dependencies(self):
+        """의존성 자동 설치 (requirements.txt).
+
+        Git pull 후 requirements.txt가 변경되었을 수 있으므로
+        항상 pip install을 실행하여 최신 의존성을 유지합니다.
+        """
+        try:
+            self.log_message("📦 Installing dependencies from requirements.txt...")
+
+            # Conda 환경의 Python 사용
+            conda_python = "/volume1/web/miniconda3/envs/focusmate_env/bin/python"
+            requirements_file = PROJECT_DIR / "requirements.txt"
+
+            if not Path(conda_python).exists():
+                self.log_message(f"⚠️  Conda Python not found: {conda_python}")
+                return
+
+            if not requirements_file.exists():
+                self.log_message(f"⚠️  requirements.txt not found: {requirements_file}")
+                return
+
+            # pip install 실행 (--quiet로 출력 최소화)
+            result = subprocess.run(
+                [conda_python, "-m", "pip", "install", "-r", "requirements.txt", "--quiet"],
+                cwd=PROJECT_DIR,
+                capture_output=True,
+                text=True,
+                timeout=300,  # 5분 타임아웃
+            )
+
+            if result.returncode == 0:
+                self.log_message("✅ Dependencies installed successfully")
+                if result.stdout.strip():
+                    self.log_message(f"   Output: {result.stdout.strip()}")
+            else:
+                self.log_message(f"⚠️  Dependency installation warning: {result.stderr}")
+                # 경고만 출력하고 계속 진행 (일부 패키지 실패해도 서버는 시작되어야 함)
+
+        except subprocess.TimeoutExpired:
+            self.log_message("⚠️  Dependency installation timeout (continuing anyway)")
+        except Exception as e:
+            self.log_message(f"⚠️  Dependency installation error: {e}")
+
 
     def run_migrations(self):
         """데이터베이스 마이그레이션 실행."""

@@ -1,37 +1,9 @@
-/**
- * Verification service for user verification API calls.
- */
-
 import { BaseApiClient, ApiResponse } from "../../../lib/api/base";
-
-export interface VerificationSubmit {
-  school_name: string;
-  department: string;
-  major_category?: string;
-  grade: string;
-  student_id?: string;
-  gender: "male" | "female" | "other";
-  documents: string[];
-}
-
-export interface VerificationStatus {
-  verification_id?: string;
-  status?: "pending" | "approved" | "rejected" | null;
-  school_name?: string;
-  department?: string;
-  major_category?: string;
-  grade?: string;
-  gender?: string;
-  badge_visible?: boolean;
-  department_visible?: boolean;
-  verified_at?: string;
-  message?: string;
-}
-
-export interface VerificationSettings {
-  badge_visible?: boolean;
-  department_visible?: boolean;
-}
+import type {
+  VerificationSubmit,
+  UserVerification, // Replaces VerificationStatus
+  VerificationSettings
+} from "../../../types/matching";
 
 export interface VerificationResponse {
   verification_id: string;
@@ -54,8 +26,8 @@ class VerificationService extends BaseApiClient {
   /**
    * Get current user's verification status.
    */
-  async getStatus(): Promise<ApiResponse<VerificationStatus>> {
-    const response = await this.request<VerificationStatus>("/verification/status");
+  async getStatus(): Promise<ApiResponse<UserVerification>> {
+    const response = await this.request<UserVerification>("/verification/status");
     // FastAPI returns data directly, but BaseApiClient wraps it
     // If response has data field, use it; otherwise use response itself
     if (response.status === "success" && response.data) {

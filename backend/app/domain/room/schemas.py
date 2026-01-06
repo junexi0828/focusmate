@@ -43,26 +43,34 @@ class RoomCreate(BaseModel):
     )
 
 
+
 class RoomUpdate(BaseModel):
-    """Request schema for updating room settings."""
+    """Request schema for updating room settings.
+
+    Note: Duration fields accept SECONDS as input but are stored as MINUTES in the database.
+    The service layer handles the conversion (seconds / 60 = minutes).
+    """
 
     model_config = ConfigDict(strict=True)
 
     work_duration: int | None = Field(
         None,
-        ge=MIN_WORK_DURATION * 60,  # Convert minutes to seconds
-        le=MAX_WORK_DURATION * 60,  # Convert minutes to seconds
+        ge=MIN_WORK_DURATION * 60,  # 5 minutes = 300 seconds
+        le=MAX_WORK_DURATION * 60,  # 120 minutes = 7200 seconds
+        description="Work session duration in SECONDS (300-7200). Stored as minutes in DB.",
     )
     break_duration: int | None = Field(
         None,
-        ge=MIN_BREAK_DURATION * 60,  # Convert minutes to seconds
-        le=MAX_BREAK_DURATION * 60,  # Convert minutes to seconds
+        ge=MIN_BREAK_DURATION * 60,  # 1 minute = 60 seconds
+        le=MAX_BREAK_DURATION * 60,  # 30 minutes = 1800 seconds
+        description="Break session duration in SECONDS (60-1800). Stored as minutes in DB.",
     )
     auto_start_break: bool | None = None
     remove_on_leave: bool | None = Field(
         None,
         description="If true, participants are removed from room list when they leave. If false, participants remain visible even after leaving.",
     )
+
 
 
 class RoomResponse(BaseModel):

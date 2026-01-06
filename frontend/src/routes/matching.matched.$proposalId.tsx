@@ -3,7 +3,7 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { MatchedGroupPage } from "../pages/MatchedGroup";
 import { authService } from "../features/auth/services/authService";
-import { matchingApi } from "../api/matching";
+import { matchingService } from "../features/matching/services/matchingService";
 import { PageTransition } from "../components/PageTransition";
 import { toast } from "sonner";
 import { chatService } from "../features/chat/services/chatService";
@@ -22,7 +22,14 @@ export const Route = createFileRoute("/matching/matched/$proposalId")({
     }
 
     try {
-      const proposal = await matchingApi.getProposal(params.proposalId);
+      const res = await matchingService.getProposal(params.proposalId);
+      if (res.status === 'error') throw res.error;
+      const proposal = res.data;
+
+      // Check if proposal exists and is valid
+      if (!proposal) {
+        throw new Error("제안을 찾을 수 없습니다");
+      }
 
       if (proposal.final_status !== "matched" || !proposal.chat_room_id) {
         toast.error("매칭이 완료되지 않았거나 채팅방이 생성되지 않았습니다");
@@ -31,8 +38,8 @@ export const Route = createFileRoute("/matching/matched/$proposalId")({
 
       // Get chat room and members
       const [chatRoom, members] = await Promise.all([
-        chatService.getRoom(proposal.chat_room_id),
-        chatService.getRoomMembers(proposal.chat_room_id).catch(() => []),
+        chatService.getRoom(proposal.chat_room_id).then(res => res.data),
+        chatService.getRoomMembers(proposal.chat_room_id).then(res => res.data || []).catch(() => []),
       ]);
 
       return { proposal, chatRoom, members };
@@ -56,8 +63,9 @@ function MatchedGroupComponent() {
   const { data: proposal } = useQuery({
     queryKey: ["matching", "proposal", proposalId],
     queryFn: async () => {
-      const response = await matchingApi.getProposal(proposalId);
-      return response;
+      const response = await matchingService.getProposal(proposalId);
+      if (response.status === 'error') throw response.error;
+      return response.data;
     },
     initialData: initialData.proposal,
     staleTime: 1000 * 60, // 1 minute
@@ -68,7 +76,8 @@ function MatchedGroupComponent() {
     queryKey: ["chat", "room", proposal?.chat_room_id],
     queryFn: async () => {
       if (!proposal?.chat_room_id) return null;
-      return await chatService.getRoom(proposal.chat_room_id);
+      const res = await chatService.getRoom(proposal.chat_room_id);
+      return res.data;
     },
     initialData: initialData.chatRoom,
     staleTime: 1000 * 60, // 1 minute
@@ -79,7 +88,8 @@ function MatchedGroupComponent() {
     queryKey: ["chat", "room", proposal?.chat_room_id, "members"],
     queryFn: async () => {
       if (!proposal?.chat_room_id) return [];
-      return await chatService.getRoomMembers(proposal.chat_room_id);
+      const res = await chatService.getRoomMembers(proposal.chat_room_id);
+      return res.data || [];
     },
     initialData: initialData.members,
     staleTime: 1000 * 60, // 1 minute
@@ -93,7 +103,10 @@ function MatchedGroupComponent() {
   // Determine which pool is the user's pool
   const myPool = useQuery({
     queryKey: ["matching", "myPool"],
-    queryFn: () => matchingApi.getMyPool().catch(() => null),
+    queryFn: async () => {
+      const res = await matchingService.getMyPool();
+      return res.data;
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
