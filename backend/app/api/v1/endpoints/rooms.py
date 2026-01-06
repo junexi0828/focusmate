@@ -148,7 +148,7 @@ async def get_room(
             room_repo = RoomRepository(db)
             timer_service = TimerService(timer_repo, room_repo)
 
-            timer_state = await timer_service.get_timer_state(room_id)
+            timer_state = await timer_service.get_timer_state(room_id, db=db)
             room_response.timer_state = timer_state
         except Exception:
             # If timer not found or error, just return room without timer state
@@ -239,15 +239,18 @@ async def update_room(
                         try:
                             from app.infrastructure.websocket.manager import connection_manager
                             await connection_manager.broadcast_to_room(
-                                room_id,
                                 {
-                                    "type": "timer_updated",
+                                    "event": "room_settings_updated",  # Changed from "type": "timer_updated"
                                     "data": {
                                         "room_id": room_id,
-                                        "work_duration": updated_room_model.work_duration * 60,
-                                        "break_duration": updated_room_model.break_duration * 60,
+                                        "work_duration": updated_room_model.work_duration,  # Already in minutes
+                                        "break_duration": updated_room_model.break_duration,  # Already in minutes
+                                        "auto_start_break": updated_room_model.auto_start_break,
+                                        "remove_on_leave": updated_room_model.remove_on_leave,
                                     },
+                                    "timestamp": datetime.now(UTC).isoformat(),
                                 },
+                                room_id,  # Fixed: room_id as second argument
                             )
                         except Exception as ws_error:
                             # Log but don't fail

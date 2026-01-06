@@ -1,7 +1,5 @@
-"""User stats schemas."""
-
 from datetime import datetime
-from typing import Union
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -27,11 +25,25 @@ class UserGoalResponse(BaseModel):
 
 
 class ManualSessionCreate(BaseModel):
-    """Schema for creating manual session."""
+    """Schema for creating manual session.
 
-    duration_minutes: int = Field(ge=1, le=480, description="Session duration in minutes")
-    session_type: str = Field(pattern="^(Union[focus, break])$", description="Session type")
-    completed_at: datetime = Field(description="When the session was completed")
+    Note: session_type uses Literal for validation (focus or break only).
+    """
+
+    session_type: Literal["focus", "break"] = Field(
+        ...,
+        description="Session type: 'focus' for work sessions, 'break' for rest sessions"
+    )
+    duration_minutes: int = Field(
+        ...,
+        ge=1,
+        le=480,
+        description="Session duration in minutes (1-480)"
+    )
+    completed_at: datetime | None = Field(
+        None,
+        description="When the session was completed. Defaults to now if not provided."
+    )
 
 
 class ManualSessionResponse(BaseModel):

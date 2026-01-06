@@ -2,7 +2,7 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ProposalDetailPage } from "../pages/ProposalDetail";
 import { authService } from "../features/auth/services/authService";
-import { matchingApi } from "../api/matching";
+import { matchingService } from "../features/matching/services/matchingService";
 import { PageTransition } from "../components/PageTransition";
 import { ReportDialog } from "../components/ReportDialog";
 import { toast } from "sonner";
@@ -30,7 +30,13 @@ export const Route = createFileRoute("/matching/proposals/$proposalId")({
 
     try {
       // Fetch proposal with full pool details
-      const proposal = await matchingApi.getProposal(params.proposalId, true);
+      const res = await matchingService.getProposal(params.proposalId, true);
+      if (res.status === 'error') throw res.error;
+      const proposal = res.data;
+
+      if (!proposal) {
+        throw new Error("제안을 찾을 수 없습니다");
+      }
       return { proposal, isDemo: false };
     } catch (error: any) {
       if (error?.response?.status === 404) {
@@ -73,8 +79,9 @@ function ProposalDetailComponent() {
         return demoProposal || null;
       }
       // Fetch proposal with full pool details
-      const response = await matchingApi.getProposal(proposalId, true);
-      return response;
+      const response = await matchingService.getProposal(proposalId, true);
+      if (response.status === 'error') throw response.error;
+      return response.data;
     },
     initialData: isDemo ? demoProposal : initialData.proposal,
     staleTime: 1000 * 60, // 1 minute
@@ -120,13 +127,15 @@ function ProposalDetailComponent() {
   };
 
   const respondMutation = useMutation({
-    mutationFn: (action: "accept" | "reject") => {
-      if (isDemo) {
+    mutationFn: async (action: "accept" | "reject") => {
+       if (isDemo) {
         // 데모 모드는 동기적으로 처리
         handleDemoRespond(action);
         return Promise.resolve(demoProposal!);
       }
-      return matchingApi.respondToProposal(proposalId, { action });
+      const res = await matchingService.respondToProposal(proposalId, { action });
+      if (res.status === 'error') throw new Error(res.error?.message);
+      return res.data;
     },
     onSuccess: (data) => {
       if (!isDemo) {
@@ -175,7 +184,10 @@ function ProposalDetailComponent() {
   // Determine which pool is the user's pool
   const myPool = useQuery({
     queryKey: ["matching", "myPool"],
-    queryFn: () => matchingApi.getMyPool().catch(() => null),
+    queryFn: async () => {
+      const res = await matchingService.getMyPool();
+      return res.data;
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !isDemo, // 데모 모드에서는 API 호출 안 함
   });

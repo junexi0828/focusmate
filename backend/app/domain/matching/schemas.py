@@ -11,9 +11,9 @@ class MatchingPoolCreate(BaseModel):
     """Schema for creating matching pool."""
 
     member_ids: List[str] = Field(..., min_length=2, max_length=8)
-    preferred_match_type: str = Field(..., pattern="^(Union[any, same_department]|major_category)$")
+    preferred_match_type: str = Field(..., pattern="^(any|same_department|major_category)$")
     preferred_categories: List[str] | None = None
-    matching_type: str = Field(..., pattern="^(Union[blind, open])$")
+    matching_type: str = Field(..., pattern="^(blind|open)$")
     message: Optional[str] = Field(None, max_length=200)
 
     @field_validator("member_ids")

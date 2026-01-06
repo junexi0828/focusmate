@@ -62,10 +62,32 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
+    # Initialize Background Tasks (APScheduler)
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from app.infrastructure.tasks import check_expired_timers
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        check_expired_timers,
+        'interval',
+        minutes=1,  # Check every minute
+        id='timer_cleanup',
+        replace_existing=True,
+    )
+    scheduler.start()
+    logger.info("✅ Background tasks started (timer cleanup every 1 minute)")
+
     yield
 
     # Shutdown
     logger.info("🛑 Shutting down Focus Mate Backend...")
+
+    # Stop background tasks
+    try:
+        scheduler.shutdown(wait=False)
+        logger.info("✅ Background tasks stopped")
+    except Exception:
+        logger.exception("⚠️ Error stopping background tasks")
 
     # Disconnect Redis
     try:

@@ -56,3 +56,18 @@ class SessionHistoryRepository:
             .order_by(SessionHistory.completed_at.desc())
         )
         return list(result.scalars().all())
+
+    async def get_user_ids_by_room_type_completed_at(
+        self,
+        room_id: str,
+        session_type: str,
+        completed_at: datetime,
+    ) -> set[str]:
+        """Get user IDs for sessions matching room/type/completion time."""
+        result = await self.db.execute(
+            select(SessionHistory.user_id)
+            .where(SessionHistory.room_id == room_id)
+            .where(SessionHistory.session_type == session_type)
+            .where(SessionHistory.completed_at == completed_at)
+        )
+        return set(result.scalars().all())

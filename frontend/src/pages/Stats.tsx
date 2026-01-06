@@ -55,10 +55,10 @@ export function StatsPage({
   const { data: userGoal } = useQuery({
     queryKey: ["user-goal", userId],
     queryFn: () => statsService.getGoal(),
-    enabled: !!userId && !!localStorage.getItem("access_token"), // Only fetch when authenticated
-    retry: false, // Don't retry if 404 (no goals set yet)
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
+    enabled: !!userId && !!localStorage.getItem("access_token"),
+    retry: false,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,  // ✅ Refetch when user returns to page
   });
 
   // Fetch user achievements progress
@@ -91,8 +91,8 @@ export function StatsPage({
       }
     },
     enabled: !!userId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,  // ✅ Refetch when user returns to page
   });
 
   // Save goal mutation
@@ -137,8 +137,8 @@ export function StatsPage({
       return basicStats;
     },
     enabled: !!basicStats,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 30,  // 30 seconds - fresh data
+    refetchOnWindowFocus: true,  // ✅ Refetch when user returns to page
   });
 
   const stats = filteredStats || basicStats;

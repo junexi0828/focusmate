@@ -23,39 +23,9 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { authService } from "../features/auth/services/authService";
-import { matchingApi } from "../api/matching";
+import { matchingService } from "../features/matching/services/matchingService";
 
-interface ChatRoom {
-  room_id: string;
-  room_type: string;
-  room_name?: string;
-  display_mode?: string;
-  metadata?: {
-    type?: string;
-    proposal_id?: string;
-    group_a_info?: {
-      member_ids?: string[];
-      department?: string;
-    };
-    group_b_info?: {
-      member_ids?: string[];
-      department?: string;
-    };
-  };
-  created_at: string;
-}
-
-interface ChatMember {
-  member_id: string;
-  user_id: string;
-  role: string;
-  display_name?: string;
-  anonymous_name?: string;
-  group_label?: string;
-  member_index?: number;
-  is_active: boolean;
-  joined_at: string;
-}
+import { ChatRoom, ChatMember } from "../features/chat/services/chatService";
 
 interface MatchedGroupPageProps {
   proposal: MatchingProposal;
@@ -82,7 +52,8 @@ export function MatchedGroupPage({
     queryKey: ["matching", "pool", isGroupA ? proposal.pool_id_a : proposal.pool_id_b],
     queryFn: async () => {
       const poolId = isGroupA ? proposal.pool_id_a : proposal.pool_id_b;
-      return await matchingApi.getPool(poolId);
+      const res = await matchingService.getPool(poolId);
+      return res.data;
     },
     enabled: !!userPoolId,
   });
@@ -91,7 +62,8 @@ export function MatchedGroupPage({
     queryKey: ["matching", "pool", isGroupA ? proposal.pool_id_b : proposal.pool_id_a],
     queryFn: async () => {
       const poolId = isGroupA ? proposal.pool_id_b : proposal.pool_id_a;
-      return await matchingApi.getPool(poolId);
+      const res = await matchingService.getPool(poolId);
+      return res.data;
     },
   });
 

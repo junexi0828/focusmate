@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardPage } from "../pages/Dashboard";
 import { PageTransition } from "../components/PageTransition";
 import { authService } from "../features/auth/services/authService";
@@ -77,6 +77,7 @@ export const Route = createFileRoute("/dashboard")({
 
 function DashboardComponent() {
   const user = authService.getCurrentUser();
+  const queryClient = useQueryClient();
   const initialStats = Route.useLoaderData();
 
   // TanStack Query로 데이터 캐싱 및 실시간 업데이트
@@ -95,12 +96,35 @@ function DashboardComponent() {
     refetchOnWindowFocus: true, // 창 포커스 시 자동 리패치
   });
 
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const handleStatsUpdate = () => {
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard", "stats", user.id],
+      });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === "stats" &&
+          query.queryKey[1] === "goal" &&
+          query.queryKey[2] === user.id,
+      });
+    };
+
+    window.addEventListener("stats_update", handleStatsUpdate);
+    return () => {
+      window.removeEventListener("stats_update", handleStatsUpdate);
+    };
+  }, [queryClient, user?.id]);
+
   return (
     <PageTransition>
       <DashboardPage stats={data} isLoading={isLoading} error={error} />
     </PageTransition>
   );
 }
-
 
 

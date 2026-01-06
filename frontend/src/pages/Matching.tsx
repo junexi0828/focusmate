@@ -13,7 +13,8 @@ import {
   Clock,
   TrendingUp,
 } from "lucide-react";
-import { matchingApi } from "@/api/matching";
+import { matchingService } from "@/features/matching/services/matchingService";
+import { verificationService } from "@/features/verification/services/verificationService";
 import { PageTransition } from "@/components/PageTransition";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button-enhanced";
@@ -30,14 +31,20 @@ export default function Matching() {
   // Fetch verification status
   const { data: verification, isLoading: verificationLoading } = useQuery({
     queryKey: ["verification-status"],
-    queryFn: matchingApi.getVerificationStatus,
+    queryFn: async () => {
+      const res = await verificationService.getStatus();
+      return res.data;
+    },
     retry: false,
   });
 
   // Fetch my pool
   const { data: myPool } = useQuery({
     queryKey: ["my-pool"],
-    queryFn: matchingApi.getMyPool,
+    queryFn: async () => {
+      const res = await matchingService.getMyPool();
+      return res.data;
+    },
     enabled: verification?.status === "approved",
     retry: false,
   });
@@ -45,7 +52,10 @@ export default function Matching() {
   // Fetch proposals (manual refresh recommended)
   const { data: proposals = [] } = useQuery({
     queryKey: ["my-proposals"],
-    queryFn: matchingApi.getMyProposals,
+    queryFn: async () => {
+      const res = await matchingService.getMyProposals();
+      return res.data || [];
+    },
     enabled: verification?.status === "approved",
     refetchInterval: false, // Disabled: Proposals don't need real-time polling
     staleTime: 1000 * 60, // 1 minute
@@ -54,12 +64,18 @@ export default function Matching() {
   // Fetch stats
   const { data: stats } = useQuery({
     queryKey: ["pool-stats"],
-    queryFn: matchingApi.getPoolStats,
+    queryFn: async () => {
+      const res = await matchingService.getPoolStatistics();
+      return res.data;
+    },
   });
 
   // Cancel pool mutation
   const cancelPoolMutation = useMutation({
-    mutationFn: (poolId: string) => matchingApi.cancelPool(poolId),
+    mutationFn: async (poolId: string) => {
+      const res = await matchingService.cancelPool(poolId);
+      return res.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-pool"] });
       toast.success("풀이 취소되었습니다");
@@ -68,7 +84,11 @@ export default function Matching() {
 
   // Create pool mutation
   const createPoolMutation = useMutation({
-    mutationFn: (data: MatchingPoolCreate) => matchingApi.createPool(data),
+    mutationFn: async (data: MatchingPoolCreate) => {
+      const res = await matchingService.createPool(data);
+      if (res.status === 'error') throw new Error(res.error?.message);
+      return res.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-pool"] });
       queryClient.invalidateQueries({ queryKey: ["pool-stats"] });
@@ -82,13 +102,17 @@ export default function Matching() {
 
   // Respond to proposal mutation
   const respondMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       proposalId,
       action,
     }: {
       proposalId: string;
       action: "accept" | "reject";
-    }) => matchingApi.respondToProposal(proposalId, { action }),
+    }) => {
+      const res = await matchingService.respondToProposal(proposalId, { action });
+      if (res.status === 'error') throw new Error(res.error?.message);
+      return res.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-proposals"] });
       queryClient.invalidateQueries({ queryKey: ["my-pool"] });

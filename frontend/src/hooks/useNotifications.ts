@@ -124,6 +124,9 @@ export function useNotifications(
               "timer_update",
               "timer_tick",
               "timer_countdown",
+              "stats_update",
+              "matching_stats_update",
+              "reservation_update",
               "participant_heartbeat",
               "room_sync",
               "sync",
@@ -165,6 +168,24 @@ export function useNotifications(
             );
 
             const shouldShowToast = !isSilentType && !isSilentMessage;
+
+            if (notificationType.includes("stats_update")) {
+              window.dispatchEvent(
+                new CustomEvent("stats_update", { detail: message.data })
+              );
+            }
+
+            if (notificationType.includes("matching_stats_update")) {
+              window.dispatchEvent(
+                new CustomEvent("matching_stats_update", { detail: message.data })
+              );
+            }
+
+            if (notificationType.includes("reservation_update")) {
+              window.dispatchEvent(
+                new CustomEvent("reservation_update", { detail: message.data })
+              );
+            }
 
             // Show toast only for important notifications
             if (shouldShowToast) {
