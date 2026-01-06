@@ -80,3 +80,6 @@ class RoomResponse(BaseModel):
     remove_on_leave: bool = False
     created_at: datetime
     updated_at: datetime
+    timer_state: Optional["TimerStateResponse"] = None
+
+from app.domain.timer.schemas import TimerStateResponse
