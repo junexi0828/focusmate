@@ -65,24 +65,6 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     }
   }, [wsError]);
 
-  // Update document title based on timer status
-  useEffect(() => {
-    if (status === "running" || status === "paused") {
-      const mode = sessionType === "work" ? "Focus" : "Break";
-      const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-      const icon = status === "paused" ? "⏸" : "▶️";
-      // Format: [25:00] Focus | FocusMate
-      document.title = `[${timeStr}] ${mode} | FocusMate`;
-    } else if (status === "completed") {
-      document.title = "Done! | FocusMate";
-    } else {
-      document.title = "FocusMate - 함께 집중하는 학습 타이머";
-    }
-
-    return () => {
-      document.title = "FocusMate - 함께 집중하는 학습 타이머";
-    };
-  }, [status, minutes, seconds, sessionType]);
 
   // Load room data on mount
   useEffect(() => {
@@ -339,6 +321,25 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       );
     },
   });
+
+  // Update document title based on timer status
+  useEffect(() => {
+    if (status === "running" || status === "paused") {
+      const mode = sessionType === "work" ? "Focus" : "Break";
+      const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      const icon = status === "paused" ? "⏸" : "▶️";
+      // Format: ▶️ [25:00] Focus | FocusMate
+      document.title = `${icon} [${timeStr}] ${mode} | FocusMate`;
+    } else if (status === "completed") {
+      document.title = "Done! | FocusMate";
+    } else {
+      document.title = "FocusMate - 함께 집중하는 학습 타이머";
+    }
+
+    return () => {
+      document.title = "FocusMate - 함께 집중하는 학습 타이머";
+    };
+  }, [status, minutes, seconds, sessionType]);
 
   // WebSocket connection and synchronization
   const mountTimeRef = useRef<number | null>(null);
