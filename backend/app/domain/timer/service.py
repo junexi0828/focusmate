@@ -87,9 +87,7 @@ class TimerService:
         room,
         completed_at: datetime | None = None,
     ) -> None:
-        """Record work sessions for participants who were present during the timer."""
-        if timer.phase != TimerPhase.WORK.value:
-            return
+        """Record sessions for participants who were present during the timer."""
         if not timer.started_at:
             return
 

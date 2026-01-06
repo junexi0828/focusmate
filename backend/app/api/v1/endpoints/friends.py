@@ -2,6 +2,7 @@
 
 
 from typing import Annotated, List
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import get_current_user
@@ -15,12 +16,17 @@ from app.domain.friend.schemas import (
     FriendSearchParams,
 )
 from app.domain.friend.service import FriendService
+from app.domain.notification.notification_helper import NotificationHelper
+from app.domain.notification.service import NotificationService
 from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.friend_repository import (
     FriendRepository,
     FriendRequestRepository,
 )
+from app.infrastructure.repositories.notification_repository import NotificationRepository
 from app.infrastructure.repositories.presence_repository import PresenceRepository
+from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.repositories.user_settings_repository import UserSettingsRepository
 
 
 router = APIRouter(prefix="/friends", tags=["friends"])
@@ -42,15 +48,24 @@ def get_presence_repository(db: DatabaseSession) -> PresenceRepository:
     return PresenceRepository(db)
 
 
+def get_notification_service(db: DatabaseSession) -> NotificationService:
+    """Get notification service."""
+    notification_repo = NotificationRepository(db)
+    settings_repo = UserSettingsRepository(db)
+    user_repo = UserRepository(db)
+    return NotificationService(notification_repo, settings_repo, user_repo)
+
+
 def get_friend_service(
     friend_request_repo: Annotated[
         FriendRequestRepository, Depends(get_friend_request_repository)
     ],
     friend_repo: Annotated[FriendRepository, Depends(get_friend_repository)],
     presence_repo: Annotated[PresenceRepository, Depends(get_presence_repository)],
+    notification_service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> FriendService:
     """Get friend service."""
-    return FriendService(friend_request_repo, friend_repo, presence_repo)
+    return FriendService(friend_request_repo, friend_repo, presence_repo, notification_service)
 
 
 def get_presence_service(

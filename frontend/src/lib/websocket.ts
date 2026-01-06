@@ -3,6 +3,7 @@
  */
 
 import { TimerState } from "../features/timer/types/timer.types";
+import { authService } from "../features/auth/services/authService";
 
 // WebSocket 메시지 타입 정의 (서버 → 클라이언트)
 export type WebSocketEventMessage =
@@ -465,7 +466,9 @@ class WebSocketClient {
       .replace(/^http:\/\//, "ws://")
       .replace(/^https:\/\//, "wss://");
     // Backend endpoint is /api/v1/ws/{room_id}
-    return `${wsBaseUrl}/ws/${roomId}`;
+    const token = authService.getToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${wsBaseUrl}/ws/${roomId}${query}`;
   }
 
   isConnected(): boolean {

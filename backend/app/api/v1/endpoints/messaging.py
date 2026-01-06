@@ -2,6 +2,7 @@
 
 
 from typing import Annotated, List
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.exceptions import NotFoundException
@@ -14,12 +15,16 @@ from app.domain.messaging.schemas import (
     MessageResponse,
 )
 from app.domain.messaging.service import MessagingService
+from app.domain.notification.notification_helper import NotificationHelper
+from app.domain.notification.service import NotificationService
 from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.messaging_repository import (
     ConversationRepository,
     MessageRepository,
 )
+from app.infrastructure.repositories.notification_repository import NotificationRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.repositories.user_settings_repository import UserSettingsRepository
 
 
 router = APIRouter(prefix="/messages", tags=["messaging"])
@@ -44,15 +49,24 @@ def get_user_repository(db: DatabaseSession) -> UserRepository:  # type: ignore[
     return UserRepository(db)
 
 
+def get_notification_service(db: DatabaseSession) -> NotificationService:
+    """Get notification service."""
+    notification_repo = NotificationRepository(db)
+    settings_repo = UserSettingsRepository(db)
+    user_repo = UserRepository(db)
+    return NotificationService(notification_repo, settings_repo, user_repo)
+
+
 def get_messaging_service(
     conversation_repo: Annotated[
         ConversationRepository, Depends(get_conversation_repository)
     ],
     message_repo: Annotated[MessageRepository, Depends(get_message_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    notification_service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> MessagingService:
     """Get messaging service."""
-    return MessagingService(conversation_repo, message_repo, user_repo)
+    return MessagingService(conversation_repo, message_repo, user_repo, notification_service)
 
 
 # Message Endpoints

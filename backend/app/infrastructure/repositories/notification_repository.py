@@ -78,6 +78,31 @@ class NotificationRepository:
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
+    async def get_by_user_since(
+        self,
+        user_id: str,
+        since: datetime,
+        limit: int = 50,
+    ) -> list[Notification]:
+        """Get notifications for a user created after a timestamp.
+
+        Args:
+            user_id: User identifier
+            since: Timestamp to fetch after
+            limit: Maximum number of notifications to return
+
+        Returns:
+            List of notifications
+        """
+        query = (
+            select(Notification)
+            .where(Notification.user_id == user_id, Notification.created_at > since)
+            .order_by(Notification.created_at.asc())
+            .limit(limit)
+        )
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
     async def update(self, notification: Notification) -> Notification:
         """Update a notification.
 

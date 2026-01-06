@@ -13,9 +13,16 @@ export interface Participant {
 interface ParticipantListProps {
   participants: Participant[];
   isLoading?: boolean;
+  currentCount?: number;
+  maxCount?: number;
 }
 
-export function ParticipantList({ participants, isLoading = false }: ParticipantListProps) {
+export function ParticipantList({
+  participants,
+  isLoading = false,
+  currentCount,
+  maxCount,
+}: ParticipantListProps) {
   if (isLoading) {
     return <ParticipantListSkeleton />;
   }
@@ -46,7 +53,7 @@ export function ParticipantList({ participants, isLoading = false }: Participant
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="w-5 h-5" />
-          참여자 ({participants.length})
+          참여자 ({currentCount ?? participants.length}/{maxCount ?? participants.length})
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -79,4 +86,3 @@ export function ParticipantList({ participants, isLoading = false }: Participant
     </Card>
   );
 }
-

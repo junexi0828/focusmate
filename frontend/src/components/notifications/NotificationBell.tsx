@@ -27,14 +27,6 @@ export function NotificationBell() {
     }
 
     loadUnreadCount();
-    // Poll every 30 seconds
-    const interval = setInterval(() => {
-      // Check token again before each poll
-      if (authService.isAuthenticated() && !authService.isTokenExpired()) {
-        loadUnreadCount();
-      }
-    }, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadUnreadCount = async () => {

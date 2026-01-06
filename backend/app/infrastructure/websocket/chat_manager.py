@@ -117,6 +117,25 @@ class ChatConnectionManager(BaseConnectionManager[UUID]):
         """
         return len(self.active_connections.get(room_id, set()))
 
+    def is_user_in_room(self, room_id: UUID, user_id: str) -> bool:
+        """Check if user has active connection in room.
+
+        Args:
+            room_id: Room identifier
+            user_id: User identifier
+
+        Returns:
+            True if user is connected to the room locally
+        """
+        if room_id not in self.active_connections:
+            return False
+
+        for websocket in self.active_connections[room_id]:
+            if self.user_connections.get(websocket) == user_id:
+                return True
+
+        return False
+
 
 # Global connection manager instance
 connection_manager = ChatConnectionManager()

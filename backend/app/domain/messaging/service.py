@@ -19,6 +19,9 @@ from app.infrastructure.repositories.messaging_repository import (
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.shared.utils.uuid import generate_uuid
 from datetime import UTC, datetime
+from app.domain.notification.service import NotificationService
+from app.domain.notification.notification_helper import NotificationHelper
+import logging
 
 
 class MessagingService:
@@ -29,10 +32,12 @@ class MessagingService:
         conversation_repo: ConversationRepository,
         message_repo: MessageRepository,
         user_repo: UserRepository,
+        notification_service: NotificationService | None = None,
     ) -> None:
         self.conversation_repo = conversation_repo
         self.message_repo = message_repo
         self.user_repo = user_repo
+        self.notification_service = notification_service
 
     async def send_message(self, sender_id: str, data: MessageCreate) -> MessageResponse:
         """Send a message to another user.
@@ -93,6 +98,20 @@ class MessagingService:
             response.sender_username = sender.username
         if receiver:
             response.receiver_username = receiver.username
+
+        # Send notification
+        if self.notification_service and sender_id != receiver_id:
+            try:
+                sender_name = sender.username if sender else "Unknown"
+                notification = NotificationHelper.create_new_message_notification(
+                    user_id=receiver_id,
+                    sender_name=sender_name,
+                    message_preview=data.content,
+                    conversation_id=conversation.id,
+                )
+                await self.notification_service.create_notification(notification)
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"Failed to send message notification: {e}")
 
         return response
 
