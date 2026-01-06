@@ -10,7 +10,7 @@ from app.core.exceptions import (
     RoomNotFoundException,
     TimerNotFoundException,
 )
-from app.domain.timer.schemas import TimerStateResponse
+from app.domain.timer.schemas import TimerStateResponse, StartTimerRequest
 from app.domain.timer.service import TimerService
 from app.infrastructure.repositories.room_repository import RoomRepository
 from app.infrastructure.repositories.timer_repository import TimerRepository
@@ -45,6 +45,7 @@ async def get_timer_state(
 @router.post("/{room_id}/start", response_model=TimerStateResponse)
 async def start_timer(
     room_id: str,
+    request: StartTimerRequest,
     service: Annotated[TimerService, Depends(get_timer_service)],
 ) -> TimerStateResponse:
     """Start the timer.
@@ -52,7 +53,7 @@ async def start_timer(
     Transitions from IDLE or PAUSED to RUNNING.
     """
     try:
-        return await service.start_timer(room_id)
+        return await service.start_timer(room_id, request.session_type)
     except TimerNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
