@@ -13,6 +13,8 @@ from app.domain.ranking.schemas import (
 )
 from app.infrastructure.repositories.ranking_repository import RankingRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+from app.domain.notification.service import NotificationService
+from app.domain.notification.notification_helper import NotificationHelper
 from datetime import UTC, datetime
 
 
@@ -23,10 +25,16 @@ class RankingService:
         self,
         repository: RankingRepository,
         user_repository: UserRepository | None = None,
+        notification_service: NotificationService | None = None,
     ):
         """Initialize service with repository."""
         self.repository = repository
-        self.user_repository = user_repository
+        # If user_repository is not provided, try to create it from session if available
+        if user_repository is None and hasattr(repository, "session"):
+            self.user_repository = UserRepository(repository.session)
+        else:
+            self.user_repository = user_repository
+        self.notification_service = notification_service
 
     def _generate_invite_code(self, length: int = 8) -> str:
         """Generate a random invite code."""
@@ -231,6 +239,27 @@ class RankingService:
 
         invitation = await self.repository.create_invitation(invitation_dict)
 
+        # Send real-time notification if user exists
+        if self.notification_service and self.user_repository:
+            invited_user = await self.user_repository.get_by_email(invitation_data.email)
+            if invited_user:
+                try:
+                    # Get inviter name
+                    inviter = await self.user_repository.get_by_id(inviter_id)
+                    inviter_name = inviter.username if inviter else "Someone"
+
+                    notification = NotificationHelper.create_team_invitation_notification(
+                        user_id=invited_user.id,
+                        team_name=team.team_name,
+                        inviter_name=inviter_name,
+                        invitation_id=str(invitation.invitation_id),
+                        team_id=str(team_id),
+                    )
+                    await self.notification_service.create_notification(notification)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to send invitation notification: {e}")
+
         return {
             "invitation_id": invitation.invitation_id,
             "team_id": team_id,
@@ -312,6 +341,29 @@ class RankingService:
         # Update invitation status
         await self.repository.update_invitation_status(invitation_id, "accepted")
 
+        # Send notification to inviter (Team Leader)
+        if self.notification_service and self.user_repository:
+            try:
+                # Invited user details
+                accepter = await self.user_repository.get_by_id(user_id)
+                accepter_name = accepter.username if accepter else "A user"
+
+                # Get team name
+                team = await self.repository.get_team_by_id(invitation.team_id)
+                team_name = team.team_name if team else "Team"
+
+                # Notify the inviter (who is usually the leader)
+                notification = NotificationHelper.create_team_invitation_response_notification(
+                    user_id=invitation.invited_by,
+                    team_name=team_name,
+                    responder_name=accepter_name,
+                    accepted=True,
+                )
+                await self.notification_service.create_notification(notification)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to send invitation accepted notification: {e}")
+
         return True
 
     async def reject_invitation(self, invitation_id: UUID) -> bool:
@@ -321,6 +373,31 @@ class RankingService:
             return False
 
         await self.repository.update_invitation_status(invitation_id, "rejected")
+
+        # Send notification to inviter
+        if self.notification_service and self.user_repository:
+            try:
+                # We don't have the rejecter's user_id easily if they just clicked a link,
+                # but if this is an API call, we might not know who rejected it if unauthenticated.
+                # However, usually reject requires auth or a signed token.
+                # Assuming simple case: we just notify inviter that *someone* rejected.
+                # Ideally, we should pass user_id to reject_invitation if available.
+
+                # Get team name
+                team = await self.repository.get_team_by_id(invitation.team_id)
+                team_name = team.team_name if team else "Team"
+
+                notification = NotificationHelper.create_team_invitation_response_notification(
+                    user_id=invitation.invited_by,
+                    team_name=team_name,
+                    responder_name="A user", # Anonymous since we didn't pass user_id to reject
+                    accepted=False,
+                )
+                await self.notification_service.create_notification(notification)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to send invitation rejected notification: {e}")
+
         return True
 
     async def leave_team(self, team_id: UUID, user_id: str) -> bool:

@@ -45,6 +45,31 @@ async def broadcast_timer_update(room_id: str, timer_state: TimerStateResponse) 
         logger = logging.getLogger(__name__)
         logger.error(f"Failed to broadcast timer update for room {room_id}: {e}")
 
+async def broadcast_timer_complete(
+    room_id: str,
+    completed_session_type: str,
+    next_session_type: str,
+    auto_start: bool,
+) -> None:
+    """Broadcast timer completion event to all clients in room."""
+    try:
+        await connection_manager.broadcast_to_room(
+            {
+                "event": "timer_complete",
+                "data": {
+                    "completed_session_type": completed_session_type,
+                    "next_session_type": next_session_type,
+                    "auto_start": auto_start,
+                },
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            room_id,
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to broadcast timer completion for room {room_id}: {e}")
+
 
 @router.get("/{room_id}", response_model=TimerStateResponse)
 async def get_timer_state(
@@ -164,19 +189,29 @@ async def complete_phase(
         if not room:
             raise RoomNotFoundException(room_id)
 
+        completed_session_type = (
+            "work" if timer.phase == TimerPhase.WORK.value else "break"
+        )
+        next_session_type = "break" if completed_session_type == "work" else "work"
+
         completion_time = timer.completed_at or datetime.now(UTC)
         timer_response = await service.complete_phase(room_id, completed_at=completion_time)
 
-        # ✅ 자동 세션 기록: WORK 단계 완료 시 세션 기록
-        if timer.phase == TimerPhase.WORK.value:
-            await service.record_work_sessions_for_timer(
-                db,
-                timer,
-                room,
-                completion_time,
-            )
+        # ✅ 자동 세션 기록: WORK/BREAK 단계 완료 시 세션 기록
+        await service.record_work_sessions_for_timer(
+            db,
+            timer,
+            room,
+            completion_time,
+        )
 
         # Broadcast timer completion and state update
+        await broadcast_timer_complete(
+            room_id,
+            completed_session_type,
+            next_session_type,
+            auto_start=timer_response.status == "running",
+        )
         await broadcast_timer_update(room_id, timer_response)
 
         return timer_response

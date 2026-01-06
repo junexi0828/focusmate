@@ -9,7 +9,6 @@ Advantages over APScheduler:
 - Multi-server safe (Redis handles deduplication)
 - Event-driven architecture
 """
-import json
 import logging
 from datetime import datetime, UTC
 from redis import asyncio as aioredis
@@ -18,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.domain.timer.service import TimerService
 from app.infrastructure.database.session import get_db
+from app.shared.constants.timer import TimerStatus
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class RedisTimerListener:
         self.redis = None
         self.pubsub = None
         self.running = False
+        self.available = False
 
     async def connect(self):
         """Connect to Redis and enable keyspace notifications."""
@@ -54,9 +55,11 @@ class RedisTimerListener:
             await self.pubsub.psubscribe('__keyevent@0__:expired')
 
             logger.info("✅ Redis Timer Listener connected and subscribed to expiry events")
+            self.available = True
 
         except Exception as e:
             logger.error(f"❌ Failed to connect Redis Timer Listener: {e}")
+            self.available = False
             raise
 
     async def listen(self):
@@ -97,8 +100,61 @@ class RedisTimerListener:
         async for db in get_db():
             try:
                 # Complete the timer
-                timer_service = TimerService()
-                await timer_service.complete_timer(room_id, db)
+                # Initialize repositories with the session
+                from app.infrastructure.repositories.timer_repository import TimerRepository
+                from app.infrastructure.repositories.room_repository import RoomRepository
+                from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+                from app.shared.constants.timer import TimerPhase, TimerStatus
+                from uuid import UUID
+
+                timer_repo = TimerRepository(db)
+                room_repo = RoomRepository(db)
+                timer_service = TimerService(timer_repo, room_repo)
+
+                timer = await timer_repo.get_by_room_id(room_id)
+                if not timer or timer.status != TimerStatus.RUNNING.value:
+                    return
+
+                room = await room_repo.get_by_id(room_id)
+                if not room:
+                    return
+
+                completion_time = timer.completed_at or datetime.now(UTC)
+                timer.status = TimerStatus.COMPLETED.value
+                timer.completed_at = completion_time
+                timer.remaining_seconds = 0
+                await timer_repo.update(timer)
+
+                await timer_service.record_work_sessions_for_timer(
+                    db,
+                    timer,
+                    room,
+                    completion_time,
+                )
+
+                timer_state = await timer_service.get_timer_state(room_id, db=db)
+
+                # Global Broadcast: Publish to Redis Channel
+                completed_session_type = (
+                    "work" if timer.phase == TimerPhase.WORK.value else "break"
+                )
+                next_session_type = "break" if completed_session_type == "work" else "work"
+
+                await redis_pubsub_manager.publish_event(
+                    UUID(room_id),
+                    "timer_complete",
+                    {
+                        "completed_session_type": completed_session_type,
+                        "next_session_type": next_session_type,
+                        "auto_start": False,
+                    }
+                )
+
+                await redis_pubsub_manager.publish_event(
+                    UUID(room_id),
+                    "timer_update",
+                    timer_state.model_dump()
+                )
 
                 logger.info(f"✅ Successfully completed expired timer for room {room_id}")
 
@@ -114,6 +170,7 @@ class RedisTimerListener:
     async def disconnect(self):
         """Disconnect from Redis and stop listening."""
         self.running = False
+        self.available = False
 
         if self.pubsub:
             await self.pubsub.unsubscribe()
@@ -123,6 +180,10 @@ class RedisTimerListener:
             await self.redis.close()
 
         logger.info("✅ Redis Timer Listener disconnected")
+
+    def is_available(self) -> bool:
+        """Check if Redis timer listener is connected and available."""
+        return self.available
 
 
 # Global instance

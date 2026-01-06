@@ -2,6 +2,7 @@
 
 
 from typing import Annotated, List, Optional
+from datetime import datetime
 from fastapi import (
     APIRouter,
     Depends,
@@ -128,6 +129,25 @@ async def get_my_notifications(
     return await service.get_user_notifications(user_id, unread_only, limit, offset)
 
 
+@router.get("/backfill", response_model=list[NotificationResponse])
+async def get_notification_backfill(
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    service: Annotated[NotificationService, Depends(get_notification_service)],
+    since: str = Query(..., description="Fetch notifications created after this ISO timestamp"),
+    limit: int = Query(50, ge=1, le=200, description="Maximum number of notifications"),
+) -> list[NotificationResponse]:
+    """Get notifications created after a timestamp for reconnection backfill."""
+    user_id = current_user["id"]
+    try:
+        since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)",
+        ) from e
+    return await service.get_notifications_since(user_id, since_dt, limit)
+
+
 @router.get("/unread-count", response_model=dict)
 async def get_unread_count(
     current_user: Annotated[dict, Depends(get_current_user_required)],
@@ -234,9 +254,6 @@ async def websocket_notifications(
         }
     }
     """
-    # Accept WebSocket connection first (required by FastAPI)
-    await websocket.accept()
-
     # Verify token and get user
     try:
         payload = decode_jwt_token(token)
@@ -248,9 +265,9 @@ async def websocket_notifications(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    # Connect user (this will add to active connections)
-    # user_id is guaranteed to be str at this point
-    notification_ws_manager._add_connection(websocket, user_id)
+    # Delegate connection lifecycle (accept, register, subscribe) to manager
+    # This handles websocket.accept() internally
+    await notification_ws_manager.connect(websocket, user_id)
 
     try:
         # Send connection confirmation

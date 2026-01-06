@@ -208,12 +208,31 @@ async def get_messages(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+from app.infrastructure.repositories.user_settings_repository import UserSettingsRepository
+from app.infrastructure.repositories.notification_repository import NotificationRepository
+from app.domain.notification.service import NotificationService
+from app.domain.notification.schemas import NotificationCreate
+
+
+# ... (existing imports)
+
+def get_notification_service(db: DatabaseSession) -> NotificationService:
+    """Get notification service."""
+    notification_repo = NotificationRepository(db)
+    settings_repo = UserSettingsRepository(db)
+    user_repo = UserRepository(db)
+    return NotificationService(notification_repo, settings_repo, user_repo)
+
+
+# ... (existing dependencies)
+
 @router.post("/rooms/{room_id}/messages", status_code=status.HTTP_201_CREATED)
 async def send_message(
     room_id: UUID,
     data: MessageCreate,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[ChatService, Depends(get_chat_service)],
+    notification_service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> MessageResponse:
     """Send a message."""
     try:
@@ -231,14 +250,24 @@ async def send_message(
         # Also broadcast to local WebSocket connections
         try:
             await connection_manager.broadcast_to_room(
-            room_id,
-            {
-                "type": "message",
-                "message": message.model_dump(mode="json"),
-            },
-        )
+                room_id,
+                {
+                    "type": "message",
+                    "message": message.model_dump(mode="json"),
+                },
+            )
         except Exception as e:
             logging.getLogger(__name__).error(f"WebSocket broadcast failed: {e!s}")
+
+        # Send notifications to offline/inactive members
+        try:
+            # Run in background to not block response
+            import asyncio
+            asyncio.create_task(_send_message_notifications(
+                service, notification_service, room_id, current_user, message
+            ))
+        except Exception as e:
+             logging.getLogger(__name__).error(f"Failed to schedule notifications: {e}")
 
         return message
     except ValueError as e:
@@ -251,6 +280,56 @@ async def send_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}",
         )
+
+async def _send_message_notifications(
+    chat_service: ChatService,
+    notification_service: NotificationService,
+    room_id: UUID,
+    sender: dict,
+    message: MessageResponse
+):
+    """Helper to send notifications asynchronously."""
+    try:
+        members = await chat_service.repository.get_room_members(room_id)
+        sender_id = sender["id"]
+        sender_name = sender.get("username", "Unknown")
+
+        for member in members:
+            # Skip self
+            if str(member.user_id) == sender_id:
+                continue
+
+            # Check if user is active in the room (locally)
+            # Limitation: In multi-server setup, this might be false positive if user is on another server
+            if connection_manager.is_user_in_room(room_id, str(member.user_id)):
+                continue
+
+            # Create notification
+            # Truncate message content if too long
+            preview = message.content[:50] + "..." if len(message.content) > 50 else message.content
+            if message.message_type == "image":
+                preview = "사진을 보냈습니다."
+            elif message.message_type == "file":
+                preview = "파일을 보냈습니다."
+
+            await notification_service.create_notification(
+                NotificationCreate(
+                    user_id=str(member.user_id),
+                    type="message",
+                    title=f"{sender_name}",
+                    message=preview,
+                    data={
+                        "routing": {
+                            "type": "route",
+                            "path": f"/messages?roomId={room_id}",
+                        },
+                        "room_id": str(room_id),
+                        "sender_id": sender_id,
+                    },
+                )
+            )
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Error sending message notifications: {e}")
 
 
 @router.patch("/rooms/{room_id}/messages/{message_id}")

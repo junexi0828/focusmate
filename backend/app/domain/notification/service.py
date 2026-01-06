@@ -76,8 +76,10 @@ class NotificationService:
                 "session": settings.notification_session,
                 "achievement": settings.notification_achievement,
                 "message": settings.notification_message,
+                "new_message": settings.notification_message,
                 "friend_request": settings.notification_message,  # Use message setting
                 "team_invitation": settings.notification_message,  # Use message setting
+                "team_invitation_accepted": settings.notification_message,
                 "post_comment": settings.notification_message,  # Use message setting
                 "post_like": settings.notification_message,  # Use message setting
             }
@@ -256,6 +258,27 @@ class NotificationService:
         """
         notifications = await self.repository.get_by_user(
             user_id, unread_only, limit, offset
+        )
+        return [NotificationResponse.model_validate(n) for n in notifications]
+
+    async def get_notifications_since(
+        self,
+        user_id: str,
+        since: datetime,
+        limit: int = 50,
+    ) -> list[NotificationResponse]:
+        """Get notifications for a user created after a timestamp.
+
+        Args:
+            user_id: User identifier
+            since: Timestamp to fetch after
+            limit: Maximum number of notifications to return
+
+        Returns:
+            List of notifications
+        """
+        notifications = await self.repository.get_by_user_since(
+            user_id, since, limit
         )
         return [NotificationResponse.model_validate(n) for n in notifications]
 

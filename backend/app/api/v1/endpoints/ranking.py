@@ -1,6 +1,7 @@
 """Ranking API endpoints."""
 
 from datetime import UTC, datetime, timedelta
+import logging
 from typing import Annotated, List, Literal, Optional, Union
 from uuid import UUID
 
@@ -19,8 +20,13 @@ from app.domain.ranking.schemas import (
 )
 from app.domain.ranking.service import RankingService
 from app.domain.verification.schemas import VerificationResponse, VerificationReview
+from app.domain.notification.notification_helper import NotificationHelper
+from app.domain.notification.schemas import NotificationCreate
+from app.domain.notification.service import NotificationService
 from app.infrastructure.repositories.ranking_repository import RankingRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.repositories.notification_repository import NotificationRepository
+from app.infrastructure.repositories.user_settings_repository import UserSettingsRepository
 
 
 router = APIRouter(prefix="/ranking", tags=["ranking"])
@@ -30,7 +36,15 @@ async def get_ranking_service(db: DatabaseSession) -> RankingService:
     """Dependency to get ranking service."""
     repository = RankingRepository(db)
     user_repository = UserRepository(db)
-    return RankingService(repository, user_repository)
+    notification_service = get_notification_service(db)
+    return RankingService(repository, user_repository, notification_service)
+
+def get_notification_service(db: DatabaseSession) -> NotificationService:
+    """Get notification service."""
+    notification_repo = NotificationRepository(db)
+    settings_repo = UserSettingsRepository(db)
+    user_repo = UserRepository(db)
+    return NotificationService(notification_repo, settings_repo, user_repo)
 
 
 # Team Management Endpoints
@@ -125,6 +139,8 @@ async def invite_member(
             team_id, invitation_data, current_user["id"]
         )
 
+        # In-app notification is now handled by service.invite_member
+
         # Send invitation email (best-effort, non-blocking)
         try:
             from app.infrastructure.email.email_service import email_service
@@ -168,14 +184,20 @@ async def accept_invitation(
     invitation_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
+    db: DatabaseSession,
 ) -> dict:
     """Accept a team invitation."""
+    ranking_repo = RankingRepository(db)
+    invitation = await ranking_repo.get_invitation_by_id(invitation_id)
     success = await service.accept_invitation(invitation_id, current_user["id"])
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired invitation",
         )
+
+    # In-app notification is now handled by service.accept_invitation
+
     return {"message": "Invitation accepted successfully"}
 
 
@@ -441,20 +463,25 @@ async def get_leaderboard(
         if rank_changes_to_notify:
             try:
                 from app.domain.notification.service import NotificationService
-                from app.infrastructure.repositories.notification_repository import (
-                    NotificationRepository,
-                )
                 from app.infrastructure.repositories.ranking_repository import (
                     RankingRepository,
                 )
                 from app.infrastructure.repositories.user_repository import (
                     UserRepository,
                 )
+                from app.infrastructure.repositories.user_settings_repository import (
+                    UserSettingsRepository,
+                )
 
                 notification_repo = NotificationRepository(db)
                 ranking_repo = RankingRepository(db)
                 user_repo = UserRepository(db)
-                notification_service = NotificationService(notification_repo, user_repo)
+                settings_repo = UserSettingsRepository(db)
+                notification_service = NotificationService(
+                    repository=notification_repo,
+                    settings_repository=settings_repo,
+                    user_repository=user_repo
+                )
 
                 from app.domain.notification.schemas import NotificationCreate
 

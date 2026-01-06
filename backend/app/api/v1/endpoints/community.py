@@ -3,6 +3,7 @@
 
 from typing import Annotated, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+import logging
 
 from app.api.deps import get_current_user
 from app.core.exceptions import NotFoundException, UnauthorizedException
@@ -19,6 +20,8 @@ from app.domain.community.schemas import (
     PostUpdate,
 )
 from app.domain.community.service import CommunityService
+from app.domain.notification.notification_helper import NotificationHelper
+from app.domain.notification.service import NotificationService
 from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.community_repository import (
     CommentLikeRepository,
@@ -27,7 +30,9 @@ from app.infrastructure.repositories.community_repository import (
     PostReadRepository,
     PostRepository,
 )
+from app.infrastructure.repositories.notification_repository import NotificationRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.repositories.user_settings_repository import UserSettingsRepository
 from datetime import datetime
 
 
@@ -65,6 +70,14 @@ def get_user_repository(db: DatabaseSession) -> UserRepository:
     return UserRepository(db)
 
 
+def get_notification_service(db: DatabaseSession) -> NotificationService:
+    """Get notification service."""
+    notification_repo = NotificationRepository(db)
+    settings_repo = UserSettingsRepository(db)
+    user_repo = UserRepository(db)
+    return NotificationService(notification_repo, settings_repo, user_repo)
+
+
 def get_community_service(
     post_repo: Annotated[PostRepository, Depends(get_post_repository)],
     comment_repo: Annotated[CommentRepository, Depends(get_comment_repository)],
@@ -74,6 +87,7 @@ def get_community_service(
     ],
     post_read_repo: Annotated[PostReadRepository, Depends(get_post_read_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    notification_service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> CommunityService:
     """Get community service."""
     return CommunityService(
@@ -83,6 +97,7 @@ def get_community_service(
         comment_like_repo,
         post_read_repo,
         user_repo,
+        notification_service,
     )
 
 

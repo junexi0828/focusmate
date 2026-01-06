@@ -113,6 +113,44 @@ class NotificationHelper:
         )
 
     @staticmethod
+    def create_team_invitation_response_notification(
+        user_id: str,
+        team_name: str,
+        responder_name: str,
+        accepted: bool,
+    ) -> NotificationCreate:
+        """Create a notification when a team invitation is accepted or rejected.
+
+        Args:
+            user_id: User ID to receive notification (usually team leader)
+            team_name: Name of the team
+            responder_name: Name of user who responded
+            accepted: Whether invitation was accepted or rejected
+
+        Returns:
+            NotificationCreate with routing metadata
+        """
+        action = "accepted" if accepted else "rejected"
+        title = f"Invitation {action.capitalize()}"
+        message = f"{responder_name} {action} your invitation to join {team_name}"
+
+        return NotificationCreate(
+            user_id=user_id,
+            type=f"team_invitation_{action}",
+            title=title,
+            message=message,
+            data={
+                "team_name": team_name,
+                "responder_name": responder_name,
+                "accepted": accepted,
+                "routing": {
+                    "type": "team",
+                    "path": "/teams",
+                },
+            },
+        )
+
+    @staticmethod
     def create_new_message_notification(
         user_id: str,
         sender_name: str,
