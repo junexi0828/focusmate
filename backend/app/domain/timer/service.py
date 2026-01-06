@@ -93,6 +93,17 @@ class TimerService:
             if not timer:
                 raise TimerNotFoundException(room_id)
 
+        # Check for auto-completion (lazy update)
+        if timer.status == TimerStatus.RUNNING.value and timer.started_at:
+            elapsed = (datetime.now(UTC) - timer.started_at).total_seconds()
+            current_remaining = max(0, timer.remaining_seconds - int(elapsed))
+
+            if current_remaining == 0:
+                timer.status = TimerStatus.COMPLETED.value
+                timer.completed_at = datetime.now(UTC)
+                timer.remaining_seconds = 0
+                await self.timer_repo.update(timer)
+
         # Validate state transition - allow start from IDLE, PAUSED, or COMPLETED
         if timer.status not in [TimerStatus.IDLE.value, TimerStatus.PAUSED.value, TimerStatus.COMPLETED.value]:
             raise InvalidTimerStateException(timer.status, "start")

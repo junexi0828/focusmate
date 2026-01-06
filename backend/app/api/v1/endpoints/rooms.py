@@ -132,10 +132,29 @@ async def create_room(
 async def get_room(
     room_id: str,
     service: Annotated[RoomService, Depends(get_room_service)],
+    db: DatabaseSession,
 ) -> RoomResponse:
     """Get room by ID."""
     try:
-        return await service.get_room(room_id)
+        room_response = await service.get_room(room_id)
+
+        # Populate timer state
+        try:
+            from app.domain.timer.service import TimerService
+            from app.infrastructure.repositories.timer_repository import TimerRepository
+            from app.infrastructure.repositories.room_repository import RoomRepository
+
+            timer_repo = TimerRepository(db)
+            room_repo = RoomRepository(db)
+            timer_service = TimerService(timer_repo, room_repo)
+
+            timer_state = await timer_service.get_timer_state(room_id)
+            room_response.timer_state = timer_state
+        except Exception:
+            # If timer not found or error, just return room without timer state
+            pass
+
+        return room_response
     except RoomNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
 
