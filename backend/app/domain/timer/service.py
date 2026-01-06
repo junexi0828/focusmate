@@ -2,6 +2,7 @@
 
 
 import logging
+import json
 from app.core.exceptions import (
     InvalidTimerStateException,
     RoomNotFoundException,
@@ -18,6 +19,8 @@ from app.shared.utils.uuid import generate_uuid
 from datetime import UTC, datetime, timedelta
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from redis import asyncio as aioredis
+from app.core.config import settings
 
 
 class TimerService:
@@ -36,6 +39,46 @@ class TimerService:
         """
         self.timer_repo = timer_repository
         self.room_repo = room_repository
+
+    async def _set_redis_timer_ttl(self, room_id: str, duration_seconds: int):
+        """Set Redis TTL key for timer expiry notification.
+
+        When the key expires, Redis will trigger a keyspace notification
+        that our RedisTimerListener will catch and process.
+
+        Args:
+            room_id: Room ID
+            duration_seconds: Timer duration in seconds
+        """
+        try:
+            redis = await aioredis.from_url(
+                settings.REDIS_URL,
+                decode_responses=True,
+                encoding="utf-8"
+            )
+
+            # Set key with TTL
+            # Key format: timer:expire:{room_id}
+            key = f"timer:expire:{room_id}"
+            value = json.dumps({
+                "room_id": room_id,
+                "started_at": datetime.now(UTC).isoformat(),
+                "duration": duration_seconds,
+            })
+
+            await redis.setex(key, duration_seconds, value)
+            await redis.close()
+
+            logging.getLogger(__name__).info(
+                f"✅ Set Redis TTL for room {room_id}: {duration_seconds}s"
+            )
+
+        except Exception as e:
+            # Don't fail timer start if Redis is unavailable
+            # APScheduler fallback will still work
+            logging.getLogger(__name__).warning(
+                f"⚠️  Failed to set Redis TTL for room {room_id}: {e}"
+            )
 
     async def record_work_sessions_for_timer(
         self,
@@ -267,6 +310,9 @@ class TimerService:
         timer.paused_at = None
 
         updated_timer = await self.timer_repo.update(timer)
+
+        # Set Redis TTL for automatic expiry notification
+        await self._set_redis_timer_ttl(room_id, updated_timer.remaining_seconds)
 
         # Calculate target_timestamp for client countdown
         target_timestamp = None

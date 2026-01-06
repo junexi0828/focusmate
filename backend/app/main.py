@@ -62,32 +62,30 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
-    # Initialize Background Tasks (APScheduler)
-    from apscheduler.schedulers.asyncio import AsyncIOScheduler
-    from app.infrastructure.tasks import check_expired_timers
+    # Initialize Redis Timer Listener (TTL-based expiry)
+    from app.infrastructure.tasks import redis_timer_listener
+    import asyncio
 
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        check_expired_timers,
-        'interval',
-        minutes=1,  # Check every minute
-        id='timer_cleanup',
-        replace_existing=True,
-    )
-    scheduler.start()
-    logger.info("✅ Background tasks started (timer cleanup every 1 minute)")
+    try:
+        await redis_timer_listener.connect()
+        # Start listener in background task
+        listener_task = asyncio.create_task(redis_timer_listener.listen())
+        logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
+    except Exception:
+        logger.exception("⚠️ Redis Timer Listener initialization failed")
 
     yield
 
     # Shutdown
     logger.info("🛑 Shutting down Focus Mate Backend...")
 
-    # Stop background tasks
+    # Stop Redis Timer Listener
     try:
-        scheduler.shutdown(wait=False)
-        logger.info("✅ Background tasks stopped")
+        await redis_timer_listener.disconnect()
+        listener_task.cancel()
+        logger.info("✅ Redis Timer Listener stopped")
     except Exception:
-        logger.exception("⚠️ Error stopping background tasks")
+        logger.exception("⚠️ Error stopping Redis Timer Listener")
 
     # Disconnect Redis
     try:
