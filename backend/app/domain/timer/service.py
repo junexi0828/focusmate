@@ -71,11 +71,12 @@ class TimerService:
         }
         return TimerStateResponse(**response_dict)
 
-    async def start_timer(self, room_id: str) -> TimerStateResponse:
+    async def start_timer(self, room_id: str, session_type: str = "work") -> TimerStateResponse:
         """Start timer.
 
         Args:
             room_id: Room identifier
+            session_type: "work" or "break"
 
         Returns:
             Updated timer state
@@ -104,13 +105,41 @@ class TimerService:
                 timer.remaining_seconds = 0
                 await self.timer_repo.update(timer)
 
+        # Handle phase switch request
+        current_session_type = "work" if timer.phase == TimerPhase.WORK.value else "break"
+        if session_type != current_session_type:
+            # User wants to start a DIFFERENT session type
+            room = await self.room_repo.get_by_id(room_id)
+            if not room:
+                raise RoomNotFoundException(room_id)
+
+            # Switch phase and reset
+            if session_type == "work":
+                timer.phase = TimerPhase.WORK.value
+                timer.duration = room.work_duration * 60
+                timer.remaining_seconds = room.work_duration * 60
+            else:
+                timer.phase = TimerPhase.BREAK.value
+                timer.duration = room.break_duration * 60
+                timer.remaining_seconds = room.break_duration * 60
+
+            # Reset status to IDLE so it can be started
+            timer.status = TimerStatus.IDLE.value
+            timer.started_at = None
+            timer.paused_at = None
+            timer.completed_at = None
+
+            # Note: We continue below to actually start it
+
         # Validate state transition - allow start from IDLE, PAUSED, or COMPLETED
         if timer.status not in [TimerStatus.IDLE.value, TimerStatus.PAUSED.value, TimerStatus.COMPLETED.value]:
             raise InvalidTimerStateException(timer.status, "start")
 
         # If timer is COMPLETED, reset to IDLE first
         if timer.status == TimerStatus.COMPLETED.value:
-            # Get room to reset timer with correct duration
+            # Get room to reset timer with correct duration if phase matches
+            # If phase was switched above, this block is skipped (status is IDLE)
+            # But if same phase restart:
             room = await self.room_repo.get_by_id(room_id)
             if room:
                 timer.remaining_seconds = room.work_duration * 60 if timer.phase == TimerPhase.WORK.value else room.break_duration * 60
