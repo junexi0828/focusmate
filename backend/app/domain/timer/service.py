@@ -94,16 +94,25 @@ class TimerService:
             if not timer:
                 raise TimerNotFoundException(room_id)
 
-        # Check for auto-completion (lazy update)
-        if timer.status == TimerStatus.RUNNING.value and timer.started_at:
-            elapsed = (datetime.now(UTC) - timer.started_at).total_seconds()
-            current_remaining = max(0, timer.remaining_seconds - int(elapsed))
-
-            if current_remaining == 0:
-                timer.status = TimerStatus.COMPLETED.value
-                timer.completed_at = datetime.now(UTC)
-                timer.remaining_seconds = 0
+        # Check for auto-completion (lazy update) or corrupted state
+        if timer.status == TimerStatus.RUNNING.value:
+            # Case 1: Corrupted state (Running but no start time)
+            if not timer.started_at:
+                room = await self.room_repo.get_by_id(room_id)
+                timer.status = TimerStatus.IDLE.value
+                timer.remaining_seconds = room.work_duration * 60 if timer.phase == TimerPhase.WORK.value else room.break_duration * 60
                 await self.timer_repo.update(timer)
+
+            # Case 2: Check for expiration
+            else:
+                elapsed = (datetime.now(UTC) - timer.started_at).total_seconds()
+                current_remaining = max(0, timer.remaining_seconds - int(elapsed))
+
+                if current_remaining == 0:
+                    timer.status = TimerStatus.COMPLETED.value
+                    timer.completed_at = datetime.now(UTC)
+                    timer.remaining_seconds = 0
+                    await self.timer_repo.update(timer)
 
         # Handle phase switch request
         current_session_type = "work" if timer.phase == TimerPhase.WORK.value else "break"
@@ -130,6 +139,23 @@ class TimerService:
             timer.completed_at = None
 
             # Note: We continue below to actually start it
+
+        # Idempotency check: If already RUNNING, just return current state
+        # This fixes the issue where frontend thinks it's IDLE but backend is RUNNING
+        if timer.status == TimerStatus.RUNNING.value:
+             # Calculate target_timestamp for client countdown
+            target_timestamp = None
+            if timer.started_at and timer.remaining_seconds > 0:
+                target_timestamp = (
+                    timer.started_at + timedelta(seconds=timer.remaining_seconds)
+                ).isoformat()
+
+            response_dict = {
+                **TimerStateResponse.model_validate(timer).model_dump(),
+                "target_timestamp": target_timestamp,
+                "session_type": "work" if timer.phase == TimerPhase.WORK.value else "break",
+            }
+            return TimerStateResponse(**response_dict)
 
         # Validate state transition - allow start from IDLE, PAUSED, or COMPLETED
         if timer.status not in [TimerStatus.IDLE.value, TimerStatus.PAUSED.value, TimerStatus.COMPLETED.value]:
