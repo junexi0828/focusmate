@@ -37,6 +37,16 @@ class ParticipantRepository:
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
+    async def get_by_user_and_room(self, user_id: str, room_id: str) -> Participant | None:
+        """Get participant by user ID and room ID."""
+        result = await self.db.execute(
+            select(Participant).where(
+                Participant.user_id == user_id,
+                Participant.room_id == room_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def get_by_user_id(self, user_id: str, active_only: bool = True) -> list[Participant]:
         """Get all participants for a user."""
         query = select(Participant).where(Participant.user_id == user_id)
@@ -59,6 +69,24 @@ class ParticipantRepository:
     async def mark_disconnected(self, participant_id: str) -> Participant | None:
         """Mark participant as disconnected."""
         participant = await self.get_by_id(participant_id)
+        if participant:
+            participant.is_connected = False
+            participant.left_at = datetime.now(UTC)
+            return await self.update(participant)
+        return None
+
+    async def mark_connected_by_user_and_room(self, user_id: str, room_id: str) -> Participant | None:
+        """Mark participant as connected using user ID and room ID."""
+        participant = await self.get_by_user_and_room(user_id, room_id)
+        if participant:
+            participant.is_connected = True
+            participant.left_at = None
+            return await self.update(participant)
+        return None
+
+    async def mark_disconnected_by_user_and_room(self, user_id: str, room_id: str) -> Participant | None:
+        """Mark participant as disconnected using user ID and room ID."""
+        participant = await self.get_by_user_and_room(user_id, room_id)
         if participant:
             participant.is_connected = False
             participant.left_at = datetime.now(UTC)

@@ -32,7 +32,9 @@ from app.infrastructure.repositories.community_repository import (
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.shared.utils.uuid import generate_uuid
 from datetime import UTC, datetime
-
+from app.domain.notification.service import NotificationService
+from app.domain.notification.notification_helper import NotificationHelper
+import logging
 
 class CommunityService:
     """Community service for posts, comments, and social interactions."""
@@ -45,6 +47,7 @@ class CommunityService:
         comment_like_repo: CommentLikeRepository,
         post_read_repo: PostReadRepository,
         user_repo: UserRepository,
+        notification_service: NotificationService | None = None,
     ) -> None:
         self.post_repo = post_repo
         self.comment_repo = comment_repo
@@ -52,6 +55,11 @@ class CommunityService:
         self.comment_like_repo = comment_like_repo
         self.post_read_repo = post_read_repo
         self.user_repo = user_repo
+        self.notification_service = notification_service
+
+
+
+
 
     # Post Operations
     async def create_post(self, user_id: str, data: PostCreate) -> PostResponse:
@@ -252,6 +260,23 @@ class CommunityService:
         await self.post_like_repo.create(post_like)
         post.likes += 1
         await self.post_repo.update(post)
+
+        # Send notification
+        if self.notification_service and post.user_id != user_id:
+            try:
+                liker = await self.user_repo.get_by_id(user_id)
+                liker_name = liker.username if liker else "Unknown"
+
+                notification = NotificationHelper.create_post_like_notification(
+                    user_id=post.user_id,
+                    liker_name=liker_name,
+                    post_id=post_id,
+                    post_title=post.title,
+                )
+                await self.notification_service.create_notification(notification)
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"Failed to send post like notification: {e}")
+
         return LikeResponse(success=True, liked=True, new_count=post.likes)
 
     # Comment Operations
@@ -291,6 +316,21 @@ class CommunityService:
         user = await self.user_repo.get_by_id(user_id)
         if user:
             response.author_username = user.username
+
+        # Send notification
+        if self.notification_service and post.user_id != user_id:
+            try:
+                commenter_name = user.username if user else "Unknown"
+                notification = NotificationHelper.create_post_comment_notification(
+                    user_id=post.user_id,
+                    commenter_name=commenter_name,
+                    post_id=post_id,
+                    post_title=post.title,
+                    comment_preview=data.content,
+                )
+                await self.notification_service.create_notification(notification)
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"Failed to send comment notification: {e}")
 
         return response
 

@@ -7,6 +7,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { authService } from "../features/auth/services/authService";
 import { toast } from "sonner";
 import { notificationService } from "../lib/notificationService";
+import { api } from "../api/client";
 
 const WS_URL = import.meta.env.VITE_WS_BASE_URL || "ws://localhost:8000";
 
@@ -44,6 +45,7 @@ export function useNotifications(
   const reconnectAttemptsRef = useRef(0);
   const onNewNotificationRef = useRef(onNewNotification);
   const maxReconnectAttempts = 10;
+  const lastSyncKey = "last_notification_sync";
 
   // Update callback ref when prop changes
   useEffect(() => {
@@ -103,6 +105,32 @@ export function useNotifications(
             ws.send(JSON.stringify({ type: "ping" }));
           }
         }, 30000);
+
+        // Backfill missed notifications after reconnect
+        const lastSync = localStorage.getItem(lastSyncKey);
+        if (lastSync) {
+          api
+            .get<NotificationData[]>("/notifications/backfill", {
+              params: { since: lastSync },
+            })
+            .then((response) => {
+              const missed = response.data || [];
+              if (missed.length > 0) {
+                setNotifications((prev) => [...missed, ...prev]);
+                if (onNewNotificationRef.current) {
+                  onNewNotificationRef.current(missed[0]);
+                }
+              }
+            })
+            .catch((error) => {
+              console.warn("[Notifications] Backfill failed:", error);
+            })
+            .finally(() => {
+              localStorage.setItem(lastSyncKey, new Date().toISOString());
+            });
+        } else {
+          localStorage.setItem(lastSyncKey, new Date().toISOString());
+        }
       };
 
       ws.onmessage = (event) => {
@@ -118,6 +146,7 @@ export function useNotifications(
           } else if (message.type === "notification" && message.data) {
             // Add to local state
             setNotifications((prev) => [message.data!, ...prev]);
+            localStorage.setItem(lastSyncKey, new Date().toISOString());
 
             // Filter out high-frequency notifications that shouldn't show toast
             const silentNotificationTypes = [

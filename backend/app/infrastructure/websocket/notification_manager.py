@@ -28,6 +28,13 @@ class NotificationWebSocketManager(BaseConnectionManager[str]):
         await self._accept_websocket(websocket)
         self._add_connection(websocket, user_id)
 
+        # Subscribe to Redis channel for multi-server broadcasting
+        try:
+            from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+            await redis_pubsub_manager.subscribe_to_user_notifications(user_id)
+        except Exception as e:
+            logger.error(f"Failed to subscribe to user notifications: {e}")
+
     def disconnect(self, websocket: WebSocket, user_id: str) -> None:
         """Remove a WebSocket connection.
 
@@ -37,18 +44,55 @@ class NotificationWebSocketManager(BaseConnectionManager[str]):
         """
         self._remove_connection(websocket, user_id)
 
+        # If no more connections for this user, unsubscribe from Redis
+        if user_id not in self.active_connections:
+            try:
+                # We can't await here easily since disconnect is sync in base class
+                # But typically we'd want to unsubscribe.
+                # For now, we rely on the fact that if there are no listeners,
+                # the Redis message will just be ignored by send_notification_local.
+                # Ideally, we should fire a background task to unsubscribe.
+                import asyncio
+                from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+                asyncio.create_task(redis_pubsub_manager.unsubscribe_from_user_notifications(user_id))
+            except Exception as e:
+                logger.error(f"Failed to unsubscribe from user notifications: {e}")
+
     async def send_notification(self, notification: dict[str, Any], user_id: str) -> bool:
-        """Send notification to all connections for a specific user.
+        """Send notification to user via Redis Pub/Sub.
+
+        This method publishes the notification to Redis, ensuring it reaches the user
+        regardless of which server they are connected to.
 
         Args:
             notification: Notification data
             user_id: User identifier
 
         Returns:
-            True if notification was sent, False if user has no active connections
+            True (always returns True as delivery is async via Redis)
+        """
+        try:
+            from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+            await redis_pubsub_manager.publish_notification(user_id, notification)
+            return True
+        except Exception as e:
+            logger.error(f"Error publishing notification: {e}")
+            return False
+
+    async def send_notification_local(self, notification: dict[str, Any], user_id: str) -> bool:
+        """Send notification to local active connections for a specific user.
+
+        This is called by the Redis Pub/Sub listener when a message is received.
+
+        Args:
+            notification: Notification data
+            user_id: User identifier
+
+        Returns:
+            True if notification was sent locally, False if user has no local connections
         """
         if user_id not in self.active_connections:
-            logger.debug(f"User {user_id} has no active connections, notification not sent")
+            # This is normal in a multi-server setup
             return False
 
         await self._broadcast_with_cleanup(
@@ -56,7 +100,7 @@ class NotificationWebSocketManager(BaseConnectionManager[str]):
             notification,
             user_id
         )
-        logger.info(f"Notification sent to user {user_id}")
+        logger.info(f"Notification sent to user {user_id} (local)")
         return True
 
     async def broadcast_notification(self, notification: dict[str, Any], user_ids: list[str]) -> None:

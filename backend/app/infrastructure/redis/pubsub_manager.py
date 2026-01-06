@@ -115,6 +115,52 @@ class RedisPubSubManager:
                 except Exception as e:
                     logging.getLogger(__name__).error(f"Error processing Redis message: {e}")
 
+            elif message["type"] == "message" and message["channel"].startswith("notification:user:"):
+                try:
+                    data = json.loads(message["data"])
+                    channel = message["channel"]
+
+                    # Extract user_id from channel name
+                    user_id = channel.split(":")[-1]
+
+                    # Broadcast to local WebSocket connections for this user
+                    from app.infrastructure.websocket.notification_manager import notification_ws_manager
+                    await notification_ws_manager.send_notification_local(data, user_id)
+
+                except Exception as e:
+                    logging.getLogger(__name__).error(f"Error processing Redis notification: {e}")
+
+    async def publish_notification(self, user_id: str, notification_data: dict):
+        """Publish notification to Redis channel for a specific user."""
+        if not self.redis:
+            return
+
+        channel = f"notification:user:{user_id}"
+        await self.redis.publish(
+            channel,
+            json.dumps(notification_data)
+        )
+
+    async def subscribe_to_user_notifications(self, user_id: str):
+        """Subscribe to user notification channel."""
+        if not self.pubsub:
+            return
+
+        channel = f"notification:user:{user_id}"
+        if channel not in self.subscriptions:
+            await self.pubsub.subscribe(channel)
+            self.subscriptions.add(channel)
+
+    async def unsubscribe_from_user_notifications(self, user_id: str):
+        """Unsubscribe from user notification channel."""
+        if not self.pubsub:
+            return
+
+        channel = f"notification:user:{user_id}"
+        if channel in self.subscriptions:
+            await self.pubsub.unsubscribe(channel)
+            self.subscriptions.discard(channel)
+
     async def start_listener(self):
         """Start background listener task."""
         if self._listener_task is None or self._listener_task.done():

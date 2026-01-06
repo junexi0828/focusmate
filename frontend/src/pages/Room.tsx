@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "@tanstack/react-router";
 import { Button } from "../components/ui/button";
 import { TimerDisplay } from "../features/timer/components/TimerDisplay";
@@ -44,11 +44,13 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const [listParticipants, setListParticipants] = useState<
     { id: string; name: string; isHost: boolean }[]
   >([]);
+  const [participantCount, setParticipantCount] = useState<number | null>(null);
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
   const [currentParticipantId, setCurrentParticipantId] = useState<
     string | null
   >(null);
   const [participantName, setParticipantName] = useState<string>("");
+  const maxParticipants = room?.max_participants ?? 50;
 
   // WebSocket 연결 상태
   const {
@@ -114,8 +116,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     loadRoom();
   }, [roomId, onLeaveRoom]);
 
+  const participantSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Load participants
-  const loadParticipants = async (roomId: string) => {
+  const loadParticipants = useCallback(async (roomId: string) => {
     setIsLoadingParticipants(true);
     try {
       const response = await participantService.getParticipants(roomId);
@@ -142,13 +146,40 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         }));
         setParticipants(uiParticipants);
         setListParticipants(listFormat);
+        setParticipantCount(uiParticipants.length);
       }
     } catch (error) {
       console.error("Failed to load participants:", error);
     } finally {
       setIsLoadingParticipants(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!roomId || participantCount === null) {
+      return;
+    }
+
+    if (participantCount === listParticipants.length) {
+      return;
+    }
+
+    if (participantSyncTimeoutRef.current) {
+      return;
+    }
+
+    participantSyncTimeoutRef.current = setTimeout(() => {
+      participantSyncTimeoutRef.current = null;
+      loadParticipants(roomId);
+    }, 300);
+
+    return () => {
+      if (participantSyncTimeoutRef.current) {
+        clearTimeout(participantSyncTimeoutRef.current);
+        participantSyncTimeoutRef.current = null;
+      }
+    };
+  }, [participantCount, listParticipants.length, loadParticipants, roomId]);
 
   // Join room if needed
   const joinRoomIfNeeded = async (roomId: string) => {
@@ -436,11 +467,30 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 }
                 return [...prev, newParticipant];
               });
+              setListParticipants((prev) => {
+                if (prev.find((p) => p.id === newParticipant.id)) {
+                  return prev;
+                }
+                return [
+                  ...prev,
+                  {
+                    id: newParticipant.id,
+                    name: newParticipant.name,
+                    isHost: false,
+                  },
+                ];
+              });
               // Removed redundant loadParticipants() call - trust WS data
             } else if (message.data.action === "left") {
               setParticipants((prev) =>
                 prev.filter((p) => p.id !== message.data.participant_id)
               );
+              setListParticipants((prev) =>
+                prev.filter((p) => p.id !== message.data.participant_id)
+              );
+            }
+            if (typeof message.data.current_count === "number") {
+              setParticipantCount(message.data.current_count);
             }
           } else if (message.event === "timer_complete") {
             const { completed_session_type, next_session_type, auto_start } =
@@ -827,8 +877,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           {/* Participant List */}
           <div className="lg:block hidden">
             <ParticipantList
-              participants={participants}
+              participants={listParticipants}
               isLoading={isLoadingParticipants}
+              currentCount={participantCount ?? undefined}
+              maxCount={maxParticipants}
             />
           </div>
         </div>
@@ -836,8 +888,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         {/* Mobile Participant List */}
         <div className="lg:hidden mt-8">
           <ParticipantList
-            participants={participants}
+            participants={listParticipants}
             isLoading={isLoadingParticipants}
+            currentCount={participantCount ?? undefined}
+            maxCount={maxParticipants}
           />
         </div>
       </main>

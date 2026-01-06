@@ -63,9 +63,14 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
     # Initialize Redis Timer Listener (TTL-based expiry)
-    from app.infrastructure.tasks import redis_timer_listener
+    from app.infrastructure.tasks import (
+        redis_timer_listener,
+        reservation_notification_worker,
+    )
     import asyncio
 
+    listener_task = None
+    fallback_scheduler = None
     try:
         await redis_timer_listener.connect()
         # Start listener in background task
@@ -73,6 +78,32 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
     except Exception:
         logger.exception("⚠️ Redis Timer Listener initialization failed")
+
+    if not redis_timer_listener.is_available():
+        try:
+            from apscheduler.schedulers.asyncio import AsyncIOScheduler
+            from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
+
+            fallback_scheduler = AsyncIOScheduler()
+            fallback_scheduler.add_job(
+                check_expired_timers,
+                "interval",
+                minutes=1,
+                id="timer_cleanup_fallback",
+                replace_existing=True,
+            )
+            fallback_scheduler.start()
+            logger.info("✅ APScheduler fallback started (timer cleanup every 1 minute)")
+        except Exception:
+            logger.exception("⚠️ APScheduler fallback initialization failed")
+
+    # Initialize Reservation Notification Worker (polling-based)
+    reservation_task = None
+    try:
+        reservation_task = asyncio.create_task(reservation_notification_worker.start())
+        logger.info("✅ Reservation Notification Worker started (60s interval)")
+    except Exception:
+        logger.exception("⚠️ Reservation Notification Worker initialization failed")
 
     yield
 
@@ -82,10 +113,28 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Stop Redis Timer Listener
     try:
         await redis_timer_listener.disconnect()
-        listener_task.cancel()
+        if listener_task:
+            listener_task.cancel()
         logger.info("✅ Redis Timer Listener stopped")
     except Exception:
         logger.exception("⚠️ Error stopping Redis Timer Listener")
+
+    # Stop APScheduler fallback
+    try:
+        if fallback_scheduler:
+            fallback_scheduler.shutdown(wait=False)
+        logger.info("✅ APScheduler fallback stopped")
+    except Exception:
+        logger.exception("⚠️ Error stopping APScheduler fallback")
+
+    # Stop Reservation Notification Worker
+    try:
+        await reservation_notification_worker.stop()
+        if reservation_task:
+            reservation_task.cancel()
+        logger.info("✅ Reservation Notification Worker stopped")
+    except Exception:
+        logger.exception("⚠️ Error stopping Reservation Notification Worker")
 
     # Disconnect Redis
     try:

@@ -11,6 +11,8 @@ from app.domain.friend.schemas import (
     FriendResponse,
     FriendSearchParams,
 )
+from app.domain.notification.schemas import NotificationCreate
+from app.domain.notification.service import NotificationService
 from app.infrastructure.database.models.friend import FriendRequestStatus
 from app.infrastructure.repositories.friend_repository import (
     FriendRepository,
@@ -27,10 +29,12 @@ class FriendService:
         friend_request_repo: FriendRequestRepository,
         friend_repo: FriendRepository,
         presence_repo: PresenceRepository | None = None,
+        notification_service: NotificationService | None = None,
     ):
         self.friend_request_repo = friend_request_repo
         self.friend_repo = friend_repo
         self.presence_repo = presence_repo
+        self.notification_service = notification_service
 
     async def send_friend_request(
         self, sender_id: str, data: FriendRequestCreate
@@ -74,6 +78,28 @@ class FriendService:
 
         # Get sender info
         sender = await self.friend_repo.get_user_by_id(sender_id)
+
+        # Send notification
+        if self.notification_service and sender:
+            try:
+                await self.notification_service.create_notification(
+                    NotificationCreate(
+                        user_id=receiver_id,
+                        type="friend_request",
+                        title="친구 요청",
+                        message=f"{sender.username}님이 친구 요청을 보냈습니다.",
+                        data={
+                            "routing": {
+                                "type": "route",
+                                "path": "/friends",
+                            },
+                            "sender_id": sender.id,
+                        },
+                    )
+                )
+            except Exception as e:
+                # Don't fail the request if notification fails
+                pass
 
         return FriendRequestResponse(
             id=request.id,
@@ -160,6 +186,30 @@ class FriendService:
 
         # Get sender info
         sender = await self.friend_repo.get_user_by_id(request.sender_id)
+
+        # Get receiver info (for notification message)
+        receiver = await self.friend_repo.get_user_by_id(user_id)
+
+        # Send notification to the original sender
+        if self.notification_service and receiver:
+            try:
+                await self.notification_service.create_notification(
+                    NotificationCreate(
+                        user_id=request.sender_id,
+                        type="friend_request_accepted",
+                        title="친구 요청 수락",
+                        message=f"{receiver.username}님이 친구 요청을 수락했습니다.",
+                        data={
+                            "routing": {
+                                "type": "route",
+                                "path": "/friends",
+                            },
+                            "accepter_id": receiver.id,
+                        },
+                    )
+                )
+            except Exception:
+                pass
 
         return FriendRequestResponse(
             id=request.id,
