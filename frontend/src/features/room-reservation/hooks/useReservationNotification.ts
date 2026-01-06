@@ -9,7 +9,8 @@ import { notificationService } from "../../../lib/notificationService";
 export function useReservationNotification(
   reservations: RoomReservation[]
 ) {
-  const notifiedReservationsRef = useRef<Set<string>>(new Set());
+  const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const notifiedRefs = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     // Request notification permission if needed
@@ -17,63 +18,77 @@ export function useReservationNotification(
       notificationService.requestPermission().catch(console.error);
     }
 
-    // Check for upcoming reservations
-    const checkReservations = () => {
-      const now = new Date();
-      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-      const oneMinuteFromNow = new Date(now.getTime() + 1 * 60 * 1000);
+    // Clear any existing scheduled notifications
+    timeoutRefs.current.forEach((timeoutId) => {
+      clearTimeout(timeoutId);
+    });
+    timeoutRefs.current.clear();
 
-      reservations.forEach((reservation) => {
-        if (!reservation.is_active || reservation.is_completed) return;
-        if (notifiedReservationsRef.current.has(reservation.id)) return;
+    const now = Date.now();
 
-        const scheduledTime = new Date(reservation.scheduled_at);
-        const timeDiff = scheduledTime.getTime() - now.getTime();
-
-        // 5분 전 알림 (4분 30초 ~ 5분 30초 사이)
-        if (
-          timeDiff > 4.5 * 60 * 1000 &&
-          timeDiff < 5.5 * 60 * 1000 &&
-          !notifiedReservationsRef.current.has(`${reservation.id}-5min`)
-        ) {
-          showNotification(
-            "방 예약 알림",
-            `5분 후 "${formatReservationTime(reservation.scheduled_at)}" 예약이 시작됩니다.`
-          );
-          notifiedReservationsRef.current.add(`${reservation.id}-5min`);
-        }
-
-        // 1분 전 알림 (30초 ~ 1분 30초 사이)
-        if (
-          timeDiff > 30 * 1000 &&
-          timeDiff < 1.5 * 60 * 1000 &&
-          !notifiedReservationsRef.current.has(`${reservation.id}-1min`)
-        ) {
-          showNotification(
-            "방 예약 알림",
-            `1분 후 "${formatReservationTime(reservation.scheduled_at)}" 예약이 시작됩니다.`
-          );
-          notifiedReservationsRef.current.add(`${reservation.id}-1min`);
-        }
-
-        // 예약 시간 도달 (과거 1분 이내)
-        if (timeDiff <= 0 && timeDiff > -60 * 1000) {
-          if (!notifiedReservationsRef.current.has(`${reservation.id}-start`)) {
-            showNotification(
-              "방 예약 시작",
-              `"${formatReservationTime(reservation.scheduled_at)}" 예약 시간입니다. 방에 입장하세요!`
-            );
-            notifiedReservationsRef.current.add(`${reservation.id}-start`);
-          }
-        }
-      });
+    const scheduleNotification = (key: string, delayMs: number, title: string, body: string) => {
+      if (notifiedRefs.current.has(key)) {
+        return;
+      }
+      if (delayMs <= 0) {
+        showNotification(title, body);
+        notifiedRefs.current.add(key);
+        return;
+      }
+      const timeoutId = setTimeout(() => {
+        showNotification(title, body);
+        notifiedRefs.current.add(key);
+        timeoutRefs.current.delete(key);
+      }, delayMs);
+      timeoutRefs.current.set(key, timeoutId);
     };
 
-    // Check every 30 seconds
-    const interval = setInterval(checkReservations, 30000);
-    checkReservations(); // Initial check
+    reservations.forEach((reservation) => {
+      if (!reservation.is_active || reservation.is_completed) {
+        return;
+      }
+      const scheduledAt = new Date(reservation.scheduled_at).getTime();
+      const timeDiff = scheduledAt - now;
+      if (timeDiff <= -60 * 1000) {
+        return;
+      }
 
-    return () => clearInterval(interval);
+      const formattedTime = formatReservationTime(reservation.scheduled_at);
+
+      const fiveMinKey = `${reservation.id}-5min`;
+      const oneMinKey = `${reservation.id}-1min`;
+      const startKey = `${reservation.id}-start`;
+
+      const fiveMinDelay = scheduledAt - now - 5 * 60 * 1000;
+      const oneMinDelay = scheduledAt - now - 1 * 60 * 1000;
+      const startDelay = scheduledAt - now;
+
+      scheduleNotification(
+        fiveMinKey,
+        fiveMinDelay,
+        "방 예약 알림",
+        `5분 후 "${formattedTime}" 예약이 시작됩니다.`
+      );
+
+      scheduleNotification(
+        oneMinKey,
+        oneMinDelay,
+        "방 예약 알림",
+        `1분 후 "${formattedTime}" 예약이 시작됩니다.`
+      );
+
+      scheduleNotification(
+        startKey,
+        startDelay,
+        "방 예약 시작",
+        `"${formattedTime}" 예약 시간입니다. 방에 입장하세요!`
+      );
+    });
+
+    return () => {
+      timeoutRefs.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      timeoutRefs.current.clear();
+    };
   }, [reservations]);
 
   const showNotification = (title: string, body: string) => {
@@ -97,4 +112,3 @@ export function useReservationNotification(
     });
   };
 }
-

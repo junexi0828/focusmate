@@ -31,3 +31,11 @@ class TimerControlRequest(BaseModel):
     model_config = ConfigDict(strict=True)
 
     action: str  # "start", "pause", "reset"
+
+
+class StartTimerRequest(BaseModel):
+    """Start timer request with session type."""
+
+    model_config = ConfigDict(strict=True)
+
+    session_type: str = "work"  # "work" or "break"

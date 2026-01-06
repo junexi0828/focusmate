@@ -207,7 +207,7 @@ class MatchingPoolRepository:
             "by_gender": by_gender,
             "by_department": by_department,
             "by_matching_type": by_matching_type,
-            "average_wait_time_hours": round(average_wait_time_hours, 2),
+            "average_wait_time_hours": round(float(average_wait_time_hours), 2),
         }
 
     async def expire_old_pools(self) -> int:

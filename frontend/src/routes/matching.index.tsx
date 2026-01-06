@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authService } from "../features/auth/services/authService";
-import { matchingApi } from "../api/matching";
+import { matchingService } from "../features/matching/services/matchingService";
 import { PageTransition } from "../components/PageTransition";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
@@ -62,9 +62,9 @@ export const Route = createFileRoute("/matching/")({
   loader: async () => {
     try {
       const [poolStats, myPool, proposals] = await Promise.allSettled([
-        matchingApi.getPoolStats(),
-        matchingApi.getMyPool().catch(() => null),
-        matchingApi.getMyProposals().catch(() => []),
+        matchingService.getPoolStatistics().then((res) => res.data),
+        matchingService.getMyPool().then((res) => res.data).catch(() => null),
+        matchingService.getMyProposals().then((res) => res.data || []).catch(() => []),
       ]);
 
       return {
@@ -82,6 +82,7 @@ export const Route = createFileRoute("/matching/")({
 
 function MatchingComponent() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const initialData = Route.useLoaderData();
   const [isPinkCampusTrialMode, setIsPinkCampusTrialMode] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -104,21 +105,30 @@ function MatchingComponent() {
 
   const { data: stats } = useQuery({
     queryKey: ["matching", "stats"],
-    queryFn: () => matchingApi.getPoolStats(),
+    queryFn: async () => {
+      const res = await matchingService.getPoolStatistics();
+      return res.data;
+    },
     initialData: initialData.stats,
     enabled: !isPinkCampusTrialMode, // 데모 모드에서는 API 호출 안 함
   });
 
   const { data: myPool, refetch: refetchPool } = useQuery({
     queryKey: ["matching", "myPool"],
-    queryFn: () => matchingApi.getMyPool().catch(() => null),
+    queryFn: async () => {
+      const res = await matchingService.getMyPool();
+      return res.data;
+    },
     initialData: initialData.myPool,
     enabled: !isPinkCampusTrialMode, // 데모 모드에서는 API 호출 안 함
   });
 
   const { data: proposals = [], refetch: refetchProposals } = useQuery({
     queryKey: ["matching", "proposals"],
-    queryFn: () => matchingApi.getMyProposals(),
+    queryFn: async () => {
+      const res = await matchingService.getMyProposals();
+      return res.data || [];
+    },
     initialData: initialData.proposals,
     enabled: !isPinkCampusTrialMode, // 데모 모드에서는 API 호출 안 함
   });
@@ -128,8 +138,26 @@ function MatchingComponent() {
   const displayMyPool = isPinkCampusTrialMode ? demoPool : myPool;
   const displayProposals = isPinkCampusTrialMode ? demoProposals : proposals;
 
+  useEffect(() => {
+    const handleMatchingStatsUpdate = () => {
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) && query.queryKey[0] === "matching",
+      });
+    };
+
+    window.addEventListener("matching_stats_update", handleMatchingStatsUpdate);
+    return () => {
+      window.removeEventListener("matching_stats_update", handleMatchingStatsUpdate);
+    };
+  }, [queryClient]);
+
   const cancelPoolMutation = useMutation({
-    mutationFn: (poolId: string) => matchingApi.cancelPool(poolId),
+    mutationFn: async (poolId: string) => {
+      const res = await matchingService.cancelPool(poolId);
+      if (res.status === "error") throw new Error(res.error?.message);
+      return res.data;
+    },
     onSuccess: () => {
       toast.success("매칭 풀이 취소되었습니다");
       refetchPool();
@@ -140,13 +168,17 @@ function MatchingComponent() {
   });
 
   const respondToProposalMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       proposalId,
       action,
     }: {
       proposalId: string;
       action: { action: "accept" | "reject" };
-    }) => matchingApi.respondToProposal(proposalId, action),
+    }) => {
+      const res = await matchingService.respondToProposal(proposalId, action);
+      if (res.status === "error") throw new Error(res.error?.message);
+      return res.data;
+    },
     onSuccess: () => {
       toast.success("응답이 전송되었습니다");
       refetchProposals();
@@ -158,7 +190,11 @@ function MatchingComponent() {
   });
 
   const createPoolMutation = useMutation({
-    mutationFn: (data: MatchingPoolCreate) => matchingApi.createPool(data),
+    mutationFn: async (data: MatchingPoolCreate) => {
+      const res = await matchingService.createPool(data);
+      if (res.status === "error") throw new Error(res.error?.message);
+      return res.data;
+    },
     onSuccess: () => {
       toast.success("매칭 풀이 생성되었습니다");
       setIsCreating(false);

@@ -1,18 +1,23 @@
 """Timer domain service with state machine logic."""
 
 
+import logging
 from app.core.exceptions import (
     InvalidTimerStateException,
     RoomNotFoundException,
     TimerNotFoundException,
 )
+from app.domain.stats.service import StatsService
 from app.domain.timer.schemas import TimerStateResponse
-from app.infrastructure.database.models import Timer
+from app.infrastructure.database.models import Participant, Timer
 from app.infrastructure.repositories.room_repository import RoomRepository
+from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 from app.infrastructure.repositories.timer_repository import TimerRepository
 from app.shared.constants.timer import TimerPhase, TimerStatus
 from app.shared.utils.uuid import generate_uuid
 from datetime import UTC, datetime, timedelta
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class TimerService:
@@ -31,6 +36,71 @@ class TimerService:
         """
         self.timer_repo = timer_repository
         self.room_repo = room_repository
+
+    async def record_work_sessions_for_timer(
+        self,
+        db: AsyncSession,
+        timer: Timer,
+        room,
+        completed_at: datetime | None = None,
+    ) -> None:
+        """Record work sessions for participants who were present during the timer."""
+        if timer.phase != TimerPhase.WORK.value:
+            return
+        if not timer.started_at:
+            return
+
+        completion_time = completed_at or timer.completed_at
+        if not completion_time:
+            return
+
+        stmt = (
+            select(Participant)
+            .where(Participant.room_id == timer.room_id)
+            .where(Participant.user_id.isnot(None))
+            .where(Participant.joined_at <= completion_time)
+            .where(or_(Participant.left_at.is_(None), Participant.left_at >= timer.started_at))
+        )
+        participants_result = await db.execute(stmt)
+        participants = participants_result.scalars().all()
+
+        session_repo = SessionHistoryRepository(db)
+        stats_service = StatsService(session_repo, db)
+
+        # Determine session type and duration based on timer phase
+        session_type = "work" if timer.phase == TimerPhase.WORK.value else "break"
+        duration_minutes = room.work_duration if timer.phase == TimerPhase.WORK.value else room.break_duration
+
+        existing_user_ids = await session_repo.get_user_ids_by_room_type_completed_at(
+            timer.room_id,
+            session_type,  # Use actual session type
+            completion_time,
+        )
+
+        logger = logging.getLogger(__name__)
+        for participant in participants:
+            if not participant.user_id or participant.user_id in existing_user_ids:
+                continue
+            try:
+                await stats_service.record_session(
+                    user_id=participant.user_id,
+                    room_id=timer.room_id,
+                    session_type=session_type,  # ✅ Record both work and break
+                    duration_minutes=duration_minutes,  # Use appropriate duration
+                    completed_at=completion_time,
+                )
+                logger.info(
+                    "Recorded %s session for user %s in room %s",
+                    session_type,
+                    participant.user_id,
+                    timer.room_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to record session for user %s: %s",
+                    participant.user_id,
+                    e,
+                )
 
     async def get_or_create_timer(self, room_id: str) -> TimerStateResponse:
         """Get timer for room, creating if not exists.
@@ -68,10 +138,17 @@ class TimerService:
             **TimerStateResponse.model_validate(timer).model_dump(),
             "target_timestamp": None,
             "session_type": "work" if timer.phase == TimerPhase.WORK.value else "break",
+            "work_duration": room.work_duration * 60,  # Add duration in seconds
+            "break_duration": room.break_duration * 60,  # Add duration in seconds
         }
         return TimerStateResponse(**response_dict)
 
-    async def start_timer(self, room_id: str, session_type: str = "work") -> TimerStateResponse:
+    async def start_timer(
+        self,
+        room_id: str,
+        session_type: str = "work",
+        db: AsyncSession | None = None,
+    ) -> TimerStateResponse:
         """Start timer.
 
         Args:
@@ -109,10 +186,20 @@ class TimerService:
                 current_remaining = max(0, timer.remaining_seconds - int(elapsed))
 
                 if current_remaining == 0:
+                    completion_time = timer.completed_at or datetime.now(UTC)
                     timer.status = TimerStatus.COMPLETED.value
-                    timer.completed_at = datetime.now(UTC)
+                    timer.completed_at = completion_time
                     timer.remaining_seconds = 0
                     await self.timer_repo.update(timer)
+                    if db is not None:
+                        room = await self.room_repo.get_by_id(room_id)
+                        if room:
+                            await self.record_work_sessions_for_timer(
+                                db,
+                                timer,
+                                room,
+                                completion_time,
+                            )
 
         # Handle phase switch request
         current_session_type = "work" if timer.phase == TimerPhase.WORK.value else "break"
@@ -154,6 +241,8 @@ class TimerService:
                 **TimerStateResponse.model_validate(timer).model_dump(),
                 "target_timestamp": target_timestamp,
                 "session_type": "work" if timer.phase == TimerPhase.WORK.value else "break",
+                "work_duration": room.work_duration * 60,  # Add duration in seconds
+                "break_duration": room.break_duration * 60,  # Add duration in seconds
             }
             return TimerStateResponse(**response_dict)
 
@@ -191,6 +280,8 @@ class TimerService:
             **TimerStateResponse.model_validate(updated_timer).model_dump(),
             "target_timestamp": target_timestamp,
             "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
+            "work_duration": room.work_duration * 60,  # Add duration in seconds
+            "break_duration": room.break_duration * 60,  # Add duration in seconds
         }
         return TimerStateResponse(**response_dict)
 
@@ -236,6 +327,8 @@ class TimerService:
             **TimerStateResponse.model_validate(updated_timer).model_dump(),
             "target_timestamp": None,
             "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
+            "work_duration": room.work_duration * 60,  # Add duration in seconds
+            "break_duration": room.break_duration * 60,  # Add duration in seconds
         }
         return TimerStateResponse(**response_dict)
 
@@ -279,6 +372,8 @@ class TimerService:
             **TimerStateResponse.model_validate(updated_timer).model_dump(),
             "target_timestamp": target_timestamp,
             "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
+            "work_duration": room.work_duration * 60,  # Add duration in seconds
+            "break_duration": room.break_duration * 60,  # Add duration in seconds
         }
         return TimerStateResponse(**response_dict)
 
@@ -319,10 +414,16 @@ class TimerService:
             **TimerStateResponse.model_validate(updated_timer).model_dump(),
             "target_timestamp": None,
             "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
+            "work_duration": room.work_duration * 60,  # Add duration in seconds
+            "break_duration": room.break_duration * 60,  # Add duration in seconds
         }
         return TimerStateResponse(**response_dict)
 
-    async def complete_phase(self, room_id: str) -> TimerStateResponse:
+    async def complete_phase(
+        self,
+        room_id: str,
+        completed_at: datetime | None = None,
+    ) -> TimerStateResponse:
         """Complete current timer phase and transition to next phase.
 
         Args:
@@ -349,8 +450,9 @@ class TimerService:
             raise InvalidTimerStateException(timer.status, "complete")
 
         # Mark as completed
+        completion_time = timer.completed_at or completed_at or datetime.now(UTC)
         timer.status = TimerStatus.COMPLETED.value
-        timer.completed_at = datetime.now(UTC)
+        timer.completed_at = completion_time
         timer.remaining_seconds = 0
 
         # Transition to next phase
@@ -394,7 +496,11 @@ class TimerService:
         }
         return TimerStateResponse(**response_dict)
 
-    async def get_timer_state(self, room_id: str) -> TimerStateResponse:
+    async def get_timer_state(
+        self,
+        room_id: str,
+        db: AsyncSession | None = None,
+    ) -> TimerStateResponse:
         """Get current timer state (with real-time calculation).
 
         Args:
@@ -417,10 +523,20 @@ class TimerService:
 
             # Check if timer completed
             if current_remaining == 0:
+                completion_time = timer.completed_at or datetime.now(UTC)
                 timer.status = TimerStatus.COMPLETED.value
-                timer.completed_at = datetime.now(UTC)
+                timer.completed_at = completion_time
                 timer.remaining_seconds = 0
                 await self.timer_repo.update(timer)
+                if db is not None:
+                    room = await self.room_repo.get_by_id(room_id)
+                    if room:
+                        await self.record_work_sessions_for_timer(
+                            db,
+                            timer,
+                            room,
+                            completion_time,
+                        )
 
         # Calculate target_timestamp if running
         target_timestamp = None

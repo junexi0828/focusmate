@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/PageTransition";
-import { matchingApi } from "@/api/matching";
+import { verificationService } from "../features/verification/services/verificationService";
 import { toast } from "sonner";
 
 export default function VerificationPage() {
@@ -35,7 +35,11 @@ export default function VerificationPage() {
   // Fetch current verification status
   const { data: verification, isLoading } = useQuery({
     queryKey: ["verification-status"],
-    queryFn: matchingApi.getVerificationStatus,
+    queryFn: async () => {
+      const response = await verificationService.getStatus();
+      if (response.status === "error") throw new Error(response.error?.message);
+      return response.data;
+    },
   });
 
   // Submit verification mutation
@@ -47,16 +51,23 @@ export default function VerificationPage() {
 
       // 1. Upload file first
       const uploadResponse =
-        await matchingApi.uploadVerificationFile(selectedFile);
+        await verificationService.uploadDocuments([selectedFile]);
+
+      if (uploadResponse.status === "error") {
+        throw new Error(
+          uploadResponse.error?.message || "파일 업로드에 실패했습니다"
+        );
+      }
 
       if (
-        !uploadResponse.uploaded_files ||
-        uploadResponse.uploaded_files.length === 0
+        !uploadResponse.data ||
+        !uploadResponse.data.uploaded_files ||
+        uploadResponse.data.uploaded_files.length === 0
       ) {
         throw new Error("파일 업로드에 실패했습니다");
       }
 
-      const fileUrl = uploadResponse.uploaded_files[0];
+      const fileUrl = uploadResponse.data.uploaded_files[0];
 
       // 2. Submit verification with file URL
       const submitData: any = {
@@ -75,7 +86,11 @@ export default function VerificationPage() {
         submitData.student_id = formData.student_id;
       }
 
-      return matchingApi.submitVerification(submitData);
+      const response = await verificationService.submitVerification(submitData);
+      if (response.status === "error") {
+        throw new Error(response.error?.message || "인증 제출에 실패했습니다");
+      }
+      return response.data;
     },
     onSuccess: () => {
       toast.success("인증이 제출되었습니다. 검토까지 1-2일 소요됩니다.");

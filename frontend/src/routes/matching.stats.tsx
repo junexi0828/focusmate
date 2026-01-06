@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MatchingStatsPage } from "../pages/MatchingStats";
 import { authService } from "../features/auth/services/authService";
-import { matchingApi } from "../api/matching";
+import { matchingService } from "../features/matching/services/matchingService";
 import { PageTransition } from "../components/PageTransition";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
@@ -24,8 +24,9 @@ export const Route = createFileRoute("/matching/stats")({
     }
 
     try {
-      const stats = await matchingApi.getComprehensiveStats();
-      return { stats };
+      const response = await matchingService.getComprehensiveStatistics();
+      if (response.status === 'error') throw response.error;
+      return { stats: response.data };
     } catch (error: any) {
       console.error("Failed to load matching stats:", error);
       return { stats: null };
@@ -100,11 +101,27 @@ function MatchingStatsComponent() {
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["matching", "comprehensive-stats"],
-    queryFn: () => matchingApi.getComprehensiveStats(),
+    queryFn: async () => {
+      const res = await matchingService.getComprehensiveStatistics();
+      if (res.status === 'error') throw res.error;
+      return res.data;
+    },
     initialData: initialData.stats,
-    refetchInterval: 30000, // Refresh every 30 seconds
     enabled: !isDemo, // 데모 모드에서는 API 호출 안 함
   });
+
+  useEffect(() => {
+    const handleMatchingStatsUpdate = () => {
+      queryClient.invalidateQueries({
+        queryKey: ["matching", "comprehensive-stats"],
+      });
+    };
+
+    window.addEventListener("matching_stats_update", handleMatchingStatsUpdate);
+    return () => {
+      window.removeEventListener("matching_stats_update", handleMatchingStatsUpdate);
+    };
+  }, [queryClient]);
 
   const displayStats = isDemo ? demoStats : stats;
 
@@ -155,4 +172,3 @@ function MatchingStatsComponent() {
     </PageTransition>
   );
 }
-

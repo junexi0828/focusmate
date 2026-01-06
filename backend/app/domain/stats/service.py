@@ -9,6 +9,7 @@ from app.infrastructure.database.models.session_history import SessionHistory
 from app.infrastructure.repositories.ranking_repository import RankingRepository
 from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
 from app.shared.utils.uuid import generate_uuid
+from app.infrastructure.websocket.notification_manager import notification_ws_manager
 from datetime import UTC, datetime, timedelta
 
 
@@ -29,8 +30,10 @@ class StatsService:
         room_id: str,
         session_type: str,
         duration_minutes: int,
+        completed_at: datetime | None = None,
     ) -> dict:
         """Record a completed session and sync with ranking system."""
+        completion_time = completed_at or datetime.now(UTC)
         # Create session history record
         session = SessionHistory(
             id=generate_uuid(),
@@ -38,7 +41,7 @@ class StatsService:
             room_id=room_id,
             session_type=session_type,
             duration_minutes=duration_minutes,
-            completed_at=datetime.now(UTC),
+            completed_at=completion_time,
         )
         await self.repository.create(session)
 
@@ -61,6 +64,32 @@ class StatsService:
                 # Log error but don't fail the request
                 import logging
                 logging.exception(f"Failed to sync session with ranking system: {e!s}")
+
+        # Send realtime stats update via WebSocket (no DB notification record)
+        try:
+            await notification_ws_manager.send_notification(
+                {
+                    "type": "notification",
+                    "data": {
+                        "notification_id": session.id,
+                        "type": "stats_update",
+                        "title": "stats_update",
+                        "message": "",
+                        "data": {
+                            "user_id": user_id,
+                            "room_id": room_id,
+                        },
+                        "created_at": completion_time.isoformat(),
+                    },
+                },
+                user_id,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send stats update notification: %s",
+                e,
+            )
 
         return {"status": "recorded", "session_id": session.id}
 

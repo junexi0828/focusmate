@@ -193,6 +193,27 @@ export function useServerTimer({
     }
   }, [roomId, updateTimerState]);
 
+  const completeSession = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await timerService.completeTimer(roomId);
+      if (response.status === "success" && response.data) {
+        updateTimerState(response.data);
+        toast.success("세션이 완료되었습니다");
+        return response.data;
+      } else {
+        toast.error(response.error?.message || "세션 완료 처리에 실패했습니다");
+        return null;
+      }
+    } catch (error) {
+      console.error("Failed to complete session:", error);
+      toast.error("네트워크 오류가 발생했습니다");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [roomId, updateTimerState]);
+
   // Calculate display values
   const remainingSeconds = timerState
     ? timerState.status === "running"
@@ -232,6 +253,7 @@ export function useServerTimer({
     pauseTimer,
     resumeTimer,
     resetTimer,
+    completeSession,
     updateTimerState,
   };
 }

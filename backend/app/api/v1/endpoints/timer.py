@@ -14,6 +14,8 @@ from app.domain.timer.schemas import TimerStateResponse, StartTimerRequest
 from app.domain.timer.service import TimerService
 from app.infrastructure.repositories.room_repository import RoomRepository
 from app.infrastructure.repositories.timer_repository import TimerRepository
+from app.infrastructure.websocket.manager import connection_manager
+from datetime import UTC, datetime
 
 
 router = APIRouter(prefix="/timer", tags=["timer"])
@@ -27,16 +29,36 @@ def get_timer_service(
     return TimerService(timer_repo, room_repo)
 
 
+async def broadcast_timer_update(room_id: str, timer_state: TimerStateResponse) -> None:
+    """Broadcast timer state update to all clients in room."""
+    try:
+        await connection_manager.broadcast_to_room(
+            {
+                "event": "timer_update",
+                "data": timer_state.model_dump(),
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            room_id,
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to broadcast timer update for room {room_id}: {e}")
+
+
 @router.get("/{room_id}", response_model=TimerStateResponse)
 async def get_timer_state(
     room_id: str,
     service: Annotated[TimerService, Depends(get_timer_service)],
+    db: DatabaseSession,
 ) -> TimerStateResponse:
     """Get current timer state for a room.
 
     Returns real-time calculated state including remaining seconds.
     """
     try:
+        return await service.get_timer_state(room_id, db=db)
+    except TimerNotFoundException:
         return await service.get_or_create_timer(room_id)
     except RoomNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
@@ -47,13 +69,16 @@ async def start_timer(
     room_id: str,
     request: StartTimerRequest,
     service: Annotated[TimerService, Depends(get_timer_service)],
+    db: DatabaseSession,
 ) -> TimerStateResponse:
     """Start the timer.
 
     Transitions from IDLE or PAUSED to RUNNING.
     """
     try:
-        return await service.start_timer(room_id, request.session_type)
+        timer_state = await service.start_timer(room_id, request.session_type, db=db)
+        await broadcast_timer_update(room_id, timer_state)
+        return timer_state
     except TimerNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
@@ -70,7 +95,9 @@ async def pause_timer(
     Transitions from RUNNING to PAUSED, saving remaining time.
     """
     try:
-        return await service.pause_timer(room_id)
+        timer_state = await service.pause_timer(room_id)
+        await broadcast_timer_update(room_id, timer_state)
+        return timer_state
     except TimerNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
@@ -87,7 +114,9 @@ async def resume_timer(
     Transitions from PAUSED to RUNNING, continuing from remaining time.
     """
     try:
-        return await service.resume_timer(room_id)
+        timer_state = await service.resume_timer(room_id)
+        await broadcast_timer_update(room_id, timer_state)
+        return timer_state
     except TimerNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
@@ -104,7 +133,9 @@ async def reset_timer(
     Returns timer to IDLE state with full duration.
     """
     try:
-        return await service.reset_timer(room_id)
+        timer_state = await service.reset_timer(room_id)
+        await broadcast_timer_update(room_id, timer_state)
+        return timer_state
     except (TimerNotFoundException, RoomNotFoundException) as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
 
@@ -123,34 +154,30 @@ async def complete_phase(
     Automatically records session to session_history when work phase completes.
     """
     try:
-        timer_response = await service.complete_phase(room_id)
+        from app.shared.constants.timer import TimerPhase
+
+        timer = await service.timer_repo.get_by_room_id(room_id)
+        if not timer:
+            raise TimerNotFoundException(room_id)
+
+        room = await service.room_repo.get_by_id(room_id)
+        if not room:
+            raise RoomNotFoundException(room_id)
+
+        completion_time = timer.completed_at or datetime.now(UTC)
+        timer_response = await service.complete_phase(room_id, completed_at=completion_time)
 
         # ✅ 자동 세션 기록: WORK 단계 완료 시 세션 기록
-        if timer_response.phase == "break":  # WORK → BREAK 전환 시
-            from app.domain.stats.service import StatsService
-            from app.infrastructure.repositories.session_history_repository import SessionHistoryRepository
+        if timer.phase == TimerPhase.WORK.value:
+            await service.record_work_sessions_for_timer(
+                db,
+                timer,
+                room,
+                completion_time,
+            )
 
-            # ✅ 최적화: JOIN을 사용하여 단일 쿼리로 timer와 room 조회
-            result = await service.timer_repo.get_with_room_by_room_id(room_id)
-
-            if result:
-                timer, room = result
-                # 세션 기록
-                session_repo = SessionHistoryRepository(db)
-                stats_service = StatsService(session_repo, db)
-
-                try:
-                    await stats_service.record_session(
-                        user_id=current_user["id"],
-                        room_id=room_id,
-                        session_type="work",
-                        duration_minutes=room.work_duration,
-                    )
-                except Exception as e:
-                    # 세션 기록 실패해도 타이머 완료는 성공으로 처리
-                    import logging
-                    logging.warning(f"Failed to record session after timer completion: {e}")
-
+        # Broadcast timer completion and state update
+        await broadcast_timer_update(room_id, timer_response)
 
         return timer_response
     except TimerNotFoundException as e:

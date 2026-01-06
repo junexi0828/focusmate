@@ -22,6 +22,7 @@ from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.session_history_repository import (
     SessionHistoryRepository,
 )
+from app.infrastructure.websocket.notification_manager import notification_ws_manager
 
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -462,6 +463,30 @@ async def save_manual_session(
     db.add(new_session)
     await db.commit()
     await db.refresh(new_session)
+
+    try:
+        await notification_ws_manager.send_notification(
+            {
+                "type": "notification",
+                "data": {
+                    "notification_id": str(new_session.id),
+                    "type": "stats_update",
+                    "title": "stats_update",
+                    "message": "",
+                    "data": {
+                        "user_id": user_id,
+                    },
+                    "created_at": new_session.completed_at.isoformat(),
+                },
+            },
+            user_id,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Failed to send stats update notification: %s",
+            e,
+        )
 
     return ManualSessionResponse.model_validate(new_session)
 

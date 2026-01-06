@@ -1,6 +1,7 @@
 """Room Reservation API endpoints."""
 
 from typing import Annotated, List
+from datetime import UTC, datetime
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,6 +19,17 @@ from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.room_reservation_repository import (
     RoomReservationRepository,
 )
+from app.domain.notification.service import NotificationService
+from app.domain.notification.schemas import NotificationCreate
+from app.infrastructure.repositories.notification_repository import (
+    NotificationRepository,
+)
+from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.repositories.user_settings_repository import (
+    UserSettingsRepository,
+)
+from app.infrastructure.websocket.notification_manager import notification_ws_manager
+from app.shared.utils.uuid import generate_uuid
 
 
 router = APIRouter(prefix="/room-reservations", tags=["room-reservations"])
@@ -38,6 +50,36 @@ def get_room_reservation_service(
     """Get room reservation service."""
     return RoomReservationService(repository)
 
+async def send_reservation_update(
+    user_id: str,
+    reservation_id: str,
+    action: str,
+) -> None:
+    """Send reservation update event via WebSocket."""
+    try:
+        await notification_ws_manager.send_notification(
+            {
+                "type": "notification",
+                "data": {
+                    "notification_id": generate_uuid(),
+                    "type": "reservation_update",
+                    "title": "reservation_update",
+                    "message": "",
+                    "data": {
+                        "reservation_id": reservation_id,
+                        "action": action,
+                    },
+                    "created_at": datetime.now(UTC).isoformat(),
+                },
+            },
+            user_id,
+        )
+    except Exception as e:
+        logging.getLogger(__name__).warning(
+            "Failed to send reservation update: %s",
+            e,
+        )
+
 
 @router.post("/", response_model=RoomReservationResponse, status_code=status.HTTP_201_CREATED)
 async def create_reservation(
@@ -47,7 +89,9 @@ async def create_reservation(
 ) -> RoomReservationResponse:
     """Create a new room reservation."""
     try:
-        return await service.create_reservation(current_user["id"], data)
+        created = await service.create_reservation(current_user["id"], data)
+        await send_reservation_update(current_user["id"], created.id, "created")
+        return created
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -86,7 +130,9 @@ async def update_reservation(
 ) -> RoomReservationResponse:
     """Update a reservation."""
     try:
-        return await service.update_reservation(reservation_id, current_user["id"], data)
+        updated = await service.update_reservation(reservation_id, current_user["id"], data)
+        await send_reservation_update(current_user["id"], reservation_id, "updated")
+        return updated
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except NotFoundException as e:
@@ -106,6 +152,7 @@ async def cancel_reservation(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found"
             )
+        await send_reservation_update(current_user["id"], reservation_id, "cancelled")
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -154,14 +201,42 @@ async def send_notifications(
         reservations = await service.get_reservations_needing_notification()
         sent_count = 0
 
-        for reservation in reservations:
-            try:
-                # Here you would integrate with your notification system
-                # For now, just mark as sent
-                await service.mark_notification_sent(reservation.id)
-                sent_count += 1
-            except Exception as e:
-                logging.getLogger(__name__).error(f"Error sending notification for reservation {reservation.id}: {e}")
+        from app.infrastructure.database.session import get_db
+
+        async for db in get_db():
+            notification_repo = NotificationRepository(db)
+            settings_repo = UserSettingsRepository(db)
+            user_repo = UserRepository(db)
+            notification_service = NotificationService(
+                notification_repo,
+                settings_repo,
+                user_repo,
+            )
+
+            for reservation in reservations:
+                try:
+                    scheduled_time = reservation.scheduled_at.astimezone(UTC).strftime("%m/%d %H:%M")
+                    notification_data = NotificationCreate(
+                        user_id=reservation.user_id,
+                        type="reservation",
+                        title="방 예약 알림",
+                        message=f"{scheduled_time} 예약이 곧 시작됩니다.",
+                        data={
+                            "routing": {
+                                "type": "route",
+                                "path": "/reservations",
+                            },
+                            "reservation_id": reservation.id,
+                        },
+                    )
+                    await notification_service.create_notification(notification_data)
+                    await service.mark_notification_sent(reservation.id)
+                    sent_count += 1
+                except Exception as e:
+                    logging.getLogger(__name__).error(
+                        f"Error sending notification for reservation {reservation.id}: {e}"
+                    )
+            break
 
         return {
             "status": "success",
@@ -173,4 +248,3 @@ async def send_notifications(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to send notifications: {e!s}"
         )
-

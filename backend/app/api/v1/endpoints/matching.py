@@ -2,6 +2,7 @@
 
 from typing import Annotated, Optional
 from uuid import UUID
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -19,6 +20,8 @@ from app.infrastructure.repositories.matching_pool_repository import (
 from app.infrastructure.repositories.verification_repository import (
     VerificationRepository,
 )
+from app.infrastructure.websocket.notification_manager import notification_ws_manager
+from app.shared.utils.uuid import generate_uuid
 
 
 router = APIRouter(prefix="/matching", tags=["matching"])
@@ -32,6 +35,31 @@ def get_matching_pool_service(
     verification_repository = VerificationRepository(db)
     return OptimizedMatchingPoolService(pool_repository, verification_repository)
 
+async def broadcast_matching_stats_update() -> None:
+    """Broadcast matching stats update to all online users."""
+    try:
+        online_users = notification_ws_manager.get_online_users()
+        if not online_users:
+            return
+        payload = {
+            "type": "notification",
+            "data": {
+                "notification_id": generate_uuid(),
+                "type": "matching_stats_update",
+                "title": "matching_stats_update",
+                "message": "",
+                "data": {},
+                "created_at": datetime.now(UTC).isoformat(),
+            },
+        }
+        await notification_ws_manager.broadcast_notification(payload, online_users)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Failed to broadcast matching stats update: %s",
+            e,
+        )
+
 
 # Matching Pool Endpoints
 @router.post("/pools", status_code=status.HTTP_201_CREATED)
@@ -44,7 +72,9 @@ async def create_matching_pool(
 ) -> MatchingPoolResponse:
     """Create a new matching pool."""
     try:
-        return await service.create_pool(current_user["id"], data)
+        pool = await service.create_pool(current_user["id"], data)
+        await broadcast_matching_stats_update()
+        return pool
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -119,6 +149,7 @@ async def cancel_matching_pool(
     try:
         success = await service.cancel_pool(pool_id, current_user["id"])
         if success:
+            await broadcast_matching_stats_update()
             return {"message": "매칭 풀이 취소되었습니다."}
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Pool not found"

@@ -2,6 +2,7 @@
 
 from typing import Annotated, List
 from uuid import UUID
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -12,6 +13,8 @@ from app.infrastructure.repositories.chat_repository import ChatRepository
 from app.infrastructure.repositories.matching_pool_repository import (
     MatchingPoolRepository,
 )
+from app.infrastructure.websocket.notification_manager import notification_ws_manager
+from app.shared.utils.uuid import generate_uuid
 
 
 router = APIRouter(prefix="/matching/proposals", tags=["matching-proposals"])
@@ -25,6 +28,31 @@ def get_proposal_service(
     pool_repo = MatchingPoolRepository(db)
     chat_repo = ChatRepository(db)
     return ProposalService(proposal_repo, pool_repo, chat_repo)
+
+async def broadcast_matching_stats_update() -> None:
+    """Broadcast matching stats update to all online users."""
+    try:
+        online_users = notification_ws_manager.get_online_users()
+        if not online_users:
+            return
+        payload = {
+            "type": "notification",
+            "data": {
+                "notification_id": generate_uuid(),
+                "type": "matching_stats_update",
+                "title": "matching_stats_update",
+                "message": "",
+                "data": {},
+                "created_at": datetime.now(UTC).isoformat(),
+            },
+        }
+        await notification_ws_manager.broadcast_notification(payload, online_users)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Failed to broadcast matching stats update: %s",
+            e,
+        )
 
 
 @router.get("/my", response_model=list[ProposalResponse])
@@ -61,9 +89,11 @@ async def respond_to_proposal(
                 detail="No active pool found",
             )
 
-        return await service.respond_to_proposal(
+        response = await service.respond_to_proposal(
             proposal_id, pool.pool_id, action
         )
+        await broadcast_matching_stats_update()
+        return response
     except HTTPException:
         raise
     except ValueError as e:

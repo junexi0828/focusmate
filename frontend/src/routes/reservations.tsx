@@ -63,6 +63,17 @@ function ReservationsComponent() {
     enabled: !!user?.id,
   });
 
+  useEffect(() => {
+    const handleReservationUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+    };
+
+    window.addEventListener("reservation_update", handleReservationUpdate);
+    return () => {
+      window.removeEventListener("reservation_update", handleReservationUpdate);
+    };
+  }, [queryClient]);
+
   const cancelMutation = useMutation({
     mutationFn: (reservationId: string) =>
       roomReservationService.cancelReservation(reservationId),
@@ -463,4 +474,3 @@ function ReservationCard({
     </Card>
   );
 }
-
