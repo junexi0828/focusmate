@@ -87,19 +87,20 @@ async def websocket_endpoint(
 
         logger.info(f"[Room WS] Connected {current_user.username} to room_id={room_id}")
 
-        # Get token_id for activity tracking
-        from app.infrastructure.redis.session_helpers import get_token_id, track_user_activity
+        # Get token_id for activity tracking (optional - non-critical)
+        token_id = None
+        try:
+            from app.infrastructure.redis.session_helpers import get_token_id, track_user_activity
 
-        token_id = await get_token_id(current_user.id)
-        if not token_id:
-            logger.warning(f"[Room WS] No token_id found for user {current_user.id}, activity tracking disabled")
-
-        # Track initial connection activity
-        if token_id:
-            try:
+            token_id = await get_token_id(current_user.id)
+            if token_id:
                 await track_user_activity(current_user.id, token_id, room_id)
-            except Exception as e:
-                logger.warning(f"[Room WS] Failed to track initial activity: {e}")
+                logger.debug(f"[Room WS] Activity tracked for user {current_user.id}")
+            else:
+                logger.warning(f"[Room WS] No token_id found for user {current_user.id}")
+        except Exception as e:
+            # Redis errors are non-critical - session tracking is optional
+            logger.warning(f"[Room WS] Session tracking failed (non-critical): {e}")
 
         timer_service = TimerService(
             TimerRepository(db),
