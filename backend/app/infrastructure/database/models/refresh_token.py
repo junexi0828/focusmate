@@ -23,7 +23,7 @@ class RefreshToken(Base):
         created_at: Token creation timestamp
     """
 
-    __tablename__ = "refresh_tokens"
+    __tablename__ = "user_refresh_tokens"
 
     id: Mapped[str] = mapped_column(
         String(36),
