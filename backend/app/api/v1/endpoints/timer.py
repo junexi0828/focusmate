@@ -163,6 +163,8 @@ async def pause_timer(
         timer_state = await service.pause_timer(room_id)
         await broadcast_timer_update(room_id, timer_state)
         return timer_state
+    except RoomNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except TimerNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
@@ -190,6 +192,8 @@ async def resume_timer(
         timer_state = await service.resume_timer(room_id)
         await broadcast_timer_update(room_id, timer_state)
         return timer_state
+    except RoomNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except TimerNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
