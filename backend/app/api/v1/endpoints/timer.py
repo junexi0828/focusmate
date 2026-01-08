@@ -11,6 +11,7 @@ from app.api.deps import (
     get_timer_repository,
 )
 from app.core.exceptions import (
+    ForbiddenException,
     InvalidTimerStateException,
     RoomNotFoundException,
     TimerNotFoundException,
