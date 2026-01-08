@@ -83,14 +83,24 @@ export function useWebSocketStatus(roomId: string | null) {
 
       if (state === "disconnected" && roomId) {
         const maxAttempts = wsClient.getMaxReconnectAttempts();
-        if (attempts && attempts >= maxAttempts) {
+
+        // 첫 번째 재연결 시도는 조용히 처리 (방 생성 직후 Race Condition 대응)
+        if (attempts === 1) {
+          setConnectionError(null);
+        } else if (attempts && attempts >= maxAttempts) {
+          // 최대 재연결 시도 횟수 초과
           setConnectionError("자동 재연결에 실패했습니다. 수동으로 재연결을 시도해주세요.");
-        } else {
+        } else if (attempts && attempts > 1) {
+          // 2번째 이상 재연결 시도 시에만 메시지 표시
           setConnectionError("연결이 끊어졌습니다. 재연결을 시도합니다...");
         }
       } else if (state === "connecting") {
-        setConnectionError("재연결 중...");
+        // 연결 중일 때는 재시도 횟수에 따라 메시지 표시
+        if (reconnectAttempts > 1) {
+          setConnectionError("재연결 중...");
+        }
       } else {
+        // 연결 성공 시 에러 메시지 제거
         setConnectionError(null);
       }
     });
@@ -98,7 +108,7 @@ export function useWebSocketStatus(roomId: string | null) {
     return () => {
       unsubscribe();
     };
-  }, [roomId]);
+  }, [roomId, reconnectAttempts]);
 
   return {
     isConnected,
