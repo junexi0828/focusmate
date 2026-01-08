@@ -438,9 +438,23 @@ class TimerService:
         if not timer:
             raise TimerNotFoundException(room_id)
 
-        room = await self.room_repo.get_by_id(room_id)
         if not room:
             raise RoomNotFoundException(room_id)
+
+        # Record partial session if timer was running
+        if timer.status == TimerStatus.RUNNING.value and timer.started_at and db:
+             try:
+                 # Use current time as completion time for partial session
+                 completion_time = datetime.now(UTC)
+                 await self.record_work_sessions_for_timer(
+                    db,
+                    timer,
+                    room,
+                    completed_at=completion_time,
+                 )
+             except Exception as e:
+                 # Log error but don't fail reset
+                 logging.getLogger(__name__).warning(f"Failed to record statistics on timer reset: {e}")
 
         # Reset to work phase
         timer.status = TimerStatus.IDLE.value

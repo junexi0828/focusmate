@@ -155,7 +155,7 @@ class RoomService:
                                 timer.remaining_seconds = int(timer.remaining_seconds * ratio)
                             timer.duration = room.break_duration * 60
                             timer.remaining_seconds = min(timer.remaining_seconds, room.break_duration * 60)
-                        elif timer.status == "idle":
+                        if timer.status == "idle":
                             # If idle, update duration for next phase
                             if timer.phase == "work" and work_duration_changed:
                                 timer.duration = room.work_duration * 60
@@ -163,6 +163,10 @@ class RoomService:
                             elif timer.phase == "break" and break_duration_changed:
                                 timer.duration = room.break_duration * 60
                                 timer.remaining_seconds = room.break_duration * 60
+
+                        # Sync auto_start setting
+                        if data.auto_start_break is not None:
+                            timer.is_auto_start = data.auto_start_break
 
                         await timer_repo.update(timer)
                     break

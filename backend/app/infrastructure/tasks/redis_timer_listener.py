@@ -111,42 +111,35 @@ class RedisTimerListener:
                 room_repo = RoomRepository(db)
                 timer_service = TimerService(timer_repo, room_repo)
 
+                logger.info(f"⏳ Processing expiry for room {room_id} via TimerService.complete_phase")
+
+                # Check if timer exists and is running
                 timer = await timer_repo.get_by_room_id(room_id)
                 if not timer or timer.status != TimerStatus.RUNNING.value:
+                    logging.getLogger(__name__).info(f"⏭️ Timer for room {room_id} is not running, skipping expiry.")
                     return
 
-                room = await room_repo.get_by_id(room_id)
-                if not room:
-                    return
+                # Delegate to complete_phase which handles:
+                # 1. State transition (Work -> Break)
+                # 2. Stats recording (calls record_work_sessions_for_timer)
+                # 3. Auto-start logic (is_auto_start check)
+                timer_state = await timer_service.complete_phase(room_id)
 
-                completion_time = timer.completed_at or datetime.now(UTC)
-                timer.status = TimerStatus.COMPLETED.value
-                timer.completed_at = completion_time
-                timer.remaining_seconds = 0
-                await timer_repo.update(timer)
+                # Re-fetch timer to check previous phase for notification
+                # (complete_phase returns the NEXT phase state)
+                # We need to know what Just completed.
+                # If current(new) phase is BREAK, then WORK completed.
+                completed_session_type = "work" if timer_state.phase == "break" else "break"
+                next_session_type = timer_state.phase
 
-                await timer_service.record_work_sessions_for_timer(
-                    db,
-                    timer,
-                    room,
-                    completion_time,
-                )
-
-                timer_state = await timer_service.get_timer_state(room_id, db=db)
-
-                # Global Broadcast: Publish to Redis Channel
-                completed_session_type = (
-                    "work" if timer.phase == TimerPhase.WORK.value else "break"
-                )
-                next_session_type = "break" if completed_session_type == "work" else "work"
-
+                # Global Broadcast
                 await redis_pubsub_manager.publish_event(
                     UUID(room_id),
                     "timer_complete",
                     {
                         "completed_session_type": completed_session_type,
                         "next_session_type": next_session_type,
-                        "auto_start": False,
+                        "auto_start": timer_state.status == "running",
                     }
                 )
 
@@ -156,7 +149,7 @@ class RedisTimerListener:
                     timer_state.model_dump()
                 )
 
-                logger.info(f"✅ Successfully completed expired timer for room {room_id}")
+                logger.info(f"✅ Successfully completed expired timer for room {room_id} (Auto-Start: {timer_state.status == 'running'})")
 
             except Exception as e:
                 logger.error(

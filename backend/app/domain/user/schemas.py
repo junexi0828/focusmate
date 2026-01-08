@@ -62,6 +62,7 @@ class TokenResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
     access_token: str
+    refresh_token: str | None = None  # Optional, set as HttpOnly cookie
     token_type: str = "bearer"
     user: UserResponse
 
