@@ -1,8 +1,7 @@
 """RefreshToken ORM Model."""
 
 from datetime import datetime
-from sqlalchemy import Boolean, DateTime, String, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base
@@ -27,14 +26,14 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        String(36),
         primary_key=True,
         server_default="gen_random_uuid()",
         comment="Unique token record identifier",
     )
 
     user_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        String(36),
         ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -50,7 +49,7 @@ class RefreshToken(Base):
     )
 
     family_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        String(36),
         nullable=False,
         index=True,
         comment="Token family for rotation tracking",
