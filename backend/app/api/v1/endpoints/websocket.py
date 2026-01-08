@@ -120,25 +120,33 @@ async def websocket_endpoint(
             websocket,
         )
 
-        participant_repo = ParticipantRepository(db)
-        await participant_repo.mark_connected_by_user_and_room(current_user.id, room_id)
-        participant_count = await participant_repo.count_active_participants(room_id)
+        # Mark participant as connected (non-critical, don't fail connection if this fails)
+        participant_count = 1
+        try:
+            participant_repo = ParticipantRepository(db)
+            await participant_repo.mark_connected_by_user_and_room(current_user.id, room_id)
+            participant_count = await participant_repo.count_active_participants(room_id)
+        except Exception as e:
+            logger.warning(f"[Room WS] Failed to mark participant connected: {e}")
 
         # Notify others of new connection (Global Broadcast)
-        await redis_pubsub_manager.publish_event(
-            UUID(room_id),
-            "participant_update",
-            {
-                "action": "joined",
-                "participant": {
-                    "id": current_user.id,
-                    "username": current_user.username,
-                    "name": current_user.name,
+        try:
+            await redis_pubsub_manager.publish_event(
+                UUID(room_id),
+                "participant_update",
+                {
+                    "action": "joined",
+                    "participant": {
+                        "id": current_user.id,
+                        "username": current_user.username,
+                        "name": current_user.name,
+                    },
+                    "current_count": participant_count,
+                    "room_id": room_id,
                 },
-                "current_count": participant_count,
-                "room_id": room_id,
-            },
-        )
+            )
+        except Exception as e:
+            logger.warning(f"[Room WS] Failed to publish participant join event: {e}")
 
         while True:
             try:
