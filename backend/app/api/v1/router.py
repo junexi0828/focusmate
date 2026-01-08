@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     participants,
     proposals,
     ranking,
+    refresh,
     reports,
     room_reservations,
     rooms,
@@ -49,3 +50,4 @@ api_router.include_router(chat.router)
 api_router.include_router(notifications.router)
 api_router.include_router(settings.router)
 api_router.include_router(reports.router)
+api_router.include_router(refresh.router)
