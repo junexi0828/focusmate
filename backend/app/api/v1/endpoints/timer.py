@@ -237,6 +237,8 @@ async def reset_timer(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
+    except ForbiddenException as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
 
 
 @router.post("/{room_id}/complete", response_model=TimerStateResponse)
@@ -301,3 +303,5 @@ async def complete_phase(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
     except InvalidTimerStateException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
+    except ForbiddenException as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
