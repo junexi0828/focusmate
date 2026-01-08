@@ -217,8 +217,10 @@ class TimerService:
             # Case 1: Corrupted state (Running but no start time)
             if not timer.started_at:
                 room = await self.room_repo.get_by_id(room_id)
+                work_duration = (room.work_duration or 25) * 60
+                break_duration = (room.break_duration or 5) * 60
                 timer.status = TimerStatus.IDLE.value
-                timer.remaining_seconds = room.work_duration * 60 if timer.phase == TimerPhase.WORK.value else room.break_duration * 60
+                timer.remaining_seconds = work_duration if timer.phase == TimerPhase.WORK.value else break_duration
                 await self.timer_repo.update(timer)
 
             # Case 2: Check for expiration
