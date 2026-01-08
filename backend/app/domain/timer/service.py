@@ -217,8 +217,14 @@ class TimerService:
             # Case 1: Corrupted state (Running but no start time)
             if not timer.started_at:
                 room = await self.room_repo.get_by_id(room_id)
-                work_duration = (room.work_duration or 25) * 60
-                break_duration = (room.break_duration or 5) * 60
+                if not room:
+                    raise RoomNotFoundException(room_id)
+                if room.work_duration is None or room.break_duration is None:
+                    raise InvalidTimerStateException(
+                        "Room duration settings are missing"
+                    )
+                work_duration = room.work_duration * 60
+                break_duration = room.break_duration * 60
                 timer.status = TimerStatus.IDLE.value
                 timer.remaining_seconds = work_duration if timer.phase == TimerPhase.WORK.value else break_duration
                 await self.timer_repo.update(timer)
@@ -251,6 +257,13 @@ class TimerService:
             room = await self.room_repo.get_by_id(room_id)
             if not room:
                 raise RoomNotFoundException(room_id)
+
+            # Validate room durations
+            if room.work_duration is None or room.break_duration is None:
+                raise InvalidTimerStateException(
+                    timer.status,
+                    "Room duration settings are missing"
+                )
 
             # Switch phase and reset
             if session_type == "work":
