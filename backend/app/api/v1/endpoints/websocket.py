@@ -238,7 +238,7 @@ async def websocket_endpoint(
                         await redis_pubsub_manager.publish_event(
                             UUID(room_id),
                             "timer_update",
-                            timer_state.model_dump()
+                            timer_state.model_dump(mode="json")
                         )
                     continue
 
