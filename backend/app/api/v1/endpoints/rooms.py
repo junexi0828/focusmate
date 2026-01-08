@@ -235,22 +235,21 @@ async def update_room(
 
                         await timer_repo.update(timer)
 
-                        # Broadcast timer update via WebSocket
+                        # Broadcast timer update via Redis Pub/Sub
                         try:
-                            from app.infrastructure.websocket.manager import connection_manager
-                            await connection_manager.broadcast_to_room(
+                            from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+                            from uuid import UUID
+
+                            await redis_pubsub_manager.publish_event(
+                                UUID(room_id),
+                                "room_settings_updated",
                                 {
-                                    "event": "room_settings_updated",  # Changed from "type": "timer_updated"
-                                    "data": {
-                                        "room_id": room_id,
-                                        "work_duration": updated_room_model.work_duration,  # Already in minutes
-                                        "break_duration": updated_room_model.break_duration,  # Already in minutes
-                                        "auto_start_break": updated_room_model.auto_start_break,
-                                        "remove_on_leave": updated_room_model.remove_on_leave,
-                                    },
-                                    "timestamp": datetime.now(UTC).isoformat(),
-                                },
-                                room_id,  # Fixed: room_id as second argument
+                                    "room_id": room_id,
+                                    "work_duration": updated_room_model.work_duration,
+                                    "break_duration": updated_room_model.break_duration,
+                                    "auto_start_break": updated_room_model.auto_start_break,
+                                    "remove_on_leave": updated_room_model.remove_on_leave,
+                                }
                             )
                         except Exception as ws_error:
                             # Log but don't fail

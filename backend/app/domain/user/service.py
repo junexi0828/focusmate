@@ -4,7 +4,7 @@ from secrets import token_urlsafe
 
 from app.core.config import settings
 from app.core.exceptions import UnauthorizedException, ValidationException
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import create_access_token, create_refresh_token, hash_password, verify_password
 from app.domain.user.schemas import (
     NaverOAuthCallback,
     PasswordResetComplete,
@@ -17,9 +17,12 @@ from app.domain.user.schemas import (
     UserResponse,
 )
 from app.infrastructure.database.models.user import User
+from app.infrastructure.repositories.refresh_token_repository import RefreshTokenRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.redis.session_helpers import store_token_mapping
 from app.shared.utils.uuid import generate_uuid
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 
 class UserService:
@@ -103,8 +106,28 @@ class UserService:
         # Generate JWT token
         access_token = create_access_token({"sub": user.id})
 
+        # Generate refresh token
+        family_id = str(uuid4())
+        refresh_token_repo = RefreshTokenRepository(self.repository.db)
+        refresh_token = await refresh_token_repo.create(
+            user_id=user.id,
+            family_id=family_id,
+            expires_at=datetime.now(UTC) + timedelta(days=7),
+            absolute_expires_at=datetime.now(UTC) + timedelta(days=30),
+        )
+        refresh_token_str = create_refresh_token(
+            user.id, refresh_token.token_id, family_id
+        )
+
+        # Store mapping for WebSocket use (non-critical)
+        try:
+            await store_token_mapping(user.id, refresh_token.token_id)
+        except Exception:
+            pass
+
         return TokenResponse(
             access_token=access_token,
+            refresh_token=refresh_token_str,
             user=UserResponse.model_validate(user),
         )
 

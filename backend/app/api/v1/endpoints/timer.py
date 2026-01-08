@@ -30,15 +30,15 @@ def get_timer_service(
 
 
 async def broadcast_timer_update(room_id: str, timer_state: TimerStateResponse) -> None:
-    """Broadcast timer state update to all clients in room."""
+    """Broadcast timer state update to all clients in room via Redis."""
     try:
-        await connection_manager.broadcast_to_room(
-            {
-                "event": "timer_update",
-                "data": timer_state.model_dump(),
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-            room_id,
+        from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+        from uuid import UUID
+
+        await redis_pubsub_manager.publish_event(
+            UUID(room_id),
+            "timer_update",
+            timer_state.model_dump()
         )
     except Exception as e:
         import logging
@@ -51,19 +51,19 @@ async def broadcast_timer_complete(
     next_session_type: str,
     auto_start: bool,
 ) -> None:
-    """Broadcast timer completion event to all clients in room."""
+    """Broadcast timer completion event to all clients in room via Redis."""
     try:
-        await connection_manager.broadcast_to_room(
+        from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+        from uuid import UUID
+
+        await redis_pubsub_manager.publish_event(
+            UUID(room_id),
+            "timer_complete",
             {
-                "event": "timer_complete",
-                "data": {
-                    "completed_session_type": completed_session_type,
-                    "next_session_type": next_session_type,
-                    "auto_start": auto_start,
-                },
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-            room_id,
+                "completed_session_type": completed_session_type,
+                "next_session_type": next_session_type,
+                "auto_start": auto_start,
+            }
         )
     except Exception as e:
         import logging
@@ -152,13 +152,15 @@ async def resume_timer(
 async def reset_timer(
     room_id: str,
     service: Annotated[TimerService, Depends(get_timer_service)],
+    db: DatabaseSession,
 ) -> TimerStateResponse:
     """Reset the timer to initial state.
 
+    If timer was running, partially completed session is recorded.
     Returns timer to IDLE state with full duration.
     """
     try:
-        timer_state = await service.reset_timer(room_id)
+        timer_state = await service.reset_timer(room_id, db=db)
         await broadcast_timer_update(room_id, timer_state)
         return timer_state
     except (TimerNotFoundException, RoomNotFoundException) as e:

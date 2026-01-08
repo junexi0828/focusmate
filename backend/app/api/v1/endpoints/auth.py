@@ -2,10 +2,12 @@
 
 
 from typing import Annotated
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from datetime import UTC, datetime
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, Response, status
 
 from app.api.deps import get_current_user
 from app.core.exceptions import UnauthorizedException, ValidationException
+from app.core.security import validate_refresh_token
 from app.domain.user.schemas import (
     NaverOAuthCallback,
     PasswordResetComplete,
@@ -19,7 +21,9 @@ from app.domain.user.schemas import (
 )
 from app.domain.user.service import UserService
 from app.infrastructure.database.session import DatabaseSession
+from app.infrastructure.repositories.refresh_token_repository import RefreshTokenRepository
 from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.redis.session_helpers import clear_user_activity
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -62,12 +66,25 @@ async def register(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
+    response: Response,
     data: UserLogin,
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> TokenResponse:
     """Login user and return JWT token."""
     try:
-        return await service.login(data)
+        token_response = await service.login(data)
+        if token_response.refresh_token:
+            response.set_cookie(
+                key="refresh_token",
+                value=token_response.refresh_token,
+                httponly=True,
+                secure=True,
+                samesite="lax",
+                path="/",
+                max_age=7 * 24 * 60 * 60,
+            )
+            token_response.refresh_token = None
+        return token_response
     except UnauthorizedException as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
     except Exception as e:
@@ -79,6 +96,34 @@ async def login(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed. Please try again later.",
         )
+
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    response: Response,
+    db: DatabaseSession,
+) -> dict:
+    """Logout user and revoke refresh token."""
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        try:
+            payload = validate_refresh_token(refresh_token)
+            token_id = payload["jti"]
+            user_id = payload["sub"]
+
+            refresh_token_repo = RefreshTokenRepository(db)
+            db_token = await refresh_token_repo.get_by_token_id(token_id)
+            if db_token:
+                db_token.expires_at = datetime.now(UTC)
+                await refresh_token_repo.update(db_token)
+
+            await clear_user_activity(user_id, token_id)
+        except Exception:
+            pass
+
+    response.delete_cookie(key="refresh_token", path="/")
+    return {"message": "Logged out successfully"}
 
 
 @router.get("/profile/{user_id}", response_model=UserResponse)

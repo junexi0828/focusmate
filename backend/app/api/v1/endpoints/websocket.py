@@ -87,6 +87,20 @@ async def websocket_endpoint(
 
         logger.info(f"[Room WS] Connected {current_user.username} to room_id={room_id}")
 
+        # Get token_id for activity tracking
+        from app.infrastructure.redis.session_helpers import get_token_id, track_user_activity
+
+        token_id = await get_token_id(current_user.id)
+        if not token_id:
+            logger.warning(f"[Room WS] No token_id found for user {current_user.id}, activity tracking disabled")
+
+        # Track initial connection activity
+        if token_id:
+            try:
+                await track_user_activity(current_user.id, token_id, room_id)
+            except Exception as e:
+                logger.warning(f"[Room WS] Failed to track initial activity: {e}")
+
         timer_service = TimerService(
             TimerRepository(db),
             RoomRepository(db),
@@ -130,6 +144,13 @@ async def websocket_endpoint(
             try:
                 # Receive messages from client
                 data = await websocket.receive_json()
+
+                # Track activity on ANY message (keeps session alive)
+                if token_id:
+                    try:
+                        await track_user_activity(current_user.id, token_id, room_id)
+                    except Exception as e:
+                        logger.debug(f"[Room WS] Activity tracking failed: {e}")
 
                 # Process client messages
                 message_type = data.get("type", "message")
