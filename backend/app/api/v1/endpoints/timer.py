@@ -38,7 +38,7 @@ async def broadcast_timer_update(room_id: str, timer_state: TimerStateResponse) 
         await redis_pubsub_manager.publish_event(
             UUID(room_id),
             "timer_update",
-            timer_state.model_dump()
+            timer_state.model_dump(mode="json")
         )
     except Exception as e:
         import logging
