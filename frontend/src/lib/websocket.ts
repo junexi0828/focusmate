@@ -147,24 +147,21 @@ class WebSocketClient {
       return Promise.resolve();
     }
 
-    // Cleanup 중이면 연결하지 않음 (같은 roomId인 경우만)
-    if (this.cleaningUpRoomId === roomId) {
-      console.log(`[WebSocket] Cleanup in progress for room ${roomId}, skipping connection`);
-      return Promise.reject(new Error("Cleanup in progress"));
-    }
-
-    // 다른 roomId로 cleanup 중이면 cleanup 완료 대기
-    if (this.cleaningUpRoomId && this.cleaningUpRoomId !== roomId) {
-      console.log(`[WebSocket] Waiting for cleanup of room ${this.cleaningUpRoomId} to complete`);
+    // Cleanup 중이면 cleanup 완료 대기 (같은 roomId든 다른 roomId든)
+    if (this.cleaningUpRoomId) {
+      console.log(`[WebSocket] Waiting for cleanup of room ${this.cleaningUpRoomId} to complete before connecting to ${roomId}`);
       // 짧은 지연 후 재시도
       return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (this.cleaningUpRoomId === roomId) {
-            reject(new Error("Cleanup in progress"));
-          } else {
+        const checkCleanup = () => {
+          if (!this.cleaningUpRoomId) {
+            // Cleanup 완료, 연결 시도
             this.connect(roomId).then(resolve).catch(reject);
+          } else {
+            // 아직 cleanup 중, 다시 대기
+            setTimeout(checkCleanup, 100);
           }
-        }, 50);
+        };
+        setTimeout(checkCleanup, 100);
       });
     }
 
