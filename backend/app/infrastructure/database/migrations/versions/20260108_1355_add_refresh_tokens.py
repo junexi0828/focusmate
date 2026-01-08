@@ -16,6 +16,17 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Check if table already exists to prevent duplicate creation
+    from sqlalchemy import inspect
+    from alembic import context
+
+    conn = context.get_bind()
+    inspector = inspect(conn)
+
+    if 'refresh_tokens' in inspector.get_table_names():
+        print("⚠️ refresh_tokens table already exists, skipping creation")
+        return
+
     op.create_table(
         "refresh_tokens",
         sa.Column(
