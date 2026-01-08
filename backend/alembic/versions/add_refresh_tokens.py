@@ -1,7 +1,7 @@
 """add_refresh_tokens_table
 
 Revision ID: add_refresh_tokens
-Revises: add_friend_tables
+Revises: 20260105_0009
 Create Date: 2026-01-08 12:42:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'add_refresh_tokens'
-down_revision = 'add_friend_tables'
+down_revision = '20260105_0009'
 branch_labels = None
 depends_on = None
 
