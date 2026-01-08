@@ -4,7 +4,12 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import DatabaseSession, get_current_user_required, get_room_repository, get_timer_repository
+from app.api.deps import (
+    DatabaseSession,
+    get_current_user_required,
+    get_room_repository,
+    get_timer_repository,
+)
 from app.core.exceptions import (
     InvalidTimerStateException,
     RoomNotFoundException,
@@ -13,6 +18,7 @@ from app.core.exceptions import (
 from app.domain.timer.schemas import TimerStateResponse, StartTimerRequest
 from app.domain.timer.service import TimerService
 from app.infrastructure.repositories.room_repository import RoomRepository
+from app.infrastructure.repositories.participant_repository import ParticipantRepository
 from app.infrastructure.repositories.timer_repository import TimerRepository
 from app.infrastructure.websocket.manager import connection_manager
 from datetime import UTC, datetime
@@ -27,6 +33,25 @@ def get_timer_service(
 ) -> TimerService:
     """Get timer service."""
     return TimerService(timer_repo, room_repo)
+
+
+async def ensure_room_access(
+    room_id: str,
+    user_id: str,
+    room_repo: RoomRepository,
+    participant_repo: ParticipantRepository,
+) -> None:
+    """Ensure the user can control the room timer."""
+    room = await room_repo.get_by_id(room_id)
+    if not room:
+        raise RoomNotFoundException(room_id)
+
+    if room.host_id and room.host_id == user_id:
+        return
+
+    participant = await participant_repo.get_by_user_and_room(user_id, room_id)
+    if not participant or not participant.is_connected:
+        raise RoomNotFoundException(room_id)
 
 
 async def broadcast_timer_update(room_id: str, timer_state: TimerStateResponse) -> None:
@@ -93,6 +118,7 @@ async def get_timer_state(
 async def start_timer(
     room_id: str,
     request: StartTimerRequest,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[TimerService, Depends(get_timer_service)],
     db: DatabaseSession,
 ) -> TimerStateResponse:
@@ -101,6 +127,12 @@ async def start_timer(
     Transitions from IDLE or PAUSED to RUNNING.
     """
     try:
+        await ensure_room_access(
+            room_id,
+            current_user["id"],
+            service.room_repo,
+            ParticipantRepository(db),
+        )
         timer_state = await service.start_timer(room_id, request.session_type, db=db)
         await broadcast_timer_update(room_id, timer_state)
         return timer_state
@@ -113,13 +145,21 @@ async def start_timer(
 @router.post("/{room_id}/pause", response_model=TimerStateResponse)
 async def pause_timer(
     room_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[TimerService, Depends(get_timer_service)],
+    db: DatabaseSession,
 ) -> TimerStateResponse:
     """Pause the timer.
 
     Transitions from RUNNING to PAUSED, saving remaining time.
     """
     try:
+        await ensure_room_access(
+            room_id,
+            current_user["id"],
+            service.room_repo,
+            ParticipantRepository(db),
+        )
         timer_state = await service.pause_timer(room_id)
         await broadcast_timer_update(room_id, timer_state)
         return timer_state
@@ -132,13 +172,21 @@ async def pause_timer(
 @router.post("/{room_id}/resume", response_model=TimerStateResponse)
 async def resume_timer(
     room_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[TimerService, Depends(get_timer_service)],
+    db: DatabaseSession,
 ) -> TimerStateResponse:
     """Resume the paused timer.
 
     Transitions from PAUSED to RUNNING, continuing from remaining time.
     """
     try:
+        await ensure_room_access(
+            room_id,
+            current_user["id"],
+            service.room_repo,
+            ParticipantRepository(db),
+        )
         timer_state = await service.resume_timer(room_id)
         await broadcast_timer_update(room_id, timer_state)
         return timer_state
@@ -151,6 +199,7 @@ async def resume_timer(
 @router.post("/{room_id}/reset", response_model=TimerStateResponse)
 async def reset_timer(
     room_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[TimerService, Depends(get_timer_service)],
     db: DatabaseSession,
 ) -> TimerStateResponse:
@@ -160,6 +209,12 @@ async def reset_timer(
     Returns timer to IDLE state with full duration.
     """
     try:
+        await ensure_room_access(
+            room_id,
+            current_user["id"],
+            service.room_repo,
+            ParticipantRepository(db),
+        )
         timer_state = await service.reset_timer(room_id, db=db)
         await broadcast_timer_update(room_id, timer_state)
         return timer_state
@@ -181,6 +236,12 @@ async def complete_phase(
     Automatically records session to session_history when work phase completes.
     """
     try:
+        await ensure_room_access(
+            room_id,
+            current_user["id"],
+            service.room_repo,
+            ParticipantRepository(db),
+        )
         from app.shared.constants.timer import TimerPhase
 
         timer = await service.timer_repo.get_by_room_id(room_id)
