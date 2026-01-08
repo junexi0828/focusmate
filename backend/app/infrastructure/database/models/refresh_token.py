@@ -35,7 +35,7 @@ class RefreshToken(Base):
 
     user_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="User who owns this token",
