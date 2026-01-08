@@ -286,6 +286,11 @@ class TimerService:
         # Idempotency check: If already RUNNING, just return current state
         # This fixes the issue where frontend thinks it's IDLE but backend is RUNNING
         if timer.status == TimerStatus.RUNNING.value:
+            # Fetch room for duration information
+            room = await self.room_repo.get_by_id(room_id)
+            if not room:
+                raise RoomNotFoundException(room_id)
+
              # Calculate target_timestamp for client countdown
             target_timestamp = None
             if timer.started_at and timer.remaining_seconds > 0:
