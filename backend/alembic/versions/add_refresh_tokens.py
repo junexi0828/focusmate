@@ -21,7 +21,7 @@ def upgrade() -> None:
     op.create_table(
         'refresh_tokens',
         sa.Column('id', postgresql.UUID(as_uuid=True), server_default=sa.text('gen_random_uuid()'), primary_key=True),
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('user.id', ondelete='CASCADE'), nullable=False),
         sa.Column('token_id', sa.String(36), nullable=False, unique=True),
         sa.Column('family_id', postgresql.UUID(as_uuid=True), nullable=False),
 
