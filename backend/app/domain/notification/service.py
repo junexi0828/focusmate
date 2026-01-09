@@ -126,9 +126,12 @@ class NotificationService:
             notification_id=generate_uuid(),
             user_id=data.user_id,
             type=data.type,
+            priority=data.priority,  # New field
             title=data.title,
             message=data.message,
             data=data.data,
+            routing=data.routing,    # New field
+            group_key=data.group_key, # New field
             is_read=False,
         )
 
@@ -229,6 +232,9 @@ class NotificationService:
                         "title": notification.title,
                         "message": notification.message,
                         "data": notification.data,
+                        "priority": notification.priority,
+                        "routing": notification.routing,
+                        "group_key": notification.group_key,
                         "created_at": notification.created_at.isoformat(),
                     },
                 },
