@@ -32,7 +32,7 @@ class ProposalResponse(BaseModel):
 class ProposalAction(BaseModel):
     """Schema for proposal action (accept/reject)."""
 
-    action: str = Field(..., pattern="^(Union[accept, reject])$")
+    action: str = Field(..., pattern="^(accept|reject)$")
 
 
 # Chat Room Schemas

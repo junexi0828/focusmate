@@ -2,7 +2,7 @@
 
 
 from typing import Optional
-from sqlalchemy import JSON, Boolean, ForeignKey, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, String, Text, func, Index, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin

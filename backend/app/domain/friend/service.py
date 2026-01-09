@@ -11,8 +11,8 @@ from app.domain.friend.schemas import (
     FriendResponse,
     FriendSearchParams,
 )
-from app.domain.notification.schemas import NotificationCreate
 from app.domain.notification.service import NotificationService
+from app.domain.notification.notification_helper import NotificationHelper
 from app.infrastructure.database.models.friend import FriendRequestStatus
 from app.infrastructure.repositories.friend_repository import (
     FriendRepository,
@@ -82,21 +82,12 @@ class FriendService:
         # Send notification
         if self.notification_service and sender:
             try:
-                await self.notification_service.create_notification(
-                    NotificationCreate(
-                        user_id=receiver_id,
-                        type="friend_request",
-                        title="친구 요청",
-                        message=f"{sender.username}님이 친구 요청을 보냈습니다.",
-                        data={
-                            "routing": {
-                                "type": "route",
-                                "path": "/friends",
-                            },
-                            "sender_id": sender.id,
-                        },
-                    )
+                notification = NotificationHelper.create_friend_request_notification(
+                    user_id=receiver_id,
+                    sender_name=sender.username or "Unknown",
+                    request_id=request.id,
                 )
+                await self.notification_service.create_notification(notification)
             except Exception as e:
                 # Don't fail the request if notification fails
                 pass
@@ -193,21 +184,12 @@ class FriendService:
         # Send notification to the original sender
         if self.notification_service and receiver:
             try:
-                await self.notification_service.create_notification(
-                    NotificationCreate(
-                        user_id=request.sender_id,
-                        type="friend_request_accepted",
-                        title="친구 요청 수락",
-                        message=f"{receiver.username}님이 친구 요청을 수락했습니다.",
-                        data={
-                            "routing": {
-                                "type": "route",
-                                "path": "/friends",
-                            },
-                            "accepter_id": receiver.id,
-                        },
-                    )
+                notification = NotificationHelper.create_friend_request_accepted_notification(
+                    user_id=request.sender_id,
+                    accepter_name=receiver.username or "Unknown",
+                    friend_id=receiver.id,
                 )
+                await self.notification_service.create_notification(notification)
             except Exception:
                 pass
 
