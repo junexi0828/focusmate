@@ -17,8 +17,11 @@ from app.core.config import settings
 from app.infrastructure.database.base import Base
 
 
-# Test database URL
-TEST_DATABASE_URL = "postgresql+asyncpg://test:test@localhost:5432/focusmate_test"
+# Test database URL (override with TEST_DATABASE_URL env var if needed)
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://test:test@localhost:5432/focusmate_test",
+)
 
 # Docker compose file path
 DOCKER_COMPOSE_FILE = Path(__file__).parent.parent / "docker-compose.yml"
