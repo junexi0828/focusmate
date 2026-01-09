@@ -20,9 +20,9 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
       /*
         전체 레이아웃 설정
         - py-4: 세로 패딩만 적용 (가로 패딩은 __root.tsx에서 처리)
-        - mesh-gradient: 모던 디자인 시스템 배경 적용
+        - 상위 컴포넌트(__root.tsx)에서 배경 처리됨
       */
-      className="flex flex-col items-center justify-center py-4 mesh-gradient min-h-full relative overflow-hidden"
+      className="flex flex-col items-center justify-center py-4 min-h-full relative overflow-hidden"
     >
       {/*
         컨테이너 최대 너비 설정
