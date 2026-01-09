@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -11,6 +12,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Slider } from "../../../components/ui/slider";
 import { Plus } from "lucide-react";
+import { use3DCard } from "../../../hooks/use3DCard";
 
 interface CreateRoomCardProps {
   onCreateRoom: (
@@ -26,6 +28,9 @@ export function CreateRoomCard({ onCreateRoom }: CreateRoomCardProps) {
   const [breakTime, setBreakTime] = useState(5);
   const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+
+  // 3D Card Hook
+  const { handleMouseMove, handleMouseLeave, style } = use3DCard(20);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

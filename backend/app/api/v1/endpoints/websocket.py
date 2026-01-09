@@ -4,6 +4,7 @@ import logging
 import asyncio
 
 from typing import Any
+from uuid import UUID
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt, JWTError
@@ -20,6 +21,8 @@ from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 from app.core.config import settings
 from datetime import UTC, datetime
 from app.shared.constants.timer import TimerPhase
+from app.domain.room_chat.service import RoomChatService
+from app.infrastructure.redis.room_chat_cache import append_message, get_recent_messages
 
 
 logger = logging.getLogger(__name__)
@@ -82,7 +85,6 @@ async def websocket_endpoint(
 
         # Subscribe to Redis channel for multi-server broadcasting
         try:
-            from uuid import UUID
             await redis_pubsub_manager.subscribe_to_room(UUID(room_id))
         except Exception as e:
             logger.error(f"[Room WS] Failed to subscribe to Redis channel: {e}")
@@ -98,6 +100,9 @@ async def websocket_endpoint(
             TimerRepository(db),
             RoomRepository(db),
         )
+        chat_service = RoomChatService()
+        participant_repo = ParticipantRepository(db)
+        is_participant = False
 
         # Send welcome message
         await connection_manager.send_personal_message(
@@ -116,11 +121,27 @@ async def websocket_endpoint(
         # Mark participant as connected (non-critical, don't fail connection if this fails)
         participant_count = 1
         try:
-            participant_repo = ParticipantRepository(db)
+            participant = await participant_repo.get_by_user_and_room(current_user.id, room_id)
+            is_participant = participant is not None
             await participant_repo.mark_connected_by_user_and_room(current_user.id, room_id)
             participant_count = await participant_repo.count_active_participants(room_id)
         except Exception as e:
             logger.warning(f"[Room WS] Failed to mark participant connected: {e}")
+
+        # Send recent chat backfill (best effort)
+        try:
+            recent_messages = await get_recent_messages(room_id)
+            if recent_messages:
+                await connection_manager.send_personal_message(
+                    {
+                        "event": "chat_backfill",
+                        "data": {"messages": recent_messages},
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    },
+                    websocket,
+                )
+        except Exception as e:
+            logger.debug(f"[Room WS] Chat backfill failed: {e}")
 
         # Notify others of new connection (Global Broadcast)
         try:
@@ -168,6 +189,60 @@ async def websocket_endpoint(
                         },
                         websocket,
                     )
+                    continue
+                if message_type == "chat_message":
+                    try:
+                        if not is_participant:
+                            participant = await participant_repo.get_by_user_and_room(
+                                current_user.id, room_id
+                            )
+                            is_participant = participant is not None
+
+                        if not is_participant:
+                            await connection_manager.send_personal_message(
+                                {
+                                    "event": "error",
+                                    "error": {
+                                        "code": "NOT_IN_ROOM",
+                                        "message": "방에 참여한 사용자만 채팅할 수 있습니다.",
+                                    },
+                                    "timestamp": datetime.now(UTC).isoformat(),
+                                },
+                                websocket,
+                            )
+                            continue
+
+                        content = data.get("data", {}).get("content", "")
+                        sender_name = (
+                            current_user.name
+                            or current_user.username
+                            or "사용자"
+                        )
+                        chat_message = chat_service.build_message(
+                            room_id=room_id,
+                            sender_id=current_user.id,
+                            sender_name=sender_name,
+                            content=content,
+                        )
+                        message_payload = chat_message.model_dump(mode="json")
+                        await append_message(room_id, message_payload)
+                        await redis_pubsub_manager.publish_event(
+                            UUID(room_id),
+                            "chat_message",
+                            {"message": message_payload},
+                        )
+                    except ValueError as e:
+                        await connection_manager.send_personal_message(
+                            {
+                                "event": "error",
+                                "error": {
+                                    "code": "INVALID_CHAT_MESSAGE",
+                                    "message": str(e),
+                                },
+                                "timestamp": datetime.now(UTC).isoformat(),
+                            },
+                            websocket,
+                        )
                     continue
 
                 if message_type in {
@@ -275,7 +350,6 @@ async def websocket_endpoint(
         # Unsubscribe if no more connections in this room (on this server)
         if connection_manager.get_room_connection_count(room_id) == 0:
             try:
-                from uuid import UUID
                 await redis_pubsub_manager.unsubscribe_from_room(UUID(room_id))
             except Exception as ex:
                 logger.error(f"[Room WS] Failed to unsubscribe: {ex}")
@@ -283,7 +357,6 @@ async def websocket_endpoint(
         # Notify others of disconnection (Global Broadcast)
         try:
             if current_user:
-                from uuid import UUID
                 participant_repo = ParticipantRepository(db)
                 await participant_repo.mark_disconnected_by_user_and_room(current_user.id, room_id)
                 participant_count = await participant_repo.count_active_participants(room_id)
