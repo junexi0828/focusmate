@@ -13,6 +13,9 @@ from app.infrastructure.repositories.chat_repository import ChatRepository
 from app.infrastructure.repositories.matching_pool_repository import (
     MatchingPoolRepository,
 )
+from app.domain.notification.service import NotificationService
+from app.domain.notification.notification_helper import NotificationHelper
+from app.infrastructure.repositories.user_repository import UserRepository
 
 
 class ProposalRepository:
@@ -84,10 +87,14 @@ class ProposalService:
         proposal_repo: ProposalRepository,
         pool_repo: MatchingPoolRepository,
         chat_repo: ChatRepository,
+        user_repo: UserRepository | None = None,
+        notification_service: NotificationService | None = None,
     ):
         self.proposal_repo = proposal_repo
         self.pool_repo = pool_repo
         self.chat_repo = chat_repo
+        self.user_repo = user_repo # Ideally inject this too, or create it if absent
+        self.notification_service = notification_service
 
     async def create_proposal(
         self, pool_id_a: UUID, pool_id_b: UUID
@@ -113,6 +120,31 @@ class ProposalService:
         }
 
         proposal = await self.proposal_repo.create_proposal(proposal_data)
+
+        # Notify all members
+        if self.notification_service:
+            try:
+                # Notify Pool A members about Pool B
+                for member_id in pool_a.member_ids:
+                    await self.notification_service.create_notification(
+                        NotificationHelper.create_match_proposal_notification(
+                            user_id=member_id,
+                            proposal_id=str(proposal.proposal_id),
+                            partner_department=pool_b.department,
+                        )
+                    )
+                # Notify Pool B members about Pool A
+                for member_id in pool_b.member_ids:
+                    await self.notification_service.create_notification(
+                        NotificationHelper.create_match_proposal_notification(
+                            user_id=member_id,
+                            proposal_id=str(proposal.proposal_id),
+                            partner_department=pool_a.department,
+                        )
+                    )
+            except Exception as e:
+                pass
+
         return ProposalResponse.model_validate(proposal)
 
     async def respond_to_proposal(
@@ -158,6 +190,36 @@ class ProposalService:
             # Update pool statuses
             await self.pool_repo.update_pool(pool_id_a, {"status": "matched"})
             await self.pool_repo.update_pool(pool_id_b, {"status": "matched"})
+
+            # Notify success
+            if self.notification_service:
+                try:
+                    pool_a = await self.pool_repo.get_pool_by_id(proposal.pool_id_a)
+                    pool_b = await self.pool_repo.get_pool_by_id(proposal.pool_id_b)
+
+                    if pool_a and pool_b:
+                         # Notify Pool A (Partner: B)
+                        for member_id in pool_a.member_ids:
+                            await self.notification_service.create_notification(
+                                NotificationHelper.create_match_success_notification(
+                                    user_id=member_id,
+                                    proposal_id=str(proposal.proposal_id),
+                                    chat_room_id=chat_room.room_id,
+                                    partner_department=pool_b.department,
+                                )
+                            )
+                        # Notify Pool B (Partner: A)
+                        for member_id in pool_b.member_ids:
+                            await self.notification_service.create_notification(
+                                NotificationHelper.create_match_success_notification(
+                                    user_id=member_id,
+                                    proposal_id=str(proposal.proposal_id),
+                                    chat_room_id=chat_room.room_id,
+                                    partner_department=pool_a.department,
+                                )
+                            )
+                except Exception:
+                    pass
 
         updated_proposal = await self.proposal_repo.update_proposal(
             proposal_id, update_data
