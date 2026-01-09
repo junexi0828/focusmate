@@ -59,6 +59,7 @@ function RootComponent() {
 
   // Hide sidebar on login page
   const isLoginPage = location.pathname === "/login";
+  const isHomePage = location.pathname === "/";
 
   return (
     <ErrorBoundary>
@@ -67,7 +68,11 @@ function RootComponent() {
         {!isLoginPage && <Sidebar />}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto relative flex flex-col">
+        <main
+          className={`flex-1 overflow-auto relative flex flex-col ${
+            isHomePage ? "mesh-gradient" : ""
+          }`}
+        >
           {/* Top Header Placeholder (optional) - Hidden on Login */}
           {!isLoginPage && (
             <header className="h-14 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10 flex items-center px-4">
@@ -84,8 +89,8 @@ function RootComponent() {
 
           <div
             className={
-              isLoginPage
-                ? "h-full w-full"
+              isLoginPage || isHomePage
+                ? "flex-1 w-full"
                 : "flex-1 p-8 max-w-7xl mx-auto w-full"
             }
           >
