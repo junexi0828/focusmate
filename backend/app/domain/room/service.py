@@ -213,3 +213,22 @@ class RoomService:
         # Soft delete: set is_active to False
         room.is_active = False
         await self.repository.update(room)
+
+        # Notify clients about room deletion
+        try:
+            from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+            from uuid import UUID
+
+            await redis_pubsub_manager.publish_event(
+                UUID(room_id),
+                "room_deleted",
+                {
+                    "room_id": room_id,
+                    "deleted_at": str(datetime.now(UTC)),
+                }
+            )
+        except Exception as e:
+            # Log but don't fail the transaction
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to publish room_deleted event: {e}")

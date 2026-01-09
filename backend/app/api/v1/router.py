@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     chat,
     community,
     friends,
+    health,
     matching,
     messaging,
     notifications,
@@ -27,9 +28,11 @@ from app.api.v1.endpoints import (
 )
 
 
+
 api_router = APIRouter()
 
 # Include all endpoint routers
+api_router.include_router(health.router)  # Health checks first
 api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(rooms.router)
@@ -51,3 +54,4 @@ api_router.include_router(notifications.router)
 api_router.include_router(settings.router)
 api_router.include_router(reports.router)
 api_router.include_router(refresh.router)
+

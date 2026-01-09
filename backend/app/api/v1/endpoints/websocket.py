@@ -1,7 +1,9 @@
 """WebSocket endpoint for real-time communication."""
 
 import logging
+import asyncio
 
+from typing import Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt, JWTError
@@ -87,20 +89,10 @@ async def websocket_endpoint(
 
         logger.info(f"[Room WS] Connected {current_user.username} to room_id={room_id}")
 
-        # Get token_id for activity tracking (optional - non-critical)
-        token_id = None
-        try:
-            from app.infrastructure.redis.session_helpers import get_token_id, track_user_activity
+        # Track session in background (fire-and-forget)
+        # This prevents Redis latency from blocking the WebSocket connection
+        asyncio.create_task(_track_session_background(current_user, room_id))
 
-            token_id = await get_token_id(current_user.id)
-            if token_id:
-                await track_user_activity(current_user.id, token_id, room_id)
-                logger.debug(f"[Room WS] Activity tracked for user {current_user.id}")
-            else:
-                logger.warning(f"[Room WS] No token_id found for user {current_user.id}")
-        except Exception as e:
-            # Redis errors are non-critical - session tracking is optional
-            logger.warning(f"[Room WS] Session tracking failed (non-critical): {e}")
 
         timer_service = TimerService(
             TimerRepository(db),
@@ -317,3 +309,26 @@ async def websocket_endpoint(
             await websocket.close(code=1011)
         except Exception:
             pass
+
+
+async def _track_session_background(user: Any, room_id: str) -> None:
+    """Track session activity in background to avoid blocking WebSocket handshake.
+
+    Args:
+        user: Current user object
+        room_id: Room identifier
+    """
+    try:
+        from app.infrastructure.redis.session_helpers import get_token_id, track_user_activity
+        from app.infrastructure.redis.circuit_breaker import CircuitOpenError
+
+        token_id = await get_token_id(user.id)
+        if token_id:
+            await track_user_activity(user.id, token_id, room_id)
+            logger.debug(f"[Room WS] ✅ Session tracking active for user {user.id}")
+        else:
+            logger.debug(f"[Room WS] ⚠️ No token_id found for user {user.id}")
+    except CircuitOpenError:
+        logger.debug(f"[Room WS] ⚠️ Redis circuit open, skipping session tracking for user {user.id}")
+    except Exception as e:
+        logger.warning(f"[Room WS] ⚠️ Background session tracking failed: {e}")
