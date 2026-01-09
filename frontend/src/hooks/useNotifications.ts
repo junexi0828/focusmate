@@ -7,13 +7,14 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { authService } from "../features/auth/services/authService";
 import { toast } from "sonner";
 import { notificationService } from "../lib/notificationService";
-import { api } from "../api/client";
+import { useNotificationBackfill } from "../features/notification/hooks/useNotificationBackfill";
 
 const WS_URL = import.meta.env.VITE_WS_BASE_URL || "ws://localhost:8000";
 
 export interface NotificationData {
   notification_id: string;
   type: string;
+  notification_type?: string; // For backward compatibility
   title: string;
   message: string;
   data?: {
@@ -46,6 +47,8 @@ export function useNotifications(
   const onNewNotificationRef = useRef(onNewNotification);
   const maxReconnectAttempts = 10;
   const lastSyncKey = "last_notification_sync";
+
+  const { syncMissedNotifications } = useNotificationBackfill();
 
   // Update callback ref when prop changes
   useEffect(() => {
@@ -109,25 +112,16 @@ export function useNotifications(
         // Backfill missed notifications after reconnect
         const lastSync = localStorage.getItem(lastSyncKey);
         if (lastSync) {
-          api
-            .get<NotificationData[]>("/notifications/backfill", {
-              params: { since: lastSync },
-            })
-            .then((response) => {
-              const missed = response.data || [];
-              if (missed.length > 0) {
-                setNotifications((prev) => [...missed, ...prev]);
-                if (onNewNotificationRef.current) {
-                  onNewNotificationRef.current(missed[0]);
-                }
+          syncMissedNotifications(lastSync).then((missed) => {
+            if (missed.length > 0) {
+              setNotifications((prev) => [...missed, ...prev]);
+              if (onNewNotificationRef.current) {
+                onNewNotificationRef.current(missed[0]);
               }
-            })
-            .catch((error) => {
-              console.warn("[Notifications] Backfill failed:", error);
-            })
-            .finally(() => {
-              localStorage.setItem(lastSyncKey, new Date().toISOString());
-            });
+            }
+            // Always update last sync time after successful check
+            localStorage.setItem(lastSyncKey, new Date().toISOString());
+          });
         } else {
           localStorage.setItem(lastSyncKey, new Date().toISOString());
         }

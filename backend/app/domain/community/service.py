@@ -447,4 +447,27 @@ class CommunityService:
         await self.comment_like_repo.create(comment_like)
         comment.likes += 1
         await self.comment_repo.update(comment)
+
+        # Send notification
+        if self.notification_service and comment.user_id != user_id:
+            try:
+                liker = await self.user_repo.get_by_id(user_id)
+                liker_name = liker.username if liker else "Unknown"
+
+                # We need post info for navigation
+                post = await self.post_repo.get_by_id(comment.post_id)
+                post_title = post.title if post else "Unknown Application"
+
+                notification = NotificationHelper.create_comment_like_notification(
+                     user_id=comment.user_id,
+                     liker_name=liker_name,
+                     post_id=comment.post_id,
+                     post_title=post_title,
+                     comment_content=comment.content, # Use actual comment content
+                )
+                await self.notification_service.create_notification(notification)
+
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"Failed to send comment like notification: {e}")
+
         return LikeResponse(success=True, liked=True, new_count=comment.likes)
