@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Clock,
@@ -27,6 +27,15 @@ import { authService } from "../features/auth/services/authService";
 import { GoalProgressRing } from "../components/charts/GoalProgressRing";
 import { PomodoroWidget } from "../components/PomodoroWidget";
 import { StreakCalendar } from "../components/StreakCalendar";
+
+// Helper hook for tracking previous values
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
 
 interface DashboardPageProps {
   stats?: UserStatsResponse;
@@ -449,6 +458,33 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
       </div>
     );
   }
+
+  // Celebration Triggers
+  const currentStreak = parseInt(dashboardStats?.[2]?.value.replace("일", "") || "0");
+  const prevStreak = usePrevious(currentStreak);
+
+  const goalProgress = weeklyGoal ? (weeklyGoal.current_value / weeklyGoal.goal_value) * 100 : 0;
+  const prevGoalProgress = usePrevious(goalProgress);
+
+  const isPerfectWeek = streakData && streakData.length >= 7 && streakData.slice(-7).every(d => d.sessions > 0);
+  const prevPerfectWeek = usePrevious(isPerfectWeek);
+
+  useEffect(() => {
+    // 1. Streak Increased
+    if (prevStreak !== undefined && currentStreak > prevStreak && currentStreak > 1) {
+      CelebrationSystem.streakAchieved();
+    }
+
+    // 2. Goal Achieved (Crossed 100%)
+    if (prevGoalProgress !== undefined && prevGoalProgress < 100 && goalProgress >= 100) {
+      CelebrationSystem.goalAchieved();
+    }
+
+    // 3. Perfect Week Achieved
+    if (!prevPerfectWeek && isPerfectWeek) {
+      CelebrationSystem.perfectWeek();
+    }
+  }, [currentStreak, prevStreak, goalProgress, prevGoalProgress, isPerfectWeek, prevPerfectWeek]);
 
   return (
     <div className="space-y-6">

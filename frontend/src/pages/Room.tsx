@@ -25,6 +25,65 @@ import {
 } from "../components/WebSocketStatus";
 import { WebSocketConnectionBanner } from "../components/WebSocketConnectionBanner";
 import { authService } from "../features/auth/services/authService";
+import { RoomChatMessage } from "../types/room-chat";
+
+type QuickSignalIcon = {
+  type: "emoji" | "custom";
+  value: string;
+  fallback: string;
+};
+
+type QuickSignal = {
+  id: string;
+  label: string;
+  text: string;
+  icon: QuickSignalIcon;
+};
+
+const QUICK_SIGNALS: QuickSignal[] = [
+  {
+    id: "greet",
+    label: "인사",
+    text: "들어왔어요! 집중 구경하러 왔습니다.",
+    icon: { type: "emoji", value: "👋", fallback: "👋" },
+  },
+  {
+    id: "start",
+    label: "시작",
+    text: "타이머 ON! 잡담 금지, 집중 개시!",
+    icon: { type: "emoji", value: "🏁", fallback: "🏁" },
+  },
+  {
+    id: "progress",
+    label: "진행",
+    text: "진행중이에요. 집중력 풀가동!",
+    icon: { type: "emoji", value: "⏱", fallback: "⏱" },
+  },
+  {
+    id: "focus",
+    label: "집중",
+    text: "집중 모드! 오늘도 뇌근육 운동!",
+    icon: { type: "emoji", value: "💪", fallback: "💪" },
+  },
+  {
+    id: "brain-check",
+    label: "뇌점검",
+    text: "뇌 회전수 체크 완료. 정상입니다!",
+    icon: { type: "emoji", value: "🧠", fallback: "🧠" },
+  },
+  {
+    id: "done",
+    label: "완료",
+    text: "완료! 뇌에 불 켜고 나왔어요.",
+    icon: { type: "emoji", value: "✅", fallback: "✅" },
+  },
+  {
+    id: "cheer",
+    label: "수고",
+    text: "수고했어요! 집중력 만렙 도전 성공!",
+    icon: { type: "emoji", value: "🙌", fallback: "🙌" },
+  },
+];
 
 interface RoomPageProps {
   onLeaveRoom: () => void;
@@ -51,6 +110,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   >(null);
   const [participantName, setParticipantName] = useState<string>("");
   const maxParticipants = room?.max_participants ?? 50;
+  const [chatMessages, setChatMessages] = useState<RoomChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const CHAT_MAX_LENGTH = 300;
 
   // WebSocket 연결 상태
   const {
@@ -309,6 +372,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     currentUser?.user_id === currentAuthUser?.id && currentUser?.is_host;
   // Use room.host_id if available, otherwise fallback to participant check
   const isCurrentUserHost = isCurrentUserHostByRoom ?? isCurrentUserHostByParticipant;
+  const currentUserId = currentAuthUser?.id;
 
   // Use server-side timer hook
   const {
@@ -351,6 +415,12 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
               : "다시 집중할 시간입니다!",
         }
       );
+
+      // Trigger celebration for work sessions
+      if (completedSessionType === "work") {
+        const { CelebrationSystem } = await import("../utils/celebrationSystem");
+        CelebrationSystem.celebrate();
+      }
     },
   });
 
@@ -513,6 +583,19 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 startTimer(next_session_type);
               }, 3000);
             }
+          } else if (message.event === "chat_backfill") {
+            if (message.data?.messages?.length) {
+              setChatMessages(message.data.messages);
+            }
+          } else if (message.event === "chat_message") {
+            const incoming = message.data?.message;
+            if (!incoming) return;
+            setChatMessages((prev) => {
+              if (prev.some((item) => item.id === incoming.id)) {
+                return prev;
+              }
+              return [...prev, incoming];
+            });
           } else if (message.event === "error") {
             toast.error(message.error.message);
           }
@@ -612,6 +695,45 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       updateTimerState(room.timer_state);
     }
   }, [room?.timer_state, updateTimerState]);
+
+  useEffect(() => {
+    if (!chatScrollRef.current) return;
+    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+  }, [chatMessages]);
+
+  const getQuickSignalIcon = (signal: QuickSignal) =>
+    signal.icon.type === "emoji" ? signal.icon.value : signal.icon.fallback;
+
+  const handleSendChatMessage = useCallback(
+    (content: string) => {
+      const trimmed = content.trim();
+      if (!trimmed) return;
+      if (trimmed.length > CHAT_MAX_LENGTH) {
+        toast.error(`채팅은 ${CHAT_MAX_LENGTH}자까지 보낼 수 있습니다.`);
+        return;
+      }
+      if (!wsClient.isConnected()) {
+        toast.error("실시간 연결이 끊겨 채팅을 보낼 수 없습니다.");
+        return;
+      }
+      wsClient.sendChatMessage(trimmed);
+    },
+    [CHAT_MAX_LENGTH]
+  );
+
+  const handleQuickSignal = useCallback(
+    (signal: QuickSignal) => {
+      const icon = getQuickSignalIcon(signal);
+      const content = `${icon} ${signal.text}`.trim();
+      handleSendChatMessage(content);
+    },
+    [handleSendChatMessage]
+  );
+
+  const handleSendInput = useCallback(() => {
+    handleSendChatMessage(chatInput);
+    setChatInput("");
+  }, [chatInput, handleSendChatMessage]);
 
   const handleUpdateSettings = async (
     newFocusTime: number,
@@ -894,6 +1016,97 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
             maxCount={maxParticipants}
           />
         </div>
+
+        <section className="mt-10">
+          <div className="rounded-xl border bg-card">
+            <div className="border-b px-4 py-3">
+              <h2 className="text-base font-semibold">방 채팅</h2>
+            </div>
+            <div className="flex flex-col gap-4 p-4">
+              <div className="flex flex-wrap gap-2">
+                {QUICK_SIGNALS.map((signal) => (
+                  <Button
+                    key={signal.id}
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 px-3"
+                    onClick={() => handleQuickSignal(signal)}
+                  >
+                    <span className="mr-1">{getQuickSignalIcon(signal)}</span>
+                    {signal.label}
+                  </Button>
+                ))}
+              </div>
+
+              <div
+                ref={chatScrollRef}
+                className="h-64 overflow-y-auto rounded-lg border bg-background p-3"
+              >
+                {chatMessages.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    아직 메시지가 없습니다.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {chatMessages.map((message) => {
+                      const isMine = message.sender_id === currentUserId;
+                      const timeLabel = new Date(
+                        message.created_at
+                      ).toLocaleTimeString("ko-KR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+                      return (
+                        <div
+                          key={message.id}
+                          className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                              isMine
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-foreground"
+                            }`}
+                          >
+                            <div className="mb-1 text-xs opacity-70">
+                              {isMine ? "나" : message.sender_name} · {timeLabel}
+                            </div>
+                            <div className="whitespace-pre-wrap">
+                              {message.content}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+                  placeholder="메시지 입력"
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleSendInput();
+                    }
+                  }}
+                  maxLength={CHAT_MAX_LENGTH}
+                />
+                <Button
+                  variant="default"
+                  onClick={handleSendInput}
+                  disabled={!chatInput.trim()}
+                >
+                  전송
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
