@@ -55,6 +55,17 @@ class RoomReservationService:
             else "none"
         )
 
+        from datetime import timedelta
+
+        # Check for overlaps
+        start_time = data.scheduled_at
+        duration_sec = data.work_duration + data.break_duration
+        end_time = start_time + timedelta(seconds=duration_sec)
+
+        has_conflict = await self.repository.has_overlap(user_id, start_time, end_time)
+        if has_conflict:
+            raise ValueError("Time slot overlaps with an existing reservation")
+
         # Create main reservation
         reservation = RoomReservation(
             id=generate_uuid(),
@@ -208,6 +219,20 @@ class RoomReservationService:
             reservation.break_duration = data.break_duration
         if data.description is not None:
             reservation.description = data.description
+
+        # Check for overlaps if time related fields are updated
+        if data.scheduled_at or data.work_duration or data.break_duration:
+            from datetime import timedelta
+
+            start_time = reservation.scheduled_at
+            duration_sec = reservation.work_duration + reservation.break_duration
+            end_time = start_time + timedelta(seconds=duration_sec)
+
+            has_conflict = await self.repository.has_overlap(
+                user_id, start_time, end_time, exclude_id=reservation_id
+            )
+            if has_conflict:
+                raise ValueError("Updated time slot overlaps with an existing reservation")
 
         updated = await self.repository.update(reservation)
         return RoomReservationResponse.model_validate(updated)

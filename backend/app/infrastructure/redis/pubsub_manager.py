@@ -1,17 +1,24 @@
-"""Redis Pub/Sub integration for chat system."""
+"""Redis Pub/Sub integration for chat system with fault tolerance.
+
+Production-grade PubSub with:
+- Circuit Breaker pattern for fault isolation
+- Graceful degradation on Redis failures
+- Comprehensive error handling
+"""
 
 from typing import Optional
 import asyncio
 import json
+import logging
 from uuid import UUID
 
 import redis.asyncio as aioredis
 
 from app.core.config import settings
 from app.infrastructure.websocket.chat_manager import connection_manager
+from app.infrastructure.redis.circuit_breaker import RedisCircuitBreaker, CircuitOpenError
 
-
-import logging
+logger = logging.getLogger(__name__)
 
 class RedisPubSubManager:
     """Manages Redis Pub/Sub for cross-server message synchronization."""
@@ -22,6 +29,12 @@ class RedisPubSubManager:
         self.pubsub: aioredis.client.PubSub | None = None
         self.subscriptions: set[str] = set()
         self._listener_task: asyncio.Task | None = None
+        # Circuit breaker for fault isolation
+        self._circuit_breaker = RedisCircuitBreaker(
+            failure_threshold=5,
+            recovery_timeout=30,
+            success_threshold=2,
+        )
 
     async def connect(self):
         """Connect to Redis."""
@@ -44,10 +57,20 @@ class RedisPubSubManager:
             await self.redis.close()
 
     async def publish_message(self, room_id: UUID, message_data: dict):
-        """Publish message to Redis channel."""
+        """Publish message to Redis channel with circuit breaker protection."""
         if not self.redis:
+            logger.warning("[PubSub] Redis not connected, skipping message publish")
             return
 
+        try:
+            await self._circuit_breaker.call(self._publish_message_impl, room_id, message_data)
+        except CircuitOpenError:
+            logger.warning(f"[PubSub] Circuit open, skipping message publish to room {room_id}")
+        except Exception as e:
+            logger.error(f"[PubSub] Failed to publish message to room {room_id}: {e}")
+
+    async def _publish_message_impl(self, room_id: UUID, message_data: dict):
+        """Internal implementation of publish_message."""
         channel = f"chat:room:{room_id}"
         await self.redis.publish(
             channel,
@@ -60,10 +83,20 @@ class RedisPubSubManager:
         )
 
     async def publish_event(self, room_id: UUID, event_type: str, event_data: dict):
-        """Publish event to Redis channel."""
+        """Publish event to Redis channel with circuit breaker protection."""
         if not self.redis:
+            logger.warning(f"[PubSub] Redis not connected, skipping event publish: {event_type}")
             return
 
+        try:
+            await self._circuit_breaker.call(self._publish_event_impl, room_id, event_type, event_data)
+        except CircuitOpenError:
+            logger.warning(f"[PubSub] Circuit open, skipping event {event_type} to room {room_id}")
+        except Exception as e:
+            logger.error(f"[PubSub] Failed to publish event {event_type} to room {room_id}: {e}")
+
+    async def _publish_event_impl(self, room_id: UUID, event_type: str, event_data: dict):
+        """Internal implementation of publish_event."""
         channel = f"chat:room:{room_id}"
         await self.redis.publish(
             channel,
@@ -76,24 +109,34 @@ class RedisPubSubManager:
         )
 
     async def subscribe_to_room(self, room_id: UUID):
-        """Subscribe to room channel."""
+        """Subscribe to room channel with error handling."""
         if not self.pubsub:
+            logger.warning(f"[PubSub] PubSub not initialized, skipping subscribe to room {room_id}")
             return
 
-        channel = f"chat:room:{room_id}"
-        if channel not in self.subscriptions:
-            await self.pubsub.subscribe(channel)
-            self.subscriptions.add(channel)
+        try:
+            channel = f"chat:room:{room_id}"
+            if channel not in self.subscriptions:
+                await self.pubsub.subscribe(channel)
+                self.subscriptions.add(channel)
+                logger.debug(f"[PubSub] Subscribed to room {room_id}")
+        except Exception as e:
+            logger.error(f"[PubSub] Failed to subscribe to room {room_id}: {e}")
 
     async def unsubscribe_from_room(self, room_id: UUID):
-        """Unsubscribe from room channel."""
+        """Unsubscribe from room channel with error handling."""
         if not self.pubsub:
+            logger.warning(f"[PubSub] PubSub not initialized, skipping unsubscribe from room {room_id}")
             return
 
-        channel = f"chat:room:{room_id}"
-        if channel in self.subscriptions:
-            await self.pubsub.unsubscribe(channel)
-            self.subscriptions.discard(channel)
+        try:
+            channel = f"chat:room:{room_id}"
+            if channel in self.subscriptions:
+                await self.pubsub.unsubscribe(channel)
+                self.subscriptions.discard(channel)
+                logger.debug(f"[PubSub] Unsubscribed from room {room_id}")
+        except Exception as e:
+            logger.error(f"[PubSub] Failed to unsubscribe from room {room_id}: {e}")
 
     async def listen(self):
         """Listen for messages from Redis and broadcast to WebSocket connections."""
@@ -131,10 +174,20 @@ class RedisPubSubManager:
                     logging.getLogger(__name__).error(f"Error processing Redis notification: {e}")
 
     async def publish_notification(self, user_id: str, notification_data: dict):
-        """Publish notification to Redis channel for a specific user."""
+        """Publish notification to Redis channel with circuit breaker protection."""
         if not self.redis:
+            logger.warning(f"[PubSub] Redis not connected, skipping notification for user {user_id}")
             return
 
+        try:
+            await self._circuit_breaker.call(self._publish_notification_impl, user_id, notification_data)
+        except CircuitOpenError:
+            logger.warning(f"[PubSub] Circuit open, skipping notification for user {user_id}")
+        except Exception as e:
+            logger.error(f"[PubSub] Failed to publish notification for user {user_id}: {e}")
+
+    async def _publish_notification_impl(self, user_id: str, notification_data: dict):
+        """Internal implementation of publish_notification."""
         channel = f"notification:user:{user_id}"
         await self.redis.publish(
             channel,

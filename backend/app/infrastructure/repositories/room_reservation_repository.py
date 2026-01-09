@@ -162,3 +162,69 @@ class RoomReservationRepository:
         )
         return list(result.scalars().all())
 
+    async def has_overlap(
+        self,
+        user_id: str,
+        start_time: datetime,
+        end_time: datetime,
+        exclude_id: str | None = None,
+    ) -> bool:
+        """Check if user has any overlapping active reservations.
+
+        Args:
+            user_id: User identifier
+            start_time: Start of the new reservation
+            end_time: End of the new reservation
+            exclude_id: Reservation ID to exclude (for updates)
+
+        Returns:
+            True if overlap exists
+        """
+        from datetime import timedelta
+        # Calculate duration in minutes for database query if needed,
+        # but since we store seconds, we might need a more complex query
+        # or just fetch candidates.
+        # However, SQL alchemy expression for (start + duration) is complex across DBs.
+        # A simpler robust way for now:
+        # Overlap condition: (StartA < EndB) and (EndA > StartB)
+        # Here A is existing, B is new.
+        # Existing End = scheduled_at + work_duration + break_duration (seconds)
+
+        # Since we can't easily do date math in generic SQL with seconds stored as int,
+        # we can fetch upcoming reservations for the user and check in python
+        # OR use specific dialect functions.
+        # For compatibility and simplicity given expected volume per user, checking in Python
+        # after fetching "nearby" reservations is safe, OR we assume PostgreSQL calls.
+
+        # Let's use a Python check for now which is safer for this codebase's complexity level
+        # Fetch user's active reservations around the time.
+        # Optimization: Fetch only for the specific day?
+        # Let's fetch all active upcoming or recent valid ones.
+
+        # A "safer" SQL approach might be to just get all active future reservations for user
+        # and checking overlap in memory. Users won't have thousands of active future reservations.
+
+        query = select(RoomReservation).where(
+            RoomReservation.user_id == user_id,
+            RoomReservation.is_active == True,
+            RoomReservation.is_completed == False,
+        )
+
+        if exclude_id:
+            query = query.where(RoomReservation.id != exclude_id)
+
+        result = await self.session.execute(query)
+        reservations = result.scalars().all()
+
+        for res in reservations:
+            # existing range
+            res_start = res.scheduled_at
+            res_duration_sec = res.work_duration + res.break_duration
+            res_end = res_start + timedelta(seconds=res_duration_sec)
+
+            # check overlap: (StartA < EndB) and (EndA > StartB)
+            if res_start < end_time and res_end > start_time:
+                return True
+
+        return False
+

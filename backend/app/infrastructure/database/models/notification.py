@@ -34,6 +34,13 @@ class Notification(Base, TimestampMixin):
         comment="Notification type (e.g., 'system', 'achievement', 'message')",
     )
 
+    priority: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="medium",
+        comment="Priority: high, medium, low",
+    )
+
     title: Mapped[str] = mapped_column(
         String(200),
         nullable=False,
@@ -52,16 +59,47 @@ class Notification(Base, TimestampMixin):
         comment="Additional notification data (JSON)",
     )
 
+    routing: Mapped[dict | None] = mapped_column(
+        JSON(),
+        nullable=True,
+        comment="Frontend routing info: {path, params}",
+    )
+
+    group_key: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+        comment="Key for grouping similar notifications",
+    )
+
     is_read: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
+        index=True,
         comment="Whether the notification has been read",
     )
 
     read_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
         comment="Timestamp when notification was read",
+    )
+
+    delivered_via_ws: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        comment="Delivered via WebSocket",
+    )
+
+    delivered_via_email: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        comment="Delivered via Email",
+    )
+
+    __table_args__ = (
+        Index('idx_user_unread', 'user_id', 'is_read'),
+        Index('idx_user_created', 'user_id', 'created_at'),
     )
 
     def __repr__(self) -> str:
