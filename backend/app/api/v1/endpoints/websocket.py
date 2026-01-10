@@ -55,6 +55,7 @@ async def websocket_endpoint(
         token: JWT token for authentication
     """
     current_user = None
+    token_id = None
     try:
         # Authenticate user
         if token:
@@ -64,6 +65,9 @@ async def websocket_endpoint(
                 )
                 user_id: str = payload.get("sub")
                 if user_id:
+                    # Extract token ID (JTI) for tracking session activity
+                    token_id = payload.get("jti")
+
                     user_repo = UserRepository(db)
                     user = await user_repo.get_by_id(user_id)
                     if user and user.is_active:
