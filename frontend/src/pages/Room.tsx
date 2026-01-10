@@ -443,6 +443,17 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     };
   }, [status, minutes, seconds, sessionType]);
 
+  // Use refs for stable access inside effect loops
+  const startTimerRef = useRef(startTimer);
+  const loadParticipantsRef = useRef(loadParticipants);
+  const updateTimerStateRef = useRef(updateTimerState);
+
+  useEffect(() => {
+    startTimerRef.current = startTimer;
+    loadParticipantsRef.current = loadParticipants;
+    updateTimerStateRef.current = updateTimerState;
+  }, [startTimer, loadParticipants, updateTimerState]);
+
   // WebSocket connection and synchronization
   const mountTimeRef = useRef<number | null>(null);
   const connectionEstablishedRef = useRef(false);
@@ -511,7 +522,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         // Set up message handler
         unsubscribe = wsClient.onMessage((message) => {
           if (message.event === "timer_update") {
-            updateTimerState(message.data);
+            updateTimerStateRef.current(message.data);
           } else if (message.event === "participant_update") {
             // Update participants list
             if (message.data.action === "joined" && message.data.participant) {
@@ -580,7 +591,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
             if (auto_start) {
               setTimeout(() => {
-                startTimer(next_session_type);
+                startTimerRef.current(next_session_type);
               }, 3000);
             }
           } else if (message.event === "chat_backfill") {
@@ -687,7 +698,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         cleanupTimeoutRef.current = null;
       }, 200); // 200ms 대기로 증가
     };
-  }, [roomId, updateTimerState, startTimer, loadParticipants]);
+  }, [roomId]);
 
   // Update timer state when room data changes
   useEffect(() => {
