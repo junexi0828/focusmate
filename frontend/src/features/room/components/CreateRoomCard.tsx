@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
+import { GlassCard } from "../../../components/ui/glass-card";
 import { Button } from "../../../components/ui/button-enhanced";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -69,8 +70,8 @@ export function CreateRoomCard({ onCreateRoom }: CreateRoomCardProps) {
   };
 
   return (
-    <Card
-      className={`w-full shadow-lg transition-shadow glass-card ${isFunMode ? 'hover:shadow-xl' : ''}`}
+    <GlassCard
+      className={`w-full shadow-lg transition-shadow ${isFunMode ? 'hover:shadow-xl' : ''}`}
       onMouseMove={isFunMode ? handleMouseMove : undefined}
       onMouseLeave={isFunMode ? handleMouseLeave : undefined}
       style={isFunMode ? style : undefined}
@@ -146,6 +147,6 @@ export function CreateRoomCard({ onCreateRoom }: CreateRoomCardProps) {
           </Button>
         </form>
       </CardContent>
-    </Card>
+    </GlassCard>
   );
 }
