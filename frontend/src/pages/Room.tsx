@@ -839,9 +839,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   }
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full bg-background mesh-gradient transition-colors duration-300">
       {/* Header */}
-      <header className="border-b bg-card">
+      <header className="border-b glass transition-colors duration-300">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex-1 min-w-0">
@@ -1018,8 +1018,8 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         </div>
 
         <section className="mt-10">
-          <div className="rounded-xl border bg-card">
-            <div className="border-b px-4 py-3">
+          <div className="glass-card">
+            <div className="border-b border-white/10 px-4 py-3">
               <h2 className="text-base font-semibold">방 채팅</h2>
             </div>
             <div className="flex flex-col gap-4 p-4">
@@ -1040,7 +1040,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
               <div
                 ref={chatScrollRef}
-                className="h-64 overflow-y-auto rounded-lg border bg-background p-3"
+                className="h-64 overflow-y-auto rounded-lg border bg-background/50 backdrop-blur-sm p-3"
               >
                 {chatMessages.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
