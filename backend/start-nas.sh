@@ -27,14 +27,16 @@ cd "$PROJECT_DIR"
 
 # .env 파일에서 Cloudflare Tunnel 토큰 로드
 if [ -f "$PROJECT_DIR/.env" ]; then
-    # .env 파일에서 CLOUDFLARE_TUNNEL_TOKEN 추출
-    while IFS='=' read -r key value; do
-        key=$(echo "$key" | sed 's/#.*$//' | xargs)
-        value=$(echo "$value" | sed 's/#.*$//' | xargs)
-        if [ -n "$key" ] && [ "$key" = "CLOUDFLARE_TUNNEL_TOKEN" ]; then
-            export CLOUDFLARE_TUNNEL_TOKEN="$value"
+    # 공백/따옴표를 포함한 토큰 라인을 안전하게 파싱
+    token_line=$(grep -E '^CLOUDFLARE_TUNNEL_TOKEN=' "$PROJECT_DIR/.env" 2>/dev/null | head -1)
+    if [ -n "$token_line" ]; then
+        token_value=$(echo "$token_line" | sed 's/^CLOUDFLARE_TUNNEL_TOKEN=//')
+        token_value=$(echo "$token_value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        token_value=$(echo "$token_value" | sed 's/^"//;s/"$//;s/^\x27//;s/\x27$//')
+        if [ -n "$token_value" ]; then
+            export CLOUDFLARE_TUNNEL_TOKEN="$token_value"
         fi
-    done < <(grep -E '^CLOUDFLARE_TUNNEL_TOKEN=' "$PROJECT_DIR/.env" 2>/dev/null || true)
+    fi
 fi
 
 # Miniconda 경로 및 환경 설정
@@ -86,7 +88,7 @@ export PATH="$CONDA_BIN_DIR:$PATH"
 if [ -f "$PROJECT_DIR/scripts/database/smart_migrate.py" ]; then
     # Smart migration script 사용 (기존 테이블이 있어도 안전하게 처리)
     # PATH에 conda bin이 추가되어 있으므로 alembic 명령어를 찾을 수 있음
-    if $CONDA_PYTHON "$PROJECT_DIR/scripts/database/smart_migrate.py"; then
+    if PYTHONPATH=. $CONDA_PYTHON "$PROJECT_DIR/scripts/database/smart_migrate.py"; then
         echo "✅ 마이그레이션 완료"
     else
         echo "⚠️  마이그레이션 완료 (경고가 있을 수 있지만 정상일 수 있음)"
@@ -253,4 +255,3 @@ if command -v cloudflared > /dev/null 2>&1; then
 else
     echo "⚠️  cloudflared가 설치되어 있지 않습니다. Tunnel을 시작할 수 없습니다."
 fi
-

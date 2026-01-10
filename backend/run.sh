@@ -136,7 +136,7 @@ echo ""
 echo "🗄️  Running database migrations..."
 if [ -f "scripts/database/smart_migrate.py" ]; then
     # Use smart migration script (handles existing tables gracefully)
-    if python scripts/database/smart_migrate.py; then
+    if PYTHONPATH=. python scripts/database/smart_migrate.py; then
         echo "✅ Migrations completed successfully"
     else
         echo "⚠️  Migration completed with warnings (this may be normal)"
