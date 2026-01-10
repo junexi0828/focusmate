@@ -1,7 +1,6 @@
 
 import React, { useState } from "react";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -71,7 +70,7 @@ export function CreateRoomCard({ onCreateRoom }: CreateRoomCardProps) {
 
   return (
     <GlassCard
-      className={`w-full shadow-lg transition-shadow ${isFunMode ? 'hover:shadow-xl' : ''}`}
+      className={`relative w-full h-full overflow-hidden shadow-lg transition-shadow ${isFunMode ? 'hover:shadow-xl' : ''}`}
       onMouseMove={isFunMode ? handleMouseMove : undefined}
       onMouseLeave={isFunMode ? handleMouseLeave : undefined}
       style={isFunMode ? style : undefined}
