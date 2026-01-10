@@ -13,6 +13,8 @@ import { LogIn } from "lucide-react";
 
 import { useTheme } from "../../../hooks/useTheme";
 
+import { GlassCard } from "../../../components/ui/glass-card";
+
 interface JoinRoomCardProps {
   onJoinRoom: (roomId: string) => void;
 }
@@ -47,8 +49,8 @@ export function JoinRoomCard({ onJoinRoom }: JoinRoomCardProps) {
   };
 
   return (
-    <Card
-      className={`w-full shadow-lg transition-shadow glass-card ${
+    <GlassCard
+      className={`w-full shadow-lg transition-shadow ${
         isFunMode ? "hover:shadow-xl card-interactive" : ""
       }`}
       onMouseMove={isFunMode ? handleMouseMove : undefined}
@@ -88,6 +90,6 @@ export function JoinRoomCard({ onJoinRoom }: JoinRoomCardProps) {
           </Button>
         </form>
       </CardContent>
-    </Card>
+    </GlassCard>
   );
 }
