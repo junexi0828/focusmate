@@ -14,6 +14,8 @@ import { Slider } from "../../../components/ui/slider";
 import { Plus } from "lucide-react";
 import { use3DCard } from "../../../hooks/use3DCard";
 
+import { useTheme } from "../../../hooks/useTheme";
+
 interface CreateRoomCardProps {
   onCreateRoom: (
     roomName: string,
@@ -29,8 +31,11 @@ export function CreateRoomCard({ onCreateRoom }: CreateRoomCardProps) {
   const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
+  const { theme } = useTheme();
   // 3D Card Hook
   const { handleMouseMove, handleMouseLeave, style } = use3DCard(20);
+
+  const isFunMode = theme === "fun";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +69,12 @@ export function CreateRoomCard({ onCreateRoom }: CreateRoomCardProps) {
   };
 
   return (
-    <Card className="w-full shadow-lg hover:shadow-xl transition-shadow">
+    <Card
+      className={`w-full shadow-lg transition-shadow ${isFunMode ? 'hover:shadow-xl' : ''}`}
+      onMouseMove={isFunMode ? handleMouseMove : undefined}
+      onMouseLeave={isFunMode ? handleMouseLeave : undefined}
+      style={isFunMode ? style : undefined}
+    >
       <CardHeader className="pb-6">
         <CardTitle className="flex items-center gap-3 text-2xl font-semibold">
           <Plus className="w-6 h-6" />새 방 만들기

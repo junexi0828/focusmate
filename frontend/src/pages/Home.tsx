@@ -4,7 +4,6 @@ import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
 import logoFull from "../assets/logo-full.png";
-import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -25,8 +24,6 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
       */
       className="flex flex-col items-center justify-center py-4 min-h-full relative overflow-hidden"
     >
-      <BackgroundBlobs />
-
       {/*
         컨테이너 최대 너비 설정
         - max-w-6xl: 최대 너비 (변경: max-w-4xl, max-w-5xl, max-w-7xl 등)
