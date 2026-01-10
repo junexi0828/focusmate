@@ -4,6 +4,7 @@
 
 import { TimerState } from "../features/timer/types/timer.types";
 import { authService } from "../features/auth/services/authService";
+import { RoomChatMessage } from "../types/room-chat";
 
 // WebSocket 메시지 타입 정의 (서버 → 클라이언트)
 export type WebSocketEventMessage =
@@ -45,6 +46,20 @@ export type WebSocketEventMessage =
         message: string;
       };
       timestamp: string;
+    }
+  | {
+      event: "chat_backfill";
+      data: {
+        messages: RoomChatMessage[];
+      };
+      timestamp?: string;
+    }
+  | {
+      event: "chat_message";
+      data: {
+        message: RoomChatMessage;
+      };
+      timestamp?: string;
     };
 
 // WebSocket 액션 메시지 타입 정의 (클라이언트 → 서버)
@@ -66,6 +81,12 @@ export type WebSocketActionMessage =
     }
   | {
       action: "ping";
+    }
+  | {
+      action: "chat_message";
+      data: {
+        content: string;
+      };
     };
 
 // Legacy type for backward compatibility
@@ -221,7 +242,10 @@ class WebSocketClient {
 
         this.ws.onmessage = (event) => {
           try {
-            const message: WebSocketEventMessage = JSON.parse(event.data);
+            const raw = JSON.parse(event.data);
+            const message: WebSocketEventMessage = raw.event
+              ? raw
+              : { ...raw, event: raw.type };
 
             // Handle pong response (heartbeat)
             if (message.event === "pong") {
@@ -419,7 +443,9 @@ class WebSocketClient {
                   ? "timer_reset"
                   : message.action === "ping"
                     ? "ping"
-                    : "message",
+                    : message.action === "chat_message"
+                      ? "chat_message"
+                      : "message",
         data: "data" in message && message.data ? message.data : {},
       };
       this.ws.send(JSON.stringify(backendMessage));
@@ -450,6 +476,10 @@ class WebSocketClient {
 
   sendPing(): void {
     this.send({ action: "ping" });
+  }
+
+  sendChatMessage(content: string): void {
+    this.send({ action: "chat_message", data: { content } });
   }
 
   private getWebSocketUrl(roomId: string): string {

@@ -1,5 +1,5 @@
 import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";
-import { useEffect, lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { Toaster } from "sonner";
 
 // Conditionally import TanStackRouterDevtools only in development
@@ -16,58 +16,38 @@ import { CommandPalette } from "../components/CommandPalette";
 import { NotificationBell } from "../components/notifications/NotificationBell";
 import { Footer } from "../components/footer";
 
+import { useTheme } from "../hooks/useTheme";
+// ThemeToggle removed as unused
+import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
+
 export const Route = createRootRoute({
   component: RootComponent,
 });
 
 function RootComponent() {
   const location = useLocation();
-
-  // Unified theme initialization
-  useEffect(() => {
-    const applyTheme = () => {
-      const savedTheme = localStorage.getItem("theme");
-      const root = document.documentElement;
-      root.classList.remove("light", "dark");
-
-      if (savedTheme === "dark") {
-        root.classList.add("dark");
-      } else if (savedTheme === "light") {
-        root.classList.add("light");
-      } else {
-        // Fallback to system preference if no specific theme is saved
-        const prefersDark = window.matchMedia(
-          "(prefers-color-scheme: dark)"
-        ).matches;
-        root.classList.add(prefersDark ? "dark" : "light");
-      }
-    };
-
-    applyTheme();
-
-    // Optional: Listen for system theme changes if no explicit theme is set
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      if (!localStorage.getItem("theme")) {
-        applyTheme();
-      }
-    };
-
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
+  const { isFunMode } = useTheme();
 
   // Hide sidebar on login page
   const isLoginPage = location.pathname === "/login";
+  const isHomePage = location.pathname === "/";
 
   return (
     <ErrorBoundary>
       <div className="flex h-screen bg-background text-foreground font-sans antialiased selection:bg-primary/20">
+        {isFunMode && <BackgroundBlobs />}
         {/* Persistent Sidebar - Hidden on Login */}
         {!isLoginPage && <Sidebar />}
 
+        {/* Global Theme Toggle (Upper Right) - Removed as Sidebar handles it */}
+        {/* {!isLoginPage && <ThemeToggle className="fixed top-4 right-4 z-50" />} */}
+
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto relative flex flex-col">
+            <main
+          className={`flex-1 overflow-auto relative flex flex-col ${
+            isHomePage && isFunMode ? "mesh-gradient" : ""
+          }`}
+        >
           {/* Top Header Placeholder (optional) - Hidden on Login */}
           {!isLoginPage && (
             <header className="h-14 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10 flex items-center px-4">
@@ -84,8 +64,8 @@ function RootComponent() {
 
           <div
             className={
-              isLoginPage
-                ? "h-full w-full"
+              isLoginPage || isHomePage
+                ? "flex-1 w-full"
                 : "flex-1 p-8 max-w-7xl mx-auto w-full"
             }
           >
