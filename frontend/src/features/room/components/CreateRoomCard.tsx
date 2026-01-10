@@ -70,7 +70,7 @@ export function CreateRoomCard({ onCreateRoom }: CreateRoomCardProps) {
 
   return (
     <Card
-      className={`w-full shadow-lg transition-shadow ${isFunMode ? 'hover:shadow-xl' : ''}`}
+      className={`w-full shadow-lg transition-shadow glass-card ${isFunMode ? 'hover:shadow-xl' : ''}`}
       onMouseMove={isFunMode ? handleMouseMove : undefined}
       onMouseLeave={isFunMode ? handleMouseLeave : undefined}
       style={isFunMode ? style : undefined}

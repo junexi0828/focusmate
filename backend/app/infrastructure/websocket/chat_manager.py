@@ -64,6 +64,15 @@ class ChatConnectionManager(BaseConnectionManager[UUID]):
 
         logger.info(f"User {user_id} disconnected from chat room {room_id}")
 
+    async def send_personal_message(self, message: dict, websocket: WebSocket) -> None:
+        """Send message to specific connection.
+
+        Args:
+            message: Message data
+            websocket: Target WebSocket
+        """
+        await self._send_json(websocket, message)
+
     async def broadcast_to_room(self, room_id: UUID, message: dict):
         """Broadcast message to all connections in a room.
 

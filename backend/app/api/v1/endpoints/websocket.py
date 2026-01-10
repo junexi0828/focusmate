@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt, JWTError
 
 from app.core.exceptions import InvalidTimerStateException, RoomNotFoundException, TimerNotFoundException
-from app.infrastructure.websocket.manager import connection_manager
+from app.infrastructure.websocket.chat_manager import connection_manager
 from app.infrastructure.database.session import get_db
 from app.infrastructure.repositories.room_repository import RoomRepository
 from app.infrastructure.repositories.timer_repository import TimerRepository
@@ -81,7 +81,7 @@ async def websocket_endpoint(
             return
 
         logger.info(f"[Room WS] Connection attempt by {current_user.username} for room_id={room_id}")
-        await connection_manager.connect(websocket, room_id)
+        await connection_manager.connect(websocket, UUID(room_id), str(current_user.id))
 
         # Subscribe to Redis channel for multi-server broadcasting
         try:
@@ -345,7 +345,7 @@ async def websocket_endpoint(
         logger.info(
             f"[Room WS] Client disconnected from room_id={room_id} (code: {e.code})"
         )
-        connection_manager.disconnect(websocket, room_id)
+        connection_manager.disconnect(websocket, UUID(room_id))
 
         # Unsubscribe if no more connections in this room (on this server)
         if connection_manager.get_room_connection_count(room_id) == 0:
@@ -377,7 +377,7 @@ async def websocket_endpoint(
 
     except Exception as e:
         logger.error(f"[Room WS] Fatal error for room_id={room_id}: {e}", exc_info=True)
-        connection_manager.disconnect(websocket, room_id)
+        connection_manager.disconnect(websocket, UUID(room_id))
         try:
             await websocket.close(code=1011)
         except Exception:
