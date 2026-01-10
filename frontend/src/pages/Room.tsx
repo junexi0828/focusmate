@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "@tanstack/react-router";
+import { GlassCard } from "../components/ui/glass-card";
 import { Button } from "../components/ui/button";
 import { TimerDisplay } from "../features/timer/components/TimerDisplay";
 import { TimerControls } from "../features/timer/components/TimerControls";
@@ -852,7 +853,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   return (
     <div className="min-h-full bg-background transition-colors duration-300">
       {/* Header */}
-      <header className="border-b bg-card transition-colors duration-300">
+      <header className="border-b bg-white/70 dark:bg-black/60 backdrop-blur-md border-white/20 dark:border-white/10 shadow-sm transition-colors duration-300">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex-1 min-w-0">
@@ -1029,8 +1030,8 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         </div>
 
         <section className="mt-10">
-          <div className="rounded-xl border bg-card">
-            <div className="border-b px-4 py-3">
+          <GlassCard>
+            <div className="border-b border-white/10 px-4 py-3">
               <h2 className="text-base font-semibold">방 채팅</h2>
             </div>
             <div className="flex flex-col gap-4 p-4">
@@ -1116,7 +1117,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 </Button>
               </div>
             </div>
-          </div>
+          </GlassCard>
         </section>
       </main>
     </div>
