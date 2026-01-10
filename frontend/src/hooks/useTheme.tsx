@@ -15,11 +15,15 @@ type ThemeProviderProps = {
 type ThemeProviderState = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  isFunMode: boolean;
+  toggleFunMode: () => void;
 };
 
 const initialState: ThemeProviderState = {
   theme: "system",
   setTheme: () => null,
+  isFunMode: false,
+  toggleFunMode: () => null,
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
@@ -30,34 +34,49 @@ export function ThemeProvider({
   storageKey = "focusmate-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
+  const [theme, setThemeState] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+  );
+
+  const [isFunMode, setIsFunMode] = useState<boolean>(
+    () => localStorage.getItem("focusmate-ui-fun-mode") === "true"
   );
 
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove("light", "dark");
+    // Reset all potential classes
+    root.classList.remove("light", "dark", "fun");
 
+    // Apply base theme
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
         .matches
         ? "dark"
         : "light";
-
       root.classList.add(systemTheme);
-      return;
+    } else {
+      root.classList.add(theme);
     }
 
-    root.classList.add(theme);
-  }, [theme]);
+    // Apply Fun mode (3D effects) regardless of base theme
+    if (isFunMode) {
+      root.classList.add("fun");
+    }
+  }, [theme, isFunMode]);
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
-      setTheme(theme);
+    setTheme: (newTheme: Theme) => {
+      localStorage.setItem(storageKey, newTheme);
+      setThemeState(newTheme);
     },
+    isFunMode,
+    toggleFunMode: () => {
+      const newValue = !isFunMode;
+      localStorage.setItem("focusmate-ui-fun-mode", String(newValue));
+      setIsFunMode(newValue);
+    }
   };
 
   return (

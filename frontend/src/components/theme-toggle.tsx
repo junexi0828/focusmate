@@ -1,40 +1,75 @@
-import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Laptop, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { useTheme } from "../hooks/useTheme";
+import { cn } from "../utils";
 
-export function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+interface ThemeToggleProps {
+  className?: string;
+  align?: "center" | "end" | "start";
+  children?: React.ReactNode;
+}
 
-  useEffect(() => {
-    // Check for saved theme preference or default to light mode
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
-    
-    setTheme(initialTheme);
-    document.documentElement.classList.toggle("dark", initialTheme === "dark");
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-  };
+export function ThemeToggle({ className, align = "end", children }: ThemeToggleProps) {
+  const { setTheme, isFunMode, toggleFunMode } = useTheme();
 
   return (
-    <Button
-      variant="outline"
-      size="icon"
-      onClick={toggleTheme}
-      className="fixed top-4 right-4 z-50"
-      aria-label="테마 전환"
-    >
-      {theme === "light" ? (
-        <Moon className="w-4 h-4" />
-      ) : (
-        <Sun className="w-4 h-4" />
-      )}
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        {children ? (
+          children
+        ) : (
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn("", className)}
+          >
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">테마 설정</span>
+          </Button>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align}>
+        <DropdownMenuItem onClick={(e) => {
+          e.stopPropagation();
+          setTheme("light");
+        }}>
+          <Sun className="mr-2 h-4 w-4" />
+          라이트 (Light)
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={(e) => {
+          e.stopPropagation();
+          setTheme("dark");
+        }}>
+          <Moon className="mr-2 h-4 w-4" />
+          다크 (Dark)
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={(e) => {
+          e.stopPropagation();
+          setTheme("system");
+        }}>
+          <Laptop className="mr-2 h-4 w-4" />
+          시스템 설정 (System)
+        </DropdownMenuItem>
+
+        <div className="h-px bg-border my-1" />
+
+        <DropdownMenuItem onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleFunMode();
+        }}>
+          <Sparkles className={cn("mr-2 h-4 w-4", isFunMode ? "text-purple-500 fill-purple-500" : "text-muted-foreground")} />
+          <span>3D 이펙트 {isFunMode ? "(On)" : "(Off)"}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
