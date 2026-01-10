@@ -48,8 +48,10 @@ export function JoinRoomCard({ onJoinRoom }: JoinRoomCardProps) {
 
   return (
     <Card
-      className={`w-full shadow-lg transition-shadow glass-card ${
-        isFunMode ? "hover:shadow-xl card-interactive" : ""
+      className={`w-full shadow-lg transition-shadow ${
+        isFunMode
+          ? "hover:shadow-xl card-interactive border-primary/20 bg-background/60 backdrop-blur-sm"
+          : ""
       }`}
       onMouseMove={isFunMode ? handleMouseMove : undefined}
       onMouseLeave={isFunMode ? handleMouseLeave : undefined}

@@ -292,15 +292,8 @@
   }
 
   /* Modern Design System - Premium Utilities */
-  .glass {
-    @apply bg-white/70 dark:bg-black/60 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-sm;
-  }
-
-  .glass-card {
-    @apply glass rounded-xl;
-  }
-
   .mesh-gradient {
+    background-color: #ffffff;
     background-color: #ffffff;
     background-image:
       radial-gradient(at 0% 0%, hsla(189,100%,96%,1) 0, transparent 50%),
