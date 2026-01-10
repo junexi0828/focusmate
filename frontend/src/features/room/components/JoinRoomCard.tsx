@@ -11,14 +11,24 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { LogIn } from "lucide-react";
 
+import { useTheme } from "../../../hooks/useTheme";
+
 interface JoinRoomCardProps {
   onJoinRoom: (roomId: string) => void;
 }
+
+import { use3DCard } from "../../../hooks/use3DCard";
 
 export function JoinRoomCard({ onJoinRoom }: JoinRoomCardProps) {
   const [roomId, setRoomId] = useState("");
   const [error, setError] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+
+  const { theme } = useTheme();
+  const isFunMode = theme === "fun";
+
+  // 3D Card Hook
+  const { handleMouseMove, handleMouseLeave, style } = use3DCard(20);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +47,16 @@ export function JoinRoomCard({ onJoinRoom }: JoinRoomCardProps) {
   };
 
   return (
-    <Card className="w-full shadow-lg hover:shadow-xl transition-shadow">
+    <Card
+      className={`w-full shadow-lg transition-shadow ${
+        isFunMode
+          ? "hover:shadow-xl card-interactive border-primary/20 bg-background/60 backdrop-blur-sm"
+          : ""
+      }`}
+      onMouseMove={isFunMode ? handleMouseMove : undefined}
+      onMouseLeave={isFunMode ? handleMouseLeave : undefined}
+      style={isFunMode ? style : undefined}
+    >
       <CardHeader className="pb-6">
         <CardTitle className="flex items-center gap-3 text-2xl font-semibold">
           <LogIn className="w-6 h-6" />방 참여하기

@@ -22,11 +22,13 @@ import { UserSettings } from "../types/settings";
 import { toast } from "sonner";
 import { Loader2, Settings as SettingsIcon, Lock, Bell, Palette } from "lucide-react";
 import { getErrorMessage } from "../utils/error";
+import { useTheme } from "../hooks/useTheme";
 
 export default function Settings() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { isFunMode, toggleFunMode } = useTheme();
 
   // Password change form
   const [passwordForm, setPasswordForm] = useState({
@@ -432,6 +434,20 @@ export default function Settings() {
                         </Button>
                       ))}
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="fun-mode" className="text-base">3D 이펙트 (Fun 모드)</Label>
+                      <p className="text-sm text-muted-foreground">
+                        배경에 부유하는 3D 오브젝트 효과를 적용합니다 (다크 모드와 함께 사용 가능)
+                      </p>
+                    </div>
+                    <Switch
+                      id="fun-mode"
+                      checked={isFunMode}
+                      onCheckedChange={toggleFunMode}
+                    />
                   </div>
 
                   <div className="space-y-2">
