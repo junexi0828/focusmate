@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Home,
@@ -24,12 +24,15 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { cn } from "../utils";
 import logoFull from "../assets/logo-full.png";
+import { ThemeToggle } from "./theme-toggle";
+import { useTheme } from "../hooks/useTheme";
 
 export function Sidebar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = authService.getCurrentUser();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   // 실제 읽지 않은 메시지 수 가져오기 (initial load only - WebSocket handles updates)
   const { data: unreadCount = 0 } = useQuery({
@@ -228,19 +231,35 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-border/50 space-y-2">
-        {/* Theme Toggle */}
+        {/* Theme Toggle - Dual Behavior */}
         <div
           className={cn(
-            "flex items-center rounded-md hover:bg-accent transition-colors",
-            isCollapsed
-              ? "justify-center px-3 py-2"
-              : "justify-between px-3 py-2"
+            "w-full flex items-center rounded-md hover:bg-accent transition-colors cursor-pointer",
+            isCollapsed ? "justify-center px-3 py-2" : "justify-between px-3 py-2"
           )}
+          onClick={(e) => {
+            // Cycle: Light -> Dark -> Light
+            const nextTheme = theme === "light" ? "dark" : "light";
+            setTheme(nextTheme);
+          }}
         >
+          {/* Left side (Text) */}
           {!isCollapsed && (
-            <span className="text-sm text-muted-foreground">테마</span>
+            <div className="flex-1 text-sm text-muted-foreground select-none">
+              테마
+            </div>
           )}
-          <ThemeToggleButton isCollapsed={isCollapsed} />
+
+          {/* Right side (Icon): Opens Dropdown Menu */}
+          <ThemeToggle align="end">
+            <div
+              className="border-0 bg-transparent shadow-none p-1.5 h-auto w-auto hover:bg-transparent flex items-center justify-center cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </div>
+          </ThemeToggle>
         </div>
 
         {/* Logout */}
@@ -261,45 +280,6 @@ export function Sidebar() {
         )}
       </div>
     </aside>
-  );
-}
-
-function ThemeToggleButton({ isCollapsed }: { isCollapsed: boolean }) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    // Sync with actual class on mount
-    const isDark = document.documentElement.classList.contains("dark");
-    setTheme(isDark ? "dark" : "light");
-
-    // Optional: MutationObserver to sync state if changed elsewhere
-    const observer = new MutationObserver(() => {
-      const currentlyDark = document.documentElement.classList.contains("dark");
-      setTheme(currentlyDark ? "dark" : "light");
-    });
-
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    localStorage.setItem("theme", newTheme);
-
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(newTheme);
-    // Theme state will be updated by the MutationObserver
-  };
-
-  return (
-    <button
-      onClick={toggleTheme}
-      className="p-1.5 rounded-md hover:bg-accent transition-colors"
-      aria-label="테마 전환"
-      title={isCollapsed ? "테마 전환" : undefined}
-    >
-      {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
-    </button>
   );
 }
 
