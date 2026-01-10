@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -50,7 +49,7 @@ export function JoinRoomCard({ onJoinRoom }: JoinRoomCardProps) {
 
   return (
     <GlassCard
-      className={`w-full shadow-lg transition-shadow ${
+      className={`relative w-full overflow-hidden shadow-lg transition-shadow ${
         isFunMode ? "hover:shadow-xl card-interactive" : ""
       }`}
       onMouseMove={isFunMode ? handleMouseMove : undefined}
