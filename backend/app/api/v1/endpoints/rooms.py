@@ -68,7 +68,7 @@ async def get_my_rooms(
                 else:
                     # If remove_on_leave=False, include room regardless of connection status
                     rooms.append(room)
-            except (ValueError, AttributeError, KeyError) as e:
+            except (ValueError, AttributeError, KeyError, RoomNotFoundException) as e:
                 # Skip rooms with invalid data or missing relationships
                 # Log for debugging but continue processing other rooms
                 continue
