@@ -16,7 +16,7 @@ interface HomePageProps {
 }
 
 export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
-  const { theme } = useTheme();
+
 
   return (
     <div
