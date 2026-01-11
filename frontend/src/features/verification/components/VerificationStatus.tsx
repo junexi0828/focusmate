@@ -66,7 +66,7 @@ export function VerificationStatus() {
             />
           </div>
         )}
-      </Card>
+      </GlassCard>
     );
   }
 
@@ -178,4 +178,3 @@ export function VerificationStatus() {
     </GlassCard>
   );
 }
-
