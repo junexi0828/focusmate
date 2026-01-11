@@ -178,7 +178,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
