@@ -9,7 +9,7 @@ import { useTheme } from "../hooks/useTheme";
 import logoFull from "../assets/logo-full.png";
 import darkLogoFull from "../assets/dark-logo-full.png";
 
-const HALF_ROTATION_RANGE = 18; // Restored to ~3/4 of original (25)
+const HALF_ROTATION_RANGE = 20; // Golden Ratio (~80% of original)
 
 export function HeroLogo() {
   const ref = useRef<HTMLDivElement>(null);
@@ -18,9 +18,10 @@ export function HeroLogo() {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  // Slower, smoother physics to reduce "dizziness" (stiffness 300 -> 100, damping 30 -> 40)
-  const xSpring = useSpring(x, { stiffness: 100, damping: 40 });
-  const ySpring = useSpring(y, { stiffness: 100, damping: 40 });
+  // Golden Ratio Physics: Responsive but smooth (stiffness 250, damping 35)
+  // Much faster than 100/40, but slightly smoother than original 300/30
+  const xSpring = useSpring(x, { stiffness: 250, damping: 35 });
+  const ySpring = useSpring(y, { stiffness: 250, damping: 35 });
 
   const transform = useMotionTemplate`rotateX(${xSpring}deg) rotateY(${ySpring}deg)`;
 
