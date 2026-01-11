@@ -9,7 +9,7 @@ import { useTheme } from "../hooks/useTheme";
 import logoFull from "../assets/logo-full.png";
 import darkLogoFull from "../assets/dark-logo-full.png";
 
-const HALF_ROTATION_RANGE = 25; // Increased for more visible 3D effect
+const HALF_ROTATION_RANGE = 8; // Reduced to 1/3 for subtle 3D effect
 
 export function HeroLogo() {
   const ref = useRef<HTMLDivElement>(null);
@@ -55,13 +55,13 @@ export function HeroLogo() {
         transformStyle: "preserve-3d",
         transform,
       }}
-      className="relative flex items-center justify-center -my-16 cursor-pointer group"
+      className="relative flex items-center justify-center -my-24 cursor-pointer group"
     >
       <motion.img
         src={theme === "dark" ? darkLogoFull : logoFull}
         alt="FocusMate"
         whileHover={{ scale: 1.05 }}
-        className="h-[18rem] object-contain drop-shadow-2xl transition-all duration-300"
+        className="h-[24rem] object-contain drop-shadow-2xl transition-all duration-300"
         style={{
           transform: "translateZ(50px)",
         }}
