@@ -60,6 +60,7 @@ class RedisPubSubManager:
         """Publish message to Redis channel with circuit breaker protection."""
         if not self.redis:
             logger.warning("[PubSub] Redis not connected, skipping message publish")
+            await self._broadcast_local(room_id, {"type": "message", "data": message_data})
             return
 
         try:
@@ -86,6 +87,7 @@ class RedisPubSubManager:
         """Publish event to Redis channel with circuit breaker protection."""
         if not self.redis:
             logger.warning(f"[PubSub] Redis not connected, skipping event publish: {event_type}")
+            await self._broadcast_local(room_id, {"type": event_type, "data": event_data})
             return
 
         try:
@@ -122,6 +124,13 @@ class RedisPubSubManager:
                 logger.debug(f"[PubSub] Subscribed to room {room_id}")
         except Exception as e:
             logger.error(f"[PubSub] Failed to subscribe to room {room_id}: {e}")
+
+    async def _broadcast_local(self, room_id: UUID, message: dict) -> None:
+        """Fallback to local broadcast when Redis is unavailable."""
+        try:
+            await connection_manager.broadcast_to_room(room_id, message)
+        except Exception as exc:
+            logger.error(f"[PubSub] Local broadcast failed for room {room_id}: {exc}")
 
     async def unsubscribe_from_room(self, room_id: UUID):
         """Unsubscribe from room channel with error handling."""

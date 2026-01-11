@@ -53,7 +53,7 @@ async def get_my_rooms(
         for room_id in room_ids:
             try:
                 room = await service.get_room(room_id)
-                if not room:
+                if not room or not room.is_active:
                     continue
 
                 # If room has remove_on_leave=True, only include if participant is active
