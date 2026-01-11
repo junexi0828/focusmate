@@ -48,7 +48,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             <img
               src={theme === "dark" ? darkLogoFull : logoFull}
               alt="FocusMate"
-              className="h-36"
+              className="h-[35rem] -my-32"
             />
           </div>
           {/*
