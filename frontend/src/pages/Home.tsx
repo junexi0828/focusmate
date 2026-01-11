@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
 import { HeroLogo } from "../components/HeroLogo";
-import { GlassCard } from "../components/ui/glass-card";
 import { useTheme } from "../hooks/useTheme";
 
 interface HomePageProps {
@@ -70,7 +69,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
           헤더 섹션 간격 설정
           - mb-12: 하단 여백 (변경: mb-8, mb-16 등)
         */}
-        <div className="text-center mb-8">
+        <motion.div className="text-center mb-8" variants={itemVariants}>
           {/*
             전체 로고 이미지 (새 + FocusMate 텍스트)
             - h-36: 로고 높이 (이전 비율 유지, 투명 여백 보정)
@@ -87,7 +86,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             팀과 함께 집중력을 향상시키는 실시간 협업 포모도로 타이머
           </p>
-        </div>
+        </motion.div>
 
         {/* Cards */}
         {/*
@@ -96,10 +95,10 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
           - gap-8: 카드 간 간격 (변경: gap-4, gap-6, gap-12 등)
           - mb-8: 하단 여백 (변경: mb-8, mb-12, mb-20 등)
         */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <motion.div className="grid md:grid-cols-2 gap-6 mb-6" variants={itemVariants}>
           <CreateRoomCard onCreateRoom={onCreateRoom} />
           <JoinRoomCard onJoinRoom={onJoinRoom} />
-        </div>
+        </motion.div>
 
         {/* Additional Sections: Room Reservations & My Rooms */}
         {/*
@@ -108,17 +107,17 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
           - gap-4: 작은 간격
           - mb-16: 하단 여백
         */}
-        <div className="grid md:grid-cols-2 gap-4 mb-16">
+        <motion.div className="grid md:grid-cols-2 gap-4 mb-16" variants={itemVariants}>
           <RoomReservationSection />
           <MyRoomsSection />
-        </div>
+        </motion.div>
 
         {/* How It Works Section */}
         {/*
           "사용 방법" 섹션 상단 여백
           - mt-16: 상단 여백 (변경: mt-8, mt-12, mt-20 등)
         */}
-        <div className="mt-16">
+        <motion.div className="mt-16" variants={itemVariants}>
           {/*
             섹션 제목 설정
             - text-3xl: 제목 크기 (변경: text-2xl, text-4xl 등)
@@ -177,7 +176,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
