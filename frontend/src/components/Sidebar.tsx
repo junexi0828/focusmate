@@ -24,6 +24,8 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { cn } from "../utils";
 import logoFull from "../assets/logo-full.png";
+import darkLogoFull from "../assets/dark-logo-full.png";
+import darkLogo from "../assets/dark-logo.png";
 import { ThemeToggle } from "./theme-toggle";
 import { useTheme } from "../hooks/useTheme";
 
@@ -73,14 +75,14 @@ export function Sidebar() {
       <div className="p-4 flex items-center gap-2 border-b border-border/50 relative">
         {!isCollapsed && (
           <img
-            src={logoFull}
+            src={theme === "dark" ? darkLogoFull : logoFull}
             alt="FocusMate"
-            className="h-15"
+            className="h-16"
           />
         )}
         {isCollapsed && (
           <img
-            src={logoFull}
+            src={theme === "dark" ? darkLogo : logoFull}
             alt="FocusMate"
             className="h-15 w-15 object-contain"
           />
