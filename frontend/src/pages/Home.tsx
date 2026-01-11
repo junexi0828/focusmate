@@ -131,19 +131,19 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             - gap-4: 작은 화면 간격 (변경: gap-2, gap-6 등)
             - sm:gap-8: 큰 화면 간격 (변경: sm:gap-6, sm:gap-12 등)
           */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10">
             {/* Step 1 */}
             <div className="flex flex-col items-center text-center">
               <div
-                className="w-16 h-16 min-w-16 min-h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mb-4"
+                className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mb-3"
                 style={{ aspectRatio: "1 / 1" }}
               >
-                <span className="text-2xl font-bold text-primary">1</span>
+                <span className="text-lg font-bold text-primary">1</span>
               </div>
-              <h3 className="text-xl font-bold mb-3">
-                방 만들기 또는 참여하기
+              <h3 className="text-lg font-bold mb-2">
+                방 만들기/참여
               </h3>
-              <p className="text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground break-keep">
                 새로운 방을 만들거나 팀원과 함께 기존 방에 참여하세요
               </p>
             </div>
@@ -151,13 +151,13 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             {/* Step 2 */}
             <div className="flex flex-col items-center text-center">
               <div
-                className="w-16 h-16 min-w-16 min-h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mb-4"
+                className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mb-3"
                 style={{ aspectRatio: "1 / 1" }}
               >
-                <span className="text-2xl font-bold text-primary">2</span>
+                <span className="text-lg font-bold text-primary">2</span>
               </div>
-              <h3 className="text-xl font-bold mb-3">함께 집중하기</h3>
-              <p className="text-muted-foreground leading-relaxed">
+              <h3 className="text-lg font-bold mb-2">함께 집중하기</h3>
+              <p className="text-sm text-muted-foreground break-keep">
                 모든 사람이 동일한 타이머를 보고 동기화된 상태를 유지합니다
               </p>
             </div>
@@ -165,13 +165,13 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             {/* Step 3 */}
             <div className="flex flex-col items-center text-center">
               <div
-                className="w-16 h-16 min-w-16 min-h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mb-4"
+                className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mb-3"
                 style={{ aspectRatio: "1 / 1" }}
               >
-                <span className="text-2xl font-bold text-primary">3</span>
+                <span className="text-lg font-bold text-primary">3</span>
               </div>
-              <h3 className="text-xl font-bold mb-3">함께 휴식하기</h3>
-              <p className="text-muted-foreground leading-relaxed">
+              <h3 className="text-lg font-bold mb-2">함께 휴식하기</h3>
+              <p className="text-sm text-muted-foreground break-keep">
                 동기화된 휴식을 취하며 생산성을 높이세요
               </p>
             </div>

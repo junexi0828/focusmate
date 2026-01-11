@@ -55,13 +55,13 @@ export function HeroLogo() {
         transformStyle: "preserve-3d",
         transform,
       }}
-      className="relative flex items-center justify-center -my-32 cursor-pointer group"
+      className="relative flex items-center justify-center -my-16 cursor-pointer group"
     >
       <motion.img
         src={theme === "dark" ? darkLogoFull : logoFull}
         alt="FocusMate"
         whileHover={{ scale: 1.05 }}
-        className="h-[35rem] object-contain drop-shadow-2xl transition-all duration-300"
+        className="h-[18rem] object-contain drop-shadow-2xl transition-all duration-300"
         style={{
           transform: "translateZ(50px)",
         }}
