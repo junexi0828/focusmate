@@ -82,6 +82,11 @@ export function useWebSocketStatus(roomId: string | null) {
       setReconnectAttempts(attempts || 0);
 
       if (state === "disconnected" && roomId) {
+        const lastError = wsClient.getLastErrorMessage();
+        if (lastError) {
+          setConnectionError(lastError);
+          return;
+        }
         const maxAttempts = wsClient.getMaxReconnectAttempts();
 
         // 첫 번째 재연결 시도는 조용히 처리 (방 생성 직후 Race Condition 대응)
@@ -117,4 +122,3 @@ export function useWebSocketStatus(roomId: string | null) {
     reconnectAttempts,
   };
 }
-

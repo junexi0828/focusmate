@@ -4,7 +4,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import get_room_repository
+from app.api.deps import get_current_user_required, get_room_repository
 from app.core.exceptions import (
     ParticipantNotFoundException,
     RoomFullException,
@@ -48,6 +48,7 @@ def get_participant_service(
 async def join_room(
     room_id: str,
     data: ParticipantJoin,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ParticipantService, Depends(get_participant_service)],
 ) -> ParticipantResponse:
     """Join a room as a participant.
@@ -55,7 +56,14 @@ async def join_room(
     First participant becomes the room host.
     """
     try:
-        return await service.join_room(room_id, data)
+        join_data = ParticipantJoin(
+            username=current_user.get("username")
+            or current_user.get("email")
+            or data.username,
+            user_id=current_user["id"],
+            participant_id=data.participant_id,
+        )
+        return await service.join_room(room_id, join_data)
     except RoomNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
     except RoomFullException as e:
@@ -65,10 +73,17 @@ async def join_room(
 @router.delete("/{participant_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def leave_room(
     participant_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ParticipantService, Depends(get_participant_service)],
+    participant_repo: Annotated[ParticipantRepository, Depends(get_participant_repository)],
 ) -> None:
     """Leave a room."""
     try:
+        participant = await participant_repo.get_by_id(participant_id)
+        if not participant:
+            raise ParticipantNotFoundException(participant_id)
+        if participant.user_id != current_user["id"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
         await service.leave_room(participant_id)
     except ParticipantNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
@@ -77,6 +92,7 @@ async def leave_room(
 @router.get("/{room_id}", response_model=ParticipantListResponse)
 async def get_participants(
     room_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[ParticipantService, Depends(get_participant_service)],
 ) -> ParticipantListResponse:
     """Get all active participants in a room."""

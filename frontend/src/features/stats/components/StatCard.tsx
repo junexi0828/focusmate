@@ -1,5 +1,6 @@
 import React from "react";
-import { Card, CardContent } from "../../../components/ui/card";
+import { CardContent } from "../../../components/ui/card";
+import { GlassCard } from "../../../components/ui/glass-card";
 import { LucideIcon } from "lucide-react";
 import { cn } from "../../../components/ui/utils";
 
@@ -27,7 +28,7 @@ export function StatCard({
     default: "bg-background border",
     primary: "bg-primary/10 border-primary/20",
     secondary: "bg-secondary/10 border-secondary/20",
-    muted: "bg-muted border",
+    muted: "bg-muted border", // Keep as is or change to glass style if needed
   };
 
   const textStyles = {
@@ -38,7 +39,7 @@ export function StatCard({
   };
 
   return (
-    <Card className={cn("hover:shadow-md transition-shadow", variantStyles[variant], className)}>
+    <GlassCard className={cn("hover:shadow-md transition-shadow", variantStyles[variant], className)}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -75,7 +76,7 @@ export function StatCard({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </GlassCard>
   );
 }
 

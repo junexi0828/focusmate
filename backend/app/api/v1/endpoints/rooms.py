@@ -131,6 +131,7 @@ async def create_room(
 @router.get("/{room_id}", response_model=RoomResponse)
 async def get_room(
     room_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[RoomService, Depends(get_room_service)],
     db: DatabaseSession,
 ) -> RoomResponse:

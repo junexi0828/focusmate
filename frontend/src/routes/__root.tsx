@@ -1,4 +1,9 @@
-import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  Outlet,
+  redirect,
+  useLocation,
+} from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { Toaster } from "sonner";
 
@@ -21,8 +26,27 @@ import { useTheme } from "../hooks/useTheme";
 import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
 import { ScrollingTicker } from "../components/layout/GlobalTicker";
 import { Sparkles } from "lucide-react";
+import { authService } from "../features/auth/services/authService";
 
 export const Route = createRootRoute({
+  beforeLoad: ({ location }) => {
+    const pathname = location.pathname || "/";
+    const isPublicPath =
+      pathname === "/" ||
+      pathname === "/login" ||
+      pathname.startsWith("/auth/");
+
+    if (isPublicPath) {
+      return;
+    }
+
+    const isAuthenticated =
+      authService.isAuthenticated() && !authService.isTokenExpired();
+
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: RootComponent,
 });
 

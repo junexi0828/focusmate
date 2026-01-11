@@ -4,7 +4,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Shield, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button-enhanced";
 import { verificationService } from "../services/verificationService";
 import { VerificationForm } from "./VerificationForm";
@@ -28,18 +28,18 @@ export function VerificationStatus() {
 
   if (isLoading) {
     return (
-      <Card className="p-6">
+      <GlassCard className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/4"></div>
           <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
         </div>
-      </Card>
+      </GlassCard>
     );
   }
 
   if (!status || !status.status) {
     return (
-      <Card className="p-6">
+      <GlassCard className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-[#7ED6E8]" />
@@ -107,7 +107,7 @@ export function VerificationStatus() {
   const StatusIcon = statusDisplay.icon;
 
   return (
-    <Card className="p-6">
+    <GlassCard className="p-6">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -175,7 +175,7 @@ export function VerificationStatus() {
           </div>
         )}
       </div>
-    </Card>
+    </GlassCard>
   );
 }
 

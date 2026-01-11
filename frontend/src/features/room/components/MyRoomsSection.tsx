@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { GlassCard } from "../../../components/ui/glass-card";
 import { Button } from "../../../components/ui/button";
 import { Users, ArrowRight } from "lucide-react";
 import { roomService } from "../services/roomService";
@@ -64,7 +65,7 @@ export function MyRoomsSection() {
   };
 
   return (
-    <Card className="w-full">
+    <GlassCard className="w-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -134,7 +135,7 @@ export function MyRoomsSection() {
           </div>
         )}
       </CardContent>
-    </Card>
+    </GlassCard>
   );
 }
 

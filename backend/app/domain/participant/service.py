@@ -66,10 +66,15 @@ class ParticipantService:
                 # If user lookup fails, use provided username
                 pass
 
-        # Check if user already has a participant record in this room
-        # Only attempt lookup when user_id is provided
+        # Check if participant ID matches an existing record in this room
         existing_participant = None
-        if data.user_id:
+        if data.participant_id:
+            existing_participant = await self.participant_repo.get_by_id(data.participant_id)
+            if existing_participant and existing_participant.room_id != room_id:
+                existing_participant = None
+
+        # If no participant ID match, fall back to user_id lookup
+        if not existing_participant and data.user_id:
             existing_participant = await self.participant_repo.get_by_user_and_room(
                 data.user_id,
                 room_id,

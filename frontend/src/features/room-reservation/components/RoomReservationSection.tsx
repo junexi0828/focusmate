@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import {
-  Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
+import { GlassCard } from "../../../components/ui/glass-card";
 import { Button } from "../../../components/ui/button";
 import { Calendar, Clock, X, Plus } from "lucide-react";
 import { roomReservationService } from "../services/roomReservationService";
@@ -21,6 +21,7 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { DateTimePicker } from "../../../components/ui/datetime-picker";
 import { Textarea } from "../../../components/ui/textarea";
 
 export function RoomReservationSection() {
@@ -28,7 +29,7 @@ export function RoomReservationSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    scheduled_at: "",
+    scheduled_at: undefined as Date | undefined,
     work_duration: 25,
     break_duration: 5,
     description: "",
@@ -61,30 +62,13 @@ export function RoomReservationSection() {
   };
 
   const handleCreateReservation = async () => {
-    if (!formData.scheduled_at || !formData.scheduled_at.trim()) {
+    if (!formData.scheduled_at) {
       toast.error("예약 시간을 선택해주세요");
       return;
     }
 
     try {
-      // datetime-local input returns format: "YYYY-MM-DDTHH:mm"
-      // Convert to ISO 8601 format properly
-      const localDateTime = formData.scheduled_at;
-
-      // Validate format
-      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localDateTime)) {
-        toast.error("올바른 날짜와 시간 형식을 입력해주세요");
-        return;
-      }
-
-      // Create date object from local datetime string
-      const scheduledDate = new Date(localDateTime);
-
-      // Validate date
-      if (isNaN(scheduledDate.getTime())) {
-        toast.error("올바른 날짜와 시간을 입력해주세요");
-        return;
-      }
+      const scheduledDate = formData.scheduled_at;
 
       // Check if date is in the future
       if (scheduledDate <= new Date()) {
@@ -120,7 +104,7 @@ export function RoomReservationSection() {
         toast.success("방 예약이 생성되었습니다");
         setIsDialogOpen(false);
         setFormData({
-          scheduled_at: "",
+          scheduled_at: undefined,
           work_duration: 25,
           break_duration: 5,
           description: "",
@@ -165,7 +149,7 @@ export function RoomReservationSection() {
   };
 
   return (
-    <Card className="w-full">
+    <GlassCard className="w-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -202,12 +186,10 @@ export function RoomReservationSection() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="scheduled_at">예약 시간</Label>
-                  <Input
-                    id="scheduled_at"
-                    type="datetime-local"
-                    value={formData.scheduled_at}
-                    onChange={(e) =>
-                      setFormData({ ...formData, scheduled_at: e.target.value })
+                  <DateTimePicker
+                    date={formData.scheduled_at}
+                    setDate={(date) =>
+                      setFormData({ ...formData, scheduled_at: date })
                     }
                   />
                 </div>
@@ -395,6 +377,6 @@ export function RoomReservationSection() {
           </div>
         )}
       </CardContent>
-    </Card>
+    </GlassCard>
   );
 }

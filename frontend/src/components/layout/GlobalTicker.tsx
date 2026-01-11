@@ -46,7 +46,7 @@ export function ScrollingTicker({ className, messages = [
   "🎉 신규 기능 '다크 모드'가 추가되었습니다!"
 ]}: GlobalTickerProps) {
   return (
-    <div className={cn("overflow-hidden flex items-center w-64 mask-linear-fade", className)}>
+    <div className={cn("overflow-hidden flex items-center w-[40rem] mask-linear-fade", className)}>
       <motion.div
         className="flex gap-8 whitespace-nowrap text-sm text-muted-foreground font-medium"
         animate={{ x: ["100%", "-100%"] }}
