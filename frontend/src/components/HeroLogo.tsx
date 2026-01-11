@@ -9,7 +9,7 @@ import { useTheme } from "../hooks/useTheme";
 import logoFull from "../assets/logo-full.png";
 import darkLogoFull from "../assets/dark-logo-full.png";
 
-const HALF_ROTATION_RANGE = 20; // Golden Ratio (~80% of original)
+const HALF_ROTATION_RANGE = 35; // Increased significantly for dramatic/immersive 3D effect
 
 export function HeroLogo() {
   const ref = useRef<HTMLDivElement>(null);
