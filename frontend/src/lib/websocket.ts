@@ -115,6 +115,7 @@ class WebSocketClient {
   private cleaningUpRoomId: string | null = null; // React StrictMode 대응: cleanup 중인 roomId
   private connectionPromise: Promise<void> | null = null; // 중복 연결 방지
   private cleanupTimeout: NodeJS.Timeout | null = null; // cleanup 플래그 리셋을 위한 timeout
+  private lastErrorMessage: string | null = null;
 
   constructor() {
     // Listen to online/offline events
@@ -159,6 +160,8 @@ class WebSocketClient {
   }
 
   connect(roomId: string): Promise<void> {
+    this.shouldReconnect = true;
+
     // React StrictMode 대응: 이미 연결 중이면 기존 Promise 반환
     if (this.connectionPromise && this.roomId === roomId) {
       return this.connectionPromise;
@@ -221,6 +224,7 @@ class WebSocketClient {
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
+          this.lastErrorMessage = null;
           // React StrictMode 대응: cleanup 중이면 연결 종료 (같은 roomId인 경우만)
           if (this.cleaningUpRoomId === roomId) {
             console.log(`[WebSocket] Cleanup in progress for room ${roomId}, closing connection`);
@@ -266,6 +270,9 @@ class WebSocketClient {
           );
           this.stopHeartbeat();
           this.connectionPromise = null;
+          if (!this.lastErrorMessage) {
+            this.lastErrorMessage = "실시간 동기화 연결에 실패했습니다";
+          }
 
           // 에러 상세 정보 로깅
           if (this.ws) {
@@ -307,6 +314,11 @@ class WebSocketClient {
             );
           } else {
             console.log("[WebSocket] Disconnected", closeInfo);
+          }
+
+          if (event.code === 1008) {
+            this.shouldReconnect = false;
+            this.lastErrorMessage = "로그인이 필요합니다. 다시 로그인해주세요.";
           }
 
           // Cleanup 중이면 재연결하지 않음 (같은 roomId인 경우만)
@@ -544,6 +556,10 @@ class WebSocketClient {
 
   getMaxReconnectAttempts(): number {
     return this.maxReconnectAttempts;
+  }
+
+  getLastErrorMessage(): string | null {
+    return this.lastErrorMessage;
   }
 
   // Getter for roomId (for external access)

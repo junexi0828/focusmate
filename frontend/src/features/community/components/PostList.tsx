@@ -1,6 +1,7 @@
 import { Post } from "../../../types/community";
 import { PostCard } from "./PostCard";
-import { Card, CardContent } from "../../../components/ui/card";
+import { CardContent } from "../../../components/ui/card";
+import { GlassCard } from "../../../components/ui/glass-card";
 import { MessageSquare, SearchX } from "lucide-react";
 import { Button } from "../../../components/ui/button-enhanced";
 
@@ -25,7 +26,7 @@ export function PostList({
     if (hasSearchOrFilters) {
       // Empty state for search/filter results
       return (
-        <Card>
+        <GlassCard>
           <CardContent className="py-16 text-center">
             <SearchX className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
             <p className="text-lg font-medium text-muted-foreground mb-2">
@@ -40,13 +41,13 @@ export function PostList({
               </Button>
             )}
           </CardContent>
-        </Card>
+        </GlassCard>
       );
     }
 
     // Default empty state (no posts at all)
     return (
-      <Card>
+      <GlassCard>
         <CardContent className="py-16 text-center">
           <MessageSquare className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
           <p className="text-lg font-medium text-muted-foreground mb-2">
@@ -56,7 +57,7 @@ export function PostList({
             첫 번째 게시글을 작성해보세요!
           </p>
         </CardContent>
-      </Card>
+      </GlassCard>
     );
   }
 

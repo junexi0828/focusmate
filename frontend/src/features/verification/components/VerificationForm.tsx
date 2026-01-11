@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/glass-card";
 import { verificationService, type VerificationSubmit } from "../services/verificationService";
 import { toast } from "sonner";
 
@@ -112,7 +112,7 @@ export function VerificationForm({ onSuccess }: VerificationFormProps) {
   };
 
   return (
-    <Card className="p-6">
+    <GlassCard className="p-6">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <div>
@@ -263,7 +263,7 @@ export function VerificationForm({ onSuccess }: VerificationFormProps) {
           </Button>
         </div>
       </form>
-    </Card>
+    </GlassCard>
   );
 }
 

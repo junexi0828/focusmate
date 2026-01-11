@@ -356,21 +356,33 @@ class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem("access_token");
+    try {
+      return localStorage.getItem("access_token");
+    } catch {
+      return null;
+    }
   }
 
   setToken(token: string): void {
-    localStorage.setItem("access_token", token);
+    try {
+      localStorage.setItem("access_token", token);
+    } catch {
+      // Ignore storage errors (e.g., private mode)
+    }
   }
 
   removeToken(): void {
-    localStorage.removeItem("access_token");
+    try {
+      localStorage.removeItem("access_token");
+    } catch {
+      // Ignore storage errors
+    }
   }
 
   getCurrentUser(): UserResponse | null {
-    const userStr = localStorage.getItem("user");
-    if (!userStr) return null;
     try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return null;
       return JSON.parse(userStr);
     } catch {
       return null;
@@ -378,11 +390,19 @@ class AuthService {
   }
 
   setCurrentUser(user: UserResponse): void {
-    localStorage.setItem("user", JSON.stringify(user));
+    try {
+      localStorage.setItem("user", JSON.stringify(user));
+    } catch {
+      // Ignore storage errors
+    }
   }
 
   removeCurrentUser(): void {
-    localStorage.removeItem("user");
+    try {
+      localStorage.removeItem("user");
+    } catch {
+      // Ignore storage errors
+    }
   }
 
   isAuthenticated(): boolean {

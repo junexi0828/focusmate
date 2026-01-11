@@ -287,6 +287,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         const response = await participantService.joinRoom(roomId, {
           username: name || "사용자",
           user_id: userId,
+          participant_id: storedParticipantId,
         });
         if (response.status === "success" && response.data) {
           setCurrentParticipantId(
@@ -339,6 +340,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       const response = await participantService.joinRoom(roomId, {
         username: name, // Backend expects 'username', not 'participant_name'
         user_id: userId, // Pass user_id if authenticated
+        participant_id: storedParticipantId,
       });
       if (response.status === "success" && response.data) {
         const participantId =

@@ -152,7 +152,11 @@ export class BaseApiClient {
           window.dispatchEvent(new Event("auth:logout"));
 
           // Redirect to login if not already there
-          if (window.location.pathname !== "/login") {
+          const path = window.location.pathname;
+          const isPublicPath =
+            path === "/" || path === "/login" || path.startsWith("/auth/");
+
+          if (!isPublicPath) {
             window.location.href = "/login";
           }
         }

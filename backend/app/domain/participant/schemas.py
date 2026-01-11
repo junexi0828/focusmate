@@ -13,6 +13,7 @@ class ParticipantJoin(BaseModel):
 
     username: str = Field(min_length=1, max_length=50)
     user_id: str | None = None
+    participant_id: str | None = None
 
 
 class ParticipantResponse(BaseModel):
