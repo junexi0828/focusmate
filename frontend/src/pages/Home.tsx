@@ -2,7 +2,7 @@ import React from "react";
 import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
-import { useRef } from "react";
+
 import { motion } from "framer-motion";
 import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
