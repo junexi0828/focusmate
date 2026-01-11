@@ -198,6 +198,8 @@ if settings.RATE_LIMIT_ENABLED:
 # This ensures OPTIONS preflight requests are handled correctly
 # Allow ngrok URLs in development using regex pattern (fixed regex)
 ngrok_regex = r"https://.*\.ngrok(-free)?\.(app|io)"
+# Allow production frontend origins by regex (covers apex and subdomains)
+prod_origin_regex = r"https://(.*\.)?eieconcierge\.com"
 # Handle CORS_ORIGINS="*" case: cannot use allow_credentials=True with "*"
 cors_origins = settings.CORS_ORIGINS
 allow_credentials = settings.CORS_ALLOW_CREDENTIALS
@@ -210,7 +212,7 @@ if isinstance(cors_origins, list) and len(cors_origins) == 1 and cors_origins[0]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=ngrok_regex if settings.is_development else None,
+    allow_origin_regex=ngrok_regex if settings.is_development else prod_origin_regex,
     allow_credentials=allow_credentials,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],  # Allow all headers including Authorization

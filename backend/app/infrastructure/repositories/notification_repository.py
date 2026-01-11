@@ -112,6 +112,7 @@ class NotificationRepository:
         Returns:
             Updated notification
         """
+        self.db.add(notification)
         await self.db.commit()
         await self.db.refresh(notification)
         return notification
