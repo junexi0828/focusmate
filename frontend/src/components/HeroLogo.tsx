@@ -9,7 +9,7 @@ import { useTheme } from "../hooks/useTheme";
 import logoFull from "../assets/logo-full.png";
 import darkLogoFull from "../assets/dark-logo-full.png";
 
-const HALF_ROTATION_RANGE = 8; // Reduced to 1/3 for subtle 3D effect
+const HALF_ROTATION_RANGE = 18; // Restored to ~3/4 of original (25)
 
 export function HeroLogo() {
   const ref = useRef<HTMLDivElement>(null);
@@ -18,8 +18,9 @@ export function HeroLogo() {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const xSpring = useSpring(x, { stiffness: 300, damping: 30 });
-  const ySpring = useSpring(y, { stiffness: 300, damping: 30 });
+  // Slower, smoother physics to reduce "dizziness" (stiffness 300 -> 100, damping 30 -> 40)
+  const xSpring = useSpring(x, { stiffness: 100, damping: 40 });
+  const ySpring = useSpring(y, { stiffness: 100, damping: 40 });
 
   const transform = useMotionTemplate`rotateX(${xSpring}deg) rotateY(${ySpring}deg)`;
 
