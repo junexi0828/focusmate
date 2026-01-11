@@ -2,9 +2,13 @@ import React from "react";
 import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
+import { useRef } from "react";
+import { motion } from "framer-motion";
+import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
 import { HeroLogo } from "../components/HeroLogo";
 import { GlassCard } from "../components/ui/glass-card";
+import { useTheme } from "../hooks/useTheme";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -16,7 +20,29 @@ interface HomePageProps {
 }
 
 export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
+  const { theme } = useTheme();
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+      },
+    },
+  };
 
   return (
     <div
@@ -27,11 +53,18 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
       */
       className="flex flex-col items-center justify-center py-4 min-h-full relative overflow-hidden"
     >
+      <BackgroundBlobs />
+
       {/*
         컨테이너 최대 너비 설정
         - max-w-6xl: 최대 너비 (변경: max-w-4xl, max-w-5xl, max-w-7xl 등)
       */}
-      <div className="w-full max-w-[68rem] mx-auto">
+      <motion.div
+        className="w-full max-w-[68rem] mx-auto z-10 relative"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Header */}
         {/*
           헤더 섹션 간격 설정

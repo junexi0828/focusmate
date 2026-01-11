@@ -9,7 +9,7 @@ import { useTheme } from "../hooks/useTheme";
 import logoFull from "../assets/logo-full.png";
 import darkLogoFull from "../assets/dark-logo-full.png";
 
-const HALF_ROTATION_RANGE = 15; // Decreased for subtler effect on large element
+const HALF_ROTATION_RANGE = 25; // Increased for more visible 3D effect
 
 export function HeroLogo() {
   const ref = useRef<HTMLDivElement>(null);
@@ -18,8 +18,8 @@ export function HeroLogo() {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const xSpring = useSpring(x);
-  const ySpring = useSpring(y);
+  const xSpring = useSpring(x, { stiffness: 300, damping: 30 });
+  const ySpring = useSpring(y, { stiffness: 300, damping: 30 });
 
   const transform = useMotionTemplate`rotateX(${xSpring}deg) rotateY(${ySpring}deg)`;
 
@@ -55,11 +55,12 @@ export function HeroLogo() {
         transformStyle: "preserve-3d",
         transform,
       }}
-      className="relative flex items-center justify-center -my-32 cursor-pointer"
+      className="relative flex items-center justify-center -my-32 cursor-pointer group"
     >
-      <img
+      <motion.img
         src={theme === "dark" ? darkLogoFull : logoFull}
         alt="FocusMate"
+        whileHover={{ scale: 1.05 }}
         className="h-[35rem] object-contain drop-shadow-2xl transition-all duration-300"
         style={{
           transform: "translateZ(50px)",
