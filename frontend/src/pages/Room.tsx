@@ -495,18 +495,20 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
         await wsClient.connect(roomId);
 
-        if (!isMounted) {
-          // 연결 후 언마운트되었으면 즉시 disconnect
-          wsClient.disconnect();
-          return;
-        }
-
-        // 마운트 시간이 변경되었으면 연결 취소
+        // 마운트 시간이 변경되었으면 연결 상태 확인
         if (mountTimeRef.current !== currentMountTime) {
-          console.log(
-            `[Room] Canceling connection - mount time changed during connection`
-          );
-          wsClient.disconnect();
+          // 다른 마운트(재진입)로 인해 변경된 경우(숫자)는 연결 유지 (disconnect 호출 금지)
+          // 완전히 언마운트된 경우(null)에만 disconnect 호출하여 리소스 정리
+          if (mountTimeRef.current === null) {
+            console.log(
+              `[Room] Connection finished after cleanup - disconnecting`
+            );
+            wsClient.disconnect();
+          } else {
+            console.log(
+              `[Room] Connection finished but superseded - yielding to new mount`
+            );
+          }
           return;
         }
 
