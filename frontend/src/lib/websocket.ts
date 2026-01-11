@@ -5,6 +5,7 @@
 import { TimerState } from "../features/timer/types/timer.types";
 import { authService } from "../features/auth/services/authService";
 import { RoomChatMessage } from "../types/room-chat";
+import { getApiBaseUrl } from "./api/base-url";
 
 // WebSocket 메시지 타입 정의 (서버 → 클라이언트)
 export type WebSocketEventMessage =
@@ -483,10 +484,8 @@ class WebSocketClient {
   }
 
   private getWebSocketUrl(roomId: string): string {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const env = (import.meta as any).env;
     // Use HTTP base URL and convert to WebSocket URL
-    const apiBaseUrl = env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+    const apiBaseUrl = getApiBaseUrl();
     // Convert http:// to ws:// and https:// to wss://
     // Fix: Replace http:// with ws:// (not just http: with ws:)
     const wsBaseUrl = apiBaseUrl

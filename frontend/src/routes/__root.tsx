@@ -19,6 +19,8 @@ import { Footer } from "../components/footer";
 import { useTheme } from "../hooks/useTheme";
 // ThemeToggle removed as unused
 import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
+import { ScrollingTicker } from "../components/layout/GlobalTicker";
+import { Sparkles } from "lucide-react";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -50,14 +52,28 @@ function RootComponent() {
         >
           {/* Top Header Placeholder (optional) - Hidden on Login */}
           {!isLoginPage && (
-            <header className="h-14 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10 flex items-center px-4">
+            <header className="h-14 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10 flex items-center px-4 relative">
+              {/* Left Spacer / Breadcrumbs area */}
               <div className="flex-1" />
-              <div className="text-sm text-muted-foreground flex items-center gap-4">
+
+              {/* Center: Global Ticker (Megaphone) */}
+              <div className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 hidden md:block">
+                <ScrollingTicker />
+              </div>
+
+              {/* Right: Actions */}
+              <div className="text-sm text-muted-foreground flex items-center gap-3">
                 <NotificationBell />
-                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                   <span className="text-xs">⌘</span>K
                 </kbd>
-                <span>FocusMate v2.0</span>
+
+                {/* AI Chatbot Trigger */}
+                 <div className="w-px h-4 bg-border mx-1" />
+                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-300 hover:scale-105 group">
+                    <Sparkles className="w-3.5 h-3.5 transition-transform group-hover:rotate-12" />
+                    <span className="text-xs font-bold">AI Chat</span>
+                </button>
               </div>
             </header>
           )}
