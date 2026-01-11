@@ -75,7 +75,7 @@ export function Sidebar() {
           <img
             src={logoFull}
             alt="FocusMate"
-            className="h-15"
+            className="h-16"
           />
         )}
         {isCollapsed && (
