@@ -67,12 +67,13 @@ class ParticipantService:
                 pass
 
         # Check if user already has a participant record in this room
-        # Use get_by_user_id_and_room_id if available, otherwise filter manually
-        existing_participants = await self.participant_repo.get_by_user_id(data.user_id, active_only=False)
-        existing_participant = next(
-            (p for p in existing_participants if p.room_id == room_id),
-            None
-        )
+        # Only attempt lookup when user_id is provided
+        existing_participant = None
+        if data.user_id:
+            existing_participant = await self.participant_repo.get_by_user_and_room(
+                data.user_id,
+                room_id,
+            )
 
         if existing_participant:
             # Reconnect existing participant and update user info

@@ -31,18 +31,37 @@ export function JoinRoomCard({ onJoinRoom }: JoinRoomCardProps) {
   // 3D Card Hook
   const { handleMouseMove, handleMouseLeave, style } = use3DCard(20);
 
+  const normalizeRoomId = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    // Allow full share URLs by extracting /room/{id}
+    try {
+      const url = new URL(trimmed);
+      const match = url.pathname.match(/\/room\/([^/]+)/);
+      if (match?.[1]) {
+        return match[1];
+      }
+    } catch {
+      // Not a URL, fall through to raw input
+    }
+
+    return trimmed;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (roomId.trim().length === 0) {
+    const normalizedRoomId = normalizeRoomId(roomId);
+    if (normalizedRoomId.length === 0) {
       setError("방 ID를 입력해주세요");
       return;
     }
 
     setIsJoining(true);
     setTimeout(() => {
-      onJoinRoom(roomId.trim());
+      onJoinRoom(normalizedRoomId);
       setIsJoining(false);
     }, 500);
   };

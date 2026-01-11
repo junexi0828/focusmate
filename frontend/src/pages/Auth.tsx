@@ -1,12 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { LoginForm } from "../components/login-form";
 import { SignupForm } from "../components/signup-form";
 import { Timer } from "lucide-react";
 import { Button } from "../components/ui/button-enhanced";
 import { authService } from "../features/auth/services/authService";
 import { toast } from "sonner";
-import { useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+
 
 type AuthView = "login" | "signup";
 
@@ -18,8 +17,6 @@ interface AuthPageProps {
 
 export function AuthPage({ onLogin, onSignup, isLoading = false }: AuthPageProps) {
   const [view, setView] = useState<AuthView>("login");
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const handleNaverLogin = async () => {
     try {

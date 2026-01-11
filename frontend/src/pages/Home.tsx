@@ -19,7 +19,7 @@ interface HomePageProps {
 }
 
 export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
-  const { theme } = useTheme();
+
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -40,7 +40,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         duration: 0.5,
         ease: "easeOut",
       },
-    },
+    } as const,
   };
 
   return (
@@ -75,7 +75,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             - h-36: 로고 높이 (이전 비율 유지, 투명 여백 보정)
             - mb-4: 텍스트와의 여백 (황금비율 복원)
           */}
-          <div className="flex items-center justify-center mb-0 perspective-1000">
+          <div className="flex items-center justify-center mb-2 perspective-1000">
             <HeroLogo />
           </div>
           {/*

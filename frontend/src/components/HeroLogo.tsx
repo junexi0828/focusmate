@@ -58,7 +58,7 @@ export function HeroLogo() {
         transformStyle: "preserve-3d",
         transform,
       }}
-      className="relative flex items-center justify-center -my-32 cursor-pointer group"
+      className="relative flex items-center justify-center -my-28 cursor-pointer group"
     >
       <motion.img
         src={theme === "dark" ? darkLogoFull : logoFull}

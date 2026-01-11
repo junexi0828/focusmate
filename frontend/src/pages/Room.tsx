@@ -142,22 +142,34 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
     const loadRoom = async () => {
       setIsLoading(true);
+      const timeoutMs = 12000;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
       try {
-        const response = await roomService.getRoom(roomId);
+        const response = (await Promise.race([
+          roomService.getRoom(roomId),
+          new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(() => {
+              reject(new Error("ROOM_LOAD_TIMEOUT"));
+            }, timeoutMs);
+          }),
+        ])) as Awaited<ReturnType<typeof roomService.getRoom>>;
         if (response.status === "success" && response.data) {
           const roomData = response.data;
-          setRoom(roomData);
+          const normalizedRoom = {
+            ...roomData,
+            room_id: roomData.room_id ?? roomData.id,
+            room_name: roomData.room_name ?? roomData.name,
+          };
+          setRoom(normalizedRoom);
           // Backend now stores work_duration and break_duration in minutes
           setFocusTime(roomData.work_duration); // Already in minutes
           setBreakTime(roomData.break_duration); // Already in minutes
           setAutoStart(roomData.auto_start_break ?? false);
           setRemoveOnLeave(roomData.remove_on_leave ?? false);
 
-          // Load participants from API
-          await loadParticipants(roomId);
-
-          // Join room if not already joined
-          await joinRoomIfNeeded(roomId);
+          // Load participants/join without blocking initial render.
+          void loadParticipants(roomId);
+          void joinRoomIfNeeded(roomId);
         } else {
           if (response.error?.code === "ROOM_NOT_FOUND") {
             toast.error("방을 찾을 수 없습니다");
@@ -170,9 +182,16 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         }
       } catch (error) {
         console.error("Failed to load room:", error);
-        toast.error("네트워크 오류가 발생했습니다");
+        if (error instanceof Error && error.message === "ROOM_LOAD_TIMEOUT") {
+          toast.error("방 정보를 불러오는 데 시간이 오래 걸립니다");
+        } else {
+          toast.error("네트워크 오류가 발생했습니다");
+        }
         onLeaveRoom();
       } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
         setIsLoading(false);
       }
     };
@@ -280,6 +299,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           );
           // Reload participants list to show updated name
           await loadParticipants(roomId);
+        } else {
+          // Fall back to stored participant ID if rejoin failed
+          setCurrentParticipantId(storedParticipantId);
         }
       } catch (error) {
         console.error("Failed to rejoin room:", error);
@@ -328,7 +350,11 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         await loadParticipants(roomId);
         toast.success("방에 참여했습니다!");
       } else {
-        toast.error(response.error?.message || "방 참여에 실패했습니다");
+        if (response.error?.code === "CONFLICT") {
+          toast.error("방이 가득 찼습니다");
+        } else {
+          toast.error(response.error?.message || "방 참여에 실패했습니다");
+        }
       }
     } catch (error) {
       console.error("Failed to join room:", error);

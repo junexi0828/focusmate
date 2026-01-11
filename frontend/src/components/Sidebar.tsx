@@ -26,7 +26,6 @@ import { cn } from "../utils";
 import logo from "../assets/logo.png";
 import logoFull from "../assets/logo-full.png";
 import darkLogoFull from "../assets/dark-logo-full.png";
-import darkLogo from "../assets/dark-logo.png";
 import { ThemeToggle } from "./theme-toggle";
 import { useTheme } from "../hooks/useTheme";
 
@@ -242,7 +241,7 @@ export function Sidebar() {
             "w-full flex items-center rounded-md hover:bg-accent transition-colors cursor-pointer",
             isCollapsed ? "justify-center px-3 py-2" : "justify-between px-3 py-2"
           )}
-          onClick={(e) => {
+          onClick={() => {
             // Cycle: Light -> Dark -> Light
             const nextTheme = theme === "light" ? "dark" : "light";
             setTheme(nextTheme);
