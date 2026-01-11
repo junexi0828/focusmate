@@ -40,7 +40,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             - h-16: 로고 높이 (변경: h-12, h-20 등)
           */}
           <div className="flex items-center justify-center mb-4">
-            <img src={logoFull} alt="FocusMate" className="h-30" />
+            <img src={logoFull} alt="FocusMate" className="h-32" />
           </div>
           {/*
             설명 텍스트 설정
