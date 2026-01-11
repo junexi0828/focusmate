@@ -3,9 +3,8 @@ import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
-import { useTheme } from "../hooks/useTheme";
-import logoFull from "../assets/logo-full.png";
-import darkLogoFull from "../assets/dark-logo-full.png";
+import { HeroLogo } from "../components/HeroLogo";
+import { GlassCard } from "../components/ui/glass-card";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -44,12 +43,8 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             - h-36: 로고 높이 (이전 비율 유지, 투명 여백 보정)
             - mb-4: 텍스트와의 여백 (황금비율 복원)
           */}
-          <div className="flex items-center justify-center mb-4">
-            <img
-              src={theme === "dark" ? darkLogoFull : logoFull}
-              alt="FocusMate"
-              className="h-[35rem] -my-32"
-            />
+          <div className="flex items-center justify-center mb-4 perspective-1000">
+            <HeroLogo />
           </div>
           {/*
             설명 텍스트 설정

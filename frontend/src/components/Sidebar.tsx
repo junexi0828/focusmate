@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { cn } from "../utils";
+import logo from "../assets/logo.png";
 import logoFull from "../assets/logo-full.png";
 import darkLogoFull from "../assets/dark-logo-full.png";
 import darkLogo from "../assets/dark-logo.png";
