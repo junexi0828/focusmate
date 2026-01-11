@@ -69,7 +69,7 @@ class RoomService:
             RoomNotFoundException: If room not found
         """
         room = await self.repository.get_by_id(room_id)
-        if not room:
+        if not room or not room.is_active:
             raise RoomNotFoundException(room_id)
         return RoomResponse.model_validate(room)
 
