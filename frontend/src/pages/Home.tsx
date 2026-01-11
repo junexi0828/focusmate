@@ -3,7 +3,9 @@ import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
+import { useTheme } from "../hooks/useTheme";
 import logoFull from "../assets/logo-full.png";
+import darkLogoFull from "../assets/dark-logo-full.png";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -15,6 +17,8 @@ interface HomePageProps {
 }
 
 export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
+  const { theme } = useTheme();
+
   return (
     <div
       /*
@@ -40,7 +44,11 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
             - h-16: 로고 높이 (변경: h-12, h-20 등)
           */}
           <div className="flex items-center justify-center mb-4">
-            <img src={logoFull} alt="FocusMate" className="h-32" />
+            <img
+              src={theme === "dark" ? darkLogoFull : logoFull}
+              alt="FocusMate"
+              className="h-32"
+            />
           </div>
           {/*
             설명 텍스트 설정
