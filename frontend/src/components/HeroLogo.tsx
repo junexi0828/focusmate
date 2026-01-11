@@ -33,11 +33,12 @@ export function HeroLogo() {
     const width = rect.width;
     const height = rect.height;
 
-    const mouseX = (e.clientX - rect.left) * 32.5;
-    const mouseY = (e.clientY - rect.top) * 32.5;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-    const rX = (mouseY / height - HALF_ROTATION_RANGE) * -1;
-    const rY = mouseX / width - HALF_ROTATION_RANGE;
+    // Normalize values to -0.5 to 0.5, then multiply by full range
+    const rX = (mouseY / height - 0.5) * HALF_ROTATION_RANGE * 2 * -1;
+    const rY = (mouseX / width - 0.5) * HALF_ROTATION_RANGE * 2;
 
     x.set(rX);
     y.set(rY);
@@ -57,7 +58,7 @@ export function HeroLogo() {
         transformStyle: "preserve-3d",
         transform,
       }}
-      className="relative flex items-center justify-center -my-24 cursor-pointer group"
+      className="relative flex items-center justify-center -my-32 cursor-pointer group"
     >
       <motion.img
         src={theme === "dark" ? darkLogoFull : logoFull}
