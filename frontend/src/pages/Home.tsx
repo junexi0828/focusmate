@@ -32,7 +32,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         컨테이너 최대 너비 설정
         - max-w-6xl: 최대 너비 (변경: max-w-4xl, max-w-5xl, max-w-7xl 등)
       */}
-      <div className="w-full max-w-5xl mx-auto">
+      <div className="w-full max-w-[68rem] mx-auto">
         {/* Header */}
         {/*
           헤더 섹션 간격 설정
@@ -41,13 +41,14 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         <div className="text-center mb-8">
           {/*
             전체 로고 이미지 (새 + FocusMate 텍스트)
-            - h-80: 로고 높이 (약 320px - 대폭 확대)
+            - h-36: 로고 높이 (이전 비율 유지, 투명 여백 보정)
+            - mb-4: 텍스트와의 여백 (황금비율 복원)
           */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center mb-4">
             <img
               src={theme === "dark" ? darkLogoFull : logoFull}
               alt="FocusMate"
-              className="h-80"
+              className="h-36"
             />
           </div>
           {/*
