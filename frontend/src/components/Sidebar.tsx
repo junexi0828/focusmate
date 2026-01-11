@@ -74,17 +74,19 @@ export function Sidebar() {
     >
       <div className="p-4 flex items-center gap-2 border-b border-border/50 relative">
         {!isCollapsed && (
-          <img
-            src={theme === "dark" ? darkLogoFull : logoFull}
-            alt="FocusMate"
-            className="h-16"
-          />
+          <div className="flex items-center justify-center overflow-hidden py-4">
+             <img
+              src={theme === "dark" ? darkLogoFull : logoFull}
+              alt="FocusMate"
+              className="h-40 -my-12 object-contain"
+            />
+          </div>
         )}
         {isCollapsed && (
           <img
-            src={theme === "dark" ? darkLogo : logoFull}
+            src={logo}
             alt="FocusMate"
-            className="h-15 w-15 object-contain"
+            className="h-10 w-10 object-contain"
           />
         )}
         <button
