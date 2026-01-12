@@ -158,15 +158,21 @@ Supabase와 같은 클라우드 DB를 로컬/NAS에서 사용할 때, **"Max cli
 nano /volume1/web/focusmate-backend/.env
 ```
 
-**권장 설정값 (Supabase/pgBouncer 사용 시):**
+**권장 설정값 (Supabase 무료 버전 황금비율):**
+> 공식: `(WORKERS × POOL_SIZE) + OVERFLOW ≤ 60` (Supabase 최대 연결 수)
+
+안전하고 쾌적한 **"안전형"** 조합을 추천합니다:
+
 ```ini
-# 동시 처리 프로세스 수를 1개로 제한 (NAS 리소스 절약 + DB 연결 절약)
+# NAS 리소스를 아끼기 위해 프로세스는 1개만 사용
 WORKERS=1
 
-# DB 연결 풀 크기를 최소화
-DATABASE_POOL_SIZE=5
-DATABASE_MAX_OVERFLOW=0
+# 대신 하나의 프로세스가 넉넉한 연결을 가지도록 설정 (총 30개로 60개 제한 안쪽)
+DATABASE_POOL_SIZE=20
+DATABASE_MAX_OVERFLOW=10
 ```
+
+이렇게 하면 1개의 워커가 20~30개의 DB 연결을 관리하므로, 동시 접속자가 늘어도 500 에러 없이 안정적으로 처리할 수 있습니다.
 
 수정 후 반드시 백엔드를 재시작하세요:
 ```bash
