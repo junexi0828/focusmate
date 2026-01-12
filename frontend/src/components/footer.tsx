@@ -8,6 +8,7 @@ import {
   Trophy,
   MessageSquare,
 } from "lucide-react";
+import { OpenSourceLicenseDialog } from "./OpenSourceLicenseDialog";
 
 export function Footer() {
   return (
@@ -104,12 +105,12 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  to="/faq"
                   className="text-sm text-muted-foreground hover:text-[#7ED6E8] transition-colors"
                 >
                   FAQ
-                </a>
+                </Link>
               </li>
               <li>
                 <a
@@ -177,6 +178,7 @@ export function Footer() {
               >
                 이용약관
               </a>
+              <OpenSourceLicenseDialog />
             </div>
           </div>
         </div>
