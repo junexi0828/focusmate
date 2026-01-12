@@ -3,7 +3,7 @@
 
 from typing import Annotated
 from datetime import UTC, datetime
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, Response, status, BackgroundTasks
 
 from app.api.deps import get_current_user, get_current_user_required
 from app.core.config import settings
@@ -57,14 +57,16 @@ def get_user_service(
 async def register(
     data: UserRegister,
     service: Annotated[UserService, Depends(get_user_service)],
+    background_tasks: BackgroundTasks,
 ) -> TokenResponse:
     """Register a new user."""
     try:
         response = await service.register(data)
 
-        # Slack Notification
+        # Slack Notification (Background)
         from app.core.notify import send_slack_notification
-        await send_slack_notification(
+        background_tasks.add_task(
+            send_slack_notification,
             message=f"🎉 New User Registration: {data.email}",
             level="info",
             details={
@@ -93,6 +95,7 @@ async def login(
     response: Response,
     data: UserLogin,
     service: Annotated[UserService, Depends(get_user_service)],
+    background_tasks: BackgroundTasks,
 ) -> TokenResponse:
     """Login user and return JWT token."""
     try:
@@ -109,10 +112,11 @@ async def login(
             )
             token_response.refresh_token = None
 
-        # Slack Notification (Optional: might be too noisy for high traffic)
+        # Slack Notification (Background)
         # For now, let's keep it to monitor verified logins
         from app.core.notify import send_slack_notification
-        await send_slack_notification(
+        background_tasks.add_task(
+            send_slack_notification,
             message=f"🔑 User Login: {data.email}",
             level="info",
             details={
