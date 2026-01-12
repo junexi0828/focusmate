@@ -3,13 +3,14 @@
 ISO/IEC 25010 Quality Standards Compliant.
 """
 
-from typing import Dict, Union
+from typing import Any, Dict, Union
+import re
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -233,6 +234,35 @@ app.add_middleware(
     max_age=3600,  # Cache preflight requests for 1 hour
 )
 
+# Fallback CORS headers for edge cases where middleware is bypassed
+@app.middleware("http")
+async def cors_fallback(request: Request, call_next):  # type: ignore[override]
+    response = await call_next(request)
+    if "access-control-allow-origin" in response.headers:
+        return response
+
+    origin = request.headers.get("origin")
+    if not origin:
+        return response
+
+    allowed = False
+    if isinstance(cors_origins, list) and origin in cors_origins:
+        allowed = True
+    if not allowed and origin_regex:
+        try:
+            if re.match(origin_regex, origin):
+                allowed = True
+        except re.error:
+            allowed = False
+
+    if allowed:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        if allow_credentials:
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers.setdefault("Vary", "Origin")
+
+    return response
+
 
 # Exception handler for custom exceptions
 @app.exception_handler(AppException)
@@ -330,14 +360,55 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 # Health check endpoint
 @app.get("/health")
-async def health_check() -> dict[str, str]:
-    """Health check endpoint."""
-    return {
+async def health_check(response: Response) -> dict[str, Any]:
+    """Deep health check endpoint verifying DB and Redis connectivity."""
+    from sqlalchemy import text
+    from app.infrastructure.database.session import AsyncSessionLocal
+    from fastapi import status
+
+    health_status = {
         "status": "healthy",
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "environment": settings.APP_ENV,
+        "components": {
+            "database": "unknown",
+            "redis": "unknown",
+        },
     }
+
+    is_healthy = True
+
+    # Check Database
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        health_status["components"]["database"] = "connected"
+    except Exception as e:
+        is_healthy = False
+        health_status["components"]["database"] = f"error: {str(e)}"
+        logger = logging.getLogger("app")
+        logger.error(f"Health check failed (Database): {e}")
+
+    # Check Redis
+    try:
+        # Check if connected using ping
+        if redis_pubsub_manager.redis and await redis_pubsub_manager.redis.ping():
+            health_status["components"]["redis"] = "connected"
+        else:
+            is_healthy = False
+            health_status["components"]["redis"] = "disconnected"
+    except Exception as e:
+        is_healthy = False
+        health_status["components"]["redis"] = f"error: {str(e)}"
+        logger = logging.getLogger("app")
+        logger.error(f"Health check failed (Redis): {e}")
+
+    if not is_healthy:
+        health_status["status"] = "degraded"
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return health_status
 
 
 # Include API router
