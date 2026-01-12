@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     DATABASE_ECHO: bool = False
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
+    DATABASE_POOL_TIMEOUT: int = 30
+    DATABASE_PGBOUNCER: bool = False  # Set to True when using Supabase Transaction Mode (port 6543)
 
     @field_validator("DATABASE_URL")
     @classmethod

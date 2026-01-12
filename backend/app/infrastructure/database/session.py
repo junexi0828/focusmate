@@ -29,7 +29,12 @@ if settings.DATABASE_URL.startswith("postgresql"):
         "pool_pre_ping": True,
         "pool_size": settings.DATABASE_POOL_SIZE,
         "max_overflow": settings.DATABASE_MAX_OVERFLOW,
+        "pool_timeout": settings.DATABASE_POOL_TIMEOUT,
     })
+
+    # Disable prepared statements for pgBouncer transaction mode
+    if settings.DATABASE_PGBOUNCER:
+        engine_kwargs["connect_args"] = {"statement_cache_size": 0}
 
 engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
