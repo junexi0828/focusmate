@@ -134,8 +134,9 @@ export function useChatWebSocket() {
     }
 
     setIsConnecting(true);
-    const wsUrl = `${getWebSocketUrl()}?token=${token}`;
-    const ws = new WebSocket(wsUrl);
+    const wsUrl = getWebSocketUrl();
+    const protocols = token ? ["access_token", token] : undefined;
+    const ws = protocols ? new WebSocket(wsUrl, protocols) : new WebSocket(wsUrl);
 
     ws.onopen = () => {
       // Check if we're cleaning up (React StrictMode double-mount)
@@ -419,6 +420,7 @@ export function useChatWebSocket() {
   }, [clearTimers]);
 
   const joinRoom = useCallback((roomId: string) => {
+    joinedRoomsRef.current.add(roomId);
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(
         JSON.stringify({
@@ -426,11 +428,11 @@ export function useChatWebSocket() {
           room_id: roomId,
         })
       );
-      joinedRoomsRef.current.add(roomId);
     }
   }, []);
 
   const leaveRoom = useCallback((roomId: string) => {
+    joinedRoomsRef.current.delete(roomId);
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(
         JSON.stringify({
@@ -438,7 +440,6 @@ export function useChatWebSocket() {
           room_id: roomId,
         })
       );
-      joinedRoomsRef.current.delete(roomId);
     }
   }, []);
 

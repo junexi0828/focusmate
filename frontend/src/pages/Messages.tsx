@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   MessageSquare,
@@ -47,6 +47,15 @@ import {
   TabsTrigger,
 } from "../components/ui/tabs";
 
+type PendingMessage = {
+  id: string;
+  room_id: string;
+  content: string;
+  message_type?: Message["message_type"];
+  attachments?: string[];
+  created_at: string;
+};
+
 interface MessagesPageProps {
   initialRoomId?: string;
 }
@@ -80,13 +89,108 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     sendTyping,
   } = useChatWebSocket();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastToastRef = useRef<Record<string, number>>({});
+  const pendingQueueRef = useRef<PendingMessage[]>([]);
+  const isFlushingRef = useRef(false);
+
+  const notifyOnce = useCallback(
+    (key: string, message: string, intervalMs = 8000) => {
+      const now = Date.now();
+      if (now - (lastToastRef.current[key] || 0) < intervalMs) {
+        return;
+      }
+      lastToastRef.current[key] = now;
+      toast.error(message);
+    },
+    []
+  );
+
+  const loadPendingQueue = useCallback(() => {
+    try {
+      const raw = localStorage.getItem("chat_pending_queue");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        pendingQueueRef.current = parsed;
+      }
+    } catch (error) {
+      console.warn("Failed to load pending chat queue:", error);
+    }
+  }, []);
+
+  const savePendingQueue = useCallback((queue: PendingMessage[]) => {
+    const trimmed = queue.slice(-100);
+    pendingQueueRef.current = trimmed;
+    localStorage.setItem("chat_pending_queue", JSON.stringify(trimmed));
+  }, []);
+
+  const enqueuePending = useCallback(
+    (payload: PendingMessage) => {
+      const next = [...pendingQueueRef.current, payload];
+      savePendingQueue(next);
+      notifyOnce("chat_offline", "네트워크 불안정: 메시지를 임시 보관합니다");
+    },
+    [notifyOnce, savePendingQueue]
+  );
+
+  const flushPending = useCallback(async () => {
+    if (isFlushingRef.current || !navigator.onLine) {
+      return;
+    }
+    if (pendingQueueRef.current.length === 0) {
+      return;
+    }
+    isFlushingRef.current = true;
+    const queue = [...pendingQueueRef.current];
+    const remaining: PendingMessage[] = [];
+    for (const item of queue) {
+      const response = await chatService.sendMessage(item.room_id, {
+        content: item.content,
+        message_type: item.message_type,
+        attachments: item.attachments,
+      });
+      if (response.status === "success") {
+        if (selectedRoom?.room_id === item.room_id) {
+          queryClient.invalidateQueries({
+            queryKey: ["chat-messages", item.room_id],
+          });
+        }
+      } else {
+        remaining.push(item);
+      }
+    }
+    savePendingQueue(remaining);
+    isFlushingRef.current = false;
+  }, [queryClient, savePendingQueue, selectedRoom?.room_id]);
+
+  useEffect(() => {
+    loadPendingQueue();
+  }, [loadPendingQueue]);
+
+  useEffect(() => {
+    if (isConnected) {
+      void flushPending();
+    }
+  }, [flushPending, isConnected]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      void flushPending();
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [flushPending]);
 
   // Fetch rooms (initial load only - WebSocket handles updates)
   const { data: roomsData, isLoading } = useQuery({
     queryKey: ["chat-rooms", activeTab],
     queryFn: async () => {
       console.log("[Messages] Fetching rooms for tab:", activeTab);
-      const response = await chatService.getRooms(activeTab);
+      let response = await chatService.getRooms(activeTab);
+      if (response.status === "error" && response.error?.code === "NETWORK_ERROR") {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        response = await chatService.getRooms(activeTab);
+      }
       console.log("[Messages] Rooms API response:", response);
       return response.status === "success"
         ? response.data
@@ -227,7 +331,11 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     queryKey: ["chat-messages", selectedRoom?.room_id],
     queryFn: async () => {
       if (!selectedRoom) return null;
-      const response = await chatService.getMessages(selectedRoom.room_id);
+      let response = await chatService.getMessages(selectedRoom.room_id);
+      if (response.status === "error" && response.error?.code === "NETWORK_ERROR") {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        response = await chatService.getMessages(selectedRoom.room_id);
+      }
       return response.status === "success"
         ? response.data
         : { messages: [], total: 0, has_more: false };
@@ -235,11 +343,35 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     enabled: !!selectedRoom,
   });
 
+  // Fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (!selectedRoom?.room_id || isConnected) {
+      return;
+    }
+    const intervalId = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", selectedRoom.room_id],
+      });
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [isConnected, queryClient, selectedRoom?.room_id]);
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (data: MessageCreate) => {
       if (!selectedRoom) {
         throw new Error("방이 선택되지 않았습니다");
+      }
+      if (!navigator.onLine) {
+        enqueuePending({
+          id: `pending_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          room_id: selectedRoom.room_id,
+          content: data.content,
+          message_type: data.message_type,
+          attachments: data.attachments,
+          created_at: new Date().toISOString(),
+        });
+        throw new Error("NETWORK_ERROR");
       }
 
       // If there are files, upload them first
@@ -272,10 +404,26 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
       }
 
       // Send message via API
-      const response = await chatService.sendMessage(selectedRoom.room_id, data);
+      let response = await chatService.sendMessage(selectedRoom.room_id, data);
+      if (response.status === "error" && response.error?.code === "NETWORK_ERROR") {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        response = await chatService.sendMessage(selectedRoom.room_id, data);
+      }
 
       if (response.status === "error") {
-        throw new Error(response.error?.message || "메시지 전송 실패");
+        if (response.error?.code === "NETWORK_ERROR") {
+          enqueuePending({
+            id: `pending_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+            room_id: selectedRoom.room_id,
+            content: data.content,
+            message_type: data.message_type,
+            attachments: data.attachments,
+            created_at: new Date().toISOString(),
+          });
+        }
+        const err = new Error(response.error?.message || "메시지 전송 실패");
+        (err as Error & { code?: string }).code = response.error?.code;
+        throw err;
       }
 
       return response.data;
@@ -322,7 +470,10 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     },
     onError: (error: any) => {
       const errorMessage = error?.message || "메시지 전송에 실패했습니다";
-      toast.error(errorMessage);
+      if (errorMessage === "NETWORK_ERROR") {
+        return;
+      }
+      notifyOnce("send_message_failed", errorMessage);
       console.error("Send message error:", error);
     },
   });
@@ -343,7 +494,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
       toast.success("메시지가 수정되었습니다");
     },
     onError: () => {
-      toast.error("메시지 수정에 실패했습니다");
+      notifyOnce("update_message_failed", "메시지 수정에 실패했습니다");
     },
   });
 
@@ -358,7 +509,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
       toast.success("메시지가 삭제되었습니다");
     },
     onError: () => {
-      toast.error("메시지 삭제에 실패했습니다");
+      notifyOnce("delete_message_failed", "메시지 삭제에 실패했습니다");
     },
   });
 
@@ -398,11 +549,16 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
   useEffect(() => {
     if (selectedRoom) {
       joinRoom(selectedRoom.room_id);
-      chatService.markAsRead(selectedRoom.room_id).then(() => {
-        queryClient.invalidateQueries({
-          queryKey: ["chat-rooms", activeTab],
+      chatService
+        .markAsRead(selectedRoom.room_id)
+        .then(() => {
+          queryClient.invalidateQueries({
+            queryKey: ["chat-rooms", activeTab],
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to mark as read:", error);
         });
-      });
       return () => {
         leaveRoom(selectedRoom.room_id);
       };

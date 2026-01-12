@@ -44,7 +44,6 @@ class RefreshToken(Base):
         String(36),
         nullable=False,
         unique=True,
-        index=True,
         comment="JWT jti claim",
     )
 

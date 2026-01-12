@@ -5,9 +5,6 @@
 export const getApiBaseUrl = (): string => {
   // Always check for environment variable first (works in both dev and prod)
   const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) {
-    return envUrl;
-  }
 
   // In production without env var, try to detect if we're on the same domain
   // If backend is on different domain, this will fail - user must set VITE_API_BASE_URL
@@ -15,7 +12,16 @@ export const getApiBaseUrl = (): string => {
     // Try to use same origin (assumes proxy or same domain)
     // Note: This assumes backend is proxied through Vercel or on same domain
     const origin = window.location.origin;
-    return `${origin}/api/v1`;
+    const forceSameOrigin =
+      import.meta.env.VITE_FORCE_SAME_ORIGIN === "true" ||
+      window.location.hostname.endsWith("eieconcierge.com");
+    if (forceSameOrigin) {
+      return `${origin}/api/v1`;
+    }
+  }
+
+  if (envUrl) {
+    return envUrl;
   }
 
   // In development, use localhost

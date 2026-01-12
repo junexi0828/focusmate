@@ -92,9 +92,9 @@ export function useNotifications(
     }
 
     try {
-      const ws = new WebSocket(
-        `${WS_URL}/api/v1/notifications/ws?token=${token}`
-      );
+      const wsUrl = `${WS_URL}/api/v1/notifications/ws`;
+      const protocols = token ? ["access_token", token] : undefined;
+      const ws = protocols ? new WebSocket(wsUrl, protocols) : new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {

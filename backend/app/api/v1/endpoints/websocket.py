@@ -19,6 +19,7 @@ from app.infrastructure.repositories.participant_repository import ParticipantRe
 from app.domain.timer.service import TimerService
 from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 from app.core.config import settings
+from app.api.utils.websocket_auth import extract_ws_token
 from datetime import UTC, datetime
 from app.shared.constants.timer import TimerPhase
 from app.domain.room_chat.service import RoomChatService
@@ -58,10 +59,11 @@ async def websocket_endpoint(
     token_id = None
     try:
         # Authenticate user
-        if token:
+        jwt_token = extract_ws_token(websocket, token)
+        if jwt_token:
             try:
                 payload = jwt.decode(
-                    token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+                    jwt_token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
                 )
                 user_id: str = payload.get("sub")
                 if user_id:
@@ -193,6 +195,8 @@ async def websocket_endpoint(
                         },
                         websocket,
                     )
+                    continue
+                if message_type == "pong":
                     continue
                 if message_type == "chat_message":
                     try:

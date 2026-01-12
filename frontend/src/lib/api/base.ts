@@ -20,9 +20,19 @@ export interface ApiResponse<T> {
 
 export class BaseApiClient {
   protected baseUrl: string;
+  private defaultTimeoutMs = 12000;
+  private maxRetries = 2;
 
   constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl;
+    if (
+      typeof window !== "undefined" &&
+      window.location.hostname.endsWith("eieconcierge.com") &&
+      baseUrl.includes("api.eieconcierge.com")
+    ) {
+      this.baseUrl = `${window.location.origin}/api/v1`;
+    } else {
+      this.baseUrl = baseUrl;
+    }
   }
 
   protected async request<T>(
@@ -39,6 +49,7 @@ export class BaseApiClient {
 
     const headers: HeadersInit = {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      Accept: "application/json",
       ...options.headers,
     };
 
@@ -46,11 +57,47 @@ export class BaseApiClient {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    const method = (options.method || "GET").toUpperCase();
+    const shouldRetry = method === "GET";
+
+    const execute = async (attempt: number): Promise<Response> => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.defaultTimeoutMs);
+      try {
+        return await fetch(url, {
+          ...options,
+          headers,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      });
+      let response = await execute(0);
+      let attempt = 0;
+
+      while (
+        shouldRetry &&
+        attempt < this.maxRetries &&
+        (response.status === 502 ||
+          response.status === 503 ||
+          response.status === 504 ||
+          response.status === 429)
+      ) {
+        attempt += 1;
+        let backoffMs = 400 * attempt + Math.floor(Math.random() * 200);
+        const retryAfter = response.headers.get("retry-after");
+        if (retryAfter) {
+          const retryAfterSeconds = parseInt(retryAfter, 10);
+          if (!Number.isNaN(retryAfterSeconds)) {
+            backoffMs = Math.min(retryAfterSeconds * 1000, 5000);
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        response = await execute(attempt);
+      }
 
       // Handle 204 No Content (success with no body)
       if (response.status === 204) {
@@ -58,6 +105,8 @@ export class BaseApiClient {
           status: "success",
         } as ApiResponse<T>;
       }
+
+      const requestId = response.headers.get("X-Request-ID") || undefined;
 
       // Check content type for JSON responses
       const contentType = response.headers.get("content-type");
@@ -70,6 +119,7 @@ export class BaseApiClient {
           error: {
             code: "HTTP_ERROR",
             message: `HTTP ${response.status}: ${response.statusText}`,
+            details: requestId ? { request_id: requestId } : undefined,
           },
         };
       }
@@ -98,6 +148,7 @@ export class BaseApiClient {
               error: {
                 code: "EMPTY_RESPONSE",
                 message: `HTTP ${response.status}: ${response.statusText}`,
+                details: requestId ? { request_id: requestId } : undefined,
               },
             };
           }
@@ -166,7 +217,10 @@ export class BaseApiClient {
           error: {
             code: errorCode,
             message: errorMessage,
-            details: typeof errorDetail === "object" ? errorDetail : undefined,
+            details: {
+              ...(typeof errorDetail === "object" ? errorDetail : {}),
+              ...(requestId ? { request_id: requestId } : {}),
+            },
           },
         };
       }
@@ -177,6 +231,75 @@ export class BaseApiClient {
         data: data,
       };
     } catch (error) {
+      if (shouldRetry && (error instanceof DOMException || error instanceof TypeError)) {
+        for (let attempt = 1; attempt <= this.maxRetries; attempt += 1) {
+          const backoffMs = 400 * attempt + Math.floor(Math.random() * 200);
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+          try {
+            const response = await execute(attempt);
+            const requestId = response.headers.get("X-Request-ID") || undefined;
+            if (response.status === 204) {
+              return {
+                status: "success",
+              } as ApiResponse<T>;
+            }
+            const contentType = response.headers.get("content-type");
+            const isJson = contentType && contentType.includes("application/json");
+            if (response.ok && !isJson) {
+              return {
+                status: "success",
+              } as ApiResponse<T>;
+            }
+            const text = await response.text();
+            if (!text || text.trim() === "") {
+              if (response.ok) {
+                return {
+                  status: "success",
+                } as ApiResponse<T>;
+              }
+              return {
+                status: "error",
+                error: {
+                  code: "EMPTY_RESPONSE",
+                  message: `HTTP ${response.status}: ${response.statusText}`,
+                  details: requestId ? { request_id: requestId } : undefined,
+                },
+              };
+            }
+            const data = JSON.parse(text);
+            if (!response.ok) {
+              const errorDetail = data.detail || data.error || data;
+              const errorMessage =
+                typeof errorDetail === "string"
+                  ? errorDetail
+                  : errorDetail?.message ||
+                    errorDetail?.detail ||
+                    `HTTP ${response.status}: ${response.statusText}`;
+              const errorCode =
+                errorDetail?.code || this.getErrorCodeFromStatus(response.status);
+              return {
+                status: "error",
+                error: {
+                  code: errorCode,
+                  message: errorMessage,
+                  details: {
+                    ...(typeof errorDetail === "object" ? errorDetail : {}),
+                    ...(requestId ? { request_id: requestId } : {}),
+                  },
+                },
+              };
+            }
+            return {
+              status: "success",
+              data: data,
+            };
+          } catch (retryError) {
+            if (attempt === this.maxRetries) {
+              break;
+            }
+          }
+        }
+      }
       // Network error or fetch failed
       if (error instanceof TypeError && error.message === "Failed to fetch") {
         return {

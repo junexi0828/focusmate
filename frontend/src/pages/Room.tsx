@@ -123,13 +123,26 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     connectionError: wsError,
     reconnectAttempts,
   } = useWebSocketStatus(roomId || null);
+  const lastToastRef = useRef<Record<string, number>>({});
+
+  const notifyOnce = useCallback(
+    (key: string, message: string, intervalMs = 8000) => {
+      const now = Date.now();
+      if (now - (lastToastRef.current[key] || 0) < intervalMs) {
+        return;
+      }
+      lastToastRef.current[key] = now;
+      toast.error(message, { duration: 3000 });
+    },
+    []
+  );
 
   // WebSocket 에러 메시지 표시
   useEffect(() => {
     if (wsError) {
-      toast.error(wsError, { duration: 3000 });
+      notifyOnce("ws_error", wsError);
     }
-  }, [wsError]);
+  }, [notifyOnce, wsError]);
 
 
   // Load room data on mount
@@ -145,14 +158,24 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       const timeoutMs = 12000;
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
       try {
-        const response = (await Promise.race([
-          roomService.getRoom(roomId),
-          new Promise<never>((_, reject) => {
-            timeoutId = setTimeout(() => {
-              reject(new Error("ROOM_LOAD_TIMEOUT"));
-            }, timeoutMs);
-          }),
-        ])) as Awaited<ReturnType<typeof roomService.getRoom>>;
+        let response: Awaited<ReturnType<typeof roomService.getRoom>> | null = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          response = (await Promise.race([
+            roomService.getRoom(roomId),
+            new Promise<never>((_, reject) => {
+              timeoutId = setTimeout(() => {
+                reject(new Error("ROOM_LOAD_TIMEOUT"));
+              }, timeoutMs);
+            }),
+          ])) as Awaited<ReturnType<typeof roomService.getRoom>>;
+          if (response.status === "success") {
+            break;
+          }
+          if (response.error?.code !== "NETWORK_ERROR") {
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+        }
         if (response.status === "success" && response.data) {
           const roomData = response.data;
           const normalizedRoom = {
@@ -183,9 +206,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       } catch (error) {
         console.error("Failed to load room:", error);
         if (error instanceof Error && error.message === "ROOM_LOAD_TIMEOUT") {
-          toast.error("방 정보를 불러오는 데 시간이 오래 걸립니다");
+          notifyOnce("room_timeout", "방 정보를 불러오는 데 시간이 오래 걸립니다");
         } else {
-          toast.error("네트워크 오류가 발생했습니다");
+          notifyOnce("room_network", "네트워크 오류가 발생했습니다");
         }
         onLeaveRoom();
       } finally {
@@ -205,7 +228,11 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const loadParticipants = useCallback(async (roomId: string) => {
     setIsLoadingParticipants(true);
     try {
-      const response = await participantService.getParticipants(roomId);
+      let response = await participantService.getParticipants(roomId);
+      if (response.status === "error" && response.error?.code === "NETWORK_ERROR") {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        response = await participantService.getParticipants(roomId);
+      }
       if (response.status === "success" && response.data) {
         // Convert API participant format to UI format
         const uiParticipants: Participant[] = response.data.map((p) => ({
@@ -237,6 +264,17 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       setIsLoadingParticipants(false);
     }
   }, []);
+
+  // Fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (!roomId || wsConnected) {
+      return;
+    }
+    const intervalId = setInterval(() => {
+      void loadParticipants(roomId);
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [loadParticipants, roomId, wsConnected]);
 
   useEffect(() => {
     if (!roomId || participantCount === null) {
@@ -284,11 +322,19 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         }
 
         // Rejoin to update user info
-        const response = await participantService.joinRoom(roomId, {
+        let response = await participantService.joinRoom(roomId, {
           username: name || "사용자",
           user_id: userId,
           participant_id: storedParticipantId,
         });
+        if (response.status === "error" && response.error?.code === "NETWORK_ERROR") {
+          await new Promise((resolve) => setTimeout(resolve, 600));
+          response = await participantService.joinRoom(roomId, {
+            username: name || "사용자",
+            user_id: userId,
+            participant_id: storedParticipantId,
+          });
+        }
         if (response.status === "success" && response.data) {
           setCurrentParticipantId(
             response.data.id ||
@@ -337,11 +383,19 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     }
 
     try {
-      const response = await participantService.joinRoom(roomId, {
+      let response = await participantService.joinRoom(roomId, {
         username: name, // Backend expects 'username', not 'participant_name'
         user_id: userId, // Pass user_id if authenticated
         participant_id: storedParticipantId,
       });
+      if (response.status === "error" && response.error?.code === "NETWORK_ERROR") {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        response = await participantService.joinRoom(roomId, {
+          username: name,
+          user_id: userId,
+          participant_id: storedParticipantId,
+        });
+      }
       if (response.status === "success" && response.data) {
         const participantId =
           response.data.id || response.data.participant_id || "";
