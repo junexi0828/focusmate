@@ -333,24 +333,38 @@ async def naver_login_url() -> dict:
     Returns:
         Naver OAuth authorization URL
     """
-    import secrets
+    import logging
 
-    from app.core.config import settings
+    logger = logging.getLogger(__name__)
 
-    state = secrets.token_urlsafe(32)
-    naver_auth_url = (
-        f"https://nid.naver.com/oauth2.0/authorize?"
-        f"response_type=code&"
-        f"client_id={settings.NAVER_CLIENT_ID}&"
-        f"redirect_uri={settings.NAVER_REDIRECT_URI}&"
-        f"state={state}&"
-        f"scope=email"
-    )
+    try:
+        import secrets
+        from app.core.config import settings
 
-    return {
-        "auth_url": naver_auth_url,
-        "state": state,
-    }
+        logger.info("Attempting to generate Naver login URL")
+
+        if not settings.NAVER_CLIENT_ID or settings.NAVER_CLIENT_ID == "YOUR_NAVER_CLIENT_ID":
+             logger.error("NAVER_CLIENT_ID is not configured properly.")
+
+        state = secrets.token_urlsafe(32)
+        naver_auth_url = (
+            f"https://nid.naver.com/oauth2.0/authorize?"
+            f"response_type=code&"
+            f"client_id={settings.NAVER_CLIENT_ID}&"
+            f"redirect_uri={settings.NAVER_REDIRECT_URI}&"
+            f"state={state}&"
+            f"scope=email"
+        )
+
+        logger.info(f"Generated Naver auth URL: {naver_auth_url}")
+
+        return {
+            "auth_url": naver_auth_url,
+            "state": state,
+        }
+    except Exception as e:
+        logger.error(f"Error generating Naver login URL: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @router.post("/naver/callback", response_model=TokenResponse)
