@@ -27,3 +27,19 @@ export const getApiBaseUrl = (): string => {
   // In development, use localhost
   return "http://localhost:8000/api/v1";
 };
+
+export const getWebSocketBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_WS_BASE_URL;
+  if (envUrl) {
+    return envUrl;
+  }
+
+  if (import.meta.env.PROD && window.location.hostname.endsWith("eieconcierge.com")) {
+    // Prefer API subdomain for WebSocket because Vercel rewrites do not proxy WS.
+    return "https://api.eieconcierge.com";
+  }
+
+  const apiBaseUrl = getApiBaseUrl();
+  // Strip /api/v1 if present, keep scheme/host.
+  return apiBaseUrl.replace(/\/api\/v1$/, "");
+};

@@ -5,11 +5,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { authService } from "../../auth/services/authService";
 import type { Message } from "../services/chatService";
+import { getWebSocketBaseUrl } from "../../../lib/api/base-url";
 
 const getWebSocketUrl = (): string => {
-  const env = import.meta.env;
-  const apiBaseUrl = env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
-  const wsBaseUrl = apiBaseUrl
+  const wsBaseUrl = getWebSocketBaseUrl()
     .replace(/^http:\/\//, "ws://")
     .replace(/^https:\/\//, "wss://");
   return `${wsBaseUrl}/chats/ws`;

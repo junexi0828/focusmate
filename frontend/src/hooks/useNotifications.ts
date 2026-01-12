@@ -8,8 +8,14 @@ import { authService } from "../features/auth/services/authService";
 import { toast } from "sonner";
 import { notificationService } from "../lib/notificationService";
 import { useNotificationBackfill } from "../features/notification/hooks/useNotificationBackfill";
+import { getWebSocketBaseUrl } from "../lib/api/base-url";
 
-const WS_URL = import.meta.env.VITE_WS_BASE_URL || "ws://localhost:8000";
+const getNotificationWsUrl = (): string => {
+  const wsBaseUrl = getWebSocketBaseUrl()
+    .replace(/^http:\/\//, "ws://")
+    .replace(/^https:\/\//, "wss://");
+  return `${wsBaseUrl}/api/v1/notifications/ws`;
+};
 
 export interface NotificationData {
   notification_id: string;
@@ -92,7 +98,7 @@ export function useNotifications(
     }
 
     try {
-      const wsUrl = `${WS_URL}/api/v1/notifications/ws`;
+      const wsUrl = getNotificationWsUrl();
       const protocols = token ? ["access_token", token] : undefined;
       const ws = protocols ? new WebSocket(wsUrl, protocols) : new WebSocket(wsUrl);
       wsRef.current = ws;

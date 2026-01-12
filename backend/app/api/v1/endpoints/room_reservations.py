@@ -115,10 +115,9 @@ async def get_upcoming_reservations(
     try:
         return await service.get_upcoming_reservations(current_user["id"])
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get upcoming reservations: {e!s}"
-        )
+        # Return empty list to prevent UI crash when DB is unstable
+        logging.getLogger(__name__).error(f"Failed to get upcoming reservations: {e}", exc_info=True)
+        return []
 
 
 @router.put("/{reservation_id}", response_model=RoomReservationResponse)
