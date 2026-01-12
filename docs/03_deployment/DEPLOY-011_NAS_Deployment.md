@@ -59,7 +59,24 @@ python3 --version
 # DSM 7.x: 이미 Python 3.8+ 포함되어 있을 수 있음
 ```
 
-### 2. 프로젝트 파일 복사
+### 2. Redis 설치 (필수)
+
+FocusMate 백엔드는 실시간 타이머 동기화와 예약 알림을 위해 **Redis가 필수**입니다.
+DS223j 모델은 공식 Redis 패키지가 없을 수 있으므로 **SynoCommunity** 저장소를 추가해야 합니다.
+
+1.  **SynoCommunity 소스 추가**
+    -   DSM → Package Center → **Settings** (오른쪽 상단)
+    -   **Package Sources** 탭 클릭 → **Add**
+    -   **Name**: SynoCommunity
+    -   **Location**: `https://packages.synocommunity.com/`
+    -   OK 클릭
+
+2.  **Redis 설치**
+    -   Package Center의 **Community** 탭 선택 (또는 검색)
+    -   "Redis" 검색 및 설치
+    -   설치 후 상태가 "Running"인지 확인
+
+### 3. 프로젝트 파일 복사
 
 #### 방법 1: File Station 사용
 
@@ -131,6 +148,34 @@ SECRET_KEY=your-secret-key-here
 **NAS 프로덕션 스크립트** `backend/start-nas.sh` 스크립트가 rsync를 통해 NAS에 자동으로 동기화됩니다.
 
 스크립트 위치: `/volume1/web/focusmate-backend/start-nas.sh`
+### 7. (중요) 500 에러 및 DB 연결 끊김 해결
+
+Supabase와 같은 클라우드 DB를 로컬/NAS에서 사용할 때, **"Max clients reached"** 에러와 함께 500 오류가 발생할 수 있습니다.
+이는 백엔드가 너무 많은 DB 연결을 잡고 있어서 발생합니다. `.env` 파일에서 다음 설정을 권장값으로 낮춰주세요.
+
+```bash
+# SSH 접속 후 .env 수정
+nano /volume1/web/focusmate-backend/.env
+```
+
+**권장 설정값 (Supabase/pgBouncer 사용 시):**
+```ini
+# 동시 처리 프로세스 수를 1개로 제한 (NAS 리소스 절약 + DB 연결 절약)
+WORKERS=1
+
+# DB 연결 풀 크기를 최소화
+DATABASE_POOL_SIZE=5
+DATABASE_MAX_OVERFLOW=0
+```
+
+수정 후 반드시 백엔드를 재시작하세요:
+```bash
+./stop-nas.sh && ./start-nas.sh
+```
+
+---
+
+## FAQ (자주 묻는 질문)
 
 **수동으로 실행 권한 부여 (필요한 경우):**
 
@@ -196,10 +241,25 @@ echo $! > tunnel.pid
 
 ## Cloudflare Tunnel 설정 (NAS에서 실행)
 
-### 1. cloudflared 설치 (NAS)
+### 1. Cloudflare Tunnel 설치 (SynoCommunity 권장)
 
-DS223j는 ARM 프로세서이므로 ARM용 바이너리가 필요합니다.
+DS223j 모델은 SynoCommunity 패키지를 사용하는 것이 가장 쉽습니다.
 
+1.  **Package Center 열기**
+    -   **Community** 탭 선택
+    -   **Cloudflare Tunnel** 검색 및 설치
+    -   (주의: "Cloudflared"가 아닌 "Cloudflare Tunnel"입니다)
+
+2.  **설치 중 설정**
+    -   설치 과정에서 **Tunnel Token**을 입력하라는 창이 나올 수 있습니다.
+    -   Zero Trust 대시보드에서 복사한 토큰을 입력하면 자동 설정됩니다.
+    -   혹은 설치 후 설정 파일에서 토큰을 입력할 수도 있습니다.
+
+### 2. Tunnel 생성 및 실행 (수동 설정 시)
+
+패키지를 설치했다면 수동 설치 과정은 건너뛰어도 됩니다. 만약 직접 바이너리로 설치해야 한다면 아래 과정을 따르세요.
+
+#### 수동 설치 (바이너리 직접 다운로드 - ARM64)
 ```bash
 # SSH 접속
 ssh admin@your-nas-ip
@@ -214,7 +274,7 @@ chmod +x /usr/local/bin/cloudflared
 cloudflared --version
 ```
 
-### 2. Tunnel 생성 및 실행
+### 3. Tunnel 생성 및 설정
 
 #### Zero Trust 대시보드에서 Tunnel 생성
 

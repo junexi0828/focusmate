@@ -5,7 +5,8 @@ from typing import Annotated
 from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, Response, status
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_required
+from app.core.config import settings
 from app.core.exceptions import UnauthorizedException, ValidationException
 from app.core.security import validate_refresh_token
 from app.domain.user.schemas import (
@@ -27,6 +28,15 @@ from app.infrastructure.redis.session_helpers import clear_user_activity
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _require_self_or_admin(current_user: dict, user_id: str) -> None:
+    """Allow only the user or an admin to access the resource."""
+    if current_user["id"] != user_id and not current_user.get("is_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this resource",
+        )
 
 
 def get_user_repository(db: DatabaseSession) -> UserRepository:
@@ -78,7 +88,7 @@ async def login(
                 key="refresh_token",
                 value=token_response.refresh_token,
                 httponly=True,
-                secure=True,
+                secure=settings.is_production,
                 samesite="lax",
                 path="/",
                 max_age=7 * 24 * 60 * 60,
@@ -129,6 +139,7 @@ async def logout(
 @router.get("/profile/{user_id}", response_model=UserResponse)
 async def get_profile(
     user_id: str,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> UserResponse:
     """Get user profile by ID.
@@ -144,6 +155,7 @@ async def get_profile(
         HTTPException: If user not found
     """
     try:
+        _require_self_or_admin(current_user, user_id)
         return await service.get_profile(user_id)
     except UnauthorizedException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
@@ -153,6 +165,7 @@ async def get_profile(
 async def update_profile(
     user_id: str,
     data: UserProfileUpdate,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> UserResponse:
     """Update user profile.
@@ -169,6 +182,7 @@ async def update_profile(
         HTTPException: If user not found
     """
     try:
+        _require_self_or_admin(current_user, user_id)
         return await service.update_profile(user_id, data)
     except UnauthorizedException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
@@ -178,7 +192,7 @@ async def update_profile(
 async def upload_profile_image(
     user_id: str,
     file: UploadFile = File(...),
-    current_user: Annotated[dict, Depends(get_current_user)] = None,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
     service: Annotated[UserService, Depends(get_user_service)] = None,
 ) -> dict:
     """Upload user profile image.
@@ -198,11 +212,7 @@ async def upload_profile_image(
     from app.infrastructure.storage.file_upload import FileUploadService
 
     # Verify user is updating their own profile
-    if current_user["id"] != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own profile image",
-        )
+    _require_self_or_admin(current_user, user_id)
 
     # Validate file type
     if not file.content_type or not file.content_type.startswith("image/"):

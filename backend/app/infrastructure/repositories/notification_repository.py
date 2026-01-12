@@ -152,9 +152,10 @@ class NotificationRepository:
         Returns:
             Count of unread notifications
         """
+        from sqlalchemy import func
         result = await self.db.execute(
-            select(Notification).where(
+            select(func.count()).select_from(Notification).where(
                 Notification.user_id == user_id, Notification.is_read == False
             )
         )
-        return len(list(result.scalars().all()))
+        return result.scalar() or 0

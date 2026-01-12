@@ -89,6 +89,13 @@ class Settings(BaseSettings):
 
     BCRYPT_ROUNDS: int = Field(default=12, ge=10, le=14)
 
+    SECURITY_HEADERS_ENABLED: bool = True
+    SECURITY_HSTS_ENABLED: bool = True
+    SECURITY_CSP_ENABLED: bool = False
+    SECURITY_CSP_POLICY: str = (
+        "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+    )
+
     # File Encryption (optional - if not set, derives from SECRET_KEY)
     FILE_ENCRYPTION_KEY: str | None = Field(
         default=None,

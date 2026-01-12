@@ -20,6 +20,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.api.middleware.request_logging import RequestLoggingMiddleware, get_request_id
+from app.api.middleware.security_headers import SecurityHeadersMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -176,6 +177,16 @@ app.add_middleware(
     minimum_size=1000,  # Only compress responses larger than 1KB
     compresslevel=6,  # Compression level (1-9, default 6 for balance)
 )
+
+# Security headers middleware - attaches common hardening headers
+if settings.SECURITY_HEADERS_ENABLED:
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        enable_hsts=settings.SECURITY_HSTS_ENABLED and settings.is_production,
+        enable_csp=settings.SECURITY_CSP_ENABLED,
+        csp_policy=settings.SECURITY_CSP_POLICY,
+        csp_exclude_paths=["/docs", "/redoc", "/openapi.json"],
+    )
 
 # Trusted Host middleware - protects against Host header attacks
 # In production, only allow specific domains
