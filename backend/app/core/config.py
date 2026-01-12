@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     APP_LOG_LEVEL: Literal["debug", "info", "warning", "error", "critical"] = "info"
     APP_NAME: str = "Focus Mate"
     APP_VERSION: str = "1.0.0"
+    APP_SLOW_REQUEST_THRESHOLD_MS: int = 1500
 
     # ==========================================================================
     # Server

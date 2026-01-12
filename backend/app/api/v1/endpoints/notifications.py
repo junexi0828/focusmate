@@ -14,6 +14,7 @@ from fastapi import (
 )
 
 from app.api.deps import get_current_user_required
+from app.api.utils.websocket_auth import extract_ws_token
 from app.core.security import decode_jwt_token
 from app.domain.notification.schemas import (
     NotificationCreate,
@@ -25,6 +26,7 @@ from app.infrastructure.database.session import DatabaseSession
 from app.infrastructure.repositories.notification_repository import (
     NotificationRepository,
 )
+from app.infrastructure.repositories.user_repository import UserRepository
 from app.infrastructure.websocket.notification_manager import notification_ws_manager
 
 
@@ -163,8 +165,15 @@ async def get_unread_count(
         Count of unread notifications
     """
     user_id = current_user["id"]
-    count = await service.get_unread_count(user_id)
-    return {"unread_count": count}
+    try:
+        count = await service.get_unread_count(user_id)
+        return {"unread_count": count}
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to get notification unread count for user {user_id}: {e}", exc_info=True)
+        # Return 0 to prevent blocking the UI on error
+        return {"unread_count": 0}
 
 
 @router.post("/mark-read", status_code=status.HTTP_200_OK)
@@ -233,7 +242,8 @@ async def delete_notification(
 @router.websocket("/ws")
 async def websocket_notifications(
     websocket: WebSocket,
-    token: str = Query(...),
+    db: DatabaseSession,
+    token: str | None = Query(None),
 ):
     """WebSocket endpoint for real-time notifications.
 
@@ -256,9 +266,19 @@ async def websocket_notifications(
     """
     # Verify token and get user
     try:
-        payload = decode_jwt_token(token)
+        jwt_token = extract_ws_token(websocket, token)
+        if not jwt_token:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+
+        payload = decode_jwt_token(jwt_token)
         user_id: str | None = payload.get("sub")
         if not user_id:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        user_repo = UserRepository(db)
+        user = await user_repo.get_by_id(user_id)
+        if not user or not user.is_active:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
     except Exception:
@@ -287,6 +307,8 @@ async def websocket_notifications(
                 # Handle ping
                 if data.get("type") == "ping":
                     await websocket.send_json({"type": "pong"})
+                elif data.get("type") == "pong":
+                    continue
 
             except Exception:
                 break

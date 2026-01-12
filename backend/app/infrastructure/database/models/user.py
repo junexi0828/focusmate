@@ -36,7 +36,6 @@ class User(Base, TimestampMixin):
         String(255),
         unique=True,
         nullable=False,
-        index=True,
         comment="User email",
     )
 
@@ -121,7 +120,6 @@ class User(Base, TimestampMixin):
         String(100),
         nullable=True,
         unique=True,
-        index=True,
         comment="Naver OAuth ID",
     )
 

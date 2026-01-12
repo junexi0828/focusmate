@@ -96,4 +96,14 @@ async def get_participants(
     service: Annotated[ParticipantService, Depends(get_participant_service)],
 ) -> ParticipantListResponse:
     """Get all active participants in a room."""
-    return await service.get_participants(room_id)
+    try:
+        return await service.get_participants(room_id)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to get participants for room {room_id}: {e}", exc_info=True)
+        # Re-raise as HTTPException to ensure CORS headers are added by main.py exception handler
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"code": "PARTICIPANT_LIST_ERROR", "message": "Failed to retrieve participants"},
+        )

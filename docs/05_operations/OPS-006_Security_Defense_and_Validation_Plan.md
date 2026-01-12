@@ -102,6 +102,8 @@ iso_standard: ISO/IEC 27001, ISO/IEC 27002, ISO/IEC 27005
 - **파일 업로드 보호**: 경로 정규화, 파일 크기 상한 적용.
 - **로그 노출 방지**: 요청 로그에서 전체 URL 제거(쿼리 토큰 노출 방지).
 - **정보 노출 최소화**: 유저 검색 결과에서 이메일은 관리자만 확인 가능.
+- **WebSocket 보안**: 토큰 Query 대신 Subprotocol 사용, 서버측 사용자 실검증 적용.
+- **Rate Limit 강화**: 민감 엔드포인트 별도 제한 추가.
 
 ### 12.2 검증 결과
 - **보안 테스트 스크립트**: `scripts/testing/run_tests.sh --security` 실행 시도.

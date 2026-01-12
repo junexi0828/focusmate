@@ -19,6 +19,7 @@ from fastapi.websockets import WebSocketState
 
 from app.api.deps import DatabaseSession, get_current_user, get_current_user_required
 from app.core.security import decode_jwt_token
+from app.api.utils.websocket_auth import extract_ws_token
 from app.domain.chat.invitation_service import InvitationService
 from app.domain.chat.schemas import (
     ChatMemberResponse,
@@ -597,28 +598,48 @@ async def mark_as_read(
 @router.websocket("/ws")
 async def websocket_chat(
     websocket: WebSocket,
-    token: str = Query(...),
+    db: DatabaseSession,
+    token: str | None = Query(None),
 ):
     """WebSocket endpoint for real-time chat."""
     # Verify token and get user
     try:
-        payload = decode_jwt_token(token)
+        jwt_token = extract_ws_token(websocket, token)
+        if not jwt_token:
+            if websocket.client_state != WebSocketState.DISCONNECTED:
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+
+        payload = decode_jwt_token(jwt_token)
         user_id: str = payload.get("sub")
         if not user_id:
             if websocket.client_state != WebSocketState.DISCONNECTED:
                 await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
-        # Note: Full user verification would require DB session
-        # For WebSocket, we trust the JWT token for now
-        # Full verification can be added if needed
+        user_repo = UserRepository(db)
+        user = await user_repo.get_by_id(user_id)
+        if not user or not user.is_active:
+            if websocket.client_state != WebSocketState.DISCONNECTED:
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
 
     except Exception as e:
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await websocket.accept()
+    protocol_header = websocket.headers.get("sec-websocket-protocol", "")
+    subprotocol = None
+    if protocol_header:
+        parts = [part.strip() for part in protocol_header.split(",") if part.strip()]
+        if any(part.lower() == "access_token" for part in parts):
+            subprotocol = "access_token"
+
+    if subprotocol:
+        await websocket.accept(subprotocol=subprotocol)
+    else:
+        await websocket.accept()
 
     # Send welcome message to confirm connection is established
     try:
@@ -639,6 +660,8 @@ async def websocket_chat(
         return
 
     try:
+        # Server-side keep-alive
+        await websocket.send_json({"type": "pong"})
         while True:
             try:
                 # Use receive_text() and parse JSON manually for better error handling
@@ -652,6 +675,9 @@ async def websocket_chat(
                 if data.get("type") == "ping":
                     # Heartbeat - respond with pong
                     await websocket.send_json({"type": "pong"})
+                elif data.get("type") == "pong":
+                    # Client pong - keep connection alive
+                    continue
 
                 elif data.get("type") == "join_room":
                     room_id = UUID(data["room_id"])

@@ -221,7 +221,8 @@ class WebSocketClient {
       console.log(`[WebSocket] Connecting to ${wsUrl}`);
 
       try {
-        this.ws = new WebSocket(wsUrl);
+        const protocols = this.getWebSocketProtocols();
+        this.ws = protocols ? new WebSocket(wsUrl, protocols) : new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
           this.lastErrorMessage = null;
@@ -504,9 +505,13 @@ class WebSocketClient {
       .replace(/^http:\/\//, "ws://")
       .replace(/^https:\/\//, "wss://");
     // Backend endpoint is /api/v1/ws/{room_id}
+    return `${wsBaseUrl}/ws/${roomId}`;
+  }
+
+  private getWebSocketProtocols(): string[] | undefined {
     const token = authService.getToken();
-    const query = token ? `?token=${encodeURIComponent(token)}` : "";
-    return `${wsBaseUrl}/ws/${roomId}${query}`;
+    if (!token) return undefined;
+    return ["access_token", token];
   }
 
   isConnected(): boolean {

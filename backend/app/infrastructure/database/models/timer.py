@@ -46,7 +46,6 @@ class Timer(Base, TimestampMixin):
         String(36),
         nullable=False,
         unique=True,
-        index=True,
         comment="Associated room ID",
     )
 

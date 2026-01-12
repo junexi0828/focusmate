@@ -1,4 +1,5 @@
 import { BaseApiClient, ApiResponse } from "../../../lib/api/base";
+import { getApiBaseUrl } from "../../../lib/api/base-url";
 
 export interface ChatRoom {
   room_id: string;
@@ -168,29 +169,50 @@ class ChatService extends BaseApiClient {
     });
   }
 
-  async uploadFiles(roomId: string, files: File[]): Promise<ApiResponse<{ uploaded: number; files: Array<{ path: string; url: string }> }>> {
+  async uploadFiles(
+    roomId: string,
+    files: File[]
+  ): Promise<ApiResponse<{ uploaded: number; files: Array<{ path: string; url: string }> }>> {
     const formData = new FormData();
     files.forEach((file) => {
       formData.append("files", file);
     });
 
     const token = localStorage.getItem("access_token");
-    const env = (import.meta as any).env;
-    const apiBaseUrl = env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+    const apiBaseUrl = getApiBaseUrl();
 
-    const response = await fetch(`${apiBaseUrl}/chats/rooms/${roomId}/upload`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    let response: Response;
+    try {
+      response = await fetch(`${apiBaseUrl}/chats/rooms/${roomId}/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      clearTimeout(timeoutId);
+      return {
+        status: "error",
+        error: {
+          code: "NETWORK_ERROR",
+          message: "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.",
+        },
+      } as ApiResponse<{ uploaded: number; files: Array<{ path: string; url: string }> }>;
+    }
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: "File upload failed" }));
       return {
         status: "error",
-        error: { message: error.detail || "File upload failed" },
+        error: {
+          code: "UPLOAD_FAILED",
+          message: error.detail || "File upload failed",
+        },
       } as ApiResponse<{ uploaded: number; files: Array<{ path: string; url: string }> }>;
     }
 
@@ -203,4 +225,3 @@ class ChatService extends BaseApiClient {
 }
 
 export const chatService = new ChatService();
-

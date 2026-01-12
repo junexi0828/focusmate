@@ -51,6 +51,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/api/v1/auth/register": 3,  # 3 requests per minute
             "/api/v1/auth/password-reset/request": 3,
             "/api/v1/auth/password-reset/complete": 3,
+            "/api/v1/auth/password-reset/verify": 5,
+            "/api/v1/users/search": 15,
         }
 
     async def connect_redis(self):

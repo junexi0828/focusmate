@@ -2,7 +2,7 @@
 
 
 from typing import Annotated, Optional
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,7 @@ security = HTTPBearer(auto_error=False)
 async def get_current_user(
     db: DatabaseSession,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    request: Request | None = None,
 ) -> dict | None:
     """Get current authenticated user from JWT token.
 
@@ -60,12 +61,16 @@ async def get_current_user(
     if not user or not user.is_active:
         return None
 
-    return {
+    user_payload = {
         "id": user.id,
         "email": user.email,
         "username": user.username,
         "is_admin": user.is_admin,
     }
+    if request is not None:
+        request.state.user_id = user.id
+
+    return user_payload
 
 
 async def get_current_user_required(

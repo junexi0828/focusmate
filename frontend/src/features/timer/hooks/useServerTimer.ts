@@ -28,6 +28,17 @@ export function useServerTimer({
   const [isLoading, setIsLoading] = useState(false);
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastToastRef = useRef<Record<string, number>>({});
+  const lastSyncRef = useRef<number>(0);
+
+  const notifyOnce = useCallback((key: string, message: string, intervalMs = 8000) => {
+    const now = Date.now();
+    if (now - (lastToastRef.current[key] || 0) < intervalMs) {
+      return;
+    }
+    lastToastRef.current[key] = now;
+    toast.error(message);
+  }, []);
 
   // Calculate remaining seconds from target_timestamp
   const calculateRemainingSeconds = useCallback((targetTimestamp?: string): number => {
@@ -42,6 +53,21 @@ export function useServerTimer({
   const updateTimerState = useCallback((newState: TimerState) => {
     setTimerState(newState);
   }, []);
+
+  const syncTimerState = useCallback(
+    async (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastSyncRef.current < 5000) {
+        return;
+      }
+      lastSyncRef.current = now;
+      const response = await timerService.getTimer(roomId);
+      if (response.status === "success" && response.data) {
+        updateTimerState(response.data);
+      }
+    },
+    [roomId, updateTimerState]
+  );
 
   // Start timer countdown based on target_timestamp
   useEffect(() => {
@@ -108,7 +134,8 @@ export function useServerTimer({
     async (sessionType: SessionType = "work") => {
       // 현재 상태 확인 - RUNNING이면 시작하지 않음
       if (timerState?.status === "running") {
-        toast.error("타이머가 이미 실행 중입니다");
+        notifyOnce("timer_running", "타이머가 이미 실행 중입니다");
+        await syncTimerState();
         return;
       }
 
@@ -122,19 +149,22 @@ export function useServerTimer({
           const errorMessage =
             response.error?.message || "타이머 시작에 실패했습니다";
           if (response.error?.code === "TIMER_ALREADY_RUNNING") {
-            toast.error("타이머가 이미 실행 중입니다");
+            notifyOnce("timer_running", "타이머가 이미 실행 중입니다");
+            await syncTimerState();
           } else {
-            toast.error(errorMessage);
+            notifyOnce("timer_start_failed", errorMessage);
+            await syncTimerState();
           }
         }
       } catch (error) {
         console.error("Failed to start timer:", error);
-        toast.error("네트워크 오류가 발생했습니다");
+        notifyOnce("timer_start_network", "네트워크 오류가 발생했습니다");
+        await syncTimerState();
       } finally {
         setIsLoading(false);
       }
     },
-    [roomId, updateTimerState, timerState?.status]
+    [roomId, updateTimerState, timerState?.status, notifyOnce, syncTimerState]
   );
 
   const pauseTimer = useCallback(async () => {
@@ -145,17 +175,20 @@ export function useServerTimer({
         updateTimerState(response.data);
         toast.success("타이머가 일시정지되었습니다");
       } else {
-        toast.error(
+        notifyOnce(
+          "timer_pause_failed",
           response.error?.message || "타이머 일시정지에 실패했습니다"
         );
+        await syncTimerState();
       }
     } catch (error) {
       console.error("Failed to pause timer:", error);
-      toast.error("네트워크 오류가 발생했습니다");
+      notifyOnce("timer_pause_network", "네트워크 오류가 발생했습니다");
+      await syncTimerState();
     } finally {
       setIsLoading(false);
     }
-  }, [roomId, updateTimerState]);
+  }, [roomId, updateTimerState, notifyOnce, syncTimerState]);
 
   const resumeTimer = useCallback(async () => {
     setIsLoading(true);
@@ -165,15 +198,20 @@ export function useServerTimer({
         updateTimerState(response.data);
         toast.success("타이머가 재개되었습니다");
       } else {
-        toast.error(response.error?.message || "타이머 재개에 실패했습니다");
+        notifyOnce(
+          "timer_resume_failed",
+          response.error?.message || "타이머 재개에 실패했습니다"
+        );
+        await syncTimerState();
       }
     } catch (error) {
       console.error("Failed to resume timer:", error);
-      toast.error("네트워크 오류가 발생했습니다");
+      notifyOnce("timer_resume_network", "네트워크 오류가 발생했습니다");
+      await syncTimerState();
     } finally {
       setIsLoading(false);
     }
-  }, [roomId, updateTimerState]);
+  }, [roomId, updateTimerState, notifyOnce, syncTimerState]);
 
   const resetTimer = useCallback(async () => {
     setIsLoading(true);
@@ -183,15 +221,20 @@ export function useServerTimer({
         updateTimerState(response.data);
         toast.success("타이머가 리셋되었습니다");
       } else {
-        toast.error(response.error?.message || "타이머 리셋에 실패했습니다");
+        notifyOnce(
+          "timer_reset_failed",
+          response.error?.message || "타이머 리셋에 실패했습니다"
+        );
+        await syncTimerState();
       }
     } catch (error) {
       console.error("Failed to reset timer:", error);
-      toast.error("네트워크 오류가 발생했습니다");
+      notifyOnce("timer_reset_network", "네트워크 오류가 발생했습니다");
+      await syncTimerState();
     } finally {
       setIsLoading(false);
     }
-  }, [roomId, updateTimerState]);
+  }, [roomId, updateTimerState, notifyOnce, syncTimerState]);
 
   const completeSession = useCallback(async () => {
     setIsLoading(true);
@@ -202,17 +245,39 @@ export function useServerTimer({
         toast.success("세션이 완료되었습니다");
         return response.data;
       } else {
-        toast.error(response.error?.message || "세션 완료 처리에 실패했습니다");
+        notifyOnce(
+          "timer_complete_failed",
+          response.error?.message || "세션 완료 처리에 실패했습니다"
+        );
+        await syncTimerState();
         return null;
       }
     } catch (error) {
       console.error("Failed to complete session:", error);
-      toast.error("네트워크 오류가 발생했습니다");
+      notifyOnce("timer_complete_network", "네트워크 오류가 발생했습니다");
+      await syncTimerState();
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, [roomId, updateTimerState]);
+  }, [roomId, updateTimerState, notifyOnce, syncTimerState]);
+
+  // Periodic sync to avoid drift or missed updates
+  useEffect(() => {
+    if (!roomId) return;
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+    }
+    syncIntervalRef.current = setInterval(() => {
+      void syncTimerState();
+    }, 30000);
+
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
+    };
+  }, [roomId, syncTimerState]);
 
   // Calculate display values
   const remainingSeconds = timerState
@@ -257,4 +322,3 @@ export function useServerTimer({
     updateTimerState,
   };
 }
-
