@@ -10,7 +10,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -22,6 +23,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.api.middleware.request_logging import RequestLoggingMiddleware, get_request_id
 from app.api.middleware.security_headers import SecurityHeadersMiddleware
+from app.api.middleware.slow_request import SlowRequestMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -171,6 +173,12 @@ app.add_middleware(
     exclude_paths=["/health", "/docs", "/redoc", "/openapi.json"],
 )
 
+# Slow request logging - detects latency regressions
+app.add_middleware(
+    SlowRequestMiddleware,
+    threshold_ms=settings.APP_SLOW_REQUEST_THRESHOLD_MS,
+)
+
 # GZip middleware - compresses responses for bandwidth optimization
 # Should be added first to compress all responses
 app.add_middleware(
@@ -263,6 +271,13 @@ async def cors_fallback(request: Request, call_next):  # type: ignore[override]
 
     return response
 
+# Standard response metadata header
+@app.middleware("http")
+async def response_meta(request: Request, call_next):  # type: ignore[override]
+    response = await call_next(request)
+    response.headers.setdefault("X-App-Version", settings.APP_VERSION)
+    return response
+
 
 # Exception handler for custom exceptions
 @app.exception_handler(AppException)
@@ -290,6 +305,9 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
         },
     )
 
+    headers = {}
+    if request_id:
+        headers["X-Request-ID"] = request_id
     return JSONResponse(
         status_code=status_code,
         content={
@@ -301,6 +319,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
             },
             "request_id": request_id,
         },
+        headers=headers,
     )
 
 
@@ -335,6 +354,9 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     else:
         error_message = "An internal server error occurred"
 
+    headers = {}
+    if request_id:
+        headers["X-Request-ID"] = request_id
     return JSONResponse(
         status_code=500,
         content={
@@ -346,60 +368,15 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             },
             "request_id": request_id,
         },
+        headers=headers,
     )
 
 
 # Health check endpoint
-@app.get("/health")
-async def health_check(response: Response) -> dict[str, Any]:
-    """Deep health check endpoint verifying DB and Redis connectivity."""
-    from sqlalchemy import text
-    from app.infrastructure.database.session import AsyncSessionLocal
-    from fastapi import status
+# Health check endpoint (mapped from v1 controller)
+from app.api.v1.endpoints import health
 
-    health_status = {
-        "status": "healthy",
-        "service": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "environment": settings.APP_ENV,
-        "components": {
-            "database": "unknown",
-            "redis": "unknown",
-        },
-    }
-
-    is_healthy = True
-
-    # Check Database
-    try:
-        async with AsyncSessionLocal() as session:
-            await session.execute(text("SELECT 1"))
-        health_status["components"]["database"] = "connected"
-    except Exception as e:
-        is_healthy = False
-        health_status["components"]["database"] = f"error: {str(e)}"
-        logger = logging.getLogger("app")
-        logger.error(f"Health check failed (Database): {e}")
-
-    # Check Redis
-    try:
-        # Check if connected using ping
-        if redis_pubsub_manager.redis and await redis_pubsub_manager.redis.ping():
-            health_status["components"]["redis"] = "connected"
-        else:
-            is_healthy = False
-            health_status["components"]["redis"] = "disconnected"
-    except Exception as e:
-        is_healthy = False
-        health_status["components"]["redis"] = f"error: {str(e)}"
-        logger = logging.getLogger("app")
-        logger.error(f"Health check failed (Redis): {e}")
-
-    if not is_healthy:
-        health_status["status"] = "degraded"
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-
-    return health_status
+app.include_router(health.router, include_in_schema=False)  # /health is covered by api/v1/health in schema
 
 
 @app.exception_handler(HTTPException)
@@ -408,6 +385,18 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     code = "HTTP_ERROR"
     message = exc.detail if isinstance(exc.detail, str) else "Request failed"
     details = exc.detail if isinstance(exc.detail, dict) else {}
+    logger = logging.getLogger("app")
+    logger.warning(
+        "HTTPException: status=%s path=%s method=%s request_id=%s detail=%s",
+        exc.status_code,
+        request.url.path,
+        request.method,
+        request_id,
+        exc.detail,
+    )
+    headers = {}
+    if request_id:
+        headers["X-Request-ID"] = request_id
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -415,6 +404,38 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
             "error": {"code": code, "message": message, "details": details},
             "request_id": request_id,
         },
+        headers=headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    request_id = getattr(request.state, "request_id", None)
+    logger = logging.getLogger("app")
+    logger.warning(
+        "Validation error: path=%s method=%s request_id=%s errors=%s",
+        request.url.path,
+        request.method,
+        request_id,
+        exc.errors(),
+    )
+    headers = {}
+    if request_id:
+        headers["X-Request-ID"] = request_id
+    return JSONResponse(
+        status_code=422,
+        content={
+            "status": "error",
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation error",
+                "details": exc.errors(),
+            },
+            "request_id": request_id,
+        },
+        headers=headers,
     )
 
 

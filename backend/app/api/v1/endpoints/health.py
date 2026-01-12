@@ -8,7 +8,7 @@ Provides endpoints for:
 """
 
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.session import get_db
@@ -20,52 +20,61 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-async def health_check(db: AsyncSession = Depends(get_db)) -> dict:
+async def health_check(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     """Overall system health check.
 
     Returns:
         Dictionary with overall status and component health
     """
+    from app.core.config import settings
+    from sqlalchemy import text
+    from fastapi import status
+
+    health_status = {
+        "status": "healthy",
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": settings.APP_ENV,
+        "components": {
+            "database": "unknown",
+            "redis": "unknown",
+        },
+    }
+
+    is_healthy = True
+
     # Check Redis
     redis_healthy = await redis_health_check()
+    health_status["components"]["redis"] = "connected" if redis_healthy else "disconnected"
+    if not redis_healthy:
+        is_healthy = False
 
     # Check Database
-    db_healthy = True
     try:
-        await db.execute("SELECT 1")
+        await db.execute(text("SELECT 1"))
+        health_status["components"]["database"] = "connected"
     except Exception as e:
         logger.error(f"[Health] Database check failed: {e}")
-        db_healthy = False
+        health_status["components"]["database"] = f"error: {str(e)}"
+        is_healthy = False
 
     # Get circuit breaker stats
     circuit_stats = get_circuit_breaker_stats()
-
-    # Determine overall status
-    overall_status = "healthy"
-    if not redis_healthy or not db_healthy:
-        overall_status = "degraded"
-    if not db_healthy:
-        overall_status = "unhealthy"
-
-    return {
-        "status": overall_status,
-        "components": {
-            "database": {
-                "status": "up" if db_healthy else "down",
-                "critical": True,
-            },
-            "redis": {
-                "status": "up" if redis_healthy else "down",
-                "critical": False,
-            },
-            "circuit_breaker": {
-                "state": circuit_stats["state"],
-                "failure_count": circuit_stats["failure_count"],
-                "success_rate": circuit_stats["success_rate"],
-                "circuit_open_count": circuit_stats["circuit_open_count"],
-            },
-        },
+    health_status["components"]["circuit_breaker"] = {
+        "state": circuit_stats["state"],
+        "failure_count": circuit_stats["failure_count"],
+        "success_rate": circuit_stats["success_rate"],
     }
+
+    # Determine overall status and HTTP code
+    if not is_healthy:
+        health_status["status"] = "degraded"
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return health_status
 
 
 @router.get("/health/redis")
