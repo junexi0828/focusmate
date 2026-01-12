@@ -187,16 +187,32 @@ async def pause_timer(
             ParticipantRepository(db),
         )
         timer_state = await service.pause_timer(room_id)
-        await broadcast_timer_update(room_id, timer_state)
-        return timer_state
-    except AppException:
-        raise
+    except RoomNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except TimerNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidTimerStateException as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except AppException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        logger.exception("Timer pause failed: room_id=%s user_id=%s error=%s", room_id, current_user["id"], e)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Timer pause failed: room_id={room_id} user_id={current_user['id']} error={e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"code": "TIMER_INTERNAL_ERROR", "message": "Timer operation failed"},
+            detail={"code": "TIMER_INTERNAL_ERROR", "message": "Timer pause operation failed"},
         )
+
+    # Broadcast update (non-blocking validation)
+    try:
+        await broadcast_timer_update(room_id, timer_state)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to broadcast timer update after pause for room {room_id}: {e}")
+
+    return timer_state
 
 
 @router.post("/{room_id}/resume", response_model=TimerStateResponse)
@@ -218,16 +234,32 @@ async def resume_timer(
             ParticipantRepository(db),
         )
         timer_state = await service.resume_timer(room_id)
-        await broadcast_timer_update(room_id, timer_state)
-        return timer_state
-    except AppException:
-        raise
+    except RoomNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except TimerNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidTimerStateException as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except AppException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        logger.exception("Timer resume failed: room_id=%s user_id=%s error=%s", room_id, current_user["id"], e)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Timer resume failed: room_id={room_id} user_id={current_user['id']} error={e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"code": "TIMER_INTERNAL_ERROR", "message": "Timer operation failed"},
+            detail={"code": "TIMER_INTERNAL_ERROR", "message": "Timer resume operation failed"},
         )
+
+    # Broadcast update (non-blocking validation)
+    try:
+        await broadcast_timer_update(room_id, timer_state)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to broadcast timer update after resume for room {room_id}: {e}")
+
+    return timer_state
 
 
 @router.post("/{room_id}/reset", response_model=TimerStateResponse)
@@ -250,16 +282,32 @@ async def reset_timer(
             ParticipantRepository(db),
         )
         timer_state = await service.reset_timer(room_id, db=db)
-        await broadcast_timer_update(room_id, timer_state)
-        return timer_state
-    except AppException:
-        raise
+    except RoomNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except TimerNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidTimerStateException as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except AppException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        logger.exception("Timer reset failed: room_id=%s user_id=%s error=%s", room_id, current_user["id"], e)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Timer reset failed: room_id={room_id} user_id={current_user['id']} error={e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"code": "TIMER_INTERNAL_ERROR", "message": "Timer operation failed"},
+            detail={"code": "TIMER_INTERNAL_ERROR", "message": "Timer reset operation failed"},
         )
+
+    # Broadcast update (non-blocking validation)
+    try:
+        await broadcast_timer_update(room_id, timer_state)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to broadcast timer update after reset for room {room_id}: {e}")
+
+    return timer_state
 
 
 @router.post("/{room_id}/complete", response_model=TimerStateResponse)
@@ -308,7 +356,25 @@ async def complete_phase(
             completion_time,
         )
 
-        # Broadcast timer completion and state update
+    except RoomNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except TimerNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidTimerStateException as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except AppException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Timer complete failed: room_id={room_id} user_id={current_user['id']} error={e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"code": "TIMER_INTERNAL_ERROR", "message": "Timer completion operation failed"},
+        )
+
+    # Broadcast timer completion and state update (non-blocking validation)
+    try:
         await broadcast_timer_complete(
             room_id,
             completed_session_type,
@@ -316,13 +382,9 @@ async def complete_phase(
             auto_start=timer_response.status == "running",
         )
         await broadcast_timer_update(room_id, timer_response)
-
-        return timer_response
-    except AppException:
-        raise
     except Exception as e:
-        logger.exception("Timer complete failed: room_id=%s user_id=%s error=%s", room_id, current_user["id"], e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"code": "TIMER_INTERNAL_ERROR", "message": "Timer operation failed"},
-        )
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to broadcast timer completion/update for room {room_id}: {e}")
+
+    return timer_response
