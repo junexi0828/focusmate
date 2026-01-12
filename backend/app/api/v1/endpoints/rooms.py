@@ -16,6 +16,7 @@ from app.domain.room.service import RoomService
 from app.infrastructure.database.session import DatabaseSession
 
 
+
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
 
