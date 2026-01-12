@@ -76,7 +76,6 @@ async def get_my_rooms(
 
         return rooms
     except Exception as e:
-    except Exception as e:
         # Return empty list on failure to prevent UI crash
         import logging
         logging.getLogger(__name__).error(f"Failed to get rooms for user {current_user.get('id')}: {e}", exc_info=True)
