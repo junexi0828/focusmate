@@ -294,6 +294,14 @@ class Settings(BaseSettings):
     FEATURE_NOTIFICATIONS_ENABLED: bool = True
 
     # ==========================================================================
+    # Integration (Slack, etc.)
+    # ==========================================================================
+    SLACK_WEBHOOK_URL: str | None = Field(
+        default=None,
+        description="Slack Webhook URL for notifications",
+    )
+
+    # ==========================================================================
     # OAuth (Social Login)
     # ==========================================================================
     NAVER_CLIENT_ID: str = Field(
