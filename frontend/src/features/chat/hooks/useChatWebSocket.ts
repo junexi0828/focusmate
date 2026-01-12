@@ -7,11 +7,16 @@ import { authService } from "../../auth/services/authService";
 import type { Message } from "../services/chatService";
 import { getWebSocketBaseUrl } from "../../../lib/api/base-url";
 
-const getWebSocketUrl = (): string => {
+const getWebSocketUrl = (token?: string | null): string => {
   const wsBaseUrl = getWebSocketBaseUrl()
     .replace(/^http:\/\//, "ws://")
     .replace(/^https:\/\//, "wss://");
-  return `${wsBaseUrl}/chats/ws`;
+  const baseUrl = `${wsBaseUrl}/chats/ws`;
+  if (!token) {
+    return baseUrl;
+  }
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
 };
 
 // Reconnection configuration
@@ -133,9 +138,8 @@ export function useChatWebSocket() {
     }
 
     setIsConnecting(true);
-    const wsUrl = getWebSocketUrl();
-    const protocols = token ? ["access_token", token] : undefined;
-    const ws = protocols ? new WebSocket(wsUrl, protocols) : new WebSocket(wsUrl);
+    const wsUrl = getWebSocketUrl(token);
+    const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       // Check if we're cleaning up (React StrictMode double-mount)

@@ -40,6 +40,12 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
             if any(part.lower() == "access_token" for part in parts):
                 subprotocol = "access_token"
 
+        from starlette.websockets import WebSocketState
+
+        if websocket.client_state == WebSocketState.CONNECTED:
+            # Already accepted, do nothing
+            return
+
         if subprotocol:
             await websocket.accept(subprotocol=subprotocol)
         else:
