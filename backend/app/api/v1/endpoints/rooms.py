@@ -2,7 +2,7 @@
 
 
 from typing import Annotated, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import ValidationError
 
 from app.api.deps import get_current_user_required, get_room_service
@@ -88,6 +88,7 @@ async def create_room(
     current_user: Annotated[dict, Depends(get_current_user_required)],
     db: DatabaseSession,
     service: Annotated[RoomService, Depends(get_room_service)],
+    background_tasks: BackgroundTasks,
 ) -> RoomResponse:
     """Create a new room and automatically add creator as participant."""
     try:
@@ -122,11 +123,18 @@ async def create_room(
         # Create timer for the room if it doesn't exist
         timer_repo = TimerRepository(db)
         timer_service = TimerService(timer_repo, room_repo)
-        await timer_service.get_or_create_timer(room.id)
+        try:
+            await timer_service.get_or_create_timer(room.id)
+        except Exception:
+            # If timer creation fails, just log it. Room is already created.
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to create timer for room {room.id}")
 
-        # Slack Notification
+        # Slack Notification (Background)
         from app.core.notify import send_slack_notification
-        await send_slack_notification(
+        background_tasks.add_task(
+            send_slack_notification,
             message=f"🏠 New Room Created: {room.name}",
             level="info",
             details={
