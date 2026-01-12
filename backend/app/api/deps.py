@@ -23,7 +23,7 @@ security = HTTPBearer(auto_error=False)
 async def get_current_user(
     db: DatabaseSession,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
-    request: Request | None = None,
+    request: Request,
 ) -> dict | None:
     """Get current authenticated user from JWT token.
 
