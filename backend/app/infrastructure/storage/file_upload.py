@@ -4,12 +4,15 @@ from typing import List, Optional, Tuple
 import os
 import uuid
 from pathlib import Path
+import re
 
 from fastapi import UploadFile
 
 
 import logging
 from datetime import datetime
+
+from app.core.config import settings
 
 class FileUploadService:
     """Service for handling file uploads."""
@@ -19,20 +22,43 @@ class FileUploadService:
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self.allowed_extensions = {".jpg", ".jpeg", ".png", ".pdf"}
-        self.max_file_size = 10 * 1024 * 1024  # 10MB
+        self.max_file_size = settings.STORAGE_MAX_FILE_SIZE
+
+    def _safe_dir_name(self, name: str) -> str:
+        """Normalize directory name to prevent path traversal."""
+        safe = re.sub(r"[^A-Za-z0-9_-]", "_", name or "").strip("_")
+        return safe or uuid.uuid4().hex
 
     def validate_file(self, file: UploadFile) -> tuple[bool, str | None]:
         """Validate uploaded file."""
         # Check file extension
-        file_ext = Path(file.filename).suffix.lower()
+        file_ext = Path(file.filename or "upload").suffix.lower()
         if file_ext not in self.allowed_extensions:
             return False, f"Invalid file type. Allowed: {', '.join(self.allowed_extensions)}"
 
         # Check file size (if available)
-        if file.size and file.size > self.max_file_size:
+        size = getattr(file, "size", None)
+        if size and size > self.max_file_size:
             return False, f"File too large. Maximum size: {self.max_file_size / 1024 / 1024}MB"
 
         return True, None
+
+    async def _read_with_limit(self, file: UploadFile) -> bytes:
+        """Read file content with size limit enforcement."""
+        chunks: list[bytes] = []
+        total = 0
+        chunk_size = 1024 * 1024
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > self.max_file_size:
+                raise ValueError(
+                    f"File too large. Maximum size: {self.max_file_size / 1024 / 1024}MB"
+                )
+            chunks.append(chunk)
+        return b"".join(chunks)
 
     async def save_file(self, file: UploadFile, team_id: str) -> str:
         """Save uploaded file and return file path."""
@@ -42,16 +68,17 @@ class FileUploadService:
             raise ValueError(error_msg)
 
         # Generate unique filename
-        file_ext = Path(file.filename).suffix.lower()
-        unique_filename = f"{team_id}_{uuid.uuid4().hex}{file_ext}"
+        file_ext = Path(file.filename or "upload").suffix.lower()
+        unique_filename = f"{uuid.uuid4().hex}{file_ext}"
 
         # Create team directory
-        team_dir = self.upload_dir / team_id
+        safe_team_id = self._safe_dir_name(team_id)
+        team_dir = self.upload_dir / safe_team_id
         team_dir.mkdir(parents=True, exist_ok=True)
 
         # Save file
         file_path = team_dir / unique_filename
-        content = await file.read()
+        content = await self._read_with_limit(file)
         with open(file_path, "wb") as f:
             f.write(content)
 

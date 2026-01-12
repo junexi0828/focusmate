@@ -79,7 +79,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             log_data = {
                 "request_id": request_id,
                 "method": request.method,
-                "url": str(request.url),
                 "path": request.url.path,
                 "client_host": request.client.host if request.client else None,
                 "user_agent": request.headers.get("user-agent"),

@@ -63,30 +63,61 @@ class RedisTimerListener:
             raise
 
     async def listen(self):
-        """Listen for timer expiry events and process them.
+        """Listen for timer expiry events and process them with auto-reconnection.
 
         This runs in a background task and processes expired timer keys.
+        Robustly handles connection failures with retry logic.
         """
         self.running = True
-        logger.info("🎧 Redis Timer Listener started")
+        import asyncio
 
-        try:
-            async for message in self.pubsub.listen():
+        retry_count = 0
+        max_retries = 5
+        base_delay = 1
+
+        while self.running:
+            try:
+                if not self.redis or not self.pubsub:
+                    logger.info("🔄 Redis Listener reconnecting...")
+                    await self.connect()
+
+                logger.info("🎧 Redis Timer Listener started monitoring")
+
+                # Reset retry count on successful connection
+                retry_count = 0
+
+                async for message in self.pubsub.listen():
+                    if not self.running:
+                        break
+
+                    if message['type'] == 'pmessage':
+                        key = message['data']
+                        if key.startswith('timer:expire:'):
+                            room_id = key.split(':')[-1]
+                            # Run handling in background to not block listener
+                            asyncio.create_task(self._handle_timer_expiry(room_id))
+
+            except Exception as e:
+                logger.error(f"❌ Redis Listener connection lost: {e}")
+                self.available = False
+                # Clean up potentially broken connection
+                try:
+                    if self.pubsub: await self.pubsub.close()
+                    if self.redis: await self.redis.close()
+                except: pass
+                self.pubsub = None
+                self.redis = None
+
                 if not self.running:
                     break
 
-                if message['type'] == 'pmessage':
-                    key = message['data']
+                # Exponential backoff
+                retry_count += 1
+                delay = min(base_delay * (2 ** (retry_count - 1)), 60) # Max 60s
+                logger.warning(f"⚠️ Retrying Redis listener in {delay}s (Attempt {retry_count})...")
+                await asyncio.sleep(delay)
 
-                    # Check if this is a timer expiry key
-                    if key.startswith('timer:expire:'):
-                        room_id = key.split(':')[-1]
-                        await self._handle_timer_expiry(room_id)
-
-        except Exception as e:
-            logger.error(f"❌ Error in Redis Timer Listener: {e}", exc_info=True)
-        finally:
-            logger.info("🛑 Redis Timer Listener stopped")
+        logger.info("🛑 Redis Timer Listener stopped permanently")
 
     async def _handle_timer_expiry(self, room_id: str):
         """Handle timer expiry event.

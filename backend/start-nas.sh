@@ -140,10 +140,13 @@ echo "   Logs: logs/app.log"
 echo ""
 
 # 백그라운드 실행 (Miniconda 환경의 Python 직접 사용)
+# WORKERS 변수가 설정되어 있지 않으면 기본값 1 사용
+WORKERS=${WORKERS:-1}
+
 nohup $CONDA_PYTHON -m uvicorn app.main:app \
     --host 0.0.0.0 \
     --port 8000 \
-    --workers 2 \
+    --workers $WORKERS \
     > logs/app.log 2>&1 &
 
 PID=$!

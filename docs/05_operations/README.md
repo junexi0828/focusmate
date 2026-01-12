@@ -13,6 +13,7 @@ Deployment, maintenance, and operational logs for Focus Mate.
 ## 🔧 Maintenance
 *   [**OPS-002_Troubleshooting_Guide.md**](./OPS-002_Troubleshooting_Guide.md): Known issues and fixes.
 *   [**OPS-001_Seed_Data_Review.md**](./OPS-001_Seed_Data_Review.md): Database seeding records.
+*   [**OPS-006_Security_Defense_and_Validation_Plan.md**](./OPS-006_Security_Defense_and_Validation_Plan.md): Security defense controls and validation plan.
 
 ## 📜 Logs & Reports
 *   [**OPS-005_Changelog.md**](./OPS-005_Changelog.md): Version update history.

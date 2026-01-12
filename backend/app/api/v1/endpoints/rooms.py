@@ -3,6 +3,7 @@
 
 from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import ValidationError
 
 from app.api.deps import get_current_user_required, get_room_service
 from app.core.exceptions import (
@@ -68,7 +69,7 @@ async def get_my_rooms(
                 else:
                     # If remove_on_leave=False, include room regardless of connection status
                     rooms.append(room)
-            except (ValueError, AttributeError, KeyError, RoomNotFoundException) as e:
+            except (ValueError, AttributeError, KeyError, RoomNotFoundException, ValidationError) as e:
                 # Skip rooms with invalid data or missing relationships
                 # Log for debugging but continue processing other rooms
                 continue

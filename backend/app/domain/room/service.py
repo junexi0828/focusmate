@@ -213,18 +213,23 @@ class RoomService:
         # Soft delete: set is_active to False
         room.is_active = False
         await self.repository.update(room)
+        # Explicitly commit the transaction to ensure the soft delete is persisted
+        # This fixes an issue where the auto-commit might not be triggering reliably
+        await self.repository.db.commit()
 
         # Notify clients about room deletion
         try:
             from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
             from uuid import UUID
+            from datetime import datetime
+            from datetime import timezone
 
             await redis_pubsub_manager.publish_event(
                 UUID(room_id),
                 "room_deleted",
                 {
                     "room_id": room_id,
-                    "deleted_at": str(datetime.now(UTC)),
+                    "deleted_at": str(datetime.now(timezone.utc)),
                 }
             )
         except Exception as e:

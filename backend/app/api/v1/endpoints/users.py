@@ -47,7 +47,7 @@ async def search_users(
             {
                 "id": user.id,
                 "username": user.username,
-                "email": user.email,
+                "email": user.email if current_user.get("is_admin") else None,
                 "bio": user.bio,
                 "profile_image": user.profile_image,
             }
