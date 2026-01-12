@@ -61,12 +61,17 @@ async def websocket_endpoint(
         # Authenticate user
         jwt_token = extract_ws_token(websocket, token)
         if jwt_token:
+            user_id = None
             try:
                 payload = jwt.decode(
                     jwt_token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
                 )
-                user_id: str = payload.get("sub")
-                if user_id:
+                user_id = payload.get("sub")
+            except (JWTError, Exception) as e:
+                logger.warning(f"[Room WS] Token decode failed for room_id={room_id}: {e}")
+
+            if user_id:
+                try:
                     # Extract token ID (JTI) for tracking session activity
                     token_id = payload.get("jti")
 
@@ -74,8 +79,10 @@ async def websocket_endpoint(
                     user = await user_repo.get_by_id(user_id)
                     if user and user.is_active:
                         current_user = user
-            except (JWTError, Exception) as e:
-                logger.warning(f"[Room WS] Auth failed for room_id={room_id}: {e}")
+                except Exception as db_e:
+                    logger.error(f"[Room WS] DB Authentication failed for user_id={user_id}: {db_e}", exc_info=True)
+                    # continue; current_user remains None, triggering 1008 close below
+
                 # We typically close if auth fails, but for public rooms we might allow guests?
                 # For now, let's enforce auth or handle guests if needed.
                 # Assuming auth is required based on "current_user" usage below.

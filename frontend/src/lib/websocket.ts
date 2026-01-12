@@ -504,7 +504,7 @@ class WebSocketClient {
       .replace(/^http:\/\//, "ws://")
       .replace(/^https:\/\//, "wss://");
     // Backend endpoint is /api/v1/ws/{room_id}
-    return `${wsBaseUrl}/ws/${roomId}`;
+    return `${wsBaseUrl}/api/v1/ws/${roomId}`;
   }
 
   private getWebSocketProtocols(): string[] | undefined {
