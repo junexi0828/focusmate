@@ -33,7 +33,17 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
         Args:
             websocket: WebSocket connection to accept
         """
-        await websocket.accept()
+        protocol_header = websocket.headers.get("sec-websocket-protocol", "")
+        subprotocol = None
+        if protocol_header:
+            parts = [part.strip() for part in protocol_header.split(",") if part.strip()]
+            if any(part.lower() == "access_token" for part in parts):
+                subprotocol = "access_token"
+
+        if subprotocol:
+            await websocket.accept(subprotocol=subprotocol)
+        else:
+            await websocket.accept()
         logger.debug("WebSocket connection accepted")
 
     def _add_connection(self, websocket: WebSocket, key: KeyType) -> None:
@@ -96,9 +106,17 @@ class BaseConnectionManager(ABC, Generic[KeyType]):
             key: Connection key for cleanup
         """
         disconnected = []
-        for connection in connections:
-            success = await self._send_json(connection, message)
-            if not success:
+        # Broadcast in parallel to avoid blocking on slow clients
+        import asyncio
+        results = await asyncio.gather(
+            *[self._send_json(connection, message) for connection in connections],
+            return_exceptions=True
+        )
+
+        disconnected = []
+        for connection, result in zip(connections, results):
+            # Check if result is an exception or False (failed send)
+            if isinstance(result, Exception) or result is False:
                 disconnected.append(connection)
 
         # Clean up disconnected clients
