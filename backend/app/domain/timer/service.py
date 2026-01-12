@@ -51,27 +51,15 @@ class TimerService:
             duration_seconds: Timer duration in seconds
         """
         try:
-            redis = await aioredis.from_url(
-                settings.REDIS_URL,
-                decode_responses=True,
-                encoding="utf-8"
-            )
+            from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 
-            # Set key with TTL
-            # Key format: timer:expire:{room_id}
-            key = f"timer:expire:{room_id}"
-            value = json.dumps({
+            data = {
                 "room_id": room_id,
                 "started_at": datetime.now(UTC).isoformat(),
                 "duration": duration_seconds,
-            })
+            }
 
-            await redis.setex(key, duration_seconds, value)
-            await redis.close()
-
-            logging.getLogger(__name__).info(
-                f"✅ Set Redis TTL for room {room_id}: {duration_seconds}s"
-            )
+            await redis_pubsub_manager.set_timer_ttl(room_id, duration_seconds, data)
 
         except Exception as e:
             # Don't fail timer start if Redis is unavailable

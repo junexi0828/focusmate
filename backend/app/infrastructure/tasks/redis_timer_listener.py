@@ -187,9 +187,8 @@ class RedisTimerListener:
                     f"❌ Failed to complete timer for room {room_id}: {e}",
                     exc_info=True
                 )
-            finally:
-                await db.close()
-                break  # Only use first db session
+            # No finally block needed - get_db context manager handles commit/rollback/close
+            break  # Process only once per session
 
     async def disconnect(self):
         """Disconnect from Redis and stop listening."""

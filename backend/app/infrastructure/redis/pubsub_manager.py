@@ -348,6 +348,29 @@ class RedisPubSubManager:
             logging.getLogger(__name__).error(f"Error getting cached presence: {e}")
             return None
 
+    async def set_timer_ttl(self, room_id: str, duration_seconds: int, data: dict) -> None:
+        """Set Redis TTL key for timer expiry with circuit breaker protection.
 
+        Args:
+            room_id: Room ID
+            duration_seconds: Timer duration in seconds
+            data: Data to store (e.g. started_at)
+        """
+        if not self.redis:
+            logger.warning(f"[PubSub] Redis not connected, skipping set_timer_ttl for room {room_id}")
+            return
+
+        try:
+            await self._circuit_breaker.call(self._set_timer_ttl_impl, room_id, duration_seconds, data)
+        except CircuitOpenError:
+            logger.warning(f"[PubSub] Circuit open, skipping timer TTL for room {room_id}")
+        except Exception as e:
+            logger.error(f"[PubSub] Failed to set timer TTL for room {room_id}: {e}")
+
+    async def _set_timer_ttl_impl(self, room_id: str, duration_seconds: int, data: dict):
+        """Internal implementation of set_timer_ttl."""
+        key = f"timer:expire:{room_id}"
+        await self.redis.setex(key, duration_seconds, json.dumps(data))
+        logger.info(f"✅ Set Redis TTL for room {room_id}: {duration_seconds}s")
 # Global Redis Pub/Sub manager instance
 redis_pubsub_manager = RedisPubSubManager()
