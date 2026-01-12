@@ -200,6 +200,8 @@ if settings.RATE_LIMIT_ENABLED:
 ngrok_regex = r"https://.*\.ngrok(-free)?\.(app|io)"
 # Allow production frontend origins by regex (covers apex and subdomains)
 prod_origin_regex = r"https://(.*\.)?eieconcierge\.com"
+# Use a combined regex so prod works even if APP_ENV is mis-set
+origin_regex = f"(?:{ngrok_regex}|{prod_origin_regex})"
 # Handle CORS_ORIGINS="*" case: cannot use allow_credentials=True with "*"
 cors_origins = settings.CORS_ORIGINS
 allow_credentials = settings.CORS_ALLOW_CREDENTIALS
@@ -212,7 +214,7 @@ if isinstance(cors_origins, list) and len(cors_origins) == 1 and cors_origins[0]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=ngrok_regex if settings.is_development else prod_origin_regex,
+    allow_origin_regex=origin_regex,
     allow_credentials=allow_credentials,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],  # Allow all headers including Authorization
