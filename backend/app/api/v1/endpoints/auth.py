@@ -223,8 +223,8 @@ async def update_profile(
 async def upload_profile_image(
     user_id: str,
     current_user: Annotated[dict, Depends(get_current_user_required)],
-    file: UploadFile = File(...),
     service: Annotated[UserService, Depends(get_user_service)] = None,
+    file: UploadFile = File(...),
 ) -> dict:
     """Upload user profile image.
 
