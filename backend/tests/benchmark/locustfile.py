@@ -6,13 +6,13 @@ class FocusMateUser(HttpUser):
 
     @task(3)
     def health_check(self):
-        self.client.get("/api/v1/system/health")
+        self.client.get("/health")
 
     @task(1)
     def echo_test(self):
         # Only tests simple endpoint without DB if available,
         # or minimal DB query
-        self.client.get("/api/v1/system/health")
+        self.client.get("/health")
         # Note: Add specific DB-heavy endpoints here if needed for deeper stress testing
         # e.g. self.client.get("/api/v1/rooms/my-rooms") (requires auth)
 
