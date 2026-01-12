@@ -19,6 +19,7 @@ import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MatchingRouteImport } from './routes/matching'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FriendsRouteImport } from './routes/friends'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as IndexRouteImport } from './routes/index'
@@ -86,6 +87,11 @@ const LoginRoute = LoginRouteImport.update({
 const FriendsRoute = FriendsRouteImport.update({
   id: '/friends',
   path: '/friends',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -186,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/community': typeof CommunityRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/faq': typeof FaqRoute
   '/friends': typeof FriendsRoute
   '/login': typeof LoginRoute
   '/matching': typeof MatchingRouteWithChildren
@@ -215,6 +222,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/faq': typeof FaqRoute
   '/friends': typeof FriendsRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/community': typeof CommunityRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/faq': typeof FaqRoute
   '/friends': typeof FriendsRoute
   '/login': typeof LoginRoute
   '/matching': typeof MatchingRouteWithChildren
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/'
     | '/community'
     | '/dashboard'
+    | '/faq'
     | '/friends'
     | '/login'
     | '/matching'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dashboard'
+    | '/faq'
     | '/friends'
     | '/login'
     | '/messages'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/'
     | '/community'
     | '/dashboard'
+    | '/faq'
     | '/friends'
     | '/login'
     | '/matching'
@@ -364,6 +376,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CommunityRoute: typeof CommunityRouteWithChildren
   DashboardRoute: typeof DashboardRoute
+  FaqRoute: typeof FaqRoute
   FriendsRoute: typeof FriendsRoute
   LoginRoute: typeof LoginRoute
   MatchingRoute: typeof MatchingRouteWithChildren
@@ -450,6 +463,13 @@ declare module '@tanstack/react-router' {
       path: '/friends'
       fullPath: '/friends'
       preLoaderRoute: typeof FriendsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -645,6 +665,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CommunityRoute: CommunityRouteWithChildren,
   DashboardRoute: DashboardRoute,
+  FaqRoute: FaqRoute,
   FriendsRoute: FriendsRoute,
   LoginRoute: LoginRoute,
   MatchingRoute: MatchingRouteWithChildren,
