@@ -34,6 +34,31 @@ from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 # 로깅 설정 초기화
 setup_logging()
 
+# Initialize Sentry
+if settings.SENTRY_ENABLED and settings.SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+        from sentry_sdk.integrations.redis import RedisIntegration
+
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.APP_ENV,
+            traces_sample_rate=1.0 if settings.is_development else 0.1,
+            integrations=[
+                FastApiIntegration(transaction_style="url"),
+                SqlalchemyIntegration(),
+                RedisIntegration(),
+            ],
+        )
+        logging.getLogger("app").info("✅ Sentry initialized")
+    except ImportError:
+        logging.getLogger("app").warning("⚠️ sentry-sdk not installed, skipping Sentry init")
+    except Exception as e:
+        logging.getLogger("app").warning(f"⚠️ Sentry init failed: {e}")
+
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
@@ -72,6 +97,13 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         reservation_notification_worker,
     )
     import asyncio
+    from app.core.notify import send_slack_notification
+
+    # Send startup notification
+    await send_slack_notification(
+        message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
+        level="info"
+    )
 
     listener_task = None
     fallback_scheduler = None
@@ -82,6 +114,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
     except Exception:
         logger.exception("⚠️ Redis Timer Listener initialization failed")
+        await send_slack_notification(
+            message="⚠️ Redis Timer Listener initialization failed",
+            level="error"
+        )
 
     if not redis_timer_listener.is_available():
         try:
@@ -108,11 +144,19 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("✅ Reservation Notification Worker started (60s interval)")
     except Exception:
         logger.exception("⚠️ Reservation Notification Worker initialization failed")
+        await send_slack_notification(
+            message="⚠️ Reservation Notification Worker initialization failed",
+            level="error"
+        )
 
     yield
 
     # Shutdown
     logger.info("🛑 Shutting down Focus Mate Backend...")
+    await send_slack_notification(
+        message=f"🛑 FocusMate Backend Shutting Down ({settings.APP_ENV})",
+        level="warning"
+    )
 
     # Stop Redis Timer Listener
     try:
@@ -279,6 +323,24 @@ async def response_meta(request: Request, call_next):  # type: ignore[override]
     return response
 
 
+def _add_cors_headers(headers: dict, request: Request) -> None:
+    origin = request.headers.get("origin")
+    if not origin:
+        return
+    if isinstance(cors_origins, list) and origin in cors_origins:
+        headers["Access-Control-Allow-Origin"] = origin
+    elif origin_regex:
+        try:
+            if re.match(origin_regex, origin):
+                headers["Access-Control-Allow-Origin"] = origin
+        except re.error:
+            return
+    if "Access-Control-Allow-Origin" in headers:
+        if allow_credentials:
+            headers["Access-Control-Allow-Credentials"] = "true"
+        headers.setdefault("Vary", "Origin")
+
+
 # Exception handler for custom exceptions
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
@@ -308,6 +370,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     headers = {}
     if request_id:
         headers["X-Request-ID"] = request_id
+    _add_cors_headers(headers, request)
     return JSONResponse(
         status_code=status_code,
         content={
@@ -357,6 +420,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     headers = {}
     if request_id:
         headers["X-Request-ID"] = request_id
+    _add_cors_headers(headers, request)
     return JSONResponse(
         status_code=500,
         content={
@@ -382,9 +446,22 @@ app.include_router(health.router, include_in_schema=False)  # /health is covered
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None)
-    code = "HTTP_ERROR"
+    status_code_map = {
+        400: "BAD_REQUEST",
+        401: "UNAUTHORIZED",
+        403: "FORBIDDEN",
+        404: "NOT_FOUND",
+        409: "CONFLICT",
+        422: "VALIDATION_ERROR",
+        429: "RATE_LIMITED",
+        500: "INTERNAL_SERVER_ERROR",
+        503: "SERVICE_UNAVAILABLE",
+    }
+    code = status_code_map.get(exc.status_code, "HTTP_ERROR")
     message = exc.detail if isinstance(exc.detail, str) else "Request failed"
     details = exc.detail if isinstance(exc.detail, dict) else {}
+    if isinstance(details, dict) and details.get("code"):
+        code = details["code"]
     logger = logging.getLogger("app")
     logger.warning(
         "HTTPException: status=%s path=%s method=%s request_id=%s detail=%s",
@@ -397,6 +474,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     headers = {}
     if request_id:
         headers["X-Request-ID"] = request_id
+    _add_cors_headers(headers, request)
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -424,6 +502,7 @@ async def validation_exception_handler(
     headers = {}
     if request_id:
         headers["X-Request-ID"] = request_id
+    _add_cors_headers(headers, request)
     return JSONResponse(
         status_code=422,
         content={

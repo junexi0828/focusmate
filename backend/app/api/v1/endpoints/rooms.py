@@ -124,6 +124,19 @@ async def create_room(
         timer_service = TimerService(timer_repo, room_repo)
         await timer_service.get_or_create_timer(room.id)
 
+        # Slack Notification
+        from app.core.notify import send_slack_notification
+        await send_slack_notification(
+            message=f"🏠 New Room Created: {room.name}",
+            level="info",
+            details={
+                "room_id": str(room.id),
+                "room_name": room.name,
+                "host_id": str(room.host_id),
+                "category": room.category
+            }
+        )
+
         return room
     except RoomNameTakenException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=e.message)

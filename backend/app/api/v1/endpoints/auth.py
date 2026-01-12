@@ -60,7 +60,21 @@ async def register(
 ) -> TokenResponse:
     """Register a new user."""
     try:
-        return await service.register(data)
+        response = await service.register(data)
+
+        # Slack Notification
+        from app.core.notify import send_slack_notification
+        await send_slack_notification(
+            message=f"🎉 New User Registration: {data.email}",
+            level="info",
+            details={
+                "email": data.email,
+                "username": data.username,
+                "provider": "email"
+            }
+        )
+
+        return response
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
     except Exception as e:
@@ -94,6 +108,19 @@ async def login(
                 max_age=7 * 24 * 60 * 60,
             )
             token_response.refresh_token = None
+
+        # Slack Notification (Optional: might be too noisy for high traffic)
+        # For now, let's keep it to monitor verified logins
+        from app.core.notify import send_slack_notification
+        await send_slack_notification(
+            message=f"🔑 User Login: {data.email}",
+            level="info",
+            details={
+                "email": data.email,
+                "time": datetime.now(UTC).isoformat()
+            }
+        )
+
         return token_response
     except UnauthorizedException as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
