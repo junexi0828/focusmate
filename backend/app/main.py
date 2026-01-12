@@ -10,7 +10,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -273,18 +273,8 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     logger = logging.getLogger("app")
     request_id = getattr(request.state, "request_id", None)
 
-    # Determine status code based on exception type
-    status_code = 400
-    if exc.code == "NOT_FOUND":
-        status_code = 404
-    elif exc.code == "UNAUTHORIZED":
-        status_code = 401
-    elif exc.code == "FORBIDDEN":
-        status_code = 403
-    elif exc.code == "CONFLICT":
-        status_code = 409
-    elif exc.code == "VALIDATION_ERROR":
-        status_code = 422
+    # Use status code from exception
+    status_code = exc.status_code
 
     # Log error with context
     logger.warning(
@@ -352,6 +342,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             "error": {
                 "code": "INTERNAL_SERVER_ERROR",
                 "message": error_message,
+                "details": {},
             },
             "request_id": request_id,
         },
@@ -409,6 +400,24 @@ async def health_check(response: Response) -> dict[str, Any]:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return health_status
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    request_id = getattr(request.state, "request_id", None)
+    code = "HTTP_ERROR"
+    message = exc.detail if isinstance(exc.detail, str) else "Request failed"
+    details = exc.detail if isinstance(exc.detail, dict) else {}
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "status": "error",
+            "error": {"code": code, "message": message, "details": details},
+            "request_id": request_id,
+        },
+    )
+
+
 
 
 # Include API router

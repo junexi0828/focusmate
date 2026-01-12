@@ -2,7 +2,7 @@
 
 
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from app.api.deps import (
     DatabaseSession,
@@ -11,8 +11,6 @@ from app.api.deps import (
     get_timer_repository,
 )
 from app.core.exceptions import (
-    ForbiddenException,
-    InvalidTimerStateException,
     RoomNotFoundException,
     TimerNotFoundException,
 )
@@ -112,8 +110,6 @@ async def get_timer_state(
         return await service.get_timer_state(room_id, db=db)
     except TimerNotFoundException:
         return await service.get_or_create_timer(room_id)
-    except RoomNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
 
 
 @router.post("/{room_id}/start", response_model=TimerStateResponse)
@@ -128,24 +124,15 @@ async def start_timer(
 
     Transitions from IDLE or PAUSED to RUNNING.
     """
-    try:
-        await ensure_room_access(
-            room_id,
-            current_user["id"],
-            service.room_repo,
-            ParticipantRepository(db),
-        )
-        timer_state = await service.start_timer(room_id, request.session_type, db=db)
-        await broadcast_timer_update(room_id, timer_state)
-        return timer_state
-    except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except RoomNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
-    except ForbiddenException as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
+    await ensure_room_access(
+        room_id,
+        current_user["id"],
+        service.room_repo,
+        ParticipantRepository(db),
+    )
+    timer_state = await service.start_timer(room_id, request.session_type, db=db)
+    await broadcast_timer_update(room_id, timer_state)
+    return timer_state
 
 
 @router.post("/{room_id}/pause", response_model=TimerStateResponse)
@@ -159,24 +146,15 @@ async def pause_timer(
 
     Transitions from RUNNING to PAUSED, saving remaining time.
     """
-    try:
-        await ensure_room_access(
-            room_id,
-            current_user["id"],
-            service.room_repo,
-            ParticipantRepository(db),
-        )
-        timer_state = await service.pause_timer(room_id)
-        await broadcast_timer_update(room_id, timer_state)
-        return timer_state
-    except RoomNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
-    except ForbiddenException as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
+    await ensure_room_access(
+        room_id,
+        current_user["id"],
+        service.room_repo,
+        ParticipantRepository(db),
+    )
+    timer_state = await service.pause_timer(room_id)
+    await broadcast_timer_update(room_id, timer_state)
+    return timer_state
 
 
 @router.post("/{room_id}/resume", response_model=TimerStateResponse)
@@ -190,24 +168,15 @@ async def resume_timer(
 
     Transitions from PAUSED to RUNNING, continuing from remaining time.
     """
-    try:
-        await ensure_room_access(
-            room_id,
-            current_user["id"],
-            service.room_repo,
-            ParticipantRepository(db),
-        )
-        timer_state = await service.resume_timer(room_id)
-        await broadcast_timer_update(room_id, timer_state)
-        return timer_state
-    except RoomNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
-    except ForbiddenException as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
+    await ensure_room_access(
+        room_id,
+        current_user["id"],
+        service.room_repo,
+        ParticipantRepository(db),
+    )
+    timer_state = await service.resume_timer(room_id)
+    await broadcast_timer_update(room_id, timer_state)
+    return timer_state
 
 
 @router.post("/{room_id}/reset", response_model=TimerStateResponse)
@@ -222,24 +191,15 @@ async def reset_timer(
     If timer was running, partially completed session is recorded.
     Returns timer to IDLE state with full duration.
     """
-    try:
-        await ensure_room_access(
-            room_id,
-            current_user["id"],
-            service.room_repo,
-            ParticipantRepository(db),
-        )
-        timer_state = await service.reset_timer(room_id, db=db)
-        await broadcast_timer_update(room_id, timer_state)
-        return timer_state
-    except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except RoomNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
-    except ForbiddenException as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
+    await ensure_room_access(
+        room_id,
+        current_user["id"],
+        service.room_repo,
+        ParticipantRepository(db),
+    )
+    timer_state = await service.reset_timer(room_id, db=db)
+    await broadcast_timer_update(room_id, timer_state)
+    return timer_state
 
 
 @router.post("/{room_id}/complete", response_model=TimerStateResponse)
@@ -255,54 +215,45 @@ async def complete_phase(
     Auto-starts break if auto_start_break is enabled.
     Automatically records session to session_history when work phase completes.
     """
-    try:
-        await ensure_room_access(
-            room_id,
-            current_user["id"],
-            service.room_repo,
-            ParticipantRepository(db),
-        )
-        from app.shared.constants.timer import TimerPhase
+    await ensure_room_access(
+        room_id,
+        current_user["id"],
+        service.room_repo,
+        ParticipantRepository(db),
+    )
+    from app.shared.constants.timer import TimerPhase
 
-        timer = await service.timer_repo.get_by_room_id(room_id)
-        if not timer:
-            raise TimerNotFoundException(room_id)
+    timer = await service.timer_repo.get_by_room_id(room_id)
+    if not timer:
+        raise TimerNotFoundException(room_id)
 
-        room = await service.room_repo.get_by_id(room_id)
-        if not room:
-            raise RoomNotFoundException(room_id)
+    room = await service.room_repo.get_by_id(room_id)
+    if not room:
+        raise RoomNotFoundException(room_id)
 
-        completed_session_type = (
-            "work" if timer.phase == TimerPhase.WORK.value else "break"
-        )
-        next_session_type = "break" if completed_session_type == "work" else "work"
+    completed_session_type = (
+        "work" if timer.phase == TimerPhase.WORK.value else "break"
+    )
+    next_session_type = "break" if completed_session_type == "work" else "work"
 
-        completion_time = timer.completed_at or datetime.now(UTC)
-        timer_response = await service.complete_phase(room_id, completed_at=completion_time)
+    completion_time = timer.completed_at or datetime.now(UTC)
+    timer_response = await service.complete_phase(room_id, completed_at=completion_time)
 
-        # ✅ 자동 세션 기록: WORK/BREAK 단계 완료 시 세션 기록
-        await service.record_work_sessions_for_timer(
-            db,
-            timer,
-            room,
-            completion_time,
-        )
+    # ✅ 자동 세션 기록: WORK/BREAK 단계 완료 시 세션 기록
+    await service.record_work_sessions_for_timer(
+        db,
+        timer,
+        room,
+        completion_time,
+    )
 
-        # Broadcast timer completion and state update
-        await broadcast_timer_complete(
-            room_id,
-            completed_session_type,
-            next_session_type,
-            auto_start=timer_response.status == "running",
-        )
-        await broadcast_timer_update(room_id, timer_response)
+    # Broadcast timer completion and state update
+    await broadcast_timer_complete(
+        room_id,
+        completed_session_type,
+        next_session_type,
+        auto_start=timer_response.status == "running",
+    )
+    await broadcast_timer_update(room_id, timer_response)
 
-        return timer_response
-    except TimerNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except RoomNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message) from e
-    except InvalidTimerStateException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message) from e
-    except ForbiddenException as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
+    return timer_response
