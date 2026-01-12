@@ -140,13 +140,23 @@ echo "   Logs: logs/app.log"
 echo ""
 
 # 백그라운드 실행 (Miniconda 환경의 Python 직접 사용)
-# WORKERS 변수가 설정되어 있지 않으면 기본값 1 사용
-WORKERS=${WORKERS:-1}
+# WORKERS 변수가 설정되어 있지 않으면 기본값 2 사용 (밸런스 조정)
+WORKERS=${WORKERS:-2}
+echo "   Workers: $WORKERS"
+
+# 데이터베이스 연결 풀 설정 (NAS 리소스 제한 고려)
+# 작업자당 10개 연결 * 2 Workers = 20 (기본값) ~ max limit 안전범위
+export DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-10}
+export DATABASE_MAX_OVERFLOW=${DATABASE_MAX_OVERFLOW:-5}
+echo "   DB Pool: $DATABASE_POOL_SIZE (Overflow: $DATABASE_MAX_OVERFLOW)"
 
 nohup $CONDA_PYTHON -m uvicorn app.main:app \
     --host 0.0.0.0 \
     --port 8000 \
     --workers $WORKERS \
+    --timeout-keep-alive 75 \
+    --proxy-headers \
+    --forwarded-allow-ips "*" \
     > logs/app.log 2>&1 &
 
 PID=$!
