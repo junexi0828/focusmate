@@ -7,6 +7,7 @@ from app.core.exceptions import (
     InvalidTimerStateException,
     RoomNotFoundException,
     TimerNotFoundException,
+    ConflictException,
 )
 from app.domain.stats.service import StatsService
 from app.domain.timer.schemas import TimerStateResponse
@@ -208,7 +209,7 @@ class TimerService:
                 if not room:
                     raise RoomNotFoundException(room_id)
                 if room.work_duration is None or room.break_duration is None:
-                    raise InvalidTimerStateException(
+                    raise ConflictException(
                         "Room duration settings are missing"
                     )
                 work_duration = room.work_duration * 60
@@ -248,10 +249,9 @@ class TimerService:
 
             # Validate room durations
             if room.work_duration is None or room.break_duration is None:
-                raise InvalidTimerStateException(
-                    timer.status,
-                    "Room duration settings are missing"
-                )
+                    raise ConflictException(
+                        "Room duration settings are missing"
+                    )
 
             # Switch phase and reset
             if session_type == "work":
