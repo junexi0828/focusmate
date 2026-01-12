@@ -76,10 +76,11 @@ async def get_my_rooms(
 
         return rooms
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get rooms: {e!s}"
-        )
+    except Exception as e:
+        # Return empty list on failure to prevent UI crash
+        import logging
+        logging.getLogger(__name__).error(f"Failed to get rooms for user {current_user.get('id')}: {e}", exc_info=True)
+        return []
 
 
 @router.post("/", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
