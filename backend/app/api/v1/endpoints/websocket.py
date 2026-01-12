@@ -34,7 +34,6 @@ router = APIRouter(tags=["websocket"])
 async def websocket_endpoint(
     websocket: WebSocket,
     room_id: str,
-    db: AsyncSession = Depends(get_db),
     token: str | None = Query(None),
 ) -> None:
     """WebSocket endpoint for room real-time updates.
@@ -55,8 +54,14 @@ async def websocket_endpoint(
         room_id: Room identifier
         token: JWT token for authentication
     """
-    current_user = None
-    token_id = None
+    # Accept connection immediately to establish handshake (prevents 1006)
+    await websocket.accept()
+
+    from app.infrastructure.database.session import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        current_user = None
+        token_id = None
     try:
         # Authenticate user
         jwt_token = extract_ws_token(websocket, token)
@@ -81,16 +86,14 @@ async def websocket_endpoint(
                         current_user = user
                 except Exception as db_e:
                     logger.error(f"[Room WS] DB Authentication failed for user_id={user_id}: {db_e}", exc_info=True)
-                    # continue; current_user remains None, triggering 1008 close below
-
-                # We typically close if auth fails, but for public rooms we might allow guests?
-                # For now, let's enforce auth or handle guests if needed.
-                # Assuming auth is required based on "current_user" usage below.
+                    # current_user remains None, triggering 1008 close below
+            else:
                 await websocket.close(code=1008, reason="Authentication failed")
                 return
 
         if not current_user:
-            await websocket.close(code=1008, reason="Authentication required")
+            # Connection is already accepted, so we can send a close frame
+            await websocket.close(code=1008, reason="Authentication failed")
             return
 
         logger.info(f"[Room WS] Connection attempt by {current_user.username} for room_id={room_id}")

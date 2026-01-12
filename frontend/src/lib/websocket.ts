@@ -217,12 +217,11 @@ class WebSocketClient {
       }
 
       this.roomId = roomId;
-      const wsUrl = this.getWebSocketUrl(roomId);
+      const wsUrl = this.getWebSocketUrl(roomId, this.getWebSocketToken());
       console.log(`[WebSocket] Connecting to ${wsUrl}`);
 
       try {
-        const protocols = this.getWebSocketProtocols();
-        this.ws = protocols ? new WebSocket(wsUrl, protocols) : new WebSocket(wsUrl);
+        this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
           this.lastErrorMessage = null;
@@ -496,7 +495,7 @@ class WebSocketClient {
     this.send({ action: "chat_message", data: { content } });
   }
 
-  private getWebSocketUrl(roomId: string): string {
+  private getWebSocketUrl(roomId: string, token?: string | null): string {
     // Use HTTP base URL and convert to WebSocket URL
     const wsBaseUrl = getWebSocketBaseUrl()
       // Convert http:// to ws:// and https:// to wss://
@@ -504,13 +503,16 @@ class WebSocketClient {
       .replace(/^http:\/\//, "ws://")
       .replace(/^https:\/\//, "wss://");
     // Backend endpoint is /api/v1/ws/{room_id}
-    return `${wsBaseUrl}/api/v1/ws/${roomId}`;
+    const baseUrl = `${wsBaseUrl}/api/v1/ws/${roomId}`;
+    if (!token) {
+      return baseUrl;
+    }
+    const separator = baseUrl.includes("?") ? "&" : "?";
+    return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
   }
 
-  private getWebSocketProtocols(): string[] | undefined {
-    const token = authService.getToken();
-    if (!token) return undefined;
-    return ["access_token", token];
+  private getWebSocketToken(): string | null {
+    return authService.getToken();
   }
 
   isConnected(): boolean {

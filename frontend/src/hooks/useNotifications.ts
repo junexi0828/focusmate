@@ -10,11 +10,16 @@ import { notificationService } from "../lib/notificationService";
 import { useNotificationBackfill } from "../features/notification/hooks/useNotificationBackfill";
 import { getWebSocketBaseUrl } from "../lib/api/base-url";
 
-const getNotificationWsUrl = (): string => {
+const getNotificationWsUrl = (token?: string | null): string => {
   const wsBaseUrl = getWebSocketBaseUrl()
     .replace(/^http:\/\//, "ws://")
     .replace(/^https:\/\//, "wss://");
-  return `${wsBaseUrl}/api/v1/notifications/ws`;
+  const baseUrl = `${wsBaseUrl}/api/v1/notifications/ws`;
+  if (!token) {
+    return baseUrl;
+  }
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
 };
 
 export interface NotificationData {
@@ -98,9 +103,8 @@ export function useNotifications(
     }
 
     try {
-      const wsUrl = getNotificationWsUrl();
-      const protocols = token ? ["access_token", token] : undefined;
-      const ws = protocols ? new WebSocket(wsUrl, protocols) : new WebSocket(wsUrl);
+      const wsUrl = getNotificationWsUrl(token);
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
