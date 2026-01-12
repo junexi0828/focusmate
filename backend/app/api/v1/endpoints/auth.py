@@ -222,8 +222,8 @@ async def update_profile(
 @router.post("/profile/{user_id}/upload-image", status_code=status.HTTP_200_OK)
 async def upload_profile_image(
     user_id: str,
-    file: UploadFile = File(...),
     current_user: Annotated[dict, Depends(get_current_user_required)],
+    file: UploadFile = File(...),
     service: Annotated[UserService, Depends(get_user_service)] = None,
 ) -> dict:
     """Upload user profile image.
