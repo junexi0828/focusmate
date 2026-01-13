@@ -84,6 +84,25 @@ if settings.DATABASE_URL.startswith("postgresql"):
     if connect_args:
         engine_kwargs["connect_args"] = connect_args
 
+    # Log final config (sanitized URL)
+    import logging
+
+    logger = logging.getLogger(__name__)
+    try:
+        parsed_url = make_url(settings.DATABASE_URL)
+        sanitized_url = parsed_url._replace(password="***")
+    except Exception:
+        sanitized_url = "unparseable"
+
+    logger.info(
+        "DB engine init: url=%s connect_args=%s pool_size=%s max_overflow=%s timeout=%s",
+        sanitized_url,
+        engine_kwargs.get("connect_args"),
+        engine_kwargs.get("pool_size"),
+        engine_kwargs.get("max_overflow"),
+        engine_kwargs.get("pool_timeout"),
+    )
+
 engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
     **engine_kwargs,
