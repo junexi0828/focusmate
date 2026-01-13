@@ -104,17 +104,21 @@ class WebhookHandler(BaseHTTPRequestHandler):
         try:
             self.log_message("🔄 Starting deployment...")
 
+            # 환경변수 설정 (PYTHONPATH 추가)
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(PROJECT_DIR)
+
             # 1. Git Reset (Hard) - 로컬 변경사항(Rsync 등) 무시하고 강제 동기화
             cmd = ["git", "fetch", "--all"]
-            subprocess.check_call(cmd, cwd=PROJECT_DIR)
+            subprocess.check_call(cmd, cwd=PROJECT_DIR, env=env)
 
             cmd = ["git", "reset", "--hard", "origin/main"]
-            subprocess.check_call(cmd, cwd=PROJECT_DIR)
+            subprocess.check_call(cmd, cwd=PROJECT_DIR, env=env)
 
             self.log_message("✅ Code updated successfully")
 
             # 2. 서버 재시작
-            self.restart_server()
+            self.restart_server(env)
 
         except subprocess.CalledProcessError as e:
             self.log_message(f"❌ Git/Deployment failed: {e}")
@@ -123,18 +127,21 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.log_message(f"❌ Error during deployment: {e}")
             raise
 
-    def restart_server(self):
+    def restart_server(self, env=None):
         """서버 재시작."""
         try:
             self.log_message("🔄 Restarting backend service...")
+            if env is None:
+                env = os.environ.copy()
+                env["PYTHONPATH"] = str(PROJECT_DIR)
 
             # stop-nas.sh 실행
-            subprocess.run(["bash", "stop-nas.sh"], cwd=PROJECT_DIR, check=False)
+            subprocess.run(["bash", "stop-nas.sh"], cwd=PROJECT_DIR, check=False, env=env)
 
             # start-nas.sh 실행 (nohup 아님 - 리스너가 관리하지 않음, 별도 프로세스로 분리)
             # 주의: 리스너가 죽지 않도록 Popen 사용
             subprocess.Popen(["bash", "start-nas.sh"], cwd=PROJECT_DIR,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
 
             self.log_message("✅ Restart command issued")
 

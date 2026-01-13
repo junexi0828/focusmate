@@ -60,6 +60,12 @@ if [ "${INSTALL_DEPS:-1}" = "1" ]; then
     ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && if [ -f requirements.txt ] && [ -x $REMOTE_PYTHON ]; then $REMOTE_PYTHON -m pip install -r requirements.txt --quiet; else echo 'ℹ️  requirements.txt or python missing, skipping deps'; fi"
 fi
 
+# 1.6 Optional: Run Database Migrations
+if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
+    echo "🗄️  Running Database Migrations..."
+    ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && export PYTHONPATH=. && $REMOTE_PYTHON scripts/database/smart_migrate.py"
+fi
+
 # 2. Restart Service
 echo "🔄 Restarting Remote Service..."
 ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash stop-nas.sh && bash start-nas.sh"
