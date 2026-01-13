@@ -60,6 +60,10 @@ def _get_connect_args(database_url: str) -> dict:
         is_pgbouncer,
     )
 
+    # DEBUG: Force enable
+    # print("DEBUG: Enforcing statement_cache_size=0", flush=True)
+    # return {"statement_cache_size": 0}
+
     if is_pgbouncer:
         # pgBouncer transaction/statement pool mode cannot handle prepared statements
         return {"statement_cache_size": 0}

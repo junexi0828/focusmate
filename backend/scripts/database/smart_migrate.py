@@ -20,8 +20,15 @@ from app.core.config import settings
 
 async def check_alembic_version_table() -> bool:
     """Check if alembic_version table exists."""
+    connect_args = {}
+    if settings.DATABASE_PGBOUNCER:
+        connect_args["statement_cache_size"] = 0
+
     engine = create_async_engine(
-        settings.DATABASE_URL, pool_pre_ping=True, echo=False
+        settings.DATABASE_URL,
+        pool_pre_ping=True,
+        echo=False,
+        connect_args=connect_args,
     )
     try:
         async with engine.begin() as conn:
@@ -42,8 +49,15 @@ async def check_alembic_version_table() -> bool:
 
 async def check_tables_exist() -> bool:
     """Check if any application tables exist."""
+    connect_args = {}
+    if settings.DATABASE_PGBOUNCER:
+        connect_args["statement_cache_size"] = 0
+
     engine = create_async_engine(
-        settings.DATABASE_URL, pool_pre_ping=True, echo=False
+        settings.DATABASE_URL,
+        pool_pre_ping=True,
+        echo=False,
+        connect_args=connect_args,
     )
     try:
         async with engine.begin() as conn:

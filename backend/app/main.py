@@ -70,7 +70,6 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("🚀 Starting Focus Mate Backend...")
     logger.info("📍 Environment: %s", settings.APP_ENV)
-    logger.info("🗄️ Database: %s", settings.DATABASE_URL.split("://")[0])
 
     if settings.DEV_RESET_DB and settings.is_development:
         logger.warning("⚠️ Resetting database (development only)...")
