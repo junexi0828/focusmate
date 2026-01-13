@@ -29,13 +29,9 @@ if [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "master" ] && [ "$C
     exit 0
 fi
 
-echo "🚀 Starting Deployment to NAS ($NAS_HOST)..."
-
-# Ensure remote project dir exists before sync/restart
-if ! ssh "$NAS_USER@$NAS_HOST" "[ -d \"$NAS_DIR\" ]"; then
-    echo "❌ Remote project directory not found: $NAS_DIR"
-    exit 1
-fi
+# 0. Stop Service (Release Locks)
+echo "🛑 Stopping Remote Service..."
+ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash stop-nas.sh"
 
 # 1. Deployment: Rsync Code
 # Excludes virtual environments, cache, git history, and local .env (protecting remote config)
@@ -48,6 +44,7 @@ rsync -avz --progress \
     --exclude '.git' \
     --exclude '.DS_Store' \
     --exclude '.env' \
+    --exclude '._*' \
     --exclude '*.env' \
     --rsync-path="/usr/bin/rsync" \
     ./ "$NAS_USER@$NAS_HOST:$NAS_DIR/"
@@ -66,8 +63,8 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && export PYTHONPATH=. && $REMOTE_PYTHON scripts/database/smart_migrate.py"
 fi
 
-# 2. Restart Service
-echo "🔄 Restarting Remote Service..."
-ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash stop-nas.sh && bash start-nas.sh"
+# 2. Restart Service (Start only)
+echo "🔄 Starting Remote Service..."
+ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash start-nas.sh"
 
 echo "🎉 Deployment & Restart Successfully Completed!"
