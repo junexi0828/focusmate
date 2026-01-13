@@ -78,7 +78,9 @@ if settings.DATABASE_URL.startswith("postgresql"):
         }
     )
 
-    connect_args = _get_connect_args(settings.DATABASE_URL)
+    # Merge connect_args so nothing else overwrites our statement_cache_size
+    connect_args = dict(engine_kwargs.get("connect_args", {}))
+    connect_args.update(_get_connect_args(settings.DATABASE_URL))
     if connect_args:
         engine_kwargs["connect_args"] = connect_args
 
