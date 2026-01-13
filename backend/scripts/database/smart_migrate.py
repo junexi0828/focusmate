@@ -117,7 +117,7 @@ def main():
     # Run migrations
     print("🔄 Running database migrations...")
     result = subprocess.run(
-        ["alembic", "upgrade", "head"],
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=Path(__file__).parent.parent,
         capture_output=True,
         text=True,
