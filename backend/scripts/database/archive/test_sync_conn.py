@@ -1,12 +1,12 @@
 import psycopg2
 import sys
 import os
-from pathlib import Path
+from urllib.parse import urlparse
 
 def test_sync_conn():
     # Construct sync URL from environment
+    # Note: Requires DATABASE_URL in environment or hardcoded mapping
     try:
-        sys.path.insert(0, str(Path(__file__).parent.parent.parent))
         from app.core.config import settings
         raw_url = settings.DATABASE_URL
         if raw_url.startswith("postgresql+asyncpg://"):
@@ -35,4 +35,6 @@ def test_sync_conn():
         print(f"❌ Connection failed: {e}")
 
 if __name__ == "__main__":
+    # Add parent path to find app.core.config
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
     test_sync_conn()
