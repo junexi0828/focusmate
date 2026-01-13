@@ -99,8 +99,8 @@ def main():
         print()
 
         result = subprocess.run(
-            ["alembic", "stamp", "head"],
-            cwd=Path(__file__).parent.parent,
+            [sys.executable, "-m", "alembic", "stamp", "head"],
+            cwd=Path(__file__).parent.parent.parent,
             capture_output=True,
             text=True,
         )
@@ -118,7 +118,7 @@ def main():
     print("🔄 Running database migrations...")
     result = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
-        cwd=Path(__file__).parent.parent,
+        cwd=Path(__file__).parent.parent.parent,
         capture_output=True,
         text=True,
     )
@@ -136,8 +136,8 @@ def main():
 
             # Try to stamp head to sync Alembic with current state
             stamp_result = subprocess.run(
-                ["alembic", "stamp", "head"],
-                cwd=Path(__file__).parent.parent,
+                [sys.executable, "-m", "alembic", "stamp", "head"],
+                cwd=Path(__file__).parent.parent.parent,
                 capture_output=True,
                 text=True,
             )
@@ -151,10 +151,14 @@ def main():
                 return 1
         else:
             print("❌ Migration failed:")
-            print(result.stderr)
+            if result.stdout:
+                print("--- STDOUT ---")
+                print(result.stdout)
+            if result.stderr:
+                print("--- STDERR ---")
+                print(result.stderr)
             return 1
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
