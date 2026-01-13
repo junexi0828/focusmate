@@ -8,6 +8,7 @@ from typing import Annotated
 from collections.abc import AsyncGenerator
 
 from fastapi import Depends
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -23,18 +24,63 @@ engine_kwargs = {
     "echo": settings.DATABASE_ECHO,
 }
 
+def _using_pgbouncer(database_url: str) -> bool:
+    """Detect pgBouncer-style connection URLs.
+
+    Supabase uses pgBouncer on port 6543 in transaction mode, which is not
+    compatible with asyncpg prepared statements.
+    """
+    try:
+        parsed_url = make_url(database_url)
+    except Exception:
+        return False
+
+    if parsed_url.port == 6543:
+        return True
+
+    # Allow explicit opt-in via query param (?pgbouncer=true)
+    return str(parsed_url.query.get("pgbouncer", "")).lower() in {"1", "true", "yes"}
+
+
+def _get_connect_args(database_url: str) -> dict:
+    """Build connect args, disabling statement cache when pgBouncer is detected."""
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Never let detection override an explicit env flag
+    env_flag = bool(settings.DATABASE_PGBOUNCER)
+    auto_detected = _using_pgbouncer(database_url)
+    is_pgbouncer = env_flag or auto_detected
+
+    logger.info(
+        "PgBouncer detection: env_flag=%s auto_detected=%s using=%s",
+        env_flag,
+        auto_detected,
+        is_pgbouncer,
+    )
+
+    if is_pgbouncer:
+        # pgBouncer transaction/statement pool mode cannot handle prepared statements
+        return {"statement_cache_size": 0}
+
+    return {}
+
+
 # Only add pool settings for PostgreSQL (SQLite doesn't support pooling)
 if settings.DATABASE_URL.startswith("postgresql"):
-    engine_kwargs.update({
-        "pool_pre_ping": True,
-        "pool_size": settings.DATABASE_POOL_SIZE,
-        "max_overflow": settings.DATABASE_MAX_OVERFLOW,
-        "pool_timeout": settings.DATABASE_POOL_TIMEOUT,
-    })
+    engine_kwargs.update(
+        {
+            "pool_pre_ping": True,
+            "pool_size": settings.DATABASE_POOL_SIZE,
+            "max_overflow": settings.DATABASE_MAX_OVERFLOW,
+            "pool_timeout": settings.DATABASE_POOL_TIMEOUT,
+        }
+    )
 
-    # Disable prepared statements for pgBouncer transaction mode
-    if settings.DATABASE_PGBOUNCER:
-        engine_kwargs["connect_args"] = {"statement_cache_size": 0}
+    connect_args = _get_connect_args(settings.DATABASE_URL)
+    if connect_args:
+        engine_kwargs["connect_args"] = connect_args
 
 engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
