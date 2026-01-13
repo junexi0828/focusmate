@@ -21,6 +21,23 @@ export PATH="/usr/local/bin:$PATH"
 
 set -e
 
+# Unset collision (legacy ghost variable)
+unset DATABASE_URL
+
+# EXPLICITLY LOAD DATABASE_URL from .env
+# This ensures we use the correct local configuration (Port 5432)
+# and bypasses any system-level overrides, without hardcoding secrets.
+
+# 프로젝트 디렉토리 (NAS 경로) - 미리 정의
+PROJECT_DIR="/volume1/web/focusmate-backend"
+
+# 안전하게 .env 로드 (표준 방식)
+if [ -f "$PROJECT_DIR/.env" ]; then
+    set -a  # 자동으로 export
+    source "$PROJECT_DIR/.env"
+    set +a
+fi
+
 # 프로젝트 디렉토리 (NAS 경로)
 PROJECT_DIR="/volume1/web/focusmate-backend"
 cd "$PROJECT_DIR"

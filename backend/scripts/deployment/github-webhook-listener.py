@@ -9,13 +9,13 @@ import hashlib
 import json
 import subprocess
 import sys
+import os
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
 
 # 프로젝트 디렉토리 (NAS 경로)
 PROJECT_DIR = Path("/volume1/web/focusmate-backend")
-WEBHOOK_SECRET = None  # .env에서 로드하거나 환경변수로 설정
+WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")  # .env에서 로드하거나 환경변수로 설정
 PORT = 9000  # Webhook 리스너 포트
 
 
@@ -77,7 +77,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             if event_type == "push":
                 ref = event_data.get("ref", "")
                 # main 또는 develop 브랜치만 처리
-                if ref in ["refs/heads/main", "refs/heads/develop"]:
+                if ref in ["refs/heads/main", "refs/heads/master"]:
                     self.log_message(f"🔄 Processing push to {ref}")
                     self.handle_git_pull()
                 else:
@@ -99,191 +99,76 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(f"Error: {str(e)}".encode())
 
-    def do_GET(self):
-        """GET 요청 처리 (health check)."""
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"GitHub Webhook Listener is running")
-
     def handle_git_pull(self):
-        """NAS에서 git pull 실행."""
-        if not PROJECT_DIR.exists():
-            self.log_message(f"❌ Project directory not found: {PROJECT_DIR}")
-            return
-
-        self.log_message(f"📂 Project directory: {PROJECT_DIR}")
-
+        """Git Pull 수행 및 서버 재시작."""
         try:
-            # Git pull 실행
-            result = subprocess.run(
-                ["git", "pull", "origin", "main"],
-                cwd=PROJECT_DIR,
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
+            self.log_message("🔄 Starting deployment...")
 
-            if result.returncode == 0:
-                self.log_message("✅ Git pull successful")
-                self.log_message(f"Output: {result.stdout}")
+            # 1. Git Reset (Hard) - 로컬 변경사항(Rsync 등) 무시하고 강제 동기화
+            cmd = ["git", "fetch", "--all"]
+            subprocess.check_call(cmd, cwd=PROJECT_DIR)
 
-                # 실제로 변경사항이 있는지 확인
-                output_lower = result.stdout.lower()
-                has_changes = not ("already up to date" in output_lower or "already up-to-date" in output_lower)
+            cmd = ["git", "reset", "--hard", "origin/main"]
+            subprocess.check_call(cmd, cwd=PROJECT_DIR)
 
-                if has_changes:
-                    self.log_message("🔄 Code changes detected, updating server...")
+            self.log_message("✅ Code updated successfully")
 
-                    # 의존성 설치 (requirements.txt 변경 감지)
-                    self.install_dependencies()
+            # 2. 서버 재시작
+            self.restart_server()
 
-                    # 마이그레이션 실행 (필요시)
-                    self.run_migrations()
-
-                    # ⚠️ 개발 환경용: 서버 자동 재시작 활성화
-                    # 🚨 실운영 배포 전 반드시 주석 처리 필요!
-                    # 실운영에서는 무중단 배포 또는 수동 재시작 권장
-                    self.restart_server()
-                else:
-                    self.log_message("✅ Already up to date, no restart needed")
-            else:
-                self.log_message(f"❌ Git pull failed: {result.stderr}")
-
-        except subprocess.TimeoutExpired:
-            self.log_message("❌ Git pull timeout")
+        except subprocess.CalledProcessError as e:
+            self.log_message(f"❌ Git/Deployment failed: {e}")
+            raise
         except Exception as e:
-            self.log_message(f"❌ Error during git pull: {e}")
-
-    def install_dependencies(self):
-        """의존성 자동 설치 (requirements.txt).
-
-        Git pull 후 requirements.txt가 변경되었을 수 있으므로
-        항상 pip install을 실행하여 최신 의존성을 유지합니다.
-        """
-        try:
-            self.log_message("📦 Installing dependencies from requirements.txt...")
-
-            # Conda 환경의 Python 사용
-            conda_python = "/volume1/web/miniconda3/envs/focusmate_env/bin/python"
-            requirements_file = PROJECT_DIR / "requirements.txt"
-
-            if not Path(conda_python).exists():
-                self.log_message(f"⚠️  Conda Python not found: {conda_python}")
-                return
-
-            if not requirements_file.exists():
-                self.log_message(f"⚠️  requirements.txt not found: {requirements_file}")
-                return
-
-            # pip install 실행 (--quiet로 출력 최소화)
-            result = subprocess.run(
-                [conda_python, "-m", "pip", "install", "-r", "requirements.txt", "--quiet"],
-                cwd=PROJECT_DIR,
-                capture_output=True,
-                text=True,
-                timeout=300,  # 5분 타임아웃
-            )
-
-            if result.returncode == 0:
-                self.log_message("✅ Dependencies installed successfully")
-                if result.stdout.strip():
-                    self.log_message(f"   Output: {result.stdout.strip()}")
-            else:
-                self.log_message(f"⚠️  Dependency installation warning: {result.stderr}")
-                # 경고만 출력하고 계속 진행 (일부 패키지 실패해도 서버는 시작되어야 함)
-
-        except subprocess.TimeoutExpired:
-            self.log_message("⚠️  Dependency installation timeout (continuing anyway)")
-        except Exception as e:
-            self.log_message(f"⚠️  Dependency installation error: {e}")
-
-
-    def run_migrations(self):
-        """데이터베이스 마이그레이션 실행."""
-        try:
-            # Conda 환경의 Python 사용
-            conda_python = "/volume1/web/miniconda3/envs/focusmate_env/bin/python"
-            if Path(conda_python).exists():
-                result = subprocess.run(
-                    [conda_python, "-m", "alembic", "upgrade", "head"],
-                    cwd=PROJECT_DIR,
-                    capture_output=True,
-                    text=True,
-                    timeout=120,
-                )
-                if result.returncode == 0:
-                    self.log_message("✅ Migrations completed")
-                else:
-                    self.log_message(f"⚠️  Migration warning: {result.stderr}")
-        except Exception as e:
-            self.log_message(f"⚠️  Migration error: {e}")
+            self.log_message(f"❌ Error during deployment: {e}")
+            raise
 
     def restart_server(self):
-        """서버 재시작 (선택적)."""
+        """서버 재시작."""
         try:
+            self.log_message("🔄 Restarting backend service...")
+
             # stop-nas.sh 실행
-            stop_script = PROJECT_DIR / "stop-nas.sh"
-            if stop_script.exists():
-                subprocess.run([str(stop_script)], cwd=PROJECT_DIR, timeout=10)
-                self.log_message("✅ Server stopped")
+            subprocess.run(["bash", "stop-nas.sh"], cwd=PROJECT_DIR, check=False)
 
-            # start-nas.sh 실행
-            start_script = PROJECT_DIR / "start-nas.sh"
-            if start_script.exists():
-                subprocess.Popen(
-                    [str(start_script)],
-                    cwd=PROJECT_DIR,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                self.log_message("✅ Server started")
+            # start-nas.sh 실행 (nohup 아님 - 리스너가 관리하지 않음, 별도 프로세스로 분리)
+            # 주의: 리스너가 죽지 않도록 Popen 사용
+            subprocess.Popen(["bash", "start-nas.sh"], cwd=PROJECT_DIR,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            self.log_message("✅ Restart command issued")
+
         except Exception as e:
-            self.log_message(f"⚠️  Server restart error: {e}")
+            self.log_message(f"❌ Restart failed: {e}")
+            raise
 
 
-def load_webhook_secret():
-    """.env 파일에서 webhook secret 로드."""
+def run(server_class=HTTPServer, handler_class=WebhookHandler, port=PORT):
+    # .env 로드 (간이)
     global WEBHOOK_SECRET
-    env_file = PROJECT_DIR / ".env"
-    if env_file.exists():
-        with open(env_file) as f:
-            for line in f:
-                if line.startswith("GITHUB_WEBHOOK_SECRET="):
-                    WEBHOOK_SECRET = line.split("=", 1)[1].strip().strip('"').strip("'")
-                    break
+    env_path = PROJECT_DIR / ".env"
+    if env_path.exists() and not WEBHOOK_SECRET:
+        try:
+            with open(env_path) as f:
+                for line in f:
+                    if line.startswith("GITHUB_WEBHOOK_SECRET="):
+                        WEBHOOK_SECRET = line.strip().split("=", 1)[1]
+                        # 따옴표 제거
+                        WEBHOOK_SECRET = WEBHOOK_SECRET.strip("'").strip('"')
+                        break
+        except Exception as e:
+            print(f"⚠️  Failed to load .env: {e}")
 
-
-def main():
-    """메인 함수."""
-    print("=" * 60)
-    print("GitHub Webhook Listener for NAS Auto-Deployment")
-    print("=" * 60)
-    print(f"Project directory: {PROJECT_DIR}")
-    print(f"Port: {PORT}")
-    print()
-
-    # Webhook secret 로드
-    load_webhook_secret()
+    server_address = ("", port)
+    httpd = server_class(server_address, handler_class)
+    print(f"🚀 Starting webhook listener on port {port}...")
     if WEBHOOK_SECRET:
-        print("✅ Webhook secret loaded")
+        print("🔒 Webhook secret configured")
     else:
-        print("⚠️  Warning: GITHUB_WEBHOOK_SECRET not found in .env")
-        print("   Webhook will accept requests without signature verification")
+        print("⚠️  No webhook secret configured!")
 
-    print()
-    print(f"🚀 Starting webhook listener on port {PORT}...")
-    print(f"   GitHub webhook URL: http://your-nas-ip:{PORT}/webhook")
-    print(f"   Or via Cloudflare Tunnel: https://your-tunnel-url/webhook")
-    print()
-
-    # HTTP 서버 시작
-    server = HTTPServer(("0.0.0.0", PORT), WebhookHandler)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\n🛑 Shutting down webhook listener...")
-        server.shutdown()
+    httpd.serve_forever()
 
 
 if __name__ == "__main__":
-    main()
+    run()
