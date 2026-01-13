@@ -142,7 +142,6 @@ async def create_room(
                 "room_id": str(room.id),
                 "room_name": room.name,
                 "host_id": str(room.host_id),
-                "category": room.category
             }
         )
 
