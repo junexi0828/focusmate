@@ -1,6 +1,6 @@
 import httpx
 import logging
-import asyncio
+import time
 from typing import Any
 
 from app.core.config import settings
@@ -41,7 +41,7 @@ async def send_slack_notification(
                 "text": message,
                 "fields": [],
                 "footer": settings.APP_NAME,
-                "ts": asyncio.get_event_loop().time() # timestamp approximation or just omit
+                "ts": int(time.time())
             }
         ]
     }
