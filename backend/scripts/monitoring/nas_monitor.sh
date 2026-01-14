@@ -62,7 +62,21 @@ if [ "$DISK_USAGE" -gt 90 ]; then
     send_slack "warning" "Disk Usage Alert" "Disk usage on /volume1 is at ${DISK_USAGE}%."
 fi
 
-# 4. Check if Backend is running
+# 4. Check if Backend is running (Watchdog)
 if ! pgrep -f "uvicorn app.main:app" > /dev/null; then
-    send_slack "error" "Service Down" "FocusMate backend process is not running!"
+    send_slack "error" "Service Down" "FocusMate backend process is not running! Attempting to restart..."
+
+    # Attempt to restart
+    if [ -f "$BACKEND_DIR/start-nas.sh" ]; then
+        cd "$BACKEND_DIR" && bash start-nas.sh >> "$BACKEND_DIR/logs/monitor.log" 2>&1
+
+        sleep 5
+        if pgrep -f "uvicorn app.main:app" > /dev/null; then
+            send_slack "info" "Watchdog Success" "FocusMate backend has been successfully restarted."
+        else
+            send_slack "critical" "Watchdog Failure" "Failed to restart FocusMate backend. Manual intervention required."
+        fi
+    else
+        send_slack "error" "Watchdog Error" "start-nas.sh not found at $BACKEND_DIR"
+    fi
 fi
