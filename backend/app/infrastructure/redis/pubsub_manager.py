@@ -155,32 +155,29 @@ class RedisPubSubManager:
         async for message in self.pubsub.listen():
             if message["type"] == "message":
                 try:
-                    data = json.loads(message["data"])
                     channel = message["channel"]
 
-                    # Extract room_id from channel name
-                    room_id = UUID(channel.split(":")[-1])
+                    data = json.loads(message["data"])
 
-                    # Broadcast to WebSocket connections
-                    await connection_manager.broadcast_to_room(room_id, data)
+                    if channel.startswith("chat:room:"):
+                        # Extract room_id from channel name
+                        room_id = UUID(channel.split(":")[-1])
+                        # Broadcast to WebSocket connections
+                        await connection_manager.broadcast_to_room(room_id, data)
+                    elif channel.startswith("notification:user:"):
+                        # Extract user_id from channel name
+                        user_id = channel.split(":")[-1]
+                        # Broadcast to local WebSocket connections for this user
+                        from app.infrastructure.websocket.notification_manager import (
+                            notification_ws_manager,
+                        )
+
+                        await notification_ws_manager.send_notification_local(
+                            data, user_id
+                        )
 
                 except Exception as e:
                     logging.getLogger(__name__).error(f"Error processing Redis message: {e}")
-
-            elif message["type"] == "message" and message["channel"].startswith("notification:user:"):
-                try:
-                    data = json.loads(message["data"])
-                    channel = message["channel"]
-
-                    # Extract user_id from channel name
-                    user_id = channel.split(":")[-1]
-
-                    # Broadcast to local WebSocket connections for this user
-                    from app.infrastructure.websocket.notification_manager import notification_ws_manager
-                    await notification_ws_manager.send_notification_local(data, user_id)
-
-                except Exception as e:
-                    logging.getLogger(__name__).error(f"Error processing Redis notification: {e}")
 
     async def publish_notification(self, user_id: str, notification_data: dict):
         """Publish notification to Redis channel with circuit breaker protection."""

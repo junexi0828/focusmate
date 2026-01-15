@@ -30,7 +30,7 @@ class UserSettingsUpdate(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
-    theme: str | None = Field(None, pattern="^(Union[light, dark]|system)$")
+    theme: str | None = Field(None, pattern="^(light|dark|system)$")
     language: str | None = Field(None, min_length=2, max_length=10)
     notification_email: bool | None = None
     notification_push: bool | None = None

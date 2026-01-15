@@ -27,6 +27,15 @@ class AchievementRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_ids(self, achievement_ids: list[str]) -> list[Achievement]:
+        """Get achievements by IDs."""
+        if not achievement_ids:
+            return []
+        result = await self.db.execute(
+            select(Achievement).where(Achievement.id.in_(achievement_ids))
+        )
+        return list(result.scalars().all())
+
     async def get_by_name(self, name: str) -> Achievement | None:
         """Get achievement by name."""
         result = await self.db.execute(

@@ -84,11 +84,17 @@ class AchievementService:
     async def get_user_achievements(self, user_id: str) -> list[UserAchievementResponse]:
         """Get all unlocked achievements for a user."""
         user_achievements = await self.user_achievement_repo.get_all_by_user(user_id)
+        if not user_achievements:
+            return []
+
+        achievement_ids = [ua.achievement_id for ua in user_achievements]
+        achievements = await self.achievement_repo.get_by_ids(achievement_ids)
+        achievement_map = {achievement.id: achievement for achievement in achievements}
 
         result = []
         for ua in user_achievements:
-            achievement = await self.achievement_repo.get_by_id(ua.achievement_id)
             response = UserAchievementResponse.model_validate(ua)
+            achievement = achievement_map.get(ua.achievement_id)
             if achievement:
                 response.achievement = AchievementResponse.model_validate(achievement)
             result.append(response)
@@ -116,13 +122,15 @@ class AchievementService:
         user_achievements = await self.user_achievement_repo.get_all_by_user(user_id)
         unlocked_map = {ua.achievement_id: ua for ua in user_achievements}
 
+        progress_by_type = await self._get_progress_map(
+            user, {achievement.requirement_type for achievement in all_achievements}
+        )
+
         result = []
         for achievement in all_achievements:
             try:
                 # Calculate progress based on requirement type
-                current_progress = await self._calculate_progress(
-                    user, achievement.requirement_type
-                )
+                current_progress = progress_by_type.get(achievement.requirement_type, 0)
 
                 is_unlocked = achievement.id in unlocked_map
                 progress_percentage = min(
@@ -164,6 +172,10 @@ class AchievementService:
         user_achievements = await self.user_achievement_repo.get_all_by_user(user_id)
         unlocked_ids = {ua.achievement_id for ua in user_achievements}
 
+        progress_by_type = await self._get_progress_map(
+            user, {achievement.requirement_type for achievement in all_achievements}
+        )
+
         newly_unlocked = []
         for achievement in all_achievements:
             # Skip if already unlocked
@@ -171,9 +183,7 @@ class AchievementService:
                 continue
 
             # Calculate current progress
-            current_progress = await self._calculate_progress(
-                user, achievement.requirement_type
-            )
+            current_progress = progress_by_type.get(achievement.requirement_type, 0)
 
             # Check if requirement is met
             if current_progress >= achievement.requirement_value:
@@ -192,6 +202,21 @@ class AchievementService:
                 newly_unlocked.append(response)
 
         return newly_unlocked
+
+    async def _get_progress_map(self, user, requirement_types: set[str]) -> dict[str, int]:
+        """Compute progress for each requirement type only once."""
+        progress: dict[str, int] = {}
+
+        if "total_sessions" in requirement_types:
+            progress["total_sessions"] = user.total_sessions
+        if "total_focus_time" in requirement_types:
+            progress["total_focus_time"] = user.total_focus_time
+        if "streak_days" in requirement_types:
+            progress["streak_days"] = await self._calculate_streak_days(user.id)
+        if "community_posts" in requirement_types:
+            progress["community_posts"] = await self._get_community_post_count(user.id)
+
+        return progress
 
     async def _calculate_progress(self, user, requirement_type: str) -> int:
         """Calculate user's progress for a specific requirement type.

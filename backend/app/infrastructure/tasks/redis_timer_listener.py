@@ -39,7 +39,7 @@ class RedisTimerListener:
     async def connect(self):
         """Connect to Redis and enable keyspace notifications."""
         try:
-            self.redis = await aioredis.from_url(
+            self.redis = aioredis.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
                 encoding="utf-8"

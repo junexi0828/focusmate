@@ -71,6 +71,33 @@ class FriendRequestRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
+    async def get_user_sent_requests_with_receiver(
+        self, user_id: str
+    ) -> list[tuple[FriendRequest, User]]:
+        """Get sent requests with receiver details to avoid N+1 queries."""
+        result = await self.session.execute(
+            select(FriendRequest, User)
+            .join(User, FriendRequest.receiver_id == User.id)
+            .where(FriendRequest.sender_id == user_id)
+            .order_by(FriendRequest.created_at.desc())
+        )
+        return list(result.all())
+
+    async def get_user_received_requests_with_sender(
+        self, user_id: str, pending_only: bool = False
+    ) -> list[tuple[FriendRequest, User]]:
+        """Get received requests with sender details to avoid N+1 queries."""
+        query = (
+            select(FriendRequest, User)
+            .join(User, FriendRequest.sender_id == User.id)
+            .where(FriendRequest.receiver_id == user_id)
+        )
+        if pending_only:
+            query = query.where(FriendRequest.status == FriendRequestStatus.PENDING)
+        query = query.order_by(FriendRequest.created_at.desc())
+        result = await self.session.execute(query)
+        return list(result.all())
+
     async def update_request_status(
         self, request_id: str, status: FriendRequestStatus
     ) -> FriendRequest | None:
@@ -247,6 +274,69 @@ class FriendRepository:
             .join(User, Friend.friend_id == User.id)
             .outerjoin(UserPresence, Friend.friend_id == UserPresence.id)
             .where(Friend.user_id == user_id)
+            .order_by(Friend.created_at.desc())
+        )
+        return list(result.all())
+
+    async def search_friends_with_presence(
+        self, user_id: str, query: str
+    ) -> list[tuple[Friend, User, object]]:
+        """Search friends by username with presence in a single query."""
+        from app.infrastructure.database.models.presence import UserPresence
+        from app.infrastructure.database.models.user import User
+
+        result = await self.session.execute(
+            select(Friend, User, UserPresence)
+            .join(User, Friend.friend_id == User.id)
+            .outerjoin(UserPresence, Friend.friend_id == UserPresence.id)
+            .where(
+                and_(
+                    Friend.user_id == user_id,
+                    User.username.ilike(f"%{query}%"),
+                )
+            )
+            .order_by(Friend.created_at.desc())
+        )
+        return list(result.all())
+
+    async def get_online_friends_with_presence(
+        self, user_id: str
+    ) -> list[tuple[Friend, User, object]]:
+        """Get friends who are online with user and presence details."""
+        from app.infrastructure.database.models.presence import UserPresence
+        from app.infrastructure.database.models.user import User
+
+        result = await self.session.execute(
+            select(Friend, User, UserPresence)
+            .join(User, Friend.friend_id == User.id)
+            .join(UserPresence, Friend.friend_id == UserPresence.id)
+            .where(
+                and_(
+                    Friend.user_id == user_id,
+                    UserPresence.is_online == True,
+                )
+            )
+            .order_by(Friend.created_at.desc())
+        )
+        return list(result.all())
+
+    async def get_blocked_friends_with_presence(
+        self, user_id: str
+    ) -> list[tuple[Friend, User, object]]:
+        """Get blocked friends with user and presence details."""
+        from app.infrastructure.database.models.presence import UserPresence
+        from app.infrastructure.database.models.user import User
+
+        result = await self.session.execute(
+            select(Friend, User, UserPresence)
+            .join(User, Friend.friend_id == User.id)
+            .outerjoin(UserPresence, Friend.friend_id == UserPresence.id)
+            .where(
+                and_(
+                    Friend.user_id == user_id,
+                    Friend.is_blocked == True,
+                )
+            )
             .order_by(Friend.created_at.desc())
         )
         return list(result.all())
