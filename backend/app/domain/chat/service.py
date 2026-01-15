@@ -241,22 +241,20 @@ class ChatService:
         self, user_id: str, room_type: str | None = None
     ) -> list[ChatRoomResponse]:
         """Get all chat rooms for a user."""
-        rooms = await self.repository.get_user_rooms(user_id, room_type)
+        rooms_with_context = await self.repository.get_user_rooms_with_context(
+            user_id, room_type
+        )
         room_responses = []
 
-        for room in rooms:
-            # Get last message for preview
-            last_message = await self.repository.get_last_message(room.room_id)
-
-            # Get unread count for this room
-            unread_count = await self.repository.get_room_unread_count(room.room_id, user_id)
-
+        for room, unread_count, last_message_content, last_message_sender_id in rooms_with_context:
             room_dict = ChatRoomResponse.model_validate(room).model_dump()
             room_dict["unread_count"] = unread_count
 
-            if last_message:
-                room_dict["last_message_content"] = last_message.content
-                room_dict["last_message_sender_id"] = str(last_message.sender_id)
+            if last_message_content:
+                room_dict["last_message_content"] = last_message_content
+                room_dict["last_message_sender_id"] = (
+                    str(last_message_sender_id) if last_message_sender_id else None
+                )
 
             # For direct chats, add partner information
             if room.room_type == "direct" and self.user_repository:

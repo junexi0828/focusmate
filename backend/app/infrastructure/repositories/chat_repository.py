@@ -3,7 +3,7 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models.chat import ChatMember, ChatMessage, ChatRoom
@@ -55,23 +55,6 @@ class ChatRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_direct_room(self, user1_id: str, user2_id: str) -> ChatRoom | None:
-        """Get existing direct chat room between two users."""
-        # Get all direct rooms and filter in Python (simpler than JSON query)
-        result = await self.session.execute(
-            select(ChatRoom).where(ChatRoom.room_type == "direct")
-        )
-        rooms = result.scalars().all()
-
-        # Find room with both users
-        for room in rooms:
-            if room.room_metadata and "user_ids" in room.room_metadata:
-                user_ids = room.room_metadata.get("user_ids", [])
-                if user1_id in user_ids and user2_id in user_ids:
-                    return room
-
-        return None
-
     async def update_room(self, room_id: UUID, update_data: dict) -> ChatRoom | None:
         """Update room."""
         room = await self.get_room_by_id(room_id)
@@ -118,38 +101,15 @@ class ChatRepository:
     async def get_unread_count(self, user_id: str) -> int:
         """Get total unread message count for a user across all rooms."""
         try:
-            # Get all rooms where user is a member
-            rooms_result = await self.session.execute(
-                select(ChatMember.room_id, ChatMember.last_read_at)
-                .where(
+            result = await self.session.execute(
+                select(func.coalesce(func.sum(ChatMember.unread_count), 0)).where(
                     and_(
                         ChatMember.user_id == user_id,
                         ChatMember.is_active == True,
                     )
                 )
             )
-
-            total_unread = 0
-            for row in rooms_result:
-                room_id = row.room_id
-                last_read_at = row.last_read_at
-                # Count messages in this room after last_read_at
-                query = select(func.count()).select_from(ChatMessage).where(
-                    and_(
-                        ChatMessage.room_id == room_id,
-                        ChatMessage.sender_id != user_id,  # Don't count own messages
-                        ChatMessage.is_deleted == False,
-                    )
-                )
-
-                if last_read_at:
-                    query = query.where(ChatMessage.created_at > last_read_at)
-
-                result = await self.session.execute(query)
-                count = result.scalar() or 0
-                total_unread += count
-
-            return total_unread
+            return int(result.scalar() or 0)
         except Exception:
             # If chat tables don't exist or there's any error, return 0
             return 0
@@ -183,17 +143,17 @@ class ChatRepository:
             room.updated_at = datetime.now(UTC)
 
         # Increment unread_count for all members except sender
-        members_result = await self.session.execute(
-            select(ChatMember).where(
+        await self.session.execute(
+            update(ChatMember)
+            .where(
                 and_(
                     ChatMember.room_id == message_data["room_id"],
                     ChatMember.user_id != message_data["sender_id"],
                     ChatMember.is_active == True,
                 )
             )
+            .values(unread_count=ChatMember.unread_count + 1)
         )
-        for member in members_result.scalars().all():
-            member.unread_count += 1
 
         await self.session.commit()
         await self.session.refresh(message)
@@ -269,6 +229,45 @@ class ChatRepository:
 
         message.is_deleted = True
         message.deleted_at = datetime.now(UTC)
+        await self.session.flush()
+
+        # Decrement unread_count for members who hadn't read this message
+        await self.session.execute(
+            update(ChatMember)
+            .where(
+                and_(
+                    ChatMember.room_id == message.room_id,
+                    ChatMember.user_id != message.sender_id,
+                    ChatMember.is_active == True,
+                    or_(
+                        ChatMember.last_read_at.is_(None),
+                        ChatMember.last_read_at < message.created_at,
+                    ),
+                )
+            )
+            .values(
+                unread_count=case(
+                    (ChatMember.unread_count > 0, ChatMember.unread_count - 1),
+                    else_=0,
+                )
+            )
+        )
+
+        # If the deleted message was the latest, roll back last_message_at
+        room = await self.get_room_by_id(message.room_id)
+        if room and room.last_message_at == message.created_at:
+            latest_result = await self.session.execute(
+                select(ChatMessage.created_at)
+                .where(
+                    and_(
+                        ChatMessage.room_id == message.room_id,
+                        ChatMessage.is_deleted == False,
+                    )
+                )
+                .order_by(ChatMessage.created_at.desc())
+                .limit(1)
+            )
+            room.last_message_at = latest_result.scalar_one_or_none()
 
         await self.session.commit()
         await self.session.refresh(message)
@@ -279,38 +278,7 @@ class ChatRepository:
         member = await self.get_member(room_id, user_id)
         if not member:
             return 0
-
-        if not member.last_read_at:
-            # Count all messages
-            result = await self.session.execute(
-                select(func.count(ChatMessage.message_id)).where(
-                    and_(
-                        ChatMessage.room_id == room_id,
-                        ChatMessage.sender_id != user_id,
-                        ChatMessage.is_deleted == False,
-                    )
-                )
-            )
-        else:
-            # Count messages after last read
-            result = await self.session.execute(
-                select(func.count(ChatMessage.message_id)).where(
-                    and_(
-                        ChatMessage.room_id == room_id,
-                        ChatMessage.sender_id != user_id,
-                        ChatMessage.created_at > member.last_read_at,
-                        ChatMessage.is_deleted == False,
-                    )
-                )
-            )
-
-        unread_count = result.scalar() or 0
-
-        # Update member's unread_count
-        member.unread_count = unread_count
-        await self.session.commit()
-
-        return unread_count
+        return member.unread_count
 
     async def search_messages(
         self, room_id: UUID, query: str, limit: int = 50
@@ -379,25 +347,64 @@ class ChatRepository:
             .where(
                 and_(
                     ChatRoom.room_type == "direct",
-                    ChatMember.user_id == user_id,
+                    ChatMember.user_id.in_([user_id, recipient_id]),
                     ChatMember.is_active == True,
                 )
             )
+            .group_by(ChatRoom.room_id)
+            .having(func.count(func.distinct(ChatMember.user_id)) == 2)
+            .order_by(ChatRoom.last_message_at.desc().nullslast())
+            .limit(1)
         )
-        rooms = list(result.scalars().all())
+        return result.scalar_one_or_none()
 
-        # Check if any room has the recipient as a member
-        for room in rooms:
-            members_result = await self.session.execute(
-                select(ChatMember).where(
-                    and_(
-                        ChatMember.room_id == room.room_id,
-                        ChatMember.user_id == recipient_id,
-                        ChatMember.is_active == True,
-                    )
+    async def get_user_rooms_with_context(
+        self, user_id: str, room_type: str | None = None
+    ) -> list[tuple[ChatRoom, int, str | None, str | None]]:
+        """Get rooms with unread counts and last message data in one query."""
+        last_message_subq = (
+            select(
+                ChatMessage.room_id.label("room_id"),
+                ChatMessage.content.label("content"),
+                ChatMessage.sender_id.label("sender_id"),
+                func.row_number()
+                .over(
+                    partition_by=ChatMessage.room_id,
+                    order_by=ChatMessage.created_at.desc(),
+                )
+                .label("rn"),
+            )
+            .where(ChatMessage.is_deleted == False)
+            .subquery()
+        )
+
+        query = (
+            select(
+                ChatRoom,
+                ChatMember.unread_count,
+                last_message_subq.c.content,
+                last_message_subq.c.sender_id,
+            )
+            .join(ChatMember, ChatMember.room_id == ChatRoom.room_id)
+            .outerjoin(
+                last_message_subq,
+                and_(
+                    ChatRoom.room_id == last_message_subq.c.room_id,
+                    last_message_subq.c.rn == 1,
+                ),
+            )
+            .where(
+                and_(
+                    ChatMember.user_id == user_id,
+                    ChatMember.is_active == True,
+                    ChatRoom.is_active == True,
                 )
             )
-            if members_result.scalar_one_or_none():
-                return room
+            .order_by(ChatRoom.last_message_at.desc().nullslast())
+        )
 
-        return None
+        if room_type:
+            query = query.where(ChatRoom.room_type == room_type)
+
+        result = await self.session.execute(query)
+        return list(result.all())
