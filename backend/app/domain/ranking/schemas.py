@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # Team Schemas
@@ -39,8 +39,7 @@ class TeamResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 # Team Member Schemas
@@ -53,8 +52,7 @@ class TeamMemberResponse(BaseModel):
     role: str
     joined_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 # Team Invitation Schemas
@@ -76,8 +74,7 @@ class TeamInvitationResponse(BaseModel):
     expires_at: datetime
     accepted_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 # Session Schemas
@@ -107,8 +104,7 @@ class SessionResponse(BaseModel):
     success: bool
     completed_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 # Mini-Game Schemas
@@ -139,8 +135,7 @@ class MiniGameResponse(BaseModel):
     game_data: Optional[dict]
     played_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 # Verification Schemas
@@ -164,8 +159,7 @@ class VerificationRequestResponse(BaseModel):
     reviewed_at: Optional[datetime]
     reviewed_by: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 # Leaderboard Schemas
@@ -182,8 +176,7 @@ class LeaderboardEntry(BaseModel):
     average_score: Optional[float] = None
     total_sessions: Optional[int] = None  # Total number of sessions
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 class LeaderboardResponse(BaseModel):
@@ -206,5 +199,4 @@ class TeamStatsResponse(BaseModel):
     mini_game_score: int
     member_breakdown: List[dict] | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)

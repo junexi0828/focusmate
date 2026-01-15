@@ -6,6 +6,7 @@ ISO/IEC 25010 Quality Standards Compliant.
 from typing import Any, Dict, Union
 import re
 import logging
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -33,6 +34,7 @@ from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
 
 # 로깅 설정 초기화
 setup_logging()
+logger = logging.getLogger("app")
 
 # Initialize Sentry
 if settings.SENTRY_ENABLED and settings.SENTRY_DSN:
@@ -67,6 +69,18 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     Handles startup and shutdown events.
     """
     logger = logging.getLogger("app")
+
+    async def _cancel_task(task: asyncio.Task | None, task_name: str) -> None:
+        if not task:
+            return
+        task.cancel()
+        try:
+            await task
+            logger.info("✅ %s task stopped", task_name)
+        except asyncio.CancelledError:
+            logger.info("✅ %s task cancelled", task_name)
+        except Exception:
+            logger.exception("⚠️ Error stopping %s task", task_name)
     # Startup
     logger.info("🚀 Starting Focus Mate Backend...")
     logger.info("📍 Environment: %s", settings.APP_ENV)
@@ -95,7 +109,6 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         redis_timer_listener,
         reservation_notification_worker,
     )
-    import asyncio
     from app.core.notify import send_slack_notification
 
     # Send startup notification
@@ -160,9 +173,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Stop Redis Timer Listener
     try:
         await redis_timer_listener.disconnect()
-        if listener_task:
-            listener_task.cancel()
-        logger.info("✅ Redis Timer Listener stopped")
+        await _cancel_task(listener_task, "Redis Timer Listener")
     except Exception:
         logger.exception("⚠️ Error stopping Redis Timer Listener")
 
@@ -177,9 +188,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Stop Reservation Notification Worker
     try:
         await reservation_notification_worker.stop()
-        if reservation_task:
-            reservation_task.cancel()
-        logger.info("✅ Reservation Notification Worker stopped")
+        await _cancel_task(reservation_task, "Reservation Notification Worker")
     except Exception:
         logger.exception("⚠️ Error stopping Reservation Notification Worker")
 
@@ -266,22 +275,44 @@ prod_origin_regex = r"https://(.*\.)?eieconcierge\.com"
 # Use a combined regex so prod works even if APP_ENV is mis-set
 origin_regex = f"(?:{ngrok_regex}|{prod_origin_regex})"
 # Handle CORS_ORIGINS="*" case: cannot use allow_credentials=True with "*"
+# CORS policy normalization
 cors_origins = settings.CORS_ORIGINS
 allow_credentials = settings.CORS_ALLOW_CREDENTIALS
+allow_methods = settings.CORS_ALLOW_METHODS
+allow_headers = settings.CORS_ALLOW_HEADERS
+expose_headers = settings.CORS_EXPOSE_HEADERS
 # Check if CORS_ORIGINS contains "*" (validator converts to list)
 if isinstance(cors_origins, list) and len(cors_origins) == 1 and cors_origins[0] == "*":
     # When using "*", credentials must be False
     allow_credentials = False
     logger.warning("⚠️ CORS_ORIGINS='*' detected, setting allow_credentials=False for security")
 
+if settings.is_production:
+    if isinstance(allow_methods, list) and "*" in allow_methods:
+        allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+        logger.warning("⚠️ CORS_ALLOW_METHODS='*' in production; enforcing explicit method allowlist")
+    if isinstance(allow_headers, list) and "*" in allow_headers:
+        allow_headers = [
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "Origin",
+            "X-Requested-With",
+            "X-Request-ID",
+        ]
+        logger.warning("⚠️ CORS_ALLOW_HEADERS='*' in production; enforcing explicit header allowlist")
+    if isinstance(expose_headers, list) and "*" in expose_headers:
+        expose_headers = ["X-Request-ID", "X-App-Version", "Content-Disposition"]
+        logger.warning("⚠️ CORS_EXPOSE_HEADERS='*' in production; enforcing explicit expose headers")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_origin_regex=origin_regex,
     allow_credentials=allow_credentials,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["*"],  # Allow all headers including Authorization
-    expose_headers=["*"],  # Expose all headers
+    allow_methods=allow_methods,
+    allow_headers=allow_headers,
+    expose_headers=expose_headers,
     max_age=3600,  # Cache preflight requests for 1 hour
 )
 

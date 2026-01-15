@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class VerificationSubmit(BaseModel):
@@ -42,8 +42,7 @@ class VerificationResponse(BaseModel):
     submitted_at: datetime
     verified_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 class VerificationStatusResponse(BaseModel):
@@ -89,5 +88,4 @@ class VerificationListItem(BaseModel):
     documents: List[str]
     submitted_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)

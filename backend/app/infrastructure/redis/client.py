@@ -8,6 +8,7 @@ Production-grade Redis client with:
 """
 
 import logging
+from urllib.parse import urlsplit, urlunsplit
 import redis.asyncio as aioredis
 
 from app.core.config import settings
@@ -39,14 +40,15 @@ async def get_redis() -> aioredis.Redis:
             _redis_client = await aioredis.from_url(
                 settings.REDIS_URL,
                 encoding="utf-8",
-                decode_responses=True,
-                max_connections=50,  # Increased for higher concurrency
+                decode_responses=settings.REDIS_DECODE_RESPONSES,
+                max_connections=settings.REDIS_MAX_CONNECTIONS,
                 socket_timeout=1.0,  # Fail fast (1s)
                 socket_connect_timeout=1.0,  # Fail fast on connect (1s)
                 retry_on_timeout=True,
                 health_check_interval=30,
             )
-            logger.info(f"[Redis Client] Connected to {settings.REDIS_URL}")
+            sanitized_url = _sanitize_redis_url(settings.REDIS_URL)
+            logger.info("[Redis Client] Connected to %s", sanitized_url)
         except Exception as e:
             logger.error(f"[Redis Client] Failed to initialize: {e}")
             raise
@@ -79,3 +81,19 @@ async def close_redis() -> None:
         await _redis_client.close()
         _redis_client = None
         logger.info("[Redis Client] Connection pool closed")
+
+
+def _sanitize_redis_url(redis_url: str) -> str:
+    """Remove credentials from Redis URL for safe logging."""
+    try:
+        parsed = urlsplit(redis_url)
+    except Exception:
+        return "unparseable"
+
+    if parsed.username or parsed.password:
+        netloc = parsed.hostname or ""
+        if parsed.port:
+            netloc = f"{netloc}:{parsed.port}"
+        return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+
+    return redis_url

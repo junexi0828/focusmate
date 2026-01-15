@@ -23,6 +23,8 @@ class TimerStateResponse(BaseModel):
     is_auto_start: bool
     target_timestamp: str | None = None  # ISO timestamp when timer will complete (for running timers)
     session_type: str | None = None  # "work" or "break" (derived from phase)
+    work_duration: int | None = None  # seconds
+    break_duration: int | None = None  # seconds
 
 
 class TimerControlRequest(BaseModel):

@@ -42,16 +42,16 @@ class MatchingPoolRepository:
 
     async def get_user_active_pool(self, user_id: str) -> MatchingPool | None:
         """Get active pool where user is a member."""
-        # PostgreSQL ARRAY contains check: use ANY() operator
+        # PostgreSQL ARRAY contains check: use ANY() operator safely
         # Check if user_id is in member_ids array or if user is creator
-        from sqlalchemy import or_, text
+        from sqlalchemy import or_
 
         result = await self.session.execute(
             select(MatchingPool)
             .where(
                 or_(
                     MatchingPool.creator_id == user_id,
-                    text(f"'{user_id}' = ANY(member_ids)"),
+                    MatchingPool.member_ids.any(user_id),
                 )
             )
             .where(MatchingPool.status == "waiting")
@@ -68,6 +68,26 @@ class MatchingPoolRepository:
             query = query.where(MatchingPool.pool_id != exclude_pool_id)
 
         result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_active_pools_for_members(
+        self, member_ids: list[str]
+    ) -> list[MatchingPool]:
+        """Get active pools that contain any of the provided members."""
+        if not member_ids:
+            return []
+        from sqlalchemy import or_
+
+        result = await self.session.execute(
+            select(MatchingPool)
+            .where(MatchingPool.status == "waiting")
+            .where(
+                or_(
+                    MatchingPool.creator_id.in_(member_ids),
+                    MatchingPool.member_ids.overlap(member_ids),
+                )
+            )
+        )
         return list(result.scalars().all())
 
     async def get_matching_candidates(

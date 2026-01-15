@@ -41,6 +41,27 @@ class TimerService:
         self.timer_repo = timer_repository
         self.room_repo = room_repository
 
+    async def _get_room_or_raise(self, room_id: str):
+        room = await self.room_repo.get_by_id(room_id)
+        if not room:
+            raise RoomNotFoundException(room_id)
+        return room
+
+    def _build_timer_response(
+        self,
+        timer: Timer,
+        room,
+        target_timestamp: str | None,
+    ) -> TimerStateResponse:
+        response_dict = {
+            **TimerStateResponse.model_validate(timer).model_dump(),
+            "target_timestamp": target_timestamp,
+            "session_type": "work" if timer.phase == TimerPhase.WORK.value else "break",
+            "work_duration": room.work_duration * 60,
+            "break_duration": room.break_duration * 60,
+        }
+        return TimerStateResponse(**response_dict)
+
     async def _set_redis_timer_ttl(self, room_id: str, duration_seconds: int):
         """Set Redis TTL key for timer expiry notification.
 
@@ -145,9 +166,7 @@ class TimerService:
             RoomNotFoundException: If room not found
         """
         # Verify room exists
-        room = await self.room_repo.get_by_id(room_id)
-        if not room:
-            raise RoomNotFoundException(room_id)
+        room = await self._get_room_or_raise(room_id)
 
         # Get or create timer
         timer = await self.timer_repo.get_by_room_id(room_id)
@@ -164,14 +183,7 @@ class TimerService:
             timer = await self.timer_repo.create(timer)
 
         # IDLE timers don't have target_timestamp
-        response_dict = {
-            **TimerStateResponse.model_validate(timer).model_dump(),
-            "target_timestamp": None,
-            "session_type": "work" if timer.phase == TimerPhase.WORK.value else "break",
-            "work_duration": room.work_duration * 60,  # Add duration in seconds
-            "break_duration": room.break_duration * 60,  # Add duration in seconds
-        }
-        return TimerStateResponse(**response_dict)
+        return self._build_timer_response(timer, room, None)
 
     async def start_timer(
         self,
@@ -195,19 +207,17 @@ class TimerService:
         # Get or create timer if it doesn't exist
         timer = await self.timer_repo.get_by_room_id(room_id)
         if not timer:
-            # Create timer if it doesn't exist
-            timer_state = await self.get_or_create_timer(room_id)
+            await self.get_or_create_timer(room_id)
             timer = await self.timer_repo.get_by_room_id(room_id)
             if not timer:
                 raise TimerNotFoundException(room_id)
+
+        room = await self._get_room_or_raise(room_id)
 
         # Check for auto-completion (lazy update) or corrupted state
         if timer.status == TimerStatus.RUNNING.value:
             # Case 1: Corrupted state (Running but no start time)
             if not timer.started_at:
-                room = await self.room_repo.get_by_id(room_id)
-                if not room:
-                    raise RoomNotFoundException(room_id)
                 if room.work_duration is None or room.break_duration is None:
                     raise ConflictException(
                         "Room duration settings are missing"
@@ -243,15 +253,11 @@ class TimerService:
         current_session_type = "work" if timer.phase == TimerPhase.WORK.value else "break"
         if session_type != current_session_type:
             # User wants to start a DIFFERENT session type
-            room = await self.room_repo.get_by_id(room_id)
-            if not room:
-                raise RoomNotFoundException(room_id)
-
             # Validate room durations
             if room.work_duration is None or room.break_duration is None:
-                    raise ConflictException(
-                        "Room duration settings are missing"
-                    )
+                raise ConflictException(
+                    "Room duration settings are missing"
+                )
 
             # Switch phase and reset
             if session_type == "work":
@@ -274,26 +280,13 @@ class TimerService:
         # Idempotency check: If already RUNNING, just return current state
         # This fixes the issue where frontend thinks it's IDLE but backend is RUNNING
         if timer.status == TimerStatus.RUNNING.value:
-            # Fetch room for duration information
-            room = await self.room_repo.get_by_id(room_id)
-            if not room:
-                raise RoomNotFoundException(room_id)
-
              # Calculate target_timestamp for client countdown
             target_timestamp = None
             if timer.started_at and timer.remaining_seconds > 0:
                 target_timestamp = (
                     timer.started_at + timedelta(seconds=timer.remaining_seconds)
                 ).isoformat()
-
-            response_dict = {
-                **TimerStateResponse.model_validate(timer).model_dump(),
-                "target_timestamp": target_timestamp,
-                "session_type": "work" if timer.phase == TimerPhase.WORK.value else "break",
-                "work_duration": room.work_duration * 60,  # Add duration in seconds
-                "break_duration": room.break_duration * 60,  # Add duration in seconds
-            }
-            return TimerStateResponse(**response_dict)
+            return self._build_timer_response(timer, room, target_timestamp)
 
         # Validate state transition - allow start from IDLE, PAUSED, or COMPLETED
         if timer.status not in [TimerStatus.IDLE.value, TimerStatus.PAUSED.value, TimerStatus.COMPLETED.value]:
@@ -304,11 +297,9 @@ class TimerService:
             # Get room to reset timer with correct duration if phase matches
             # If phase was switched above, this block is skipped (status is IDLE)
             # But if same phase restart:
-            room = await self.room_repo.get_by_id(room_id)
-            if room:
-                timer.remaining_seconds = room.work_duration * 60 if timer.phase == TimerPhase.WORK.value else room.break_duration * 60
-                timer.status = TimerStatus.IDLE.value
-                timer.completed_at = None
+            timer.remaining_seconds = room.work_duration * 60 if timer.phase == TimerPhase.WORK.value else room.break_duration * 60
+            timer.status = TimerStatus.IDLE.value
+            timer.completed_at = None
 
         # Update timer
         timer.status = TimerStatus.RUNNING.value
@@ -328,14 +319,7 @@ class TimerService:
             ).isoformat()
 
         # Create response with additional fields
-        response_dict = {
-            **TimerStateResponse.model_validate(updated_timer).model_dump(),
-            "target_timestamp": target_timestamp,
-            "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
-            "work_duration": room.work_duration * 60,  # Add duration in seconds
-            "break_duration": room.break_duration * 60,  # Add duration in seconds
-        }
-        return TimerStateResponse(**response_dict)
+        return self._build_timer_response(updated_timer, room, target_timestamp)
 
     async def pause_timer(self, room_id: str) -> TimerStateResponse:
         """Pause timer.
@@ -353,11 +337,12 @@ class TimerService:
         # Get or create timer if it doesn't exist
         timer = await self.timer_repo.get_by_room_id(room_id)
         if not timer:
-            # Create timer if it doesn't exist (shouldn't happen, but handle gracefully)
-            timer_state = await self.get_or_create_timer(room_id)
+            await self.get_or_create_timer(room_id)
             timer = await self.timer_repo.get_by_room_id(room_id)
             if not timer:
                 raise TimerNotFoundException(room_id)
+
+        room = await self._get_room_or_raise(room_id)
 
         # Validate state transition - allow pause from RUNNING or COMPLETED
         if timer.status not in [TimerStatus.RUNNING.value, TimerStatus.COMPLETED.value]:
@@ -375,14 +360,7 @@ class TimerService:
         updated_timer = await self.timer_repo.update(timer)
 
         # Paused timers don't have target_timestamp
-        response_dict = {
-            **TimerStateResponse.model_validate(updated_timer).model_dump(),
-            "target_timestamp": None,
-            "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
-            "work_duration": room.work_duration * 60,  # Add duration in seconds
-            "break_duration": room.break_duration * 60,  # Add duration in seconds
-        }
-        return TimerStateResponse(**response_dict)
+        return self._build_timer_response(updated_timer, room, None)
 
     async def resume_timer(self, room_id: str) -> TimerStateResponse:
         """Resume paused timer.
@@ -402,6 +380,8 @@ class TimerService:
         if not timer:
             raise TimerNotFoundException(room_id)
 
+        room = await self._get_room_or_raise(room_id)
+
         # Validate state transition - only resume from PAUSED
         if timer.status != TimerStatus.PAUSED.value:
             raise InvalidTimerStateException(timer.status, "resume")
@@ -420,16 +400,13 @@ class TimerService:
                 updated_timer.started_at + timedelta(seconds=updated_timer.remaining_seconds)
             ).isoformat()
 
-        response_dict = {
-            **TimerStateResponse.model_validate(updated_timer).model_dump(),
-            "target_timestamp": target_timestamp,
-            "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
-            "work_duration": room.work_duration * 60,  # Add duration in seconds
-            "break_duration": room.break_duration * 60,  # Add duration in seconds
-        }
-        return TimerStateResponse(**response_dict)
+        return self._build_timer_response(updated_timer, room, target_timestamp)
 
-    async def reset_timer(self, room_id: str) -> TimerStateResponse:
+    async def reset_timer(
+        self,
+        room_id: str,
+        db: AsyncSession | None = None,
+    ) -> TimerStateResponse:
         """Reset timer to initial state.
 
         Args:
@@ -446,23 +423,24 @@ class TimerService:
         if not timer:
             raise TimerNotFoundException(room_id)
 
-        if not room:
-            raise RoomNotFoundException(room_id)
+        room = await self._get_room_or_raise(room_id)
 
         # Record partial session if timer was running
         if timer.status == TimerStatus.RUNNING.value and timer.started_at and db:
-             try:
-                 # Use current time as completion time for partial session
-                 completion_time = datetime.now(UTC)
-                 await self.record_work_sessions_for_timer(
+            try:
+                # Use current time as completion time for partial session
+                completion_time = datetime.now(UTC)
+                await self.record_work_sessions_for_timer(
                     db,
                     timer,
                     room,
                     completed_at=completion_time,
-                 )
-             except Exception as e:
-                 # Log error but don't fail reset
-                 logging.getLogger(__name__).warning(f"Failed to record statistics on timer reset: {e}")
+                )
+            except Exception as e:
+                # Log error but don't fail reset
+                logging.getLogger(__name__).warning(
+                    f"Failed to record statistics on timer reset: {e}"
+                )
 
         # Reset to work phase
         timer.status = TimerStatus.IDLE.value
@@ -476,19 +454,13 @@ class TimerService:
         updated_timer = await self.timer_repo.update(timer)
 
         # Reset timers don't have target_timestamp
-        response_dict = {
-            **TimerStateResponse.model_validate(updated_timer).model_dump(),
-            "target_timestamp": None,
-            "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
-            "work_duration": room.work_duration * 60,  # Add duration in seconds
-            "break_duration": room.break_duration * 60,  # Add duration in seconds
-        }
-        return TimerStateResponse(**response_dict)
+        return self._build_timer_response(updated_timer, room, None)
 
     async def complete_phase(
         self,
         room_id: str,
         completed_at: datetime | None = None,
+        db: AsyncSession | None = None,
     ) -> TimerStateResponse:
         """Complete current timer phase and transition to next phase.
 
@@ -507,9 +479,7 @@ class TimerService:
         if not timer:
             raise TimerNotFoundException(room_id)
 
-        room = await self.room_repo.get_by_id(room_id)
-        if not room:
-            raise RoomNotFoundException(room_id)
+        room = await self._get_room_or_raise(room_id)
 
         # Validate state
         if timer.status not in [TimerStatus.RUNNING.value, TimerStatus.COMPLETED.value]:
@@ -520,6 +490,14 @@ class TimerService:
         timer.status = TimerStatus.COMPLETED.value
         timer.completed_at = completion_time
         timer.remaining_seconds = 0
+
+        if db is not None:
+            await self.record_work_sessions_for_timer(
+                db,
+                timer,
+                room,
+                completed_at=completion_time,
+            )
 
         # Transition to next phase
         if timer.phase == TimerPhase.WORK.value:
@@ -555,12 +533,7 @@ class TimerService:
                 updated_timer.started_at + timedelta(seconds=updated_timer.remaining_seconds)
             ).isoformat()
 
-        response_dict = {
-            **TimerStateResponse.model_validate(updated_timer).model_dump(),
-            "target_timestamp": target_timestamp,
-            "session_type": "work" if updated_timer.phase == TimerPhase.WORK.value else "break",
-        }
-        return TimerStateResponse(**response_dict)
+        return self._build_timer_response(updated_timer, room, target_timestamp)
 
     async def get_timer_state(
         self,
@@ -581,6 +554,8 @@ class TimerService:
         timer = await self.timer_repo.get_by_room_id(room_id)
         if not timer:
             raise TimerNotFoundException(room_id)
+
+        room = await self._get_room_or_raise(room_id)
 
         # Calculate real-time remaining seconds if running
         if timer.status == TimerStatus.RUNNING.value and timer.started_at:
@@ -611,9 +586,4 @@ class TimerService:
                 timer.started_at + timedelta(seconds=timer.remaining_seconds)
             ).isoformat()
 
-        response_dict = {
-            **TimerStateResponse.model_validate(timer).model_dump(),
-            "target_timestamp": target_timestamp,
-            "session_type": "work" if timer.phase == TimerPhase.WORK.value else "break",
-        }
-        return TimerStateResponse(**response_dict)
+        return self._build_timer_response(timer, room, target_timestamp)

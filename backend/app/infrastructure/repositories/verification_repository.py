@@ -43,6 +43,17 @@ class VerificationRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_verifications_by_user_ids(
+        self, user_ids: list[str]
+    ) -> list[UserVerification]:
+        """Get verifications for a list of user IDs."""
+        if not user_ids:
+            return []
+        result = await self.session.execute(
+            select(UserVerification).where(UserVerification.user_id.in_(user_ids))
+        )
+        return list(result.scalars().all())
+
     async def get_pending_verifications(
         self, limit: int = 100, offset: int = 0
     ) -> list[UserVerification]:

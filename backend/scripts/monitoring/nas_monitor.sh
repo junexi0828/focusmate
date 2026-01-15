@@ -1,15 +1,20 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Configuration
 # Source .env if it exists in the parent directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 if [ -f "$BACKEND_DIR/.env" ]; then
-    export $(grep -v '^#' "$BACKEND_DIR/.env" | xargs)
+    set -a
+    # shellcheck disable=SC1090
+    . "$BACKEND_DIR/.env"
+    set +a
 fi
 
-WEBHOOK_URL=$SLACK_WEBHOOK_URL
+WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
 APP_NAME=${APP_NAME:-"FocusMate"}
 ENV=${APP_ENV:-"production"}
 
@@ -41,7 +46,7 @@ send_slack() {
 }
 EOF
 )
-    curl -X POST -H 'Content-type: application/json' --data "$payload" "$WEBHOOK_URL"
+    curl -sS -X POST -H 'Content-type: application/json' --data "$payload" "$WEBHOOK_URL"
 }
 
 # 1. Check CPU Load (Alert if load > 2.0 for 1 min)
