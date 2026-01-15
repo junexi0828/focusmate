@@ -34,7 +34,7 @@ class SessionRecordRequest(BaseModel):
 
     user_id: str = Field(..., min_length=1, max_length=36)
     room_id: str = Field(..., min_length=1, max_length=36)
-    session_type: str = Field(..., pattern="^(Union[work, break])$")
+    session_type: str = Field(..., pattern="^(work|break)$")
     duration_minutes: int = Field(..., gt=0, le=120)
 
 
@@ -201,7 +201,7 @@ async def get_user_stats(
             try:
                 start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
                 end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-            except ValueError:
+            except ValueError as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid date format. Use ISO format (YYYY-MM-DD)",

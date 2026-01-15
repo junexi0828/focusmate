@@ -51,8 +51,12 @@ EOF
 
 # 1. Check CPU Load (Alert if load > 2.0 for 1 min)
 CPU_LOAD=$(uptime | awk -F'load average:' '{ print $2 }' | cut -d, -f1 | xargs)
-if (( $(echo "$CPU_LOAD > 2.0" | bc -l) )); then
-    send_slack "warning" "CPU Load Alert" "Current load average: $CPU_LOAD is higher than normal."
+if command -v bc >/dev/null 2>&1; then
+    if (( $(echo "$CPU_LOAD > 2.0" | bc -l) )); then
+        send_slack "warning" "CPU Load Alert" "Current load average: $CPU_LOAD is higher than normal."
+    fi
+else
+    echo "Warning: bc not installed; skipping CPU load threshold check"
 fi
 
 # 2. Check Memory Usage (Alert if free < 100MB)
@@ -68,7 +72,23 @@ if [ "$DISK_USAGE" -gt 90 ]; then
 fi
 
 # 4. Check if Backend is running (Watchdog)
-if ! pgrep -f "uvicorn app.main:app" > /dev/null; then
+PID_FILE="$BACKEND_DIR/app.pid"
+backend_running=false
+
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE" 2>/dev/null || echo "")
+    if [ -n "$PID" ] && ps -p "$PID" > /dev/null 2>&1; then
+        backend_running=true
+    else
+        rm -f "$PID_FILE"
+    fi
+else
+    if pgrep -f "uvicorn app.main:app" > /dev/null; then
+        backend_running=true
+    fi
+fi
+
+if [ "$backend_running" != true ]; then
     send_slack "error" "Service Down" "FocusMate backend process is not running! Attempting to restart..."
 
     # Attempt to restart
@@ -76,7 +96,7 @@ if ! pgrep -f "uvicorn app.main:app" > /dev/null; then
         cd "$BACKEND_DIR" && bash start-nas.sh >> "$BACKEND_DIR/logs/monitor.log" 2>&1
 
         sleep 5
-        if pgrep -f "uvicorn app.main:app" > /dev/null; then
+        if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE" 2>/dev/null)" > /dev/null 2>&1; then
             send_slack "info" "Watchdog Success" "FocusMate backend has been successfully restarted."
         else
             send_slack "critical" "Watchdog Failure" "Failed to restart FocusMate backend. Manual intervention required."

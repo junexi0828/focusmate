@@ -87,12 +87,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return f"user:{user_id}"
 
         # Fall back to IP address
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            # Get the first IP in the chain (client IP)
-            client_ip = forwarded_for.split(",")[0].strip()
-        else:
-            client_ip = request.client.host if request.client else "unknown"
+        client_ip = request.client.host if request.client else "unknown"
+        if settings.TRUST_PROXY_HEADERS:
+            forwarded_for = request.headers.get("X-Forwarded-For")
+            if forwarded_for:
+                # Get the first IP in the chain (client IP)
+                client_ip = forwarded_for.split(",")[0].strip()
+            else:
+                real_ip = request.headers.get("X-Real-IP")
+                if real_ip:
+                    client_ip = real_ip.strip()
 
         return f"ip:{client_ip}"
 

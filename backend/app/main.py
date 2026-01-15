@@ -272,8 +272,13 @@ if settings.RATE_LIMIT_ENABLED:
 ngrok_regex = r"https://.*\.ngrok(-free)?\.(app|io)"
 # Allow production frontend origins by regex (covers apex and subdomains)
 prod_origin_regex = r"https://(.*\.)?eieconcierge\.com"
-# Use a combined regex so prod works even if APP_ENV is mis-set
-origin_regex = f"(?:{ngrok_regex}|{prod_origin_regex})"
+# Prefer explicit config, otherwise pick by environment
+origin_regex = settings.CORS_ORIGIN_REGEX
+if not origin_regex:
+    if settings.is_development:
+        origin_regex = ngrok_regex
+    elif settings.is_production:
+        origin_regex = prod_origin_regex
 # Handle CORS_ORIGINS="*" case: cannot use allow_credentials=True with "*"
 # CORS policy normalization
 cors_origins = settings.CORS_ORIGINS
