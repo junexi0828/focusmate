@@ -2,7 +2,7 @@
 
 
 from typing import List, Optional
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database.models import Participant
@@ -33,7 +33,7 @@ class ParticipantRepository:
         """Get all participants in a room."""
         query = select(Participant).where(Participant.room_id == room_id)
         if active_only:
-            query = query.where(Participant.is_connected == True)
+            query = query.where(Participant.is_connected.is_(True))
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -51,14 +51,19 @@ class ParticipantRepository:
         """Get all participants for a user."""
         query = select(Participant).where(Participant.user_id == user_id)
         if active_only:
-            query = query.where(Participant.is_connected == True)
+            query = query.where(Participant.is_connected.is_(True))
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
     async def count_active_participants(self, room_id: str) -> int:
         """Count active participants in a room."""
-        participants = await self.get_by_room_id(room_id, active_only=True)
-        return len(participants)
+        result = await self.db.execute(
+            select(func.count(Participant.id)).where(
+                Participant.room_id == room_id,
+                Participant.is_connected.is_(True),
+            )
+        )
+        return int(result.scalar_one() or 0)
 
     async def update(self, participant: Participant) -> Participant:
         """Update participant."""
