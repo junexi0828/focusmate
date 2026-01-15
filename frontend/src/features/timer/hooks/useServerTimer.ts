@@ -40,7 +40,7 @@ export function useServerTimer({
     toast.error(message);
   }, []);
 
-  // Calculate remaining seconds from target_timestamp
+  // target_timestamp로부터 남은 시간(초) 계산
   const calculateRemainingSeconds = useCallback((targetTimestamp?: string): number => {
     if (!targetTimestamp) return 0;
     const target = new Date(targetTimestamp).getTime();
@@ -49,7 +49,7 @@ export function useServerTimer({
     return remaining;
   }, []);
 
-  // Update timer state from server
+  // 서버로부터 타이머 상태 업데이트
   const updateTimerState = useCallback((newState: TimerState) => {
     setTimerState(newState);
   }, []);
@@ -69,7 +69,7 @@ export function useServerTimer({
     [roomId, updateTimerState]
   );
 
-  // Start timer countdown based on target_timestamp
+  // target_timestamp를 기반으로 타이머 카운트다운 시작
   useEffect(() => {
     if (timerState?.status === "running" && timerState.target_timestamp) {
       // Clear existing interval
@@ -129,7 +129,7 @@ export function useServerTimer({
     };
   }, [timerState?.status, timerState?.target_timestamp, timerState?.session_type, calculateRemainingSeconds, onSessionComplete]);
 
-  // Timer control functions
+  // 타이머 제어 함수
   const startTimer = useCallback(
     async (sessionType: SessionType = "work") => {
       // 현재 상태 확인 - RUNNING이면 시작하지 않음
@@ -262,7 +262,7 @@ export function useServerTimer({
     }
   }, [roomId, updateTimerState, notifyOnce, syncTimerState]);
 
-  // Periodic sync to avoid drift or missed updates
+  // 시간 오차 방지 및 누락된 업데이트 확인을 위한 주기적 동기화
   useEffect(() => {
     if (!roomId) return;
     if (syncIntervalRef.current) {
@@ -279,7 +279,7 @@ export function useServerTimer({
     };
   }, [roomId, syncTimerState]);
 
-  // Calculate display values
+  // 표시용 값 계산
   const remainingSeconds = timerState
     ? timerState.status === "running"
       ? calculateRemainingSeconds(timerState.target_timestamp)
@@ -293,11 +293,11 @@ export function useServerTimer({
   const sessionType: SessionType =
     timerState?.session_type === "work" ? "work" : "break";
 
-  // For display purposes, convert "work" to "focus"
+  // UI 표시를 위해 "work"를 "focus"로 변환
   const displaySessionType: "focus" | "break" =
     sessionType === "work" ? "focus" : "break";
 
-  // Calculate total seconds for progress
+  // 진행률 표시를 위한 전체 시간(초) 계산
   const totalSeconds = timerState
     ? sessionType === "work"
       ? (timerState as any).work_duration || 1500

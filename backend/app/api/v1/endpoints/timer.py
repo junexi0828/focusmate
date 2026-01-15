@@ -321,6 +321,7 @@ async def complete_phase(
 
     Transitions from WORK → BREAK or BREAK → WORK.
     Auto-starts break if auto_start_break is enabled.
+    # ✅ 자동 세션 기록: WORK/BREAK 단계 완료 시 세션 기록
     Automatically records session to session_history when work phase completes.
     """
     try:

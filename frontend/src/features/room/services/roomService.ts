@@ -1,5 +1,5 @@
 /**
- * Room Feature API Service
+ * 룸 피처 API 서비스
  * 방 생성, 조회, 설정 업데이트 등의 API 호출 담당
  */
 

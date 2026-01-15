@@ -14,7 +14,7 @@ export function MyRoomsSection() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Only load if user is authenticated
+    // 인증된 사용자만 로드
     if (authService.isAuthenticated()) {
       loadMyRooms();
     } else {
@@ -22,7 +22,7 @@ export function MyRoomsSection() {
     }
   }, []);
 
-  // Reload when page becomes visible (e.g., after returning from room creation)
+  // 페이지가 다시 보여질 때 데이터 리로드 (예: 방 생성 후 복귀 시)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && authService.isAuthenticated()) {
@@ -30,7 +30,7 @@ export function MyRoomsSection() {
       }
     };
 
-    // Custom event listener for manual refresh (e.g., after creating/leaving a room)
+    // 수동 리프레시를 위한 사용자 정의 이벤트 리스너 (예: 방 생성/퇴장 후)
     const handleRefreshRooms = () => {
       if (authService.isAuthenticated()) {
         loadMyRooms();

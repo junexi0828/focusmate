@@ -97,7 +97,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             # push 이벤트만 처리
             if event_type == "push":
                 ref = event_data.get("ref", "")
-                # main 또는 develop 브랜치만 처리
+                # main 또는 master 브랜치만 처리
                 if ref in ["refs/heads/main", "refs/heads/master"]:
                     self.log_message(f"🔄 Processing push to {ref}")
                     self.handle_git_pull()
@@ -120,47 +120,127 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(f"Error: {str(e)}".encode())
 
-    def handle_git_pull(self):
-        """Git Pull 수행 및 서버 재시작."""
-        try:
-            self.log_message("🔄 Starting deployment...")
+    def do_GET(self):
+        """GET 요청 처리 (health check)."""
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"GitHub Webhook Listener is running")
 
+    def handle_git_pull(self):
+        """NAS에서 git pull 실행."""
+        if not PROJECT_DIR.exists():
+            self.log_message(f"❌ Project directory not found: {PROJECT_DIR}")
+            return
+
+        self.log_message(f"📂 Project directory: {PROJECT_DIR}")
+
+        try:
             # 환경변수 설정 (PYTHONPATH 추가)
             env = os.environ.copy()
             env["PYTHONPATH"] = str(PROJECT_DIR)
 
-            # 1. Git Reset (Hard) - 로컬 변경사항(Rsync 등) 무시하고 강제 동기화
-            cmd = ["git", "fetch", "--all"]
-            subprocess.check_call(cmd, cwd=PROJECT_DIR, env=env)
+            # 1. Git Fetch 및 Reset (Hard) - 로컬 변경사항 무시하고 강제 동기화
+            # Agent의 개선된 로직 유지
+            subprocess.check_call(["git", "fetch", "--all"], cwd=PROJECT_DIR, env=env)
 
-            cmd = ["git", "reset", "--hard", "origin/main"]
-            subprocess.check_call(cmd, cwd=PROJECT_DIR, env=env)
+            # 변경사항이 있는지 확인하기 위해 현재 HEAD 기록
+            old_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=PROJECT_DIR).strip()
 
-            self.log_message("✅ Code updated successfully")
+            subprocess.check_call(["git", "reset", "--hard", "origin/main"], cwd=PROJECT_DIR, env=env)
 
-            # 2. 서버 재시작
-            self.restart_server(env)
+            new_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=PROJECT_DIR).strip()
+
+            if old_head != new_head:
+                self.log_message("✅ Code updated successfully")
+                self.log_message("🔄 Code changes detected, updating server...")
+
+                # 의존성 설치 (requirements.txt 변경 감지)
+                self.install_dependencies(env)
+
+                # 마이그레이션 실행 (필요시)
+                self.run_migrations(env)
+
+                # 서버 재시작
+                self.restart_server(env)
+            else:
+                self.log_message("✅ Already up to date, no restart needed")
 
         except subprocess.CalledProcessError as e:
             self.log_message(f"❌ Git/Deployment failed: {e}")
-            raise
         except Exception as e:
             self.log_message(f"❌ Error during deployment: {e}")
-            raise
 
-    def restart_server(self, env=None):
+    def install_dependencies(self, env):
+        """의존성 자동 설치 (requirements.txt).
+
+        Git pull 후 requirements.txt가 변경되었을 수 있으므로
+        항상 pip install을 실행하여 최신 의존성을 유지합니다.
+        """
+        try:
+            self.log_message("📦 Installing dependencies from requirements.txt...")
+
+            # Conda 환경의 Python 사용
+            conda_python = "/volume1/web/miniconda3/envs/focusmate_env/bin/python"
+            requirements_file = PROJECT_DIR / "requirements.txt"
+
+            if not Path(conda_python).exists():
+                self.log_message(f"⚠️  Conda Python not found: {conda_python}")
+                return
+
+            if not requirements_file.exists():
+                self.log_message(f"⚠️  requirements.txt not found: {requirements_file}")
+                return
+
+            # pip install 실행 (--quiet로 출력 최소화)
+            result = subprocess.run(
+                [conda_python, "-m", "pip", "install", "-r", "requirements.txt", "--quiet"],
+                cwd=PROJECT_DIR,
+                capture_output=True,
+                text=True,
+                timeout=300,  # 5분 타임아웃
+                env=env
+            )
+
+            if result.returncode == 0:
+                self.log_message("✅ Dependencies installed successfully")
+            else:
+                self.log_message(f"⚠️  Dependency installation warning: {result.stderr}")
+
+        except subprocess.TimeoutExpired:
+            self.log_message("⚠️  Dependency installation timeout (continuing anyway)")
+        except Exception as e:
+            self.log_message(f"⚠️  Dependency installation error: {e}")
+
+    def run_migrations(self, env):
+        """데이터베이스 마이그레이션 실행."""
+        try:
+            # Conda 환경의 Python 사용
+            conda_python = "/volume1/web/miniconda3/envs/focusmate_env/bin/python"
+            if Path(conda_python).exists():
+                result = subprocess.run(
+                    [conda_python, "-m", "alembic", "upgrade", "head"],
+                    cwd=PROJECT_DIR,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                    env=env
+                )
+                if result.returncode == 0:
+                    self.log_message("✅ Migrations completed")
+                else:
+                    self.log_message(f"⚠️  Migration warning: {result.stderr}")
+        except Exception as e:
+            self.log_message(f"⚠️  Migration error: {e}")
+
+    def restart_server(self, env):
         """서버 재시작."""
         try:
             self.log_message("🔄 Restarting backend service...")
-            if env is None:
-                env = os.environ.copy()
-                env["PYTHONPATH"] = str(PROJECT_DIR)
 
             # stop-nas.sh 실행
             subprocess.run(["bash", "stop-nas.sh"], cwd=PROJECT_DIR, check=False, env=env)
 
-            # start-nas.sh 실행 (nohup 아님 - 리스너가 관리하지 않음, 별도 프로세스로 분리)
-            # 주의: 리스너가 죽지 않도록 Popen 사용
+            # start-nas.sh 실행
             subprocess.Popen(["bash", "start-nas.sh"], cwd=PROJECT_DIR,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
 
@@ -168,7 +248,6 @@ class WebhookHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             self.log_message(f"❌ Restart failed: {e}")
-            raise
 
 
 def run(server_class=HTTPServer, handler_class=WebhookHandler, port=PORT):
