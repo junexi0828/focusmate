@@ -306,20 +306,4 @@ else
     echo "⚠️  cloudflared가 설치되어 있지 않습니다. Tunnel을 시작할 수 없습니다."
 fi
 
-# Architect Agent 자동 시작 (V10.2 Eternal Mode)
-AGENT_SCRIPT="$PROJECT_DIR/scripts/automation/architect_agent.sh"
-AGENT_PID_FILE="$PROJECT_DIR/architect_agent.pid"
-
-if [ -f "$AGENT_SCRIPT" ]; then
-    if [ ! -f "$AGENT_PID_FILE" ] || ! ps -p "$(cat "$AGENT_PID_FILE" 2>/dev/null)" > /dev/null 2>&1; then
-        echo "🚀 Architect Agent (Eternal Mode) 시작 중..."
-        # 디스크 용량 관리를 위해 3일치 로그만 유지 (nas_monitor.sh에서 실시간 관리)
-        nohup bash "$AGENT_SCRIPT" >> /dev/null 2>&1 &
-        echo "✅ Architect Agent가 시작되었습니다."
-    else
-        echo "⚠️  Architect Agent가 이미 실행 중입니다."
-    fi
-    echo ""
-fi
-
 echo "🎉 Deployment & Restart Successfully Completed!"
