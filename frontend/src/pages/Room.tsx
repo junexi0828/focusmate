@@ -1026,17 +1026,31 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
             />
             <TimerControls
               status={status}
-              onStart={() => {
-                // RUNNING 상태에서는 시작하지 않음
+              onStart={async () => {
                 if (status === "running") {
                   toast.error("타이머가 이미 실행 중입니다");
                   return;
                 }
-                const nextSessionType =
-                  sessionType === "work" ? "break" : "work";
-                startTimer(nextSessionType);
-                // Also send via WebSocket
-                wsClient.sendStartTimer(nextSessionType);
+
+                if (status === "paused") {
+                  resumeTimer();
+                  wsClient.sendResumeTimer();
+                } else if (status === "completed") {
+                  const nextSessionType = sessionType === "work" ? "break" : "work";
+                  const newState = await completeSession();
+                  if (newState) {
+                    if (newState.status === "idle") {
+                      await startTimer(nextSessionType);
+                      wsClient.sendStartTimer(nextSessionType);
+                    } else if (newState.status === "running") {
+                      wsClient.sendStartTimer(nextSessionType);
+                    }
+                  }
+                } else {
+                  // idle state: start current session type
+                  startTimer(sessionType);
+                  wsClient.sendStartTimer(sessionType);
+                }
               }}
               onPause={() => {
                 pauseTimer();
@@ -1047,49 +1061,6 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 wsClient.sendResetTimer();
               }}
             />
-
-            {status === "paused" && (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  resumeTimer();
-                  wsClient.sendResumeTimer();
-                }}
-                className="mt-4"
-                disabled={isTimerLoading}
-              >
-                재개
-              </Button>
-            )}
-
-            {status === "completed" && (
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  const nextSessionType =
-                    sessionType === "work" ? "break" : "work";
-
-                  // 1. Complete Session (Record Stats + Switch Phase)
-                  const newState = await completeSession();
-
-                  // 2. Start Next Phase (if not auto-started)
-                  if (newState) {
-                      if (newState.status === "idle") {
-                          // Manual start required
-                          await startTimer(nextSessionType);
-                          wsClient.sendStartTimer(nextSessionType);
-                      } else if (newState.status === "running") {
-                          // Auto-started
-                          wsClient.sendStartTimer(nextSessionType);
-                      }
-                  }
-                }}
-                className="mt-4"
-                disabled={isTimerLoading}
-              >
-                {sessionType === "work" ? "휴식 시작" : "집중 시작"}
-              </Button>
-            )}
           </div>
 
           {/* Participant List */}
