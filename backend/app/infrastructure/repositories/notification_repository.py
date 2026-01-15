@@ -117,6 +117,21 @@ class NotificationRepository:
         await self.db.refresh(notification)
         return notification
 
+    async def mark_as_read(self, notification_ids: list[str]) -> int:
+        """Mark specific notifications as read."""
+        if not notification_ids:
+            return 0
+        result = await self.db.execute(
+            update(Notification)
+            .where(
+                Notification.notification_id.in_(notification_ids),
+                Notification.is_read == False,
+            )
+            .values(is_read=True, read_at=datetime.now(UTC))
+        )
+        await self.db.commit()
+        return result.rowcount
+
     async def delete(self, notification: Notification) -> None:
         """Delete a notification.
 

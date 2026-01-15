@@ -199,6 +199,21 @@ class Settings(BaseSettings):
         if self.APP_ENV == "production":
             if self.SECRET_KEY == "dev-secret-key-change-in-production":
                 raise ValueError("SECRET_KEY must be set to a secure value in production")
+            if not self.SECURITY_HEADERS_ENABLED or not self.SECURITY_HSTS_ENABLED:
+                raise ValueError("SECURITY_HEADERS_ENABLED and SECURITY_HSTS_ENABLED must be enabled in production")
+            if not self.SECURITY_CSP_ENABLED:
+                raise ValueError("SECURITY_CSP_ENABLED must be enabled in production")
+            if isinstance(self.CORS_ORIGINS, list):
+                if "*" in self.CORS_ORIGINS:
+                    raise ValueError("CORS_ORIGINS cannot be '*' in production")
+                if any(origin.startswith("http://") for origin in self.CORS_ORIGINS):
+                    raise ValueError("CORS_ORIGINS must use https in production")
+            if isinstance(self.TRUSTED_HOSTS, list):
+                if "*" in self.TRUSTED_HOSTS:
+                    raise ValueError("TRUSTED_HOSTS cannot be '*' in production")
+                disallowed_hosts = {"localhost", "127.0.0.1", "0.0.0.0"}
+                if any(host in disallowed_hosts for host in self.TRUSTED_HOSTS):
+                    raise ValueError("TRUSTED_HOSTS must be set to production domains in production")
         return self
 
     # ==========================================================================

@@ -109,13 +109,12 @@ class FriendService:
         self, user_id: str, pending_only: bool = False
     ) -> list[FriendRequestResponse]:
         """Get friend requests received by user."""
-        requests = await self.friend_request_repo.get_user_received_requests(
+        requests = await self.friend_request_repo.get_user_received_requests_with_sender(
             user_id, pending_only
         )
 
         result = []
-        for request in requests:
-            sender = await self.friend_repo.get_user_by_id(request.sender_id)
+        for request, sender in requests:
             result.append(
                 FriendRequestResponse(
                     id=request.id,
@@ -132,11 +131,10 @@ class FriendService:
 
     async def get_sent_requests(self, user_id: str) -> list[FriendRequestResponse]:
         """Get friend requests sent by user."""
-        requests = await self.friend_request_repo.get_user_sent_requests(user_id)
+        requests = await self.friend_request_repo.get_user_sent_requests_with_receiver(user_id)
 
         result = []
-        for request in requests:
-            receiver = await self.friend_repo.get_user_by_id(request.receiver_id)
+        for request, receiver in requests:
             result.append(
                 FriendRequestResponse(
                     id=request.id,
@@ -254,36 +252,25 @@ class FriendService:
 
     async def get_friends(self, user_id: str) -> FriendListResponse:
         """Get all friends of a user with presence information."""
-        friendships = await self.friend_repo.get_user_friends(user_id)
-
-        # Get presence for all friends if repository is available
-        presence_map = {}
-        if self.presence_repo:
-            friend_ids = [f.friend_id for f in friendships]
-            presences = await self.presence_repo.get_multiple_presence(friend_ids)
-            presence_map = {p.id: p for p in presences}
-
         friends = []
-        for friendship in friendships:
-            friend_user = await self.friend_repo.get_user_by_id(friendship.friend_id)
-            if friend_user:
-                presence = presence_map.get(friendship.friend_id)
-                friends.append(
-                    FriendResponse(
-                        id=friendship.id,
-                        user_id=friendship.user_id,
-                        friend_id=friendship.friend_id,
-                        created_at=friendship.created_at,
-                        is_blocked=friendship.is_blocked,
-                        friend_username=friend_user.username,
-                        friend_email=friend_user.email,
-                        friend_profile_image=friend_user.profile_image,
-                        friend_bio=friend_user.bio,
-                        friend_is_online=presence.is_online if presence else False,
-                        friend_last_seen_at=presence.last_seen_at if presence else None,
-                        friend_status_message=presence.status_message if presence else None,
-                    )
+        friendships = await self.friend_repo.get_friends_with_presence(user_id)
+        for friendship, friend_user, presence in friendships:
+            friends.append(
+                FriendResponse(
+                    id=friendship.id,
+                    user_id=friendship.user_id,
+                    friend_id=friendship.friend_id,
+                    created_at=friendship.created_at,
+                    is_blocked=friendship.is_blocked,
+                    friend_username=friend_user.username,
+                    friend_email=friend_user.email,
+                    friend_profile_image=friend_user.profile_image,
+                    friend_bio=friend_user.bio,
+                    friend_is_online=presence.is_online if presence else False,
+                    friend_last_seen_at=presence.last_seen_at if presence else None,
+                    friend_status_message=presence.status_message if presence else None,
                 )
+            )
 
         return FriendListResponse(friends=friends, total=len(friends))
 
@@ -318,47 +305,37 @@ class FriendService:
     async def search_friends(self, user_id: str, params: FriendSearchParams) -> FriendListResponse:
         """Search and filter friends."""
         # Handle different filter types
-        if params.filter_type == "online" and self.presence_repo:
-            friendships = await self.friend_repo.get_online_friends(user_id)
+        if params.filter_type == "online":
+            friendships = await self.friend_repo.get_online_friends_with_presence(user_id)
         elif params.filter_type == "blocked":
-            all_friends = await self.friend_repo.get_user_friends(user_id)
-            friendships = [f for f in all_friends if f.is_blocked]
+            friendships = await self.friend_repo.get_blocked_friends_with_presence(user_id)
         elif params.query:
-            friendships = await self.friend_repo.search_friends(user_id, params.query)
+            friendships = await self.friend_repo.search_friends_with_presence(
+                user_id, params.query
+            )
         else:
-            friendships = await self.friend_repo.get_user_friends(user_id)
+            friendships = await self.friend_repo.get_friends_with_presence(user_id)
 
-        # Limit results
         friendships = friendships[:params.limit]
 
-        # Get presence for all friends
-        presence_map = {}
-        if self.presence_repo:
-            friend_ids = [f.friend_id for f in friendships]
-            presences = await self.presence_repo.get_multiple_presence(friend_ids)
-            presence_map = {p.id: p for p in presences}
-
         friends = []
-        for friendship in friendships:
-            friend_user = await self.friend_repo.get_user_by_id(friendship.friend_id)
-            if friend_user:
-                presence = presence_map.get(friendship.friend_id)
-                friends.append(
-                    FriendResponse(
-                        id=friendship.id,
-                        user_id=friendship.user_id,
-                        friend_id=friendship.friend_id,
-                        created_at=friendship.created_at,
-                        is_blocked=friendship.is_blocked,
-                        friend_username=friend_user.username,
-                        friend_email=friend_user.email,
-                        friend_profile_image=friend_user.profile_image,
-                        friend_bio=friend_user.bio,
-                        friend_is_online=presence.is_online if presence else False,
-                        friend_last_seen_at=presence.last_seen_at if presence else None,
-                        friend_status_message=presence.status_message if presence else None,
-                    )
+        for friendship, friend_user, presence in friendships:
+            friends.append(
+                FriendResponse(
+                    id=friendship.id,
+                    user_id=friendship.user_id,
+                    friend_id=friendship.friend_id,
+                    created_at=friendship.created_at,
+                    is_blocked=friendship.is_blocked,
+                    friend_username=friend_user.username,
+                    friend_email=friend_user.email,
+                    friend_profile_image=friend_user.profile_image,
+                    friend_bio=friend_user.bio,
+                    friend_is_online=presence.is_online if presence else False,
+                    friend_last_seen_at=presence.last_seen_at if presence else None,
+                    friend_status_message=presence.status_message if presence else None,
                 )
+            )
 
         return FriendListResponse(friends=friends, total=len(friends))
 

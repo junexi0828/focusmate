@@ -297,15 +297,7 @@ class NotificationService:
         Returns:
             Number of notifications marked as read
         """
-        count = 0
-        for notification_id in notification_ids:
-            notification = await self.repository.get_by_id(notification_id)
-            if notification and not notification.is_read:
-                notification.is_read = True
-                notification.read_at = datetime.now(UTC)
-                await self.repository.update(notification)
-                count += 1
-        return count
+        return await self.repository.mark_as_read(notification_ids)
 
     async def mark_all_as_read(self, user_id: str) -> int:
         """Mark all notifications for a user as read.

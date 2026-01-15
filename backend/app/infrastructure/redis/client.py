@@ -37,7 +37,7 @@ async def get_redis() -> aioredis.Redis:
         try:
             # Create Redis client with production-optimized settings
             # connection_pool is created automatically by from_url
-            _redis_client = await aioredis.from_url(
+            _redis_client = aioredis.from_url(
                 settings.REDIS_URL,
                 encoding="utf-8",
                 decode_responses=settings.REDIS_DECODE_RESPONSES,

@@ -44,7 +44,7 @@ class ReservationNotificationWorker:
 
             # Using a very short connection just for the lock check
             # In a production app, we might want to maintain a persistent connection pool
-            redis = await aioredis.from_url(
+            redis = aioredis.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
                 encoding="utf-8"

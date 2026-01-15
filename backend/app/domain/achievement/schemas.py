@@ -12,8 +12,12 @@ class AchievementBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(..., min_length=1)
     icon: str = Field(..., min_length=1, max_length=50)
-    category: str = Field(..., pattern="^(Union[sessions, time]|Union[streak, social])$")
-    requirement_type: str = Field(..., pattern="^(Union[total_sessions, total_focus_time]|Union[streak_days, community_posts])$")
+    category: str = Field(
+        ..., pattern="^(sessions|time|streak|social)$"
+    )
+    requirement_type: str = Field(
+        ..., pattern="^(total_sessions|total_focus_time|streak_days|community_posts)$"
+    )
     requirement_value: int = Field(..., gt=0)
     points: int = Field(default=10, ge=0)
 

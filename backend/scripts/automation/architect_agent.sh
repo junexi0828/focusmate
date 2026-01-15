@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # =============================================================================
-# FocusMate Autonomous Architect Agent (V10.1 - Atomic Refined Mode)
+# FocusMate Autonomous Architect Agent (V10.2 - Absolute Eternal Mode)
 # =============================================================================
-# This script consolidates ALL instructions and adds an explicit mandate for
-# 'Atomic Domain Conversion' to prevent Pydantic v1/v2 version conflicts.
+# V10.2: Implemented a persistent reasoning loop to ensure Zero-Intervention
+# Continuity. The agent now auto-restarts after each comprehensive sweep.
 # =============================================================================
 
 # Define the Master Directive
@@ -50,12 +50,25 @@ if [ -n "$STALE_PIDS" ]; then
     kill $STALE_PIDS 2>/dev/null || true
 fi
 
-echo "🚀 Launching Atomic Infinite Architect Mode (V10.1)..."
-echo "👑 Mandate: Atomic Domain Conversion + Zero Intervention"
+echo "🚀 Launching Absolute Eternal Architect Mode (V10.2)..."
+echo "👑 Mandate: Atomic Domain Conversion + Eternal Persistence"
 echo "🛡️ Safety: Prevents Pydantic V1/V2 version conflicts"
-echo "Focus: High-Impact Engineering & Logic Correctness"
+echo "Focus: High-Impact Engineering & Continuous Codebase Evolution"
 echo "⚠️  Press Ctrl+C to stop at any time."
 echo ""
 
-# Use codex exec in non-interactive mode
-codex exec --full-auto --color always "$MASTER_DIRECTIVE"
+# Infinite reasoning loop
+while true; do
+    echo "🔄 Starting new Reasoning Cycle..."
+    # Use codex exec in non-interactive mode
+    codex exec --full-auto --color always "$MASTER_DIRECTIVE"
+
+    EXIT_CODE=$?
+    if [ $EXIT_CODE -eq 0 ]; then
+        echo "✅ Cycle completed. Resting for 30s before the next sweep..."
+        sleep 30
+    else
+        echo "⚠️  Cycle exited with code $EXIT_CODE. Restarting in 10s..."
+        sleep 10
+    fi
+done
