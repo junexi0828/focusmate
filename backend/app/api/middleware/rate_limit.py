@@ -4,6 +4,7 @@ Prevents abuse by limiting the number of requests from a single IP address
 or authenticated user within a specified time window.
 """
 
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -55,6 +56,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/api/v1/auth/password-reset/verify": 5,
             "/api/v1/users/search": 15,
         }
+        self._uuid_segment = re.compile(
+            r"(?<=/)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=/|$)",
+            re.IGNORECASE,
+        )
+        self._hex_segment = re.compile(r"(?<=/)[0-9a-f]{16,}(?=/|$)", re.IGNORECASE)
+        self._numeric_segment = re.compile(r"(?<=/)\d+(?=/|$)")
 
     async def connect_redis(self):
         """Connect to Redis if not already connected."""
@@ -116,6 +123,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return limit
 
         return self.requests_per_minute
+
+    def normalize_path(self, path: str) -> str:
+        """Normalize dynamic path segments to prevent key explosion."""
+        normalized = self._uuid_segment.sub(":id", path)
+        normalized = self._hex_segment.sub(":id", normalized)
+        normalized = self._numeric_segment.sub(":id", normalized)
+        return normalized
 
     async def is_rate_limited(
         self, client_id: str, path: str
@@ -203,7 +217,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_id = self.get_client_identifier(request)
 
         # Check rate limit
-        is_limited, rate_info = await self.is_rate_limited(client_id, path)
+        normalized_path = self.normalize_path(path)
+        is_limited, rate_info = await self.is_rate_limited(client_id, normalized_path)
 
         if is_limited:
             return JSONResponse(

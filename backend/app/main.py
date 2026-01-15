@@ -247,6 +247,7 @@ if settings.SECURITY_HEADERS_ENABLED:
         enable_csp=settings.SECURITY_CSP_ENABLED,
         csp_policy=settings.SECURITY_CSP_POLICY,
         csp_exclude_paths=["/docs", "/redoc", "/openapi.json"],
+        no_store_paths=["/api/v1/auth"],
     )
 
 # Trusted Host middleware - protects against Host header attacks
