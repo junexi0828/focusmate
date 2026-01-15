@@ -51,22 +51,27 @@ def _get_connect_args(database_url: str) -> dict:
     # Never let detection override an explicit env flag
     env_flag = bool(settings.DATABASE_PGBOUNCER)
     auto_detected = _using_pgbouncer(database_url)
-    is_pgbouncer = env_flag or auto_detected
+
+    # Extra check: Supabase pooler hostnames often contain ".pooler."
+    hostname_detected = ".pooler." in database_url.lower()
+
+    is_pgbouncer = env_flag or auto_detected or hostname_detected
 
     logger.info(
-        "PgBouncer detection: env_flag=%s auto_detected=%s using=%s",
+        "PgBouncer detection: env_flag=%s auto_detected=%s hostname_detected=%s using=%s",
         env_flag,
         auto_detected,
+        hostname_detected,
         is_pgbouncer,
     )
 
-    # DEBUG: Force enable
-    # print("DEBUG: Enforcing statement_cache_size=0", flush=True)
-    # return {"statement_cache_size": 0}
-
     if is_pgbouncer:
         # pgBouncer transaction/statement pool mode cannot handle prepared statements
-        return {"statement_cache_size": 0}
+        # Disabling both statement_cache_size and prepared_statement_cache_size for asyncpg
+        return {
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
+        }
 
     return {}
 
