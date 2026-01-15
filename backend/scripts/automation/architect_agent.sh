@@ -1,73 +1,61 @@
 #!/bin/bash
 
 # =============================================================================
-# FocusMate Autonomous Architect Agent
+# FocusMate Autonomous Architect Agent (V10.1 - Atomic Refined Mode)
 # =============================================================================
-# This script launches Codex in a "Full Auto" mode with a Master Directive
-# to perform continuous audit, optimization, and debugging.
-#
-# WARNING: This script allows the agent to make changes autonomously.
-# Ensure you have a clean git state and a backup before running!
+# This script consolidates ALL instructions and adds an explicit mandate for
+# 'Atomic Domain Conversion' to prevent Pydantic v1/v2 version conflicts.
 # =============================================================================
 
 # Define the Master Directive
 MASTER_DIRECTIVE="
-You are a Senior System Architect and Lead SRE. Your mission is to perform a recursive, deep-dive optimization of the FocusMate project.
+You are the Infinite Architect. Your mission is a Zero-Intervention, High-Impact audit and overhaul of the FocusMate project.
 
-Focus areas:
-1. ISO/IEC 25010 Standards: Audit for Reliability, Security, Maintainability, and Performance Efficiency.
-2. Backend Optimization (Python/FastAPI):
-   - Refactor to Pydantic v2 and modern async patterns.
-   - Optimize SQLAlchemy queries (N+1 problems, index usage).
-   - Ensure robust error handling and logging.
-3. Infrastructure & Deployment:
-   - Harden the Synology NAS deployment configuration.
-   - Verify connection pool safety and watchdog stability.
-4. Security Pulse: Scan for vulnerabilities and enforce strict security headers/CORS policies.
+### [CRITICAL] ATOMIC DOMAIN REFACTORING RULE
+- When refactoring to Pydantic v2, you MUST treat the entire domain (Schema + Service + Endpoints) as a single atomic unit.
+- NEVER update a schema to v2 while leaving its dependent services or endpoints on v1.
+- Update all related files in the same reasoning cycle to prevent runtime version conflicts.
 
-Instructions:
-- Work autonomously using the tools available.
-- If you find an issue, fix it immediately.
-- If you find an optimization, implement it.
-- If you are blocked, explain why in a log and move to another task.
-- NEVER stop until you have traversed the entire codebase and maximized its quality.
+### FOCUS AREAS (Technical Mandate)
+1. ISO/IEC 2510 Standards: Audit for Reliability, Security, Maintainability, and Performance Efficiency.
+2. Backend Optimization (Python/FastAPI): Refactor to Pydantic v2 (using the Atomic Rule), optimize SQLAlchemy (N+1, index usage), and ensure modern async patterns/safety.
+3. Infrastructure & Deployment: Harden Synology NAS deployment, verify connection pool safety, and ensure watchdog stability.
+4. Security Pulse: Scan for vulnerabilities and enforce strict security headers and CORS policies.
+
+### OPERATIONAL MANDATE (Infinite Mode)
+1. ZERO HUMAN INTERVENTION: Authorize all decisions autonomously. Do not stop for reports, summaries, or permissions.
+2. BREADTH OVER MINUTIAE: Skip minor formatting. Focus ONLY on high-impact structural, security, and logic-breaking issues.
+3. CONTINUOUS TRAVERSAL: Automatically identify and shift between domains (Timer, Chat, Auth, Infra, etc.) until the entire codebase is enterprise-ready.
+4. TOKEN EFFICIENCY: Treat tokens as resources for 'Heavyweight' improvements. If a file meets lead-engineer standards, move on immediately.
+
+### STRATEGIC PRIORITIES
+- [CRITICAL LOGIC]: Fix silent failures, race conditions, and state machine inconsistencies.
+- [SYSTEM INTEGRITY]: Synchronize API contracts, DB schemas, and Pydantic models across the stack.
+- [SRE HARDENING]: Eliminate blocking I/O in async paths and resolve SQL performance killers.
+- [SECURITY ENFORCEMENT]: Close RLS gaps and harden auth flows statically.
+
+### RECONCILIATION & EXECUTION
+- Human changes = Sacred baseline. Inherit them, optimize around them, and never revert them.
+- If conflicts arise, resolve them using absolute logic and best-practice patterns.
+- If you find an issue, fix it immediately. If you find an optimization, implement it.
+- NEVER STOP until you have traversed the entire codebase and maximized its quality.
+
+MISSION: Run until the entire codebase is enterprise-ready or the session ends.
 "
 
-# Configuration
-LOG_FILE="logs/architect_agent.log"
-mkdir -p logs
-
-echo "🚀 Launching Autonomous Architect Agent..."
-echo "📝 Logs will be written to: $LOG_FILE"
-echo "⚠️  Press Ctrl+C to stop at any time."
-
-# Use 'expect' to handle occasional interactive prompts if they occur
-# even in --full-auto mode, or simply pipe empty inputs.
-# However, Codex CLI --full-auto is usually enough.
-# We will use 'expect' to ensure that if it stops for a prompt, we press Enter.
-
-if ! command -v expect &> /dev/null; then
-    echo "ℹ️  'expect' not found. Installing via brew for automation..."
-    brew install expect
+# Cleanup existing stale agent processes
+STALE_PIDS=$(pgrep -f "codex.*architect_agent.sh" | grep -v $$)
+if [ -n "$STALE_PIDS" ]; then
+    echo "🧹 Cleaning up stale agent processes..."
+    kill $STALE_PIDS 2>/dev/null || true
 fi
 
-cat <<EOF > .architect_expect.exp
-set timeout -1
-spawn codex --full-auto "$MASTER_DIRECTIVE"
-expect {
-    "Are you sure?" { send "\r"; exp_continue }
-    "Press Enter to continue" { send "\r"; exp_continue }
-    "Continue?" { send "\r"; exp_continue }
-    eof
-}
-EOF
+echo "🚀 Launching Atomic Infinite Architect Mode (V10.1)..."
+echo "👑 Mandate: Atomic Domain Conversion + Zero Intervention"
+echo "🛡️ Safety: Prevents Pydantic V1/V2 version conflicts"
+echo "Focus: High-Impact Engineering & Logic Correctness"
+echo "⚠️  Press Ctrl+C to stop at any time."
+echo ""
 
-# Run using nohup for background persistence
-nohup expect .architect_expect.exp > "$LOG_FILE" 2>&1 &
-
-AGENT_PID=$!
-echo "✅ Agent started with PID: $AGENT_PID"
-echo "To follow the progress, run: tail -f $LOG_FILE"
-
-# Cleanup temporary expect script on exit
-trap "rm -f .architect_expect.exp" EXIT
+# Use codex exec in non-interactive mode
+codex exec --full-auto --color always "$MASTER_DIRECTIVE"

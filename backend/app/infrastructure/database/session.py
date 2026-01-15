@@ -79,6 +79,8 @@ if settings.DATABASE_URL.startswith("postgresql"):
             "pool_size": settings.DATABASE_POOL_SIZE,
             "max_overflow": settings.DATABASE_MAX_OVERFLOW,
             "pool_timeout": settings.DATABASE_POOL_TIMEOUT,
+            "pool_recycle": settings.DATABASE_POOL_RECYCLE,
+            "pool_use_lifo": settings.DATABASE_POOL_USE_LIFO,
         }
     )
 

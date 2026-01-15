@@ -7,7 +7,7 @@ ISO/IEC 25010: Maintainability, Security
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 5
     DATABASE_MAX_OVERFLOW: int = 2
     DATABASE_POOL_TIMEOUT: int = 30
+    DATABASE_POOL_RECYCLE: int = 1800  # Recycle connections every 30 minutes
+    DATABASE_POOL_USE_LIFO: bool = True  # Favor recently used connections
     DATABASE_PGBOUNCER: bool = False  # Set to True when using Supabase Transaction Mode (port 6543)
 
     @field_validator("DATABASE_URL")
@@ -120,8 +122,11 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:8080,https://eieconcierge.com,https://www.eieconcierge.com,https://api.eieconcierge.com"
     )
     CORS_ALLOW_CREDENTIALS: bool = True
-    CORS_ALLOW_METHODS: str = Field(default="*")
-    CORS_ALLOW_HEADERS: str = Field(default="*")
+    CORS_ALLOW_METHODS: str = Field(default="GET,POST,PUT,PATCH,DELETE,OPTIONS")
+    CORS_ALLOW_HEADERS: str = Field(
+        default="Authorization,Content-Type,Accept,Origin,X-Requested-With,X-Request-ID"
+    )
+    CORS_EXPOSE_HEADERS: str = Field(default="X-Request-ID,X-App-Version,Content-Disposition")
 
     # ==========================================================================
     # Trusted Hosts
@@ -170,6 +175,12 @@ class Settings(BaseSettings):
             return [header.strip() for header in v.split(",") if header.strip()]
         return ["*"]
 
+    @field_validator("CORS_EXPOSE_HEADERS")
+    @classmethod
+    def parse_cors_expose_headers(cls, v: str) -> list[str]:
+        """Parse CORS expose headers."""
+        return cls.parse_cors_headers(v)
+
     @field_validator("TRUSTED_HOSTS")
     @classmethod
     def parse_trusted_hosts(cls, v: str) -> list[str]:
@@ -181,6 +192,14 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [host.strip() for host in v.split(",") if host.strip()]
         return ["localhost", "127.0.0.1"]
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        """Enforce secure configuration in production."""
+        if self.APP_ENV == "production":
+            if self.SECRET_KEY == "dev-secret-key-change-in-production":
+                raise ValueError("SECRET_KEY must be set to a secure value in production")
+        return self
 
     # ==========================================================================
     # Rate Limiting
@@ -278,12 +297,6 @@ class Settings(BaseSettings):
     OTEL_ENABLED: bool = False
     OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
 
-    # Slack Webhook for Alerts
-    SLACK_WEBHOOK_URL: str = Field(
-        default="",
-        description="Slack webhook URL for monitoring alerts",
-    )
-
     # ==========================================================================
     # Feature Flags
     # ==========================================================================
@@ -298,7 +311,7 @@ class Settings(BaseSettings):
     # ==========================================================================
     SLACK_WEBHOOK_URL: str | None = Field(
         default=None,
-        description="Slack Webhook URL for notifications",
+        description="Slack Webhook URL for alerts and notifications",
     )
 
     # ==========================================================================

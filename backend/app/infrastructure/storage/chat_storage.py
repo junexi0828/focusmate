@@ -1,10 +1,10 @@
 """File upload service for chat attachments."""
 
-from typing import List, Tuple, Union
 import uuid
 from pathlib import Path
 
 from fastapi import UploadFile
+import anyio
 
 
 import logging
@@ -41,9 +41,8 @@ class ChatFileUploadService:
     def validate_file(self, file: UploadFile) -> tuple[bool, str]:
         """Validate uploaded file."""
         # Check file type
-        if file.content_type not in (
-            self.Union[allowed_image_types, self].allowed_file_types
-        ):
+        allowed_types = self.allowed_image_types | self.allowed_file_types
+        if file.content_type not in allowed_types:
             return False, f"File type {file.content_type} not allowed"
 
         # Check file size
@@ -89,8 +88,7 @@ class ChatFileUploadService:
                 f"File size {len(content)} exceeds maximum {max_size} bytes"
             )
 
-        with open(file_path, "wb") as f:
-            f.write(content)
+        await anyio.to_thread.run_sync(file_path.write_bytes, content)
 
         # Generate URL
         relative_path = file_path.relative_to(self.upload_dir)

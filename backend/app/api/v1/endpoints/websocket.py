@@ -286,7 +286,7 @@ async def websocket_endpoint(
                         elif message_type == "timer_resume":
                             timer_state = await timer_service.resume_timer(room_id)
                         elif message_type == "timer_reset":
-                            timer_state = await timer_service.reset_timer(room_id)
+                            timer_state = await timer_service.reset_timer(room_id, db=db)
                         elif message_type == "timer_complete":
                             timer = await timer_service.timer_repo.get_by_room_id(room_id)
                             if not timer:
@@ -302,14 +302,8 @@ async def websocket_endpoint(
                             timer_state = await timer_service.complete_phase(
                                 room_id,
                                 completed_at=completion_time,
+                                db=db,
                             )
-                            if timer.phase == TimerPhase.WORK.value:
-                                await timer_service.record_work_sessions_for_timer(
-                                    db,
-                                    timer,
-                                    room,
-                                    completion_time,
-                                )
                     except InvalidTimerStateException:
                         timer_state = await timer_service.get_timer_state(room_id, db=db)
 

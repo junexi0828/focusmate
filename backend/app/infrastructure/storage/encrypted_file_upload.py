@@ -1,6 +1,7 @@
 """Encrypted file upload service for verification documents."""
 
-from typing import List
+import asyncio
+import logging
 import uuid
 from pathlib import Path
 
@@ -8,9 +9,6 @@ from fastapi import UploadFile
 
 from app.infrastructure.storage.file_upload import FileUploadService
 from app.shared.utils.encryption import get_encryption_service
-
-
-import logging
 
 class EncryptedFileUploadService(FileUploadService):
     """File upload service with encryption support."""
@@ -43,15 +41,16 @@ class EncryptedFileUploadService(FileUploadService):
             raise ValueError(error_msg)
 
         # Generate unique filename
-        file_ext = Path(file.filename).suffix.lower()
-        unique_filename = f"{user_id}_{uuid.uuid4().hex}{file_ext}"
+        file_ext = Path(file.filename or "upload").suffix.lower()
+        safe_user_id = self._safe_dir_name(user_id)
+        unique_filename = f"{safe_user_id}_{uuid.uuid4().hex}{file_ext}"
 
         # Create user directory
-        user_dir = self.upload_dir / user_id
+        user_dir = self.upload_dir / safe_user_id
         user_dir.mkdir(parents=True, exist_ok=True)
 
         # Read file content
-        content = await file.read()
+        content = await self._read_with_limit(file)
 
         # Encrypt if enabled
         if self.encrypt and self.encryption_service:
@@ -61,8 +60,7 @@ class EncryptedFileUploadService(FileUploadService):
 
         # Save file
         file_path = user_dir / unique_filename
-        with open(file_path, "wb") as f:
-            f.write(content)
+        await self._write_file(file_path, content)
 
         # Return relative path
         return str(file_path.relative_to(self.upload_dir.parent))
@@ -80,13 +78,12 @@ class EncryptedFileUploadService(FileUploadService):
         Raises:
             ValueError: If decryption fails
         """
-        full_path = self.upload_dir.parent / file_path
+        full_path = self._resolve_relative_path(file_path)
 
-        if not full_path.exists():
+        if not full_path.exists() or not full_path.is_file():
             raise ValueError(f"File not found: {file_path}")
 
-        with open(full_path, "rb") as f:
-            content = f.read()
+        content = await asyncio.to_thread(full_path.read_bytes)
 
         # Decrypt if file is encrypted and decryption is requested
         if decrypt and file_path.endswith(".encrypted") and self.encryption_service:
@@ -116,8 +113,9 @@ class EncryptedFileUploadService(FileUploadService):
                 file_paths.append(file_path)
             except ValueError as e:
                 # Log error but continue with other files
-                logging.getLogger(__name__).error(f"Error saving file {file.filename}: {e}")
+                logging.getLogger(__name__).error(
+                    "Error saving file %s: %s", file.filename, e
+                )
                 continue
 
         return file_paths
-

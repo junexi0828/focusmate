@@ -5,12 +5,14 @@ Uses Fernet symmetric encryption from the encryption service.
 """
 
 from collections.abc import Callable
+from pathlib import Path
 
 from fastapi import Request, Response, UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from app.shared.utils.encryption import get_encryption_service
+import anyio
 
 
 class FileEncryptionMiddleware(BaseHTTPMiddleware):
@@ -116,9 +118,8 @@ async def decrypt_file_response(file_path: str) -> bytes:
     """
     encryption_service = get_encryption_service()
 
-    # Read encrypted file
-    with open(file_path, "rb") as f:
-        encrypted_content = f.read()
+    # Read encrypted file without blocking the event loop
+    encrypted_content = await anyio.to_thread.run_sync(Path(file_path).read_bytes)
 
     # Decrypt
     decrypted_content = encryption_service.decrypt(encrypted_content)

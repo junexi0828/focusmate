@@ -17,6 +17,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 PROJECT_DIR = Path("/volume1/web/focusmate-backend")
 WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")  # .env에서 로드하거나 환경변수로 설정
 PORT = 9000  # Webhook 리스너 포트
+MAX_PAYLOAD_BYTES = 1_000_000  # 1MB payload cap to avoid abuse
 
 
 class WebhookHandler(BaseHTTPRequestHandler):
@@ -29,12 +30,24 @@ class WebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """POST 요청 처리 (GitHub webhook)."""
         try:
+            if not WEBHOOK_SECRET:
+                self.log_message("❌ Webhook secret not configured")
+                self.send_response(503)
+                self.end_headers()
+                self.wfile.write(b"Webhook secret not configured")
+                return
+
             # Content-Length 확인
             content_length = int(self.headers.get("Content-Length", 0))
             if content_length == 0:
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(b"Empty payload")
+                return
+            if content_length > MAX_PAYLOAD_BYTES:
+                self.send_response(413)
+                self.end_headers()
+                self.wfile.write(b"Payload too large")
                 return
 
             # Payload 읽기
@@ -43,21 +56,27 @@ class WebhookHandler(BaseHTTPRequestHandler):
 
             # GitHub Signature 확인 (보안)
             github_signature = self.headers.get("X-Hub-Signature-256", "")
-            if WEBHOOK_SECRET and github_signature:
-                expected_signature = (
-                    "sha256="
-                    + hmac.new(
-                        WEBHOOK_SECRET.encode(),
-                        payload,
-                        hashlib.sha256,
-                    ).hexdigest()
-                )
-                if not hmac.compare_digest(github_signature, expected_signature):
-                    self.log_message("❌ Invalid signature")
-                    self.send_response(401)
-                    self.end_headers()
-                    self.wfile.write(b"Invalid signature")
-                    return
+            if not github_signature:
+                self.log_message("❌ Missing signature")
+                self.send_response(401)
+                self.end_headers()
+                self.wfile.write(b"Missing signature")
+                return
+
+            expected_signature = (
+                "sha256="
+                + hmac.new(
+                    WEBHOOK_SECRET.encode(),
+                    payload,
+                    hashlib.sha256,
+                ).hexdigest()
+            )
+            if not hmac.compare_digest(github_signature, expected_signature):
+                self.log_message("❌ Invalid signature")
+                self.send_response(401)
+                self.end_headers()
+                self.wfile.write(b"Invalid signature")
+                return
 
             # JSON 파싱
             try:

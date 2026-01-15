@@ -154,7 +154,7 @@ class RedisTimerListener:
                 # 1. State transition (Work -> Break)
                 # 2. Stats recording (calls record_work_sessions_for_timer)
                 # 3. Auto-start logic (is_auto_start check)
-                timer_state = await timer_service.complete_phase(room_id)
+                timer_state = await timer_service.complete_phase(room_id, db=db)
 
                 # Re-fetch timer to check previous phase for notification
                 # (complete_phase returns the NEXT phase state)

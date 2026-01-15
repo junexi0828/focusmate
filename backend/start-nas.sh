@@ -20,6 +20,7 @@ export PATH="/usr/local/bin:$PATH"
 # It will also start the server.
 
 set -e
+umask 027
 
 # Unset collision (legacy ghost variable)
 unset DATABASE_URL
@@ -167,13 +168,15 @@ export DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-10}
 export DATABASE_MAX_OVERFLOW=${DATABASE_MAX_OVERFLOW:-5}
 echo "   DB Pool: $DATABASE_POOL_SIZE (Overflow: $DATABASE_MAX_OVERFLOW)"
 
+FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:-127.0.0.1,::1}
+
 nohup $CONDA_PYTHON -m uvicorn app.main:app \
     --host 0.0.0.0 \
     --port 8000 \
     --workers $WORKERS \
     --timeout-keep-alive 75 \
     --proxy-headers \
-    --forwarded-allow-ips "*" \
+    --forwarded-allow-ips "$FORWARDED_ALLOW_IPS" \
     > logs/app.log 2>&1 &
 
 PID=$!

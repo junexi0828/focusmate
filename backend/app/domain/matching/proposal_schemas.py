@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # Proposal Schemas
@@ -25,8 +25,7 @@ class ProposalResponse(BaseModel):
     pool_a: Optional[dict] = None
     pool_b: Optional[dict] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 class ProposalAction(BaseModel):
@@ -47,8 +46,7 @@ class ChatRoomResponse(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 # Message Schemas
@@ -56,7 +54,7 @@ class MessageCreate(BaseModel):
     """Schema for creating a message."""
 
     content: str = Field(..., min_length=1, max_length=2000)
-    message_type: str = Field(default="text", pattern="^(Union[text, image]|system)$")
+    message_type: str = Field(default="text", pattern="^(text|image|system)$")
     attachments: List[str] | None = None
 
 
@@ -72,8 +70,7 @@ class MessageResponse(BaseModel):
     created_at: datetime
     deleted_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 class MessageListResponse(BaseModel):
@@ -97,5 +94,4 @@ class ChatMemberResponse(BaseModel):
     last_read_at: Optional[datetime]
     joined_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)

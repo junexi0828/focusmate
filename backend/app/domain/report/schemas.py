@@ -3,7 +3,7 @@
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 
@@ -36,8 +36,7 @@ class ReportResponse(BaseModel):
     reviewed_at: datetime | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, strict=True)
 
 
 class ReportUpdate(BaseModel):
@@ -45,4 +44,3 @@ class ReportUpdate(BaseModel):
 
     status: str | None = Field(None, description="Report status (pending, reviewed, resolved, dismissed)")
     admin_note: str | None = Field(None, max_length=1000, description="Admin note/response")
-

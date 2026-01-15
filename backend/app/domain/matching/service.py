@@ -32,12 +32,12 @@ class MatchingPoolService:
         self, creator_id: str, data: MatchingPoolCreate
     ) -> MatchingPoolResponse:
         """Create a new matching pool."""
-        # Check if creator is verified
-        creator_verification = await self.verification_repository.get_verification_by_user(
-            creator_id
-        )
-        if not creator_verification or creator_verification.verification_status != "approved":
-            raise ValueError("Creator must be verified")
+        member_ids = list(dict.fromkeys(data.member_ids))
+        if creator_id not in member_ids:
+            member_ids.append(creator_id)
+
+        if len(member_ids) < 2 or len(member_ids) > 8:
+            raise ValueError("Member count must be between 2 and 8")
 
         # Check if creator already has an active pool
         existing_pool = await self.pool_repository.get_pool_by_creator(creator_id)
@@ -45,31 +45,38 @@ class MatchingPoolService:
             raise ValueError("You already have an active pool")
 
         # Check if any member is already in a pool
-        for member_id in data.member_ids:
-            member_pool = await self.pool_repository.get_user_active_pool(member_id)
-            if member_pool:
-                raise ValueError(f"Member {member_id} is already in another pool")
-
-        # Verify all members
-        verifications = []
-        for member_id in data.member_ids:
-            verification = await self.verification_repository.get_verification_by_user(
-                member_id
+        active_pools = await self.pool_repository.get_active_pools_for_members(
+            member_ids
+        )
+        if active_pools:
+            active_pool = active_pools[0]
+            conflict_ids = {active_pool.creator_id} | set(active_pool.member_ids)
+            conflict_member = next(iter(conflict_ids & set(member_ids)), None)
+            raise ValueError(
+                f"Member {conflict_member or creator_id} is already in another pool"
             )
-            if not verification or verification.verification_status != "approved":
-                raise ValueError(f"Member {member_id} is not verified")
-            verifications.append(verification)
 
-        # Get creator's verification for pool info
-        creator_verification = verifications[
-            data.member_ids.index(creator_id)
-        ] if creator_id in data.member_ids else creator_verification
+        # Verify all members in batch
+        verifications = await self.verification_repository.get_verifications_by_user_ids(
+            member_ids
+        )
+        verification_map = {verification.user_id: verification for verification in verifications}
+        missing_ids = [member_id for member_id in member_ids if member_id not in verification_map]
+        if missing_ids:
+            raise ValueError(f"Member {missing_ids[0]} is not verified")
+
+        for member_id in member_ids:
+            verification = verification_map[member_id]
+            if verification.verification_status != "approved":
+                raise ValueError(f"Member {member_id} is not verified")
+
+        creator_verification = verification_map[creator_id]
 
         # Create pool data
         pool_data = {
             "creator_id": creator_id,
-            "member_count": len(data.member_ids),
-            "member_ids": data.member_ids,
+            "member_count": len(member_ids),
+            "member_ids": member_ids,
             "department": creator_verification.department,
             "grade": creator_verification.grade,
             "gender": creator_verification.gender,

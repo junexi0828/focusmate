@@ -346,14 +346,10 @@ async def complete_phase(
         next_session_type = "break" if completed_session_type == "work" else "work"
 
         completion_time = timer.completed_at or datetime.now(UTC)
-        timer_response = await service.complete_phase(room_id, completed_at=completion_time)
-
-        # ✅ 자동 세션 기록: WORK/BREAK 단계 완료 시 세션 기록
-        await service.record_work_sessions_for_timer(
-            db,
-            timer,
-            room,
-            completion_time,
+        timer_response = await service.complete_phase(
+            room_id,
+            completed_at=completion_time,
+            db=db,
         )
 
     except RoomNotFoundException as e:
