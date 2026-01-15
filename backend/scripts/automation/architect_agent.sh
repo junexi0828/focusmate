@@ -73,11 +73,23 @@ echo $$ > "$AGENT_PID_FILE"
 while true; do
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🔄 Starting new Reasoning Cycle..." | tee -a "$LOG_FILE"
 
-    # Use codex exec in non-interactive mode and append all output to log
-    # We use 'tee -a' so it shows in terminal AND saved to file
-    codex exec --full-auto --color always "$MASTER_DIRECTIVE" 2>&1 | tee -a "$LOG_FILE"
+    # Capture output in a temporary file to check for specific error patterns
+    TEMP_OUT=$(mktemp)
+    codex exec --full-auto --color always "$MASTER_DIRECTIVE" 2>&1 | tee "$TEMP_OUT"
+    EXIT_CODE=${PIPESTATUS[0]}
 
-    EXIT_CODE=${PIPESTATUS[0]} # Get exit code of codex exec, not tee
+    # Append temp output to official log
+    cat "$TEMP_OUT" >> "$LOG_FILE"
+
+    # Check for usage limit errors
+    if grep -Ei "usage limit|limit has been reached" "$TEMP_OUT" > /dev/null; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🛑 Usage limit reached. Stopping Agent loop for today." | tee -a "$LOG_FILE"
+        rm -f "$TEMP_OUT"
+        rm -f "$AGENT_PID_FILE"
+        exit 0
+    fi
+    rm -f "$TEMP_OUT"
+
     if [ $EXIT_CODE -eq 0 ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ Cycle completed. Resting for 4 hours (NAS-Friendly Mode)..." | tee -a "$LOG_FILE"
         sleep 14400
