@@ -41,8 +41,13 @@ class RedisTimerListener:
         try:
             self.redis = aioredis.from_url(
                 settings.REDIS_URL,
-                decode_responses=True,
-                encoding="utf-8"
+                decode_responses=settings.REDIS_DECODE_RESPONSES,
+                encoding="utf-8",
+                max_connections=settings.REDIS_MAX_CONNECTIONS,
+                socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+                socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+                retry_on_timeout=settings.REDIS_RETRY_ON_TIMEOUT,
+                health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
             )
 
             # Enable keyspace notifications for expired events

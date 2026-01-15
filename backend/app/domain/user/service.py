@@ -328,7 +328,7 @@ FocusMate 팀
             "state": data.state or "",
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 token_response = await client.post(token_url, params=token_params)
                 token_response.raise_for_status()
