@@ -18,7 +18,6 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -217,12 +216,6 @@ app = FastAPI(
     redirect_slashes=False,  # Disable automatic trailing slash redirects to prevent CORS issues
 )
 
-# Proxy headers middleware - trust reverse proxy headers for scheme/IP resolution
-if settings.TRUST_PROXY_HEADERS:
-    app.add_middleware(
-        ProxyHeadersMiddleware,
-        trusted_hosts=settings.TRUSTED_HOSTS,
-    )
 
 # Request logging middleware - adds request ID and logs requests
 # Should be added early to track all requests
