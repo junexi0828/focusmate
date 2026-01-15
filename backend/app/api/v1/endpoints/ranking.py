@@ -5,7 +5,7 @@ import logging
 from typing import Annotated, List, Literal, Optional, Union
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from app.api.deps import DatabaseSession, get_current_user
 from app.core.rbac import require_admin
@@ -667,7 +667,7 @@ async def upload_verification_documents(
     team_id: UUID,
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    files: List[UploadFile],
+    files: List[UploadFile] = File(...),
 ) -> dict:
     """Upload verification documents (leader only)."""
     from app.infrastructure.storage.file_upload import FileUploadService

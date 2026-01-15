@@ -191,6 +191,7 @@ async def process_due_reservations(
 @router.post("/send-notifications", response_model=dict)
 async def send_notifications(
     service: Annotated[RoomReservationService, Depends(get_room_reservation_service)],
+    db: DatabaseSession,
 ) -> dict:
     """Send notifications for upcoming reservations.
 
@@ -200,42 +201,38 @@ async def send_notifications(
         reservations = await service.get_reservations_needing_notification()
         sent_count = 0
 
-        from app.infrastructure.database.session import get_db
+        notification_repo = NotificationRepository(db)
+        settings_repo = UserSettingsRepository(db)
+        user_repo = UserRepository(db)
+        notification_service = NotificationService(
+            notification_repo,
+            settings_repo,
+            user_repo,
+        )
 
-        async for db in get_db():
-            notification_repo = NotificationRepository(db)
-            settings_repo = UserSettingsRepository(db)
-            user_repo = UserRepository(db)
-            notification_service = NotificationService(
-                notification_repo,
-                settings_repo,
-                user_repo,
-            )
-
-            for reservation in reservations:
-                try:
-                    scheduled_time = reservation.scheduled_at.astimezone(UTC).strftime("%m/%d %H:%M")
-                    notification_data = NotificationCreate(
-                        user_id=reservation.user_id,
-                        type="reservation",
-                        title="방 예약 알림",
-                        message=f"{scheduled_time} 예약이 곧 시작됩니다.",
-                        data={
-                            "routing": {
-                                "type": "route",
-                                "path": "/reservations",
-                            },
-                            "reservation_id": reservation.id,
+        for reservation in reservations:
+            try:
+                scheduled_time = reservation.scheduled_at.astimezone(UTC).strftime("%m/%d %H:%M")
+                notification_data = NotificationCreate(
+                    user_id=reservation.user_id,
+                    type="reservation",
+                    title="방 예약 알림",
+                    message=f"{scheduled_time} 예약이 곧 시작됩니다.",
+                    data={
+                        "routing": {
+                            "type": "route",
+                            "path": "/reservations",
                         },
-                    )
-                    await notification_service.create_notification(notification_data)
-                    await service.mark_notification_sent(reservation.id)
-                    sent_count += 1
-                except Exception as e:
-                    logging.getLogger(__name__).error(
-                        f"Error sending notification for reservation {reservation.id}: {e}"
-                    )
-            break
+                        "reservation_id": reservation.id,
+                    },
+                )
+                await notification_service.create_notification(notification_data)
+                await service.mark_notification_sent(reservation.id)
+                sent_count += 1
+            except Exception as e:
+                logging.getLogger(__name__).error(
+                    f"Error sending notification for reservation {reservation.id}: {e}"
+                )
 
         return {
             "status": "success",
