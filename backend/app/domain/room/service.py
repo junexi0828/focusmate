@@ -127,49 +127,46 @@ class RoomService:
         if work_duration_changed or break_duration_changed:
             try:
                 from app.domain.timer.service import TimerService
-                from app.infrastructure.database.session import get_db
                 from app.infrastructure.repositories.timer_repository import TimerRepository
 
-                # Get timer repository and service
-                async for db in get_db():
-                    timer_repo = TimerRepository(db)
-                    timer_service = TimerService(timer_repo, self.repository)
+                # Reuse the existing request session to keep updates atomic.
+                timer_repo = TimerRepository(self.repository.db)
+                timer_service = TimerService(timer_repo, self.repository)
 
-                    # Update timer durations
-                    timer = await timer_repo.get_by_room_id(room_id)
-                    if timer:
-                        # Update duration based on current phase
+                # Update timer durations
+                timer = await timer_repo.get_by_room_id(room_id)
+                if timer:
+                    # Update duration based on current phase
+                    if timer.phase == "work" and work_duration_changed:
+                        # If timer is running, adjust remaining_seconds proportionally
+                        if timer.status == "running" and timer.duration > 0:
+                            # Calculate new remaining_seconds based on ratio
+                            ratio = (room.work_duration * 60) / timer.duration
+                            timer.remaining_seconds = int(timer.remaining_seconds * ratio)
+                        timer.duration = room.work_duration * 60
+                        timer.remaining_seconds = min(timer.remaining_seconds, room.work_duration * 60)
+                    elif timer.phase == "break" and break_duration_changed:
+                        # If timer is running, adjust remaining_seconds proportionally
+                        if timer.status == "running" and timer.duration > 0:
+                            # Calculate new remaining_seconds based on ratio
+                            ratio = (room.break_duration * 60) / timer.duration
+                            timer.remaining_seconds = int(timer.remaining_seconds * ratio)
+                        timer.duration = room.break_duration * 60
+                        timer.remaining_seconds = min(timer.remaining_seconds, room.break_duration * 60)
+                    if timer.status == "idle":
+                        # If idle, update duration for next phase
                         if timer.phase == "work" and work_duration_changed:
-                            # If timer is running, adjust remaining_seconds proportionally
-                            if timer.status == "running" and timer.duration > 0:
-                                # Calculate new remaining_seconds based on ratio
-                                ratio = (room.work_duration * 60) / timer.duration
-                                timer.remaining_seconds = int(timer.remaining_seconds * ratio)
                             timer.duration = room.work_duration * 60
-                            timer.remaining_seconds = min(timer.remaining_seconds, room.work_duration * 60)
+                            timer.remaining_seconds = room.work_duration * 60
                         elif timer.phase == "break" and break_duration_changed:
-                            # If timer is running, adjust remaining_seconds proportionally
-                            if timer.status == "running" and timer.duration > 0:
-                                # Calculate new remaining_seconds based on ratio
-                                ratio = (room.break_duration * 60) / timer.duration
-                                timer.remaining_seconds = int(timer.remaining_seconds * ratio)
                             timer.duration = room.break_duration * 60
-                            timer.remaining_seconds = min(timer.remaining_seconds, room.break_duration * 60)
-                        if timer.status == "idle":
-                            # If idle, update duration for next phase
-                            if timer.phase == "work" and work_duration_changed:
-                                timer.duration = room.work_duration * 60
-                                timer.remaining_seconds = room.work_duration * 60
-                            elif timer.phase == "break" and break_duration_changed:
-                                timer.duration = room.break_duration * 60
-                                timer.remaining_seconds = room.break_duration * 60
+                            timer.remaining_seconds = room.break_duration * 60
 
-                        # Sync auto_start setting
-                        if data.auto_start_break is not None:
-                            timer.is_auto_start = data.auto_start_break
+                    # Sync auto_start setting
+                    if data.auto_start_break is not None:
+                        timer.is_auto_start = data.auto_start_break
 
-                        await timer_repo.update(timer)
-                    break
+                    await timer_repo.update(timer)
             except Exception as e:
                 # Log error but don't fail room update
                 import logging

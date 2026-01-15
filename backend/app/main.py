@@ -269,9 +269,9 @@ if settings.RATE_LIMIT_ENABLED:
 # CORS middleware - must be added before routes
 # This ensures OPTIONS preflight requests are handled correctly
 # Allow ngrok URLs in development using regex pattern (fixed regex)
-ngrok_regex = r"https://.*\.ngrok(-free)?\.(app|io)"
+ngrok_regex = r"^https://.*\.ngrok(-free)?\.(app|io)$"
 # Allow production frontend origins by regex (covers apex and subdomains)
-prod_origin_regex = r"https://(.*\.)?eieconcierge\.com"
+prod_origin_regex = r"^https://(.*\.)?eieconcierge\.com$"
 # Prefer explicit config, otherwise pick by environment
 origin_regex = settings.CORS_ORIGIN_REGEX
 if not origin_regex:
@@ -337,7 +337,7 @@ async def cors_fallback(request: Request, call_next):  # type: ignore[override]
         allowed = True
     if not allowed and origin_regex:
         try:
-            if re.match(origin_regex, origin):
+            if re.fullmatch(origin_regex, origin):
                 allowed = True
         except re.error:
             allowed = False
@@ -366,7 +366,7 @@ def _add_cors_headers(headers: dict, request: Request) -> None:
         headers["Access-Control-Allow-Origin"] = origin
     elif origin_regex:
         try:
-            if re.match(origin_regex, origin):
+            if re.fullmatch(origin_regex, origin):
                 headers["Access-Control-Allow-Origin"] = origin
         except re.error:
             return

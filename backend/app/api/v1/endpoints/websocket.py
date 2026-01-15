@@ -5,13 +5,12 @@ import asyncio
 
 from typing import Any
 from uuid import UUID
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt, JWTError
 
 from app.core.exceptions import InvalidTimerStateException, RoomNotFoundException, TimerNotFoundException
 from app.infrastructure.websocket.chat_manager import connection_manager
-from app.infrastructure.database.session import get_db
 from app.infrastructure.repositories.room_repository import RoomRepository
 from app.infrastructure.repositories.timer_repository import TimerRepository
 from app.infrastructure.repositories.user_repository import UserRepository
@@ -132,22 +131,23 @@ async def websocket_endpoint(
             chat_service = RoomChatService()
             participant_repo = ParticipantRepository(db)
             is_participant = False
+            from app.infrastructure.redis.session_helpers import track_user_activity
 
-        # Send welcome message
-        await connection_manager.send_personal_message(
-            {
-                "event": "connected",
-                "data": {
-                    "room_id": room_id,
-                    "message": "Connected to room",
-                    "user_id": current_user.id,
+            # Send welcome message
+            await connection_manager.send_personal_message(
+                {
+                    "event": "connected",
+                    "data": {
+                        "room_id": room_id,
+                        "message": "Connected to room",
+                        "user_id": current_user.id,
+                    },
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-            websocket,
-        )
+                websocket,
+            )
 
-        # Mark participant as connected (non-critical, don't fail connection if this fails)
+            # Mark participant as connected (non-critical, don't fail connection if this fails)
             participant_count = 1
             try:
                 participant = await participant_repo.get_by_user_and_room(
@@ -160,39 +160,39 @@ async def websocket_endpoint(
             except Exception as e:
                 logger.warning(f"[Room WS] Failed to mark participant connected: {e}")
 
-        # Send recent chat backfill (best effort)
-        try:
-            recent_messages = await get_recent_messages(room_id)
-            if recent_messages:
-                await connection_manager.send_personal_message(
-                    {
-                        "event": "chat_backfill",
-                        "data": {"messages": recent_messages},
-                        "timestamp": datetime.now(UTC).isoformat(),
-                    },
-                    websocket,
-                )
-        except Exception as e:
-            logger.debug(f"[Room WS] Chat backfill failed: {e}")
+            # Send recent chat backfill (best effort)
+            try:
+                recent_messages = await get_recent_messages(room_id)
+                if recent_messages:
+                    await connection_manager.send_personal_message(
+                        {
+                            "event": "chat_backfill",
+                            "data": {"messages": recent_messages},
+                            "timestamp": datetime.now(UTC).isoformat(),
+                        },
+                        websocket,
+                    )
+            except Exception as e:
+                logger.debug(f"[Room WS] Chat backfill failed: {e}")
 
-        # Notify others of new connection (Global Broadcast)
-        try:
-            await redis_pubsub_manager.publish_event(
-                UUID(room_id),
-                "participant_update",
-                {
-                    "action": "joined",
-                    "participant": {
-                        "id": current_user.id,
-                        "username": current_user.username,
-                        "name": current_user.name,
+            # Notify others of new connection (Global Broadcast)
+            try:
+                await redis_pubsub_manager.publish_event(
+                    UUID(room_id),
+                    "participant_update",
+                    {
+                        "action": "joined",
+                        "participant": {
+                            "id": current_user.id,
+                            "username": current_user.username,
+                            "name": current_user.name,
+                        },
+                        "current_count": participant_count,
+                        "room_id": room_id,
                     },
-                    "current_count": participant_count,
-                    "room_id": room_id,
-                },
-            )
-        except Exception as e:
-            logger.warning(f"[Room WS] Failed to publish participant join event: {e}")
+                )
+            except Exception as e:
+                logger.warning(f"[Room WS] Failed to publish participant join event: {e}")
 
             while True:
                 try:

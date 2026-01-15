@@ -105,3 +105,12 @@ if [ "$backend_running" != true ]; then
         send_slack "error" "Watchdog Error" "start-nas.sh not found at $BACKEND_DIR"
     fi
 fi
+
+# 5. Log Rotation (Cleanup logs older than 3 days)
+# We keep 3 days of logs to balance disk space and audit needs
+if [ -d "$BACKEND_DIR/logs" ]; then
+    find "$BACKEND_DIR/logs" -name "*.log" -mtime +3 -delete
+fi
+
+# Final status
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Monitoring check completed."

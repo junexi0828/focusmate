@@ -7,6 +7,15 @@
 # Continuity. The agent now auto-restarts after each comprehensive sweep.
 # =============================================================================
 
+# Determine the directory of the script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+LOG_DIR="$BACKEND_DIR/logs"
+LOG_FILE="$LOG_DIR/architect_agent_history.log"
+
+# Ensure log directory exists
+mkdir -p "$LOG_DIR"
+
 # Define the Master Directive
 MASTER_DIRECTIVE="
 You are the Infinite Architect. Your mission is a Zero-Intervention, High-Impact audit and overhaul of the FocusMate project.
@@ -59,16 +68,18 @@ echo ""
 
 # Infinite reasoning loop
 while true; do
-    echo "🔄 Starting new Reasoning Cycle..."
-    # Use codex exec in non-interactive mode
-    codex exec --full-auto --color always "$MASTER_DIRECTIVE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🔄 Starting new Reasoning Cycle..." | tee -a "$LOG_FILE"
 
-    EXIT_CODE=$?
+    # Use codex exec in non-interactive mode and append all output to log
+    # We use 'tee -a' so it shows in terminal AND saved to file
+    codex exec --full-auto --color always "$MASTER_DIRECTIVE" 2>&1 | tee -a "$LOG_FILE"
+
+    EXIT_CODE=${PIPESTATUS[0]} # Get exit code of codex exec, not tee
     if [ $EXIT_CODE -eq 0 ]; then
-        echo "✅ Cycle completed. Resting for 30s before the next sweep..."
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ Cycle completed. Resting for 30s..." | tee -a "$LOG_FILE"
         sleep 30
     else
-        echo "⚠️  Cycle exited with code $EXIT_CODE. Restarting in 10s..."
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️  Cycle exited with code $EXIT_CODE. Restarting in 10s..." | tee -a "$LOG_FILE"
         sleep 10
     fi
 done
