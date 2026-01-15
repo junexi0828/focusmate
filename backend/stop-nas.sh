@@ -197,3 +197,26 @@ if [ -f "$TUNNEL_PID_FILE" ]; then
     fi
 fi
 
+# Architect Agent 중지
+AGENT_PID_FILE="$PROJECT_DIR/architect_agent.pid"
+if [ -f "$AGENT_PID_FILE" ]; then
+    AGENT_PID=$(cat "$AGENT_PID_FILE" 2>/dev/null || echo "")
+    if [ -n "$AGENT_PID" ] && ps -p "$AGENT_PID" > /dev/null 2>&1; then
+        echo "🛑 Architect Agent (PID: $AGENT_PID) 중지 중..."
+        # 프로세스 그룹 전체 종료 시도 (codex exec 포함)
+        AGENT_PGID=$(ps -p "$AGENT_PID" -o pgid= 2>/dev/null | tr -d ' ' || echo "")
+        if [ -n "$AGENT_PGID" ] && [ "$AGENT_PGID" != "0" ]; then
+            kill -TERM -"$AGENT_PGID" 2>/dev/null || kill "$AGENT_PID" 2>/dev/null || true
+        else
+            kill "$AGENT_PID" 2>/dev/null || true
+        fi
+        sleep 1
+        if ps -p "$AGENT_PID" > /dev/null 2>&1; then
+            kill -9 "$AGENT_PID" 2>/dev/null || true
+        fi
+        rm -f "$AGENT_PID_FILE"
+        echo "✅ Architect Agent가 중지되었습니다."
+    else
+        rm -f "$AGENT_PID_FILE"
+    fi
+fi

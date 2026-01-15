@@ -66,6 +66,9 @@ echo "Focus: High-Impact Engineering & Continuous Codebase Evolution"
 echo "⚠️  Press Ctrl+C to stop at any time."
 echo ""
 
+AGENT_PID_FILE="$BACKEND_DIR/architect_agent.pid"
+echo $$ > "$AGENT_PID_FILE"
+
 # Infinite reasoning loop
 while true; do
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🔄 Starting new Reasoning Cycle..." | tee -a "$LOG_FILE"
