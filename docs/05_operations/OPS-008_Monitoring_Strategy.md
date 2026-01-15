@@ -16,7 +16,7 @@ We classify monitoring signals into three distinct tracks to ensure high availab
 
 ### Track B: Periodic Infrastructure Monitoring (Watchdog) 🐕
 *   **Purpose:** Ensure system resources (CPU, RAM) are healthy and backend services are alive.
-*   **Execution**: Scheduled Task (Synology Task Scheduler - Every 5-10m).
+*   **Execution**: Scheduled Task (Synology Task Scheduler - Every 4 Hours).
 *   **Component**:
     -   **NAS Monitor (`nas_monitor.sh`)**: Checks if the backend PID is alive and port 8000 is responsive. Automatically attempts restart if service is down.
 
@@ -41,7 +41,7 @@ Register the following in **Synology Control Panel -> Task Scheduler**:
 
 | Task Name | Schedule | Command |
 | :--- | :--- | :--- |
-| **FocusMate Watchdog** | Every 5 min | `bash /volume1/web/focusmate-backend/scripts/monitoring/nas_monitor.sh` |
+| **FocusMate Watchdog** | Every 4 Hours | `bash /volume1/web/focusmate-backend/scripts/monitoring/nas_monitor.sh` |
 | **FocusMate Daily** | Daily (00:00) | `/volume1/web/miniconda3/envs/focusmate_env/bin/python /volume1/web/focusmate-backend/scripts/monitoring/daily_health_report.py` |
 
 ---
