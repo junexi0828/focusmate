@@ -18,19 +18,16 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.core.config import settings
 
 
-async def check_alembic_version_table() -> bool:
-    """Check if alembic_version table exists."""
-    # Detect PgBouncer/Transaction mode (port 6543)
-    is_pgbouncer = settings.DATABASE_PGBOUNCER or "6543" in settings.DATABASE_URL
+    # Administrative checks should use Session Pooler (5432) to avoid PgBouncer issues
+    db_url = settings.DATABASE_URL.replace(":6543/", ":5432/")
 
     connect_args = {}
-    if is_pgbouncer:
-        # Aggressively disable all statement caching for PgBouncer
-        connect_args["statement_cache_size"] = 0
-        connect_args["prepared_statement_cache_size"] = 0
+    # Even on 5432, we disable cache to be absolutely safe during migrations
+    connect_args["statement_cache_size"] = 0
+    connect_args["prepared_statement_cache_size"] = 0
 
     engine = create_async_engine(
-        settings.DATABASE_URL,
+        db_url,
         pool_pre_ping=True,
         echo=False,
         connect_args=connect_args,
@@ -52,19 +49,16 @@ async def check_alembic_version_table() -> bool:
         await engine.dispose()
 
 
-async def check_tables_exist() -> bool:
-    """Check if any application tables exist."""
-    # Detect PgBouncer/Transaction mode (port 6543)
-    is_pgbouncer = settings.DATABASE_PGBOUNCER or "6543" in settings.DATABASE_URL
+    # Administrative checks should use Session Pooler (5432) to avoid PgBouncer issues
+    db_url = settings.DATABASE_URL.replace(":6543/", ":5432/")
 
     connect_args = {}
-    if is_pgbouncer:
-        # Aggressively disable all statement caching for PgBouncer
-        connect_args["statement_cache_size"] = 0
-        connect_args["prepared_statement_cache_size"] = 0
+    # Even on 5432, we disable cache to be absolutely safe during migrations
+    connect_args["statement_cache_size"] = 0
+    connect_args["prepared_statement_cache_size"] = 0
 
     engine = create_async_engine(
-        settings.DATABASE_URL,
+        db_url,
         pool_pre_ping=True,
         echo=False,
         connect_args=connect_args,
