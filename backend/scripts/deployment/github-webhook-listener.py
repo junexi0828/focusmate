@@ -2,6 +2,8 @@
 """GitHub Webhook Listener for NAS Auto-Deployment.
 
 NAS에서 실행하여 GitHub push 이벤트를 받아 자동으로 git pull을 수행합니다.
+참고: .env 파일은 Git에서 관리되지 않으므로, 환경 변수 변경 시에는
+로컬에서 ./deploy-nas.sh를 실행하여 수동으로 동기화해야 합니다.
 """
 
 import hmac
