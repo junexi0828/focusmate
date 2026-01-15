@@ -214,6 +214,23 @@ if [ -f "$WEBHOOK_SCRIPT" ]; then
     echo ""
 fi
 
+# Log Alerter 자동 시작 (실시간 로그 감시)
+LOG_ALERTER_PID_FILE="$PROJECT_DIR/log-alerter.pid"
+LOG_ALERTER_LOG_FILE="$PROJECT_DIR/logs/log-alerter.log"
+
+if [ -f "$PROJECT_DIR/scripts/monitoring/log_alerter.py" ]; then
+    if [ ! -f "$LOG_ALERTER_PID_FILE" ] || ! ps -p "$(cat "$LOG_ALERTER_PID_FILE" 2>/dev/null)" > /dev/null 2>&1; then
+        echo "🚀 Log Alerter 시작 중 (실시간 에러 알림)..."
+        nohup $CONDA_PYTHON "$PROJECT_DIR/scripts/monitoring/log_alerter.py" > "$LOG_ALERTER_LOG_FILE" 2>&1 &
+        echo $! > "$LOG_ALERTER_PID_FILE"
+        echo "✅ Log Alerter가 시작되었습니다."
+    else
+        echo "⚠️  Log Alerter가 이미 실행 중입니다."
+    fi
+    echo ""
+    echo ""
+fi
+
 # Cloudflare Tunnel 자동 시작
 TUNNEL_DIR="/volume1/web/cloudflare-tunnel"
 TUNNEL_PID_FILE="$TUNNEL_DIR/tunnel.pid"

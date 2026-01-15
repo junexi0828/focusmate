@@ -1,82 +1,56 @@
 # OPS-008: Monitoring and Observability Strategy
 
 ## 1. Overview and Standards Compliance
-This document defines the monitoring and observability strategy for the FocusMate platform, designed to meet **ISO/IEC 25010 Quality Model** standards, specifically:
--   **Reliability (Fault Tolerance, Recoverability):** Rapid detection of failures via Sentry.
--   **Maintainability (Analyzability):** Clear separation of business events and technical errors.
+This document defines the monitoring strategy for FocusMate, ensuring compliance with **ISO/IEC 25010** (Reliability, Maintainability) and **ISO/IEC 20000** (Service Management).
 
-## 2. Dual-Track Monitoring Philosophy
-We classify monitoring signals into two distinct tracks based on their nature and required action. This separation prevents "alert fatigue" and ensures the right stakeholders receive relevant information.
+## 2. Tri-Track Monitoring Philosophy
+We classify monitoring signals into three distinct tracks to ensure high availability and resource efficiency.
 
-### Track A: Negative Monitoring (Available Reliability) 🛑
-*   **Purpose:** Detect software defects, unhandled exceptions, and system outages immediately.
-*   **Target Audience:** DevOps, Backend Engineers.
-*   **Tool:** **Sentry** (Automated Error Tracking).
-*   **Triggers:**
-    -   `500 Internal Server Error` (Unhandled Exceptions).
-    -   Database connection failures.
-    -   Redis timeouts.
-    -   Critical service anomalies.
-*   **Mechanism:**
-    -   Exceptions are automatically captured by the `sentry-sdk` middleware in `app/main.py`.
-    -   Grouped by issue signature to avoid redundant notifications.
-    -   Delivers rich stack traces for debugging.
+### Track A: Real-Time Negative Monitoring (Critical Failures) 🛑
+*   **Purpose:** Immediate detection of crashes, unhandled exceptions, and logic-breaking errors.
+*   **Target:** DevOps, Backend Engineers.
+*   **Execution**: Continuous Daemon (Started by `start-nas.sh`).
+*   **Components**:
+    -   **Log Alerter (`log_alerter.py`)**: Monitors `app.log` line-by-line. Sends immediate Slack alerts for database timeouts, connection errors, and 500 status codes.
+    -   **Sentry**: Automated external crash reporting for deep stack trace analysis.
 
-### Track B: Positive Monitoring (Business Observability) ✅
-*   **Purpose:** Track operational success, business milestones, and system lifecycle events.
-*   **Target Audience:** Product Owners, Stakeholders, Entire Team.
-*   **Tool:** **Slack Webhook** (Manual Instrumentation).
-*   **Triggers:**
-    -   **Lifecycle:** Server Startup (`🚀`), Server Shutdown (`🛑`).
-    -   **Business Events:** New User Signup, Subscription Payment, Goal Achievement.
-    -   **Traffic:** Concurrent user spikes (e.g., >100 users).
-*   **Mechanism:**
-    -   Manually triggered via `app.core.notify.send_slack_notification`.
-    -   Human-readable messages with actionable data.
+### Track B: Periodic Infrastructure Monitoring (Watchdog) 🐕
+*   **Purpose:** Ensure system resources (CPU, RAM) are healthy and backend services are alive.
+*   **Execution**: Scheduled Task (Synology Task Scheduler - Every 5-10m).
+*   **Component**:
+    -   **NAS Monitor (`nas_monitor.sh`)**: Checks if the backend PID is alive and port 8000 is responsive. Automatically attempts restart if service is down.
+
+### Track C: Business Observability & Reporting (Daily Reports) 📈
+*   **Purpose:** Track user growth, focus time trends, and aggregated system logs.
+*   **Execution**: Scheduled Task (Synology Task Scheduler - Daily).
+*   **Component**:
+    -   **Daily Health Report (`daily_health_report.py`)**: Aggregates database stats and system performance into a polymorphic Slack report for stakeholders.
 
 ---
 
-## 3. Implementation Guide
+## 3. Operational Setup (Synology NAS)
 
-### 3.1. Sentry Integration (Technical Errors)
-Sentry is initialized in `app/main.py` and requires no manual invocation for standard crash reporting.
-
-**Configuration:**
--   Enabled via `SENTRY_ENABLED=True` in `.env`.
--   DSN managed via `SENTRY_DSN`.
-
-**Workflow:**
-1.  Developer commits code.
-2.  Bug causes `500 Error`.
-3.  Sentry captures stack trace.
-4.  Slack (Sentry Bot) notifies `#dev-alerts`.
-5.  Developer fixes bug -> Issue Resolved.
-
-### 3.2. Slack Notification (Business Events)
-Use the `app.core.notify` module to send verified business events.
-
-**Usage Example:**
-```python
-from app.core.notify import send_slack_notification
-
-# Example: New User Signup
-await send_slack_notification(
-    message="🎉 New User Registration",
-    level="info",  # Options: info (green), warning (yellow), error (red)
-    details={
-        "User": user.email,
-        "Source": "Google OAuth",
-        "Time": "2024-01-01 12:00:00"
-    }
-)
+### 3.1. Real-Time Setup
+Real-time monitoring is integrated into the application lifecycle. Starting the backend automatically starts the log monitor.
+```bash
+bash start-nas.sh  # Starts Backend + Log Alerter + Webhook Listener
 ```
 
-**Best Practices:**
--   **Do NOT** use this for stack traces (use Sentry).
--   **Do NOT** use for high-frequency low-value logs (use standard logging).
--   **DO** use for high-value signals that team members celebrate or need to know immediately.
+### 3.2. Scheduled Setup (Task Scheduler)
+Register the following in **Synology Control Panel -> Task Scheduler**:
 
-## 4. Operational Maintenance
--   **Daily:** Check Sentry for new "Unresolved" issues.
--   **Weekly:** Review Slack alert volume. If too noisy, adjust `level` or throttle notifications.
--   **Monthly:** Verify Webhook validity and Sentry quota usage.
+| Task Name | Schedule | Command |
+| :--- | :--- | :--- |
+| **FocusMate Watchdog** | Every 5 min | `bash /volume1/web/focusmate-backend/scripts/monitoring/nas_monitor.sh` |
+| **FocusMate Daily** | Daily (00:00) | `/volume1/web/miniconda3/envs/focusmate_env/bin/python /volume1/web/focusmate-backend/scripts/monitoring/daily_health_report.py` |
+
+---
+
+## 4. Maintenance and Scaling
+-   **Log Rotation**: Ensure `/volume1/web/focusmate-backend/logs/` is rotated to prevent disk exhaustion.
+-   **Slack Webhook**: Periodically verify that `SLACK_WEBHOOK_URL` in `.env` is valid.
+-   **Watcher Review**: If the Watchdog restarts the server frequently, investigate `app.log` for memory leaks or DB connection pool exhaustion.
+
+---
+**Document Version**: 2.0
+**Last Modified**: 2026-01-15
