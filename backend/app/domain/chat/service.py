@@ -245,6 +245,37 @@ class ChatService:
             user_id, room_type
         )
         room_responses = []
+        direct_room_ids = [
+            room.room_id
+            for room, _, _, _ in rooms_with_context
+            if room.room_type == "direct"
+        ]
+        partner_ids_by_room: dict[UUID, str] = {}
+        partner_users_by_id: dict[str, object] = {}
+
+        if direct_room_ids and self.user_repository:
+            members = await self.repository.get_members_for_rooms(direct_room_ids)
+            members_by_room: dict[UUID, list] = {}
+            for member in members:
+                members_by_room.setdefault(member.room_id, []).append(member)
+
+            for room_id in direct_room_ids:
+                partner = next(
+                    (
+                        m
+                        for m in members_by_room.get(room_id, [])
+                        if m.user_id != user_id
+                    ),
+                    None,
+                )
+                if partner:
+                    partner_ids_by_room[room_id] = partner.user_id
+
+            if partner_ids_by_room:
+                partner_users = await self.user_repository.get_by_ids(
+                    list(set(partner_ids_by_room.values()))
+                )
+                partner_users_by_id = {user.id: user for user in partner_users}
 
         for room, unread_count, last_message_content, last_message_sender_id in rooms_with_context:
             room_dict = ChatRoomResponse.model_validate(room).model_dump()
@@ -258,25 +289,22 @@ class ChatService:
 
             # For direct chats, add partner information
             if room.room_type == "direct" and self.user_repository:
-                # Get room members to find the partner
-                members = await self.repository.get_room_members(room.room_id)
-                partner = next((m for m in members if m.user_id != user_id), None)
-
-                if partner:
-                    # Get partner user details
-                    partner_user = await self.user_repository.get_by_id(partner.user_id)
-                    if partner_user:
-                        room_dict["partner_id"] = partner_user.id
-                        room_dict["partner_username"] = partner_user.username
-                        room_dict["partner_email"] = partner_user.email
-                        room_dict["partner_profile_image"] = partner_user.profile_image
-                        # Get online status from presence system
-                        try:
-                            from app.infrastructure.redis.presence_manager import presence_manager
-                            room_dict["partner_is_online"] = await presence_manager.is_user_online(partner.user_id)
-                        except Exception:
-                            # Fallback to False if presence system unavailable
-                            room_dict["partner_is_online"] = False
+                partner_user_id = partner_ids_by_room.get(room.room_id)
+                partner_user = (
+                    partner_users_by_id.get(partner_user_id) if partner_user_id else None
+                )
+                if partner_user:
+                    room_dict["partner_id"] = partner_user.id
+                    room_dict["partner_username"] = partner_user.username
+                    room_dict["partner_email"] = partner_user.email
+                    room_dict["partner_profile_image"] = partner_user.profile_image
+                    # Get online status from presence system
+                    try:
+                        from app.infrastructure.redis.presence_manager import presence_manager
+                        room_dict["partner_is_online"] = await presence_manager.is_user_online(partner_user.id)
+                    except Exception:
+                        # Fallback to False if presence system unavailable
+                        room_dict["partner_is_online"] = False
 
             room_responses.append(ChatRoomResponse(**room_dict))
 
