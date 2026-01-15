@@ -26,8 +26,8 @@ class NotificationHelper:
         return NotificationCreate(
             user_id=user_id,
             type="friend_request",
-            title="New Friend Request",
-            message=f"{sender_name} sent you a friend request",
+            title="새 친구 요청",
+            message=f"{sender_name}님이 친구 요청을 보냈습니다.",
             group_key=f"friend_req:{request_id}",
             routing={
                 "type": "friend_requests",
@@ -59,8 +59,8 @@ class NotificationHelper:
         return NotificationCreate(
             user_id=user_id,
             type="friend_request_accepted",
-            title="Friend Request Accepted",
-            message=f"{accepter_name} accepted your friend request",
+            title="친구 요청 수락",
+            message=f"{accepter_name}님이 친구 요청을 수락했습니다.",
             group_key=f"friend:{friend_id}",
             routing={
                 "type": "friends",
@@ -96,8 +96,8 @@ class NotificationHelper:
         return NotificationCreate(
             user_id=user_id,
             type="team_invitation",
-            title="Team Invitation",
-            message=f"{inviter_name} invited you to join {team_name}",
+            title="팀 초대",
+            message=f"{inviter_name}님이 {team_name}팀에 초대했습니다.",
             group_key=f"team_invite:{invitation_id}",
             routing={
                 "type": "team_invitation",
@@ -133,13 +133,13 @@ class NotificationHelper:
         Returns:
             NotificationCreate with routing metadata
         """
-        action = "accepted" if accepted else "rejected"
-        title = f"Invitation {action.capitalize()}"
-        message = f"{responder_name} {action} your invitation to join {team_name}",
+        action_kr = "수락" if accepted else "거절"
+        title = f"초대 {action_kr}"
+        message = f"{responder_name}님이 {team_name}팀 초대를 {action_kr}했습니다."
 
         return NotificationCreate(
             user_id=user_id,
-            type=f"team_invitation_{action}",
+            type=f"team_invitation_{'accepted' if accepted else 'rejected'}",
             title=title,
             message=message,
             routing={
@@ -175,7 +175,7 @@ class NotificationHelper:
             user_id=user_id,
             type="new_message",
             priority=NotificationPriority.HIGH,
-            title=f"New message from {sender_name}",
+            title=f"{sender_name}님으로부터의 새 메시지",
             message=message_preview[:100],
             group_key=f"message:{conversation_id}",
             routing={
@@ -212,8 +212,8 @@ class NotificationHelper:
         return NotificationCreate(
             user_id=user_id,
             type="comment_like",
-            title="Comment Liked",
-            message=f"{liker_name} liked your comment: {comment_content[:50]}",
+            title="댓글 좋아요",
+            message=f"{liker_name}님이 내 댓글에 좋아요를 남겼습니다: {comment_content[:50]}",
             group_key=f"post:{post_id}", # Group by post so multiple likes on same post's comments don't spam? or group by comment?
             # Let's group by post for now to capture activity on the same thread
             routing={
@@ -251,8 +251,8 @@ class NotificationHelper:
         return NotificationCreate(
             user_id=user_id,
             type="post_comment",
-            title="New Comment",
-            message=f"{commenter_name} commented on your post: {comment_preview[:50]}",
+            title="새 댓글",
+            message=f"{commenter_name}님이 내 게시글에 댓글을 남겼습니다: {comment_preview[:50]}",
             group_key=f"post_comment:{post_id}",
             routing={
                 "type": "post",
@@ -287,8 +287,8 @@ class NotificationHelper:
         return NotificationCreate(
             user_id=user_id,
             type="post_like",
-            title="Post Liked",
-            message=f"{liker_name} liked your post: {post_title}",
+            title="게시글 좋아요",
+            message=f"{liker_name}님이 내 게시글에 좋아요를 남겼습니다: {post_title}",
             group_key=f"post_like:{post_id}",
             routing={
                 "type": "post",
@@ -324,7 +324,7 @@ class NotificationHelper:
             user_id=user_id,
             type="achievement",
             priority=NotificationPriority.MEDIUM,
-            title=f"Achievement Unlocked: {achievement_name}",
+            title=f"업적 달성: {achievement_name}",
             message=achievement_description,
             group_key=f"achievement:{achievement_id}",
             routing={
@@ -392,8 +392,8 @@ class NotificationHelper:
         return NotificationCreate(
             user_id=user_id,
             type="match_proposal",
-            title="New Match Proposal",
-            message=f"A new match proposal from {partner_department} is waiting!",
+            title="새 매칭 제안",
+            message=f"{partner_department}에서 새로운 매칭 제안이 도착했습니다!",
             group_key=f"proposal:{proposal_id}",
             routing={
                 "type": "proposal",
@@ -427,8 +427,8 @@ class NotificationHelper:
         return NotificationCreate(
             user_id=user_id,
             type="match_success",
-            title="It's a Match!",
-            message=f"You are matched with {partner_department}! Chat room created.",
+            title="매칭 성공!",
+            message=f"{partner_department}과(와) 매칭되었습니다! 채팅방이 생성되었습니다.",
             group_key=f"match:{proposal_id}",
             routing={
                 "type": "chat_room",
