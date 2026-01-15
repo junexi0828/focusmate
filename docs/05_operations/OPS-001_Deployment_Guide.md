@@ -266,6 +266,18 @@ bash stop-nas.sh
 #### 4.3.3 안정성 보장을 위한 스케줄링
 NAS 제어판의 '작업 스케줄러'를 통해 주기적 감시 작업을 반드시 등록해야 합니다. 세부 설정은 [OPS-008 Monitoring Strategy](./OPS-008_Monitoring_Strategy.md)를 참조하십시오.
 
+### 4.4 Database Port Strategy (Hybrid Architecture)
+
+To ensure both performance and reliability, FocusMate uses a dual-port connection strategy on Supabase:
+
+| Purpose | Port | Mode | Why? |
+| :--- | :--- | :--- | :--- |
+| **Application Runtime** | `6543` | **Transaction** | High concurrency. Allows hundreds of simultaneous users with minimal DB overhead. |
+| **Migrations & Checks** | `5432` | **Session** | Schema changes (DDL) and Alembic migrations require persistent session state. |
+
+> [!NOTE]
+> **PgBouncer Compatibility**: `asyncpg` (our DB driver) uses prepared statements for performance. Transaction mode (6543) kills these statements because it moves connections between transactions. Therefore, administrative tasks (Alembic/Smart Migrations) *must* use 5432 or have statement caching explicitly disabled.
+
 ---
 
 ## 5. 환경 변수
