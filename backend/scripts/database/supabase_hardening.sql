@@ -1,58 +1,90 @@
 -- =============================================================================
--- FocusMate Supabase Security Hardening Script (RLS)
+-- FocusMate Supabase Security Hardening Script (RLS) - V3 Robust
 -- =============================================================================
--- This script fixes the 42 CRITICAL errors reported by the Supabase Security Advisor.
--- It enables Row Level Security (RLS) on all tables and implements
--- "Private by Default" policies to ensure users only see their own data.
+-- This script fixes all RLS issues by dynamically detecting the correct
+-- user reference column (user_id, creator_id, sender_id, etc.).
 -- =============================================================================
 
--- 1. Enable RLS for all tables mentioned in the security report
-ALTER TABLE public.achievement ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_rooms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.comment_like ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.comment ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.conversation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.friend_request ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.friend ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.manual_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.message ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.participant ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.room ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.room_reservations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.session_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.timer ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user ENABLE ROW LEVEL SECURITY;
+-- 1. Enable RLS for ALL tables in public schema
+DO $$
+DECLARE
+    t TEXT;
+BEGIN
+    FOR t IN
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+    LOOP
+        EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', t);
+    END LOOP;
+END $$;
 
--- Note: alembic_version doesn't strictly need RLS as it contains no user data,
--- but enabling it with no policies makes it "Read-Only" for everyone which is safer.
-ALTER TABLE public.alembic_version ENABLE ROW LEVEL SECURITY;
+-- 2. Helper Function to apply policy based on available columns
+DO $$
+DECLARE
+    table_rec RECORD;
+    found_col TEXT;
+BEGIN
+    -- Loop through all public tables to apply a "Private by Default" policy
+    FOR table_rec IN
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+        AND table_name != 'alembic_version'
+    LOOP
+        found_col := NULL;
 
--- 2. Create Default "Private by Default" Policies
--- These policies ensure that even if a table is public, only authenticated users
--- with the service role (backend) or the correct user ID can access data.
+        -- Check for common user identifier columns in priority order
+        SELECT column_name INTO found_col
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = table_rec.table_name
+        AND column_name IN ('user_id', 'creator_id', 'sender_id', 'author_id', 'leader_id', 'user_uuid')
+        ORDER BY
+            CASE column_name
+                WHEN 'user_id' THEN 1
+                WHEN 'creator_id' THEN 2
+                WHEN 'sender_id' THEN 3
+                WHEN 'author_id' THEN 4
+                WHEN 'leader_id' THEN 5
+                ELSE 6
+            END
+        LIMIT 1;
 
--- Example: Policy for 'user' table (Users can only read/update their own profile)
-CREATE POLICY "Users can view their own profile" ON public.user
-FOR SELECT USING (auth.uid()::text = id::text);
+        IF found_col IS NOT NULL THEN
+            -- Drop existing policy if it exists
+            EXECUTE format('DROP POLICY IF EXISTS "Private access" ON public.%I', table_rec.table_name);
 
-CREATE POLICY "Users can update their own profile" ON public.user
-FOR UPDATE USING (auth.uid()::text = id::text);
+            -- Create dynamic policy
+            EXECUTE format('
+                CREATE POLICY "Private access" ON public.%I
+                FOR ALL USING (auth.uid()::text = %I::text)',
+                table_rec.table_name, found_col);
+        END IF;
+    END LOOP;
+END $$;
 
--- Example: Policy for 'message' table (Users can only see messages in rooms they are in)
--- This assumes a 'user_id' or 'sender_id' column exists. If the column name differs,
--- please adjust accordingly in the Supabase SQL Editor.
+-- 3. Specific table exceptions or public tables
+DO $$ BEGIN
+    -- Example: Posts should be viewable by everyone, but manageable by author
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'post') THEN
+        DROP POLICY IF EXISTS "Private access" ON public.post;
+        CREATE POLICY "Public read, Private write" ON public.post
+        FOR SELECT USING (true);
+        CREATE POLICY "Author manage" ON public.post
+        FOR ALL USING (auth.uid()::text = user_id::text);
+    END IF;
+END $$;
 
--- 3. Universal Safety: Allow the backend (Service Role) full access
--- The backend uses a 'service_role' key which automatically bypasses RLS.
--- This script ensures that while the PUBLIC access is closed, the backend
--- continues to function normally.
+-- 4. Universal Safety: Service Role Bypasses RLS
+-- Note: The backend uses the 'service_role' key, which automatically bypasses RLS.
+-- This script ensures user-facing security without breaking backend logic.
 
 -- =============================================================================
 -- HOW TO APPLY:
--- 1. Go to your Supabase Dashboard -> SQL Editor.
--- 2. Paste this entire script into a new query.
--- 3. Click 'Run'.
--- 4. Check the 'Security Advisor' again; the 42 errors should disappear.
+-- 1. Copy ALL content.
+-- 2. Run in Supabase SQL Editor.
+-- 3. All matching_pools, ranking_, etc. errors will now be resolved correctly.
 -- =============================================================================

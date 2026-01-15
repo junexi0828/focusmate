@@ -159,6 +159,24 @@ if [ -f "$WEBHOOK_PID_FILE" ]; then
     fi
 fi
 
+# Log Alerter 중지
+LOG_ALERTER_PID_FILE="$PROJECT_DIR/log-alerter.pid"
+if [ -f "$LOG_ALERTER_PID_FILE" ]; then
+    ALERTER_PID=$(cat "$LOG_ALERTER_PID_FILE" 2>/dev/null || echo "")
+    if [ -n "$ALERTER_PID" ] && ps -p "$ALERTER_PID" > /dev/null 2>&1; then
+        echo "🛑 Log Alerter (PID: $ALERTER_PID) 중지 중..."
+        kill "$ALERTER_PID" 2>/dev/null || true
+        sleep 1
+        if ps -p "$ALERTER_PID" > /dev/null 2>&1; then
+            kill -9 "$ALERTER_PID" 2>/dev/null || true
+        fi
+        rm -f "$LOG_ALERTER_PID_FILE"
+        echo "✅ Log Alerter가 중지되었습니다."
+    else
+        rm -f "$LOG_ALERTER_PID_FILE"
+    fi
+fi
+
 # Cloudflare Tunnel 중지
 TUNNEL_DIR="/volume1/web/cloudflare-tunnel"
 TUNNEL_PID_FILE="$TUNNEL_DIR/tunnel.pid"

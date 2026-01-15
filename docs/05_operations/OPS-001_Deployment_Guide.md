@@ -243,6 +243,31 @@ spec:
 
 ---
 
+### 4.3 Synology NAS Deployment (Bare Metal)
+
+Synology NAS 환경에서는 Docker와 별개로 Miniconda 기반의 직접 배포 방식을 지원합니다.
+
+#### 4.3.1 배포 구조
+- **경로**: `/volume1/web/focusmate-backend`
+- **관리 스크립트**:
+    - `start-nas.sh`: 백엔드, 웹훅 리스너, 실시간 로그 감시기를 한꺼번에 시작합니다.
+    - `stop-nas.sh`: 모든 관련 프로세스를 안전하게 중지합니다.
+    - `deploy-nas.sh`: 로컬 PC에서 NAS로 코드를 동기화하고 서비스를 재시작합니다.
+
+#### 4.3.2 실행 방법
+```bash
+# 서비스 시작
+bash start-nas.sh
+
+# 서비스 중지
+bash stop-nas.sh
+```
+
+#### 4.3.3 안정성 보장을 위한 스케줄링
+NAS 제어판의 '작업 스케줄러'를 통해 주기적 감시 작업을 반드시 등록해야 합니다. 세부 설정은 [OPS-008 Monitoring Strategy](./OPS-008_Monitoring_Strategy.md)를 참조하십시오.
+
+---
+
 ## 5. 환경 변수
 
 ### 5.1 Backend 환경 변수
