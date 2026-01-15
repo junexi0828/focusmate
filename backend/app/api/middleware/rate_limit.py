@@ -5,6 +5,7 @@ or authenticated user within a specified time window.
 """
 
 import time
+import uuid
 from collections.abc import Callable
 
 import redis.asyncio as aioredis
@@ -137,7 +138,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 # If Redis is unavailable, allow the request
                 return False, {"limit": 0, "remaining": 0, "reset": 0}
 
-        current_time = int(time.time())
+        current_time = time.time()
         window_start = current_time - 60  # 1 minute window
 
         # Get rate limit for this path
@@ -147,8 +148,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         key = f"rate_limit:{client_id}:{path}"
 
         try:
-            # Use Redis pipeline for atomic operations
-            pipe = self.redis.pipeline()
+            # Use Redis transaction pipeline for atomic operations
+            pipe = self.redis.pipeline(transaction=True)
 
             # Remove old entries outside the time window
             pipe.zremrangebyscore(key, 0, window_start)
@@ -157,7 +158,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             pipe.zcard(key)
 
             # Add current request timestamp
-            pipe.zadd(key, {str(current_time): current_time})
+            entry_id = f"{current_time}:{uuid.uuid4().hex}"
+            pipe.zadd(key, {entry_id: current_time})
 
             # Set expiration to 2 minutes (cleanup old keys)
             pipe.expire(key, 120)
@@ -167,7 +169,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
             # Calculate remaining requests
             remaining = max(0, rate_limit - request_count - 1)
-            reset_time = current_time + 60
+            reset_time = int(current_time) + 60
 
             is_limited = request_count >= rate_limit
 
@@ -180,7 +182,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logging.getLogger(__name__).error(f"Rate limit check error: {e}")
             # On error, allow the request
-            return False, {"limit": rate_limit, "remaining": rate_limit, "reset": current_time + 60}
+            return False, {"limit": rate_limit, "remaining": rate_limit, "reset": int(current_time) + 60}
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with rate limiting.
