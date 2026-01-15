@@ -302,7 +302,6 @@ if command -v cloudflared > /dev/null 2>&1; then
             rm -f "$TUNNEL_PID_FILE"
         fi
     fi
-    fi
 else
     echo "⚠️  cloudflared가 설치되어 있지 않습니다. Tunnel을 시작할 수 없습니다."
 fi
