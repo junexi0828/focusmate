@@ -86,6 +86,17 @@ class ChatRepository:
         )
         return list(result.scalars().all())
 
+    async def get_members_for_rooms(self, room_ids: list[UUID]) -> list[ChatMember]:
+        """Get active members for multiple rooms in one query."""
+        if not room_ids:
+            return []
+        result = await self.session.execute(
+            select(ChatMember)
+            .where(ChatMember.room_id.in_(room_ids))
+            .where(ChatMember.is_active == True)
+        )
+        return list(result.scalars().all())
+
     async def get_member(self, room_id: UUID, user_id: str) -> ChatMember | None:
         """Get specific member."""
         result = await self.session.execute(

@@ -302,6 +302,11 @@ if command -v cloudflared > /dev/null 2>&1; then
             rm -f "$TUNNEL_PID_FILE"
         fi
     fi
+    fi
+else
+    echo "⚠️  cloudflared가 설치되어 있지 않습니다. Tunnel을 시작할 수 없습니다."
+fi
+
 # Architect Agent 자동 시작 (V10.2 Eternal Mode)
 AGENT_SCRIPT="$PROJECT_DIR/scripts/automation/architect_agent.sh"
 AGENT_PID_FILE="$PROJECT_DIR/architect_agent.pid"
