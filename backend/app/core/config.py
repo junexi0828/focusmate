@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
     RELOAD: bool = False
     WORKERS: int = 4
+    TRUST_PROXY_HEADERS: bool = False  # Only enable when behind a trusted reverse proxy
 
     # ==========================================================================
     # Database
@@ -127,6 +128,7 @@ class Settings(BaseSettings):
         default="Authorization,Content-Type,Accept,Origin,X-Requested-With,X-Request-ID"
     )
     CORS_EXPOSE_HEADERS: str = Field(default="X-Request-ID,X-App-Version,Content-Disposition")
+    CORS_ORIGIN_REGEX: str | None = None
 
     # ==========================================================================
     # Trusted Hosts
@@ -180,6 +182,16 @@ class Settings(BaseSettings):
     def parse_cors_expose_headers(cls, v: str) -> list[str]:
         """Parse CORS expose headers."""
         return cls.parse_cors_headers(v)
+
+    @field_validator("CORS_ORIGIN_REGEX")
+    @classmethod
+    def parse_cors_origin_regex(cls, v: str | None) -> str | None:
+        """Normalize optional CORS origin regex."""
+        if not v:
+            return None
+        if isinstance(v, str):
+            return v.strip() or None
+        return None
 
     @field_validator("TRUSTED_HOSTS")
     @classmethod

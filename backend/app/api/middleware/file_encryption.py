@@ -78,10 +78,12 @@ class FileEncryptionMiddleware(BaseHTTPMiddleware):
                     decrypted_data = self.encryption_service.decrypt(body)
 
                     # Create new response with decrypted data
+                    headers = dict(response.headers)
+                    headers.pop("content-length", None)
                     return Response(
                         content=decrypted_data,
                         status_code=response.status_code,
-                        headers=dict(response.headers),
+                        headers=headers,
                         media_type=response.media_type,
                     )
                 except Exception:

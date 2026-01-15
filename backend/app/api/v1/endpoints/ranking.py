@@ -752,7 +752,7 @@ async def get_session_history(
 async def get_user_invitations(
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RankingService, Depends(get_ranking_service)],
-    status_filter: Optional[str] = Query(None, pattern="^(Union[pending, accepted]|rejected)$"),
+    status_filter: Optional[str] = Query(None, pattern="^(pending|accepted|rejected)$"),
 ) -> dict:
     """Get all invitations for the current user."""
     try:

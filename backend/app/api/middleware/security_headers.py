@@ -36,6 +36,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("X-DNS-Prefetch-Control", "off")
+        response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
+        response.headers.setdefault("X-Download-Options", "noopen")
+        response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
         response.headers.setdefault(
             "Permissions-Policy",
             "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
