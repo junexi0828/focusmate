@@ -96,7 +96,7 @@ function RootComponent() {
                  <div className="w-px h-4 bg-border mx-1" />
                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-300 hover:scale-105 group">
                     <Sparkles className="w-3.5 h-3.5 transition-transform group-hover:rotate-12" />
-                    <span className="text-xs font-bold">AI Chat</span>
+                    <span className="text-xs font-bold">AI 채팅</span>
                 </button>
               </div>
             </header>

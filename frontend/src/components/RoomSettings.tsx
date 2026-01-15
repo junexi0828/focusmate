@@ -42,15 +42,15 @@ export default function RoomSettings({
       roomName.length < 3 ||
       roomName.length > 50
     ) {
-      newErrors.roomName = "Room name must be between 3 and 50 characters";
+      newErrors.roomName = "방 이름은 3자에서 50자 사이여야 합니다";
     }
 
     if (focusTime < 1 || focusTime > 60) {
-      newErrors.focusTime = "Focus time must be between 1 and 60 minutes";
+      newErrors.focusTime = "집중 시간은 1분에서 60분 사이여야 합니다";
     }
 
     if (breakTime < 1 || breakTime > 30) {
-      newErrors.breakTime = "Break time must be between 1 and 30 minutes";
+      newErrors.breakTime = "휴식 시간은 1분에서 30분 사이여야 합니다";
     }
 
     setErrors(newErrors);
@@ -72,16 +72,16 @@ export default function RoomSettings({
 
       if (response.status === "error") {
         setErrors({
-          general: response.error?.message || "Failed to update room settings",
+          general: response.error?.message || "방 설정 업데이트에 실패했습니다",
         });
         return;
       }
 
-      toast.success("Room settings updated successfully");
+      toast.success("방 설정이 업데이트되었습니다");
       onUpdate();
     } catch (error) {
       console.error("Error updating room:", error);
-      setErrors({ general: "Failed to update room settings" });
+      setErrors({ general: "방 설정 업데이트에 실패했습니다" });
     } finally {
       setIsSaving(false);
     }
@@ -94,16 +94,16 @@ export default function RoomSettings({
 
       if (response.status === "error") {
         setErrors({
-          general: response.error?.message || "Failed to delete room",
+          general: response.error?.message || "방 삭제에 실패했습니다",
         });
         return;
       }
 
-      toast.success("Room deleted successfully");
+      toast.success("방이 삭제되었습니다");
       window.location.reload();
     } catch (error) {
       console.error("Error deleting room:", error);
-      setErrors({ general: "Failed to delete room" });
+      setErrors({ general: "방 삭제에 실패했습니다" });
     } finally {
       setIsDeleting(false);
     }
@@ -113,7 +113,7 @@ export default function RoomSettings({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Room Settings</h2>
+          <h2 className="text-xl font-bold text-gray-900">방 설정</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -135,7 +135,7 @@ export default function RoomSettings({
               htmlFor="settings-roomName"
               className="text-sm font-medium text-[#111827]"
             >
-              Room Name
+              방 이름
             </Label>
             <Input
               id="settings-roomName"
@@ -157,7 +157,7 @@ export default function RoomSettings({
               htmlFor="settings-focusTime"
               className="text-sm font-medium text-[#111827]"
             >
-              Focus Time (minutes)
+              집중 시간 (분)
             </Label>
             <Input
               id="settings-focusTime"
@@ -174,7 +174,7 @@ export default function RoomSettings({
               <p className="text-sm text-red-600 mt-1">{errors.focusTime}</p>
             )}
             <p className="text-sm text-[#6b7280] mt-1">
-              Time for focused work sessions
+              집중 작업 세션 시간
             </p>
           </div>
 
@@ -183,7 +183,7 @@ export default function RoomSettings({
               htmlFor="settings-breakTime"
               className="text-sm font-medium text-[#111827]"
             >
-              Break Time (minutes)
+              휴식 시간 (분)
             </Label>
             <Input
               id="settings-breakTime"
@@ -200,13 +200,13 @@ export default function RoomSettings({
               <p className="text-sm text-red-600 mt-1">{errors.breakTime}</p>
             )}
             <p className="text-sm text-[#6b7280] mt-1">
-              Time for rest between sessions
+              세션 사이 휴식 시간
             </p>
           </div>
 
           <div className="pt-4 border-t border-gray-200">
             <h3 className="text-sm font-semibold text-gray-900 mb-2">
-              Danger Zone
+              주의 구역 (위험)
             </h3>
             {!showDeleteConfirm ? (
               <Button
@@ -216,13 +216,12 @@ export default function RoomSettings({
                 className="w-full"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Delete Room</span>
+                <span>방 삭제</span>
               </Button>
             ) : (
               <div className="space-y-2">
                 <p className="text-sm text-[#6b7280]">
-                  Are you sure? This will remove all participants and cannot be
-                  undone.
+                  정말 삭제하시겠습니까? 모든 참가자가 퇴장 처리되며 되돌릴 수 없습니다.
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -235,10 +234,10 @@ export default function RoomSettings({
                     {isDeleting ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Deleting...</span>
+                        <span>삭제 중...</span>
                       </>
                     ) : (
-                      <span>Yes, Delete</span>
+                      <span>네, 삭제합니다</span>
                     )}
                   </Button>
                   <Button
@@ -247,7 +246,7 @@ export default function RoomSettings({
                     onClick={() => setShowDeleteConfirm(false)}
                     className="flex-1"
                   >
-                    <span>Cancel</span>
+                    <span>취소</span>
                   </Button>
                 </div>
               </div>
@@ -257,7 +256,7 @@ export default function RoomSettings({
 
         <div className="sticky bottom-0 bg-[#f9fafb] border-t border-[#e5e7eb] px-6 py-4 flex gap-3">
           <Button variant="ghost" onClick={onClose} className="flex-1">
-            Cancel
+            취소
           </Button>
           <Button
             onClick={handleSave}
@@ -267,12 +266,12 @@ export default function RoomSettings({
             {isSaving ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>Saving...</span>
+                <span>저장 중...</span>
               </>
             ) : (
               <>
                 <Save className="w-5 h-5" />
-                <span>Save Changes</span>
+                <span>변경사항 저장</span>
               </>
             )}
           </Button>
