@@ -44,6 +44,7 @@ rsync -avz --progress \
     --exclude '.git' \
     --exclude '.DS_Store' \
     --exclude '._*' \
+    --exclude 'logs' \
     --rsync-path="/usr/bin/rsync" \
     ./ "$NAS_USER@$NAS_HOST:$NAS_DIR/"
 
