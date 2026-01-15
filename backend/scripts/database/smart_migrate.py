@@ -20,8 +20,13 @@ from app.core.config import settings
 
 async def check_alembic_version_table() -> bool:
     """Check if alembic_version table exists."""
+    # Detect PgBouncer/Transaction mode (port 6543)
+    is_pgbouncer = settings.DATABASE_PGBOUNCER
+    if "6543" in settings.DATABASE_URL:
+        is_pgbouncer = True
+
     connect_args = {}
-    if settings.DATABASE_PGBOUNCER:
+    if is_pgbouncer:
         connect_args["statement_cache_size"] = 0
 
     engine = create_async_engine(
