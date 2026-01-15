@@ -42,10 +42,10 @@ async def get_redis() -> aioredis.Redis:
                 encoding="utf-8",
                 decode_responses=settings.REDIS_DECODE_RESPONSES,
                 max_connections=settings.REDIS_MAX_CONNECTIONS,
-                socket_timeout=1.0,  # Fail fast (1s)
-                socket_connect_timeout=1.0,  # Fail fast on connect (1s)
-                retry_on_timeout=True,
-                health_check_interval=30,
+                socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+                socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+                retry_on_timeout=settings.REDIS_RETRY_ON_TIMEOUT,
+                health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
             )
             sanitized_url = _sanitize_redis_url(settings.REDIS_URL)
             logger.info("[Redis Client] Connected to %s", sanitized_url)

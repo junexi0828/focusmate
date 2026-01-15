@@ -478,11 +478,9 @@ class RankingService:
 
     async def get_pending_verifications(self) -> list[dict]:
         """Get all pending verification requests (admin only)."""
-        requests = await self.repository.get_pending_verification_requests()
-
+        requests = await self.repository.get_pending_verification_requests_with_team()
         results = []
-        for request in requests:
-            team = await self.repository.get_team_by_id(request.team_id)
+        for request, team in requests:
             results.append(
                 {
                     "request_id": request.request_id,

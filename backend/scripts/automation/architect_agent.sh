@@ -79,8 +79,8 @@ while true; do
 
     EXIT_CODE=${PIPESTATUS[0]} # Get exit code of codex exec, not tee
     if [ $EXIT_CODE -eq 0 ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ Cycle completed. Resting for 30s..." | tee -a "$LOG_FILE"
-        sleep 30
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ Cycle completed. Resting for 4 hours (NAS-Friendly Mode)..." | tee -a "$LOG_FILE"
+        sleep 14400
     else
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️  Cycle exited with code $EXIT_CODE. Restarting in 10s..." | tee -a "$LOG_FILE"
         sleep 10

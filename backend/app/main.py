@@ -18,6 +18,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -216,6 +217,13 @@ app = FastAPI(
     redirect_slashes=False,  # Disable automatic trailing slash redirects to prevent CORS issues
 )
 
+# Proxy headers middleware - trust reverse proxy headers for scheme/IP resolution
+if settings.TRUST_PROXY_HEADERS:
+    app.add_middleware(
+        ProxyHeadersMiddleware,
+        trusted_hosts=settings.TRUSTED_HOSTS,
+    )
+
 # Request logging middleware - adds request ID and logs requests
 # Should be added early to track all requests
 app.add_middleware(
@@ -264,6 +272,7 @@ if settings.RATE_LIMIT_ENABLED:
     app.add_middleware(
         RateLimitMiddleware,
         requests_per_minute=settings.RATE_LIMIT_PER_MINUTE,
+        burst_limit=settings.RATE_LIMIT_BURST,
         exempt_paths=["/health", "/docs", "/redoc", "/openapi.json"],
     )
 
@@ -561,7 +570,8 @@ app.include_router(api_router, prefix="/api/v1")
 
 # Prometheus metrics instrumentation
 # Exposes metrics at /metrics endpoint
-Instrumentator().instrument(app).expose(app)
+if settings.PROMETHEUS_ENABLED:
+    Instrumentator().instrument(app).expose(app)
 
 # Mount static files for uploads
 uploads_dir = Path("uploads")
@@ -573,16 +583,6 @@ chat_uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount(
     "/uploads/chat", StaticFiles(directory=str(chat_uploads_dir)), name="chat_uploads"
 )
-
-# Mount verification uploads
-verification_uploads_dir = uploads_dir / "verification"
-verification_uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount(
-    "/uploads/verification",
-    StaticFiles(directory=str(verification_uploads_dir)),
-    name="verification_uploads",
-)
-
 
 if __name__ == "__main__":
     import uvicorn

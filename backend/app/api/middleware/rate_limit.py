@@ -71,7 +71,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 self.redis = aioredis.from_url(
                     self.redis_url,
                     encoding="utf-8",
-                    decode_responses=True,
+                    decode_responses=settings.REDIS_DECODE_RESPONSES,
+                    max_connections=settings.REDIS_MAX_CONNECTIONS,
+                    socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+                    socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+                    retry_on_timeout=settings.REDIS_RETRY_ON_TIMEOUT,
+                    health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
                 )
             except Exception as e:
                 logging.getLogger(__name__).error(f"Rate limit middleware: Failed to connect to Redis: {e}")

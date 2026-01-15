@@ -226,6 +226,23 @@ class RankingRepository:
         )
         return list(result.scalars().all())
 
+    async def get_pending_verification_requests_with_team(
+        self,
+    ) -> list[tuple["RankingVerificationRequest", "RankingTeam"]]:
+        """Get pending verification requests with team details in one query."""
+        from app.infrastructure.database.models.ranking import (
+            RankingTeam,
+            RankingVerificationRequest,
+        )
+
+        result = await self.session.execute(
+            select(RankingVerificationRequest, RankingTeam)
+            .join(RankingTeam, RankingTeam.team_id == RankingVerificationRequest.team_id)
+            .where(RankingVerificationRequest.status == "pending")
+            .order_by(RankingVerificationRequest.submitted_at.desc())
+        )
+        return list(result.all())
+
     async def update_verification_request(
         self, request_id: UUID, update_data: dict
     ) -> Optional["RankingVerificationRequest"]:

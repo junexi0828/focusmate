@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_MAX_CONNECTIONS: int = 50
     REDIS_DECODE_RESPONSES: bool = True
+    REDIS_SOCKET_TIMEOUT: float = 1.0
+    REDIS_CONNECT_TIMEOUT: float = 1.0
+    REDIS_HEALTH_CHECK_INTERVAL: int = 30
+    REDIS_RETRY_ON_TIMEOUT: bool = True
 
     # ==========================================================================
     # Security
