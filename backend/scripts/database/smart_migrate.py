@@ -18,7 +18,10 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.core.config import settings
 
 
+async def check_alembic_version_table() -> bool:
+    """Check if alembic_version table exists."""
     # Administrative checks should use Session Pooler (5432) to avoid PgBouncer issues
+    # Transaction Pooler (6543) does not support prepared statements
     db_url = settings.DATABASE_URL.replace(":6543/", ":5432/")
 
     connect_args = {}
@@ -49,6 +52,8 @@ from app.core.config import settings
         await engine.dispose()
 
 
+async def check_tables_exist() -> bool:
+    """Check if any application tables exist."""
     # Administrative checks should use Session Pooler (5432) to avoid PgBouncer issues
     db_url = settings.DATABASE_URL.replace(":6543/", ":5432/")
 
