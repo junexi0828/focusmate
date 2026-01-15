@@ -163,7 +163,13 @@ async def logout(
         except Exception:
             pass
 
-    response.delete_cookie(key="refresh_token", path="/")
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+    )
     return {"message": "Logged out successfully"}
 
 

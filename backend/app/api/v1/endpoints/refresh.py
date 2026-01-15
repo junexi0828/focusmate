@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, create_refresh_token, validate_refresh_token
 from app.core.exceptions import UnauthorizedException
+from app.core.config import settings
 from app.infrastructure.database.session import get_db
 from app.infrastructure.repositories.refresh_token_repository import RefreshTokenRepository
 from app.infrastructure.redis.session_helpers import check_user_activity, store_token_mapping
@@ -117,7 +118,7 @@ async def refresh_token_endpoint(
             key="refresh_token",
             value=new_token_str,
             httponly=True,
-            secure=True,
+            secure=settings.is_production,
             samesite="lax",
             path="/",
             max_age=7*24*60*60
