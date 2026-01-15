@@ -73,6 +73,9 @@ def convert_async_url_to_sync(url: str) -> str:
     Returns:
         Synchronous database URL
     """
+    # Administrative checks should use Session Pooler (5432) to avoid PgBouncer issues
+    url = url.replace(":6543/", ":5432/")
+
     # Convert async SQLite URL to sync
     if url.startswith("sqlite+aiosqlite://"):
         return url.replace("sqlite+aiosqlite://", "sqlite://")
