@@ -68,18 +68,16 @@ class FileEncryptionMiddleware(BaseHTTPMiddleware):
         if should_decrypt and response.status_code == 200:
             # Check if response contains encrypted file data
             if "application/octet-stream" in response.headers.get("content-type", ""):
-                try:
-                    # Read response body
-                    body = b""
-                    async for chunk in response.body_iterator:
-                        body += chunk
+                # Buffer body once so we can return original content if decryption fails
+                body = b""
+                async for chunk in response.body_iterator:
+                    body += chunk
 
+                headers = dict(response.headers)
+                headers.pop("content-length", None)
+                try:
                     # Decrypt the file content
                     decrypted_data = self.encryption_service.decrypt(body)
-
-                    # Create new response with decrypted data
-                    headers = dict(response.headers)
-                    headers.pop("content-length", None)
                     return Response(
                         content=decrypted_data,
                         status_code=response.status_code,
@@ -87,8 +85,13 @@ class FileEncryptionMiddleware(BaseHTTPMiddleware):
                         media_type=response.media_type,
                     )
                 except Exception:
-                    # If decryption fails, return original response
-                    return response
+                    # If decryption fails, return the original content
+                    return Response(
+                        content=body,
+                        status_code=response.status_code,
+                        headers=headers,
+                        media_type=response.media_type,
+                    )
 
         return response
 

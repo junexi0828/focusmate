@@ -30,6 +30,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["websocket"])
 
 
+async def _commit_or_rollback(db: AsyncSession) -> None:
+    """Commit a transaction or rollback on failure."""
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
 @router.websocket("/ws/{room_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
@@ -62,63 +71,67 @@ async def websocket_endpoint(
     async with AsyncSessionLocal() as db:
         current_user = None
         token_id = None
-    try:
-        # Authenticate user
-        jwt_token = extract_ws_token(websocket, token)
-        if jwt_token:
-            user_id = None
-            try:
-                payload = jwt.decode(
-                    jwt_token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-                )
-                user_id = payload.get("sub")
-            except (JWTError, Exception) as e:
-                logger.warning(f"[Room WS] Token decode failed for room_id={room_id}: {e}")
-
-            if user_id:
+        try:
+            # Authenticate user
+            jwt_token = extract_ws_token(websocket, token)
+            if jwt_token:
+                user_id = None
                 try:
-                    # Extract token ID (JTI) for tracking session activity
-                    token_id = payload.get("jti")
+                    payload = jwt.decode(
+                        jwt_token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+                    )
+                    user_id = payload.get("sub")
+                except (JWTError, Exception) as e:
+                    logger.warning(f"[Room WS] Token decode failed for room_id={room_id}: {e}")
 
-                    user_repo = UserRepository(db)
-                    user = await user_repo.get_by_id(user_id)
-                    if user and user.is_active:
-                        current_user = user
-                except Exception as db_e:
-                    logger.error(f"[Room WS] DB Authentication failed for user_id={user_id}: {db_e}", exc_info=True)
-                    # current_user remains None, triggering 1008 close below
-            else:
+                if user_id:
+                    try:
+                        # Extract token ID (JTI) for tracking session activity
+                        token_id = payload.get("jti")
+
+                        user_repo = UserRepository(db)
+                        user = await user_repo.get_by_id(user_id)
+                        if user and user.is_active:
+                            current_user = user
+                    except Exception as db_e:
+                        logger.error(
+                            f"[Room WS] DB Authentication failed for user_id={user_id}: {db_e}",
+                            exc_info=True,
+                        )
+                        # current_user remains None, triggering 1008 close below
+                else:
+                    await websocket.close(code=1008, reason="Authentication failed")
+                    return
+
+            if not current_user:
+                # Connection is already accepted, so we can send a close frame
                 await websocket.close(code=1008, reason="Authentication failed")
                 return
 
-        if not current_user:
-            # Connection is already accepted, so we can send a close frame
-            await websocket.close(code=1008, reason="Authentication failed")
-            return
+            logger.info(
+                f"[Room WS] Connection attempt by {current_user.username} for room_id={room_id}"
+            )
+            await connection_manager.connect(websocket, UUID(room_id), str(current_user.id))
 
-        logger.info(f"[Room WS] Connection attempt by {current_user.username} for room_id={room_id}")
-        await connection_manager.connect(websocket, UUID(room_id), str(current_user.id))
+            # Subscribe to Redis channel for multi-server broadcasting
+            try:
+                await redis_pubsub_manager.subscribe_to_room(UUID(room_id))
+            except Exception as e:
+                logger.error(f"[Room WS] Failed to subscribe to Redis channel: {e}")
 
-        # Subscribe to Redis channel for multi-server broadcasting
-        try:
-            await redis_pubsub_manager.subscribe_to_room(UUID(room_id))
-        except Exception as e:
-            logger.error(f"[Room WS] Failed to subscribe to Redis channel: {e}")
+            logger.info(f"[Room WS] Connected {current_user.username} to room_id={room_id}")
 
-        logger.info(f"[Room WS] Connected {current_user.username} to room_id={room_id}")
+            # Track session in background (fire-and-forget)
+            # This prevents Redis latency from blocking the WebSocket connection
+            asyncio.create_task(_track_session_background(current_user, room_id))
 
-        # Track session in background (fire-and-forget)
-        # This prevents Redis latency from blocking the WebSocket connection
-        asyncio.create_task(_track_session_background(current_user, room_id))
-
-
-        timer_service = TimerService(
-            TimerRepository(db),
-            RoomRepository(db),
-        )
-        chat_service = RoomChatService()
-        participant_repo = ParticipantRepository(db)
-        is_participant = False
+            timer_service = TimerService(
+                TimerRepository(db),
+                RoomRepository(db),
+            )
+            chat_service = RoomChatService()
+            participant_repo = ParticipantRepository(db)
+            is_participant = False
 
         # Send welcome message
         await connection_manager.send_personal_message(
@@ -135,14 +148,17 @@ async def websocket_endpoint(
         )
 
         # Mark participant as connected (non-critical, don't fail connection if this fails)
-        participant_count = 1
-        try:
-            participant = await participant_repo.get_by_user_and_room(current_user.id, room_id)
-            is_participant = participant is not None
-            await participant_repo.mark_connected_by_user_and_room(current_user.id, room_id)
-            participant_count = await participant_repo.count_active_participants(room_id)
-        except Exception as e:
-            logger.warning(f"[Room WS] Failed to mark participant connected: {e}")
+            participant_count = 1
+            try:
+                participant = await participant_repo.get_by_user_and_room(
+                    current_user.id, room_id
+                )
+                is_participant = participant is not None
+                await participant_repo.mark_connected_by_user_and_room(current_user.id, room_id)
+                participant_count = await participant_repo.count_active_participants(room_id)
+                await _commit_or_rollback(db)
+            except Exception as e:
+                logger.warning(f"[Room WS] Failed to mark participant connected: {e}")
 
         # Send recent chat backfill (best effort)
         try:
@@ -178,222 +194,226 @@ async def websocket_endpoint(
         except Exception as e:
             logger.warning(f"[Room WS] Failed to publish participant join event: {e}")
 
-        while True:
-            try:
-                # Receive messages from client
-                data = await websocket.receive_json()
+            while True:
+                try:
+                    # Receive messages from client
+                    data = await websocket.receive_json()
 
-                # Track activity on ANY message (keeps session alive)
-                if token_id:
-                    try:
-                        await track_user_activity(current_user.id, token_id, room_id)
-                    except Exception as e:
-                        logger.debug(f"[Room WS] Activity tracking failed: {e}")
+                    # Track activity on ANY message (keeps session alive)
+                    if token_id:
+                        try:
+                            await track_user_activity(current_user.id, token_id, room_id)
+                        except Exception as e:
+                            logger.debug(f"[Room WS] Activity tracking failed: {e}")
 
-                # Process client messages
-                message_type = data.get("type", "message")
-                logger.debug(
-                    f"[Room WS] Received message type={message_type} from {current_user.username} in room_id={room_id}"
-                )
-
-                # Handle ping/pong
-                if message_type == "ping":
-                    await connection_manager.send_personal_message(
-                        {
-                            "event": "pong",
-                            "timestamp": datetime.now(UTC).isoformat(),
-                        },
-                        websocket,
+                    # Process client messages
+                    message_type = data.get("type", "message")
+                    logger.debug(
+                        f"[Room WS] Received message type={message_type} from {current_user.username} in room_id={room_id}"
                     )
-                    continue
-                if message_type == "pong":
-                    continue
-                if message_type == "chat_message":
-                    try:
-                        if not is_participant:
-                            participant = await participant_repo.get_by_user_and_room(
-                                current_user.id, room_id
-                            )
-                            is_participant = participant is not None
 
-                        if not is_participant:
+                    # Handle ping/pong
+                    if message_type == "ping":
+                        await connection_manager.send_personal_message(
+                            {
+                                "event": "pong",
+                                "timestamp": datetime.now(UTC).isoformat(),
+                            },
+                            websocket,
+                        )
+                        continue
+                    if message_type == "pong":
+                        continue
+                    if message_type == "chat_message":
+                        try:
+                            if not is_participant:
+                                participant = await participant_repo.get_by_user_and_room(
+                                    current_user.id, room_id
+                                )
+                                is_participant = participant is not None
+
+                            if not is_participant:
+                                await connection_manager.send_personal_message(
+                                    {
+                                        "event": "error",
+                                        "error": {
+                                            "code": "NOT_IN_ROOM",
+                                            "message": "방에 참여한 사용자만 채팅할 수 있습니다.",
+                                        },
+                                        "timestamp": datetime.now(UTC).isoformat(),
+                                    },
+                                    websocket,
+                                )
+                                continue
+
+                            content = data.get("data", {}).get("content", "")
+                            sender_name = (
+                                current_user.name
+                                or current_user.username
+                                or "사용자"
+                            )
+                            chat_message = chat_service.build_message(
+                                room_id=room_id,
+                                sender_id=current_user.id,
+                                sender_name=sender_name,
+                                content=content,
+                            )
+                            message_payload = chat_message.model_dump(mode="json")
+                            await append_message(room_id, message_payload)
+                            await redis_pubsub_manager.publish_event(
+                                UUID(room_id),
+                                "chat_message",
+                                {"message": message_payload},
+                            )
+                        except ValueError as e:
                             await connection_manager.send_personal_message(
                                 {
                                     "event": "error",
                                     "error": {
-                                        "code": "NOT_IN_ROOM",
-                                        "message": "방에 참여한 사용자만 채팅할 수 있습니다.",
+                                        "code": "INVALID_CHAT_MESSAGE",
+                                        "message": str(e),
                                     },
                                     "timestamp": datetime.now(UTC).isoformat(),
                                 },
                                 websocket,
                             )
-                            continue
+                        continue
 
-                        content = data.get("data", {}).get("content", "")
-                        sender_name = (
-                            current_user.name
-                            or current_user.username
-                            or "사용자"
-                        )
-                        chat_message = chat_service.build_message(
-                            room_id=room_id,
-                            sender_id=current_user.id,
-                            sender_name=sender_name,
-                            content=content,
-                        )
-                        message_payload = chat_message.model_dump(mode="json")
-                        await append_message(room_id, message_payload)
-                        await redis_pubsub_manager.publish_event(
-                            UUID(room_id),
-                            "chat_message",
-                            {"message": message_payload},
-                        )
-                    except ValueError as e:
-                        await connection_manager.send_personal_message(
-                            {
-                                "event": "error",
-                                "error": {
-                                    "code": "INVALID_CHAT_MESSAGE",
-                                    "message": str(e),
-                                },
-                                "timestamp": datetime.now(UTC).isoformat(),
-                            },
-                            websocket,
-                        )
-                    continue
+                    if message_type in {
+                        "timer_start",
+                        "timer_pause",
+                        "timer_resume",
+                        "timer_reset",
+                        "timer_complete",
+                    }:
+                        timer_state = None
+                        completed_session_type = None
 
-                if message_type in {
-                    "timer_start",
-                    "timer_pause",
-                    "timer_resume",
-                    "timer_reset",
-                    "timer_complete",
-                }:
-                    timer_state = None
-                    completed_session_type = None
+                        try:
+                            if message_type == "timer_start":
+                                session_type = data.get("data", {}).get("session_type", "work")
+                                timer_state = await timer_service.start_timer(
+                                    room_id,
+                                    session_type,
+                                    db=db,
+                                )
+                            elif message_type == "timer_pause":
+                                timer_state = await timer_service.pause_timer(room_id)
+                            elif message_type == "timer_resume":
+                                timer_state = await timer_service.resume_timer(room_id)
+                            elif message_type == "timer_reset":
+                                timer_state = await timer_service.reset_timer(room_id, db=db)
+                            elif message_type == "timer_complete":
+                                timer = await timer_service.timer_repo.get_by_room_id(room_id)
+                                if not timer:
+                                    raise TimerNotFoundException(room_id)
+                                room = await timer_service.room_repo.get_by_id(room_id)
+                                if not room:
+                                    raise RoomNotFoundException(room_id)
 
-                    try:
-                        if message_type == "timer_start":
-                            session_type = data.get("data", {}).get("session_type", "work")
-                            timer_state = await timer_service.start_timer(
-                                room_id,
-                                session_type,
-                                db=db,
-                            )
-                        elif message_type == "timer_pause":
-                            timer_state = await timer_service.pause_timer(room_id)
-                        elif message_type == "timer_resume":
-                            timer_state = await timer_service.resume_timer(room_id)
-                        elif message_type == "timer_reset":
-                            timer_state = await timer_service.reset_timer(room_id, db=db)
-                        elif message_type == "timer_complete":
-                            timer = await timer_service.timer_repo.get_by_room_id(room_id)
-                            if not timer:
-                                raise TimerNotFoundException(room_id)
-                            room = await timer_service.room_repo.get_by_id(room_id)
-                            if not room:
-                                raise RoomNotFoundException(room_id)
+                                completed_session_type = (
+                                    "work" if timer.phase == TimerPhase.WORK.value else "break"
+                                )
+                                completion_time = timer.completed_at or datetime.now(UTC)
+                                timer_state = await timer_service.complete_phase(
+                                    room_id,
+                                    completed_at=completion_time,
+                                    db=db,
+                                )
+                            await _commit_or_rollback(db)
+                        except InvalidTimerStateException:
+                            timer_state = await timer_service.get_timer_state(room_id, db=db)
 
-                            completed_session_type = (
-                                "work" if timer.phase == TimerPhase.WORK.value else "break"
-                            )
-                            completion_time = timer.completed_at or datetime.now(UTC)
-                            timer_state = await timer_service.complete_phase(
-                                room_id,
-                                completed_at=completion_time,
-                                db=db,
-                            )
-                    except InvalidTimerStateException:
-                        timer_state = await timer_service.get_timer_state(room_id, db=db)
+                        if timer_state:
+                            # Global Broadcast for timer events
+                            if completed_session_type:
+                                next_session_type = (
+                                    "break" if completed_session_type == "work" else "work"
+                                )
+                                await redis_pubsub_manager.publish_event(
+                                    UUID(room_id),
+                                    "timer_complete",
+                                    {
+                                        "completed_session_type": completed_session_type,
+                                        "next_session_type": next_session_type,
+                                        "auto_start": timer_state.status == "running",
+                                    }
+                                )
 
-                    if timer_state:
-                        # Global Broadcast for timer events
-                        if completed_session_type:
-                            next_session_type = (
-                                "break" if completed_session_type == "work" else "work"
-                            )
                             await redis_pubsub_manager.publish_event(
                                 UUID(room_id),
-                                "timer_complete",
-                                {
-                                    "completed_session_type": completed_session_type,
-                                    "next_session_type": next_session_type,
-                                    "auto_start": timer_state.status == "running",
-                                }
+                                "timer_update",
+                                timer_state.model_dump(mode="json")
                             )
+                        continue
 
-                        await redis_pubsub_manager.publish_event(
-                            UUID(room_id),
-                            "timer_update",
-                            timer_state.model_dump(mode="json")
-                        )
+                    # Ignore unknown message types
                     continue
 
-                # Ignore unknown message types
-                continue
+                except ValueError as e:
+                    logger.warning(
+                        f"[Room WS] Invalid message format from {current_user.username}: {e}"
+                    )
+                    continue
 
-            except ValueError as e:
-                logger.warning(
-                    f"[Room WS] Invalid message format from {current_user.username}: {e}"
-                )
-                continue
-
-            except RuntimeError as e:
-                # Connection was closed
-                if 'Cannot call "receive"' in str(e) or "Connection closed" in str(e):
+                except RuntimeError as e:
+                    # Connection was closed
+                    if 'Cannot call "receive"' in str(e) or "Connection closed" in str(e):
+                        break
+                    logger.error(f"[Room WS] RuntimeError for {current_user.username}: {e}")
                     break
-                logger.error(f"[Room WS] RuntimeError for {current_user.username}: {e}")
-                break
 
+                except Exception as e:
+                    logger.error(
+                        f"[Room WS] Error processing message: {e}",
+                        exc_info=True,
+                    )
+                    continue
+
+        except WebSocketDisconnect as e:
+            logger.info(
+                f"[Room WS] Client disconnected from room_id={room_id} (code: {e.code})"
+            )
+            connection_manager.disconnect(websocket, UUID(room_id))
+
+            # Unsubscribe if no more connections in this room (on this server)
+            if connection_manager.get_room_connection_count(room_id) == 0:
+                try:
+                    await redis_pubsub_manager.unsubscribe_from_room(UUID(room_id))
+                except Exception as ex:
+                    logger.error(f"[Room WS] Failed to unsubscribe: {ex}")
+
+            # Notify others of disconnection (Global Broadcast)
+            try:
+                if current_user:
+                    participant_repo = ParticipantRepository(db)
+                    await participant_repo.mark_disconnected_by_user_and_room(
+                        current_user.id, room_id
+                    )
+                    participant_count = await participant_repo.count_active_participants(room_id)
+                    await _commit_or_rollback(db)
+                    await redis_pubsub_manager.publish_event(
+                        UUID(room_id),
+                        "participant_update",
+                        {
+                            "action": "left",
+                            "participant_id": current_user.id,
+                            "current_count": participant_count,
+                            "room_id": room_id,
+                        }
+                    )
             except Exception as e:
                 logger.error(
-                    f"[Room WS] Error processing message: {e}",
-                    exc_info=True,
+                    f"[Room WS] Error broadcasting disconnect for room_id={room_id}: {e}"
                 )
-                continue
 
-    except WebSocketDisconnect as e:
-        logger.info(
-            f"[Room WS] Client disconnected from room_id={room_id} (code: {e.code})"
-        )
-        connection_manager.disconnect(websocket, UUID(room_id))
-
-        # Unsubscribe if no more connections in this room (on this server)
-        if connection_manager.get_room_connection_count(room_id) == 0:
-            try:
-                await redis_pubsub_manager.unsubscribe_from_room(UUID(room_id))
-            except Exception as ex:
-                logger.error(f"[Room WS] Failed to unsubscribe: {ex}")
-
-        # Notify others of disconnection (Global Broadcast)
-        try:
-            if current_user:
-                participant_repo = ParticipantRepository(db)
-                await participant_repo.mark_disconnected_by_user_and_room(current_user.id, room_id)
-                participant_count = await participant_repo.count_active_participants(room_id)
-                await redis_pubsub_manager.publish_event(
-                    UUID(room_id),
-                    "participant_update",
-                    {
-                        "action": "left",
-                        "participant_id": current_user.id,
-                        "current_count": participant_count,
-                        "room_id": room_id,
-                    }
-                )
         except Exception as e:
-            logger.error(
-                f"[Room WS] Error broadcasting disconnect for room_id={room_id}: {e}"
-            )
-
-    except Exception as e:
-        logger.error(f"[Room WS] Fatal error for room_id={room_id}: {e}", exc_info=True)
-        connection_manager.disconnect(websocket, UUID(room_id))
-        try:
-            await websocket.close(code=1011)
-        except Exception:
-            pass
+            logger.error(f"[Room WS] Fatal error for room_id={room_id}: {e}", exc_info=True)
+            connection_manager.disconnect(websocket, UUID(room_id))
+            try:
+                await websocket.close(code=1011)
+            except Exception:
+                pass
 
 
 async def _track_session_background(user: Any, room_id: str) -> None:
