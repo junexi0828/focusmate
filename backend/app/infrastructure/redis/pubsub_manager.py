@@ -29,6 +29,7 @@ class RedisPubSubManager:
         self.pubsub: aioredis.client.PubSub | None = None
         self.subscriptions: set[str] = set()
         self._listener_task: asyncio.Task | None = None
+        self._running = False
         # Circuit breaker for fault isolation
         self._circuit_breaker = RedisCircuitBreaker(
             failure_threshold=5,
@@ -154,35 +155,52 @@ class RedisPubSubManager:
 
     async def listen(self):
         """Listen for messages from Redis and broadcast to WebSocket connections."""
-        if not self.pubsub:
-            return
+        backoff_seconds = 1
+        while self._running:
+            try:
+                if not self.pubsub or not self.redis:
+                    await self.connect()
 
-        async for message in self.pubsub.listen():
-            if message["type"] == "message":
-                try:
-                    channel = message["channel"]
+                async for message in self.pubsub.listen():
+                    if not self._running:
+                        break
+                    if message["type"] != "message":
+                        continue
 
-                    data = json.loads(message["data"])
+                    try:
+                        channel = message["channel"]
+                        data = json.loads(message["data"])
 
-                    if channel.startswith("chat:room:"):
-                        # Extract room_id from channel name
-                        room_id = UUID(channel.split(":")[-1])
-                        # Broadcast to WebSocket connections
-                        await connection_manager.broadcast_to_room(room_id, data)
-                    elif channel.startswith("notification:user:"):
-                        # Extract user_id from channel name
-                        user_id = channel.split(":")[-1]
-                        # Broadcast to local WebSocket connections for this user
-                        from app.infrastructure.websocket.notification_manager import (
-                            notification_ws_manager,
-                        )
+                        if channel.startswith("chat:room:"):
+                            # Extract room_id from channel name
+                            room_id = UUID(channel.split(":")[-1])
+                            # Broadcast to WebSocket connections
+                            await connection_manager.broadcast_to_room(room_id, data)
+                        elif channel.startswith("notification:user:"):
+                            # Extract user_id from channel name
+                            user_id = channel.split(":")[-1]
+                            # Broadcast to local WebSocket connections for this user
+                            from app.infrastructure.websocket.notification_manager import (
+                                notification_ws_manager,
+                            )
 
-                        await notification_ws_manager.send_notification_local(
-                            data, user_id
-                        )
+                            await notification_ws_manager.send_notification_local(
+                                data, user_id
+                            )
+                    except Exception as e:
+                        logging.getLogger(__name__).error(f"Error processing Redis message: {e}")
 
-                except Exception as e:
-                    logging.getLogger(__name__).error(f"Error processing Redis message: {e}")
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"[PubSub] Listener error: {e}")
+                await self._reset_connection()
+                if not self._running:
+                    break
+                await asyncio.sleep(backoff_seconds)
+                backoff_seconds = min(backoff_seconds * 2, 60)
+            else:
+                backoff_seconds = 1
 
     async def publish_notification(self, user_id: str, notification_data: dict):
         """Publish notification to Redis channel with circuit breaker protection."""
@@ -228,16 +246,33 @@ class RedisPubSubManager:
     async def start_listener(self):
         """Start background listener task."""
         if self._listener_task is None or self._listener_task.done():
+            self._running = True
             self._listener_task = asyncio.create_task(self.listen())
 
     async def stop_listener(self):
         """Stop background listener task."""
+        self._running = False
         if self._listener_task and not self._listener_task.done():
             self._listener_task.cancel()
             try:
                 await self._listener_task
             except asyncio.CancelledError:
                 pass
+
+    async def _reset_connection(self) -> None:
+        """Reset Redis and PubSub connections after failures."""
+        try:
+            if self.pubsub:
+                await self.pubsub.close()
+        except Exception:
+            pass
+        try:
+            if self.redis:
+                await self.redis.close()
+        except Exception:
+            pass
+        self.pubsub = None
+        self.redis = None
             self._listener_task = None
 
     # Presence operations

@@ -7,7 +7,11 @@ from datetime import UTC
 from app.domain.notification.schemas import NotificationCreate
 from app.domain.notification.service import NotificationService
 from app.domain.room_reservation.service import RoomReservationService
-from app.infrastructure.database.session import get_db
+from app.infrastructure.database.session import (
+    get_db,
+    is_duplicate_prepared_statement_error,
+    reset_engine_for_prepared_statement_error,
+)
 from app.infrastructure.repositories.notification_repository import NotificationRepository
 from app.infrastructure.repositories.room_reservation_repository import (
     RoomReservationRepository,
@@ -63,19 +67,7 @@ class ReservationNotificationWorker:
             logger.warning(f"Redis distributed lock check failed, proceeding cautiously: {e}")
 
         # Step 1: Fetch reservations needing notification (Read-only session)
-        reservation_ids = []
-        async for db in get_db():
-            try:
-                reservation_repo = RoomReservationRepository(db)
-                reservation_service = RoomReservationService(reservation_repo)
-                reservations = await reservation_service.get_reservations_needing_notification()
-
-                if reservations:
-                    reservation_ids = [r.id for r in reservations]
-            except Exception as e:
-                logger.error("Reservation notification fetch failed: %s", e, exc_info=True)
-            finally:
-                break
+        reservation_ids = await self._fetch_reservation_ids()
 
         if not reservation_ids:
             return
@@ -83,6 +75,47 @@ class ReservationNotificationWorker:
         # Step 2: Process each reservation in its own transaction
         # This prevents one failure from rolling back others (which would cause duplicate notifications)
         for reservation_id in reservation_ids:
+            await self._process_reservation(reservation_id)
+
+    async def _fetch_reservation_ids(self) -> list[int]:
+        """Fetch reservation ids that need notifications, retrying on pgBouncer errors."""
+        for attempt in range(2):
+            duplicate_error = False
+            reservation_ids: list[int] = []
+            async for db in get_db():
+                try:
+                    reservation_repo = RoomReservationRepository(db)
+                    reservation_service = RoomReservationService(reservation_repo)
+                    reservations = await reservation_service.get_reservations_needing_notification()
+
+                    if reservations:
+                        reservation_ids = [r.id for r in reservations]
+                    return reservation_ids
+                except Exception as exc:
+                    await db.rollback()
+                    if is_duplicate_prepared_statement_error(exc):
+                        logger.error(
+                            "Duplicate prepared statement error in reservation fetch; resetting engine.",
+                            exc_info=True,
+                        )
+                        await reset_engine_for_prepared_statement_error()
+                        duplicate_error = True
+                    else:
+                        logger.error(
+                            "Reservation notification fetch failed: %s",
+                            exc,
+                            exc_info=True,
+                        )
+                finally:
+                    break
+            if not duplicate_error or attempt == 1:
+                return reservation_ids
+        return []
+
+    async def _process_reservation(self, reservation_id: int) -> None:
+        """Process a reservation notification with retry on pgBouncer errors."""
+        for attempt in range(2):
+            duplicate_error = False
             async for db in get_db():
                 try:
                     # Re-initialize repos for this session
@@ -97,9 +130,11 @@ class ReservationNotificationWorker:
                     # Re-fetch reservation
                     reservation = await reservation_repo.get_by_id(reservation_id)
                     if not reservation or reservation.is_notification_sent:
-                        continue
+                        return
 
-                    scheduled_time = reservation.scheduled_at.astimezone(UTC).strftime("%m/%d %H:%M")
+                    scheduled_time = reservation.scheduled_at.astimezone(UTC).strftime(
+                        "%m/%d %H:%M"
+                    )
                     notification_data = NotificationCreate(
                         user_id=reservation.user_id,
                         type="reservation",
@@ -115,15 +150,27 @@ class ReservationNotificationWorker:
                     )
                     await notification_service.create_notification(notification_data)
                     await reservation_service.mark_notification_sent(reservation.id)
+                    return
 
                 except Exception as notify_error:
-                    logger.error(
-                        "Failed to send reservation notification for %s: %s",
-                        reservation_id,
-                        notify_error,
-                    )
-                # No finally block needed - get_db context manager handles commit/rollback/close
-                break
+                    await db.rollback()
+                    if is_duplicate_prepared_statement_error(notify_error):
+                        logger.error(
+                            "Duplicate prepared statement error in reservation notify; resetting engine.",
+                            exc_info=True,
+                        )
+                        await reset_engine_for_prepared_statement_error()
+                        duplicate_error = True
+                    else:
+                        logger.error(
+                            "Failed to send reservation notification for %s: %s",
+                            reservation_id,
+                            notify_error,
+                        )
+                finally:
+                    break
+            if not duplicate_error or attempt == 1:
+                return
 
     async def stop(self) -> None:
         """Stop the worker loop."""

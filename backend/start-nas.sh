@@ -39,6 +39,55 @@ if [ -f "$PROJECT_DIR/.env" ]; then
     set +a
 fi
 
+# Enforce production-safe defaults on NAS when not explicitly set
+if [ -z "${APP_ENV:-}" ]; then
+    export APP_ENV="production"
+fi
+# Always disable prepared statements in staging/production to avoid pgBouncer
+# transaction pool errors (asyncpg DuplicatePreparedStatementError).
+if [ "${APP_ENV:-}" = "production" ] || [ "${APP_ENV:-}" = "staging" ]; then
+    export DATABASE_DISABLE_PREPARED_STATEMENTS="true"
+fi
+if [ -z "${DATABASE_PGBOUNCER:-}" ]; then
+    export DATABASE_PGBOUNCER="true"
+fi
+if [ -n "${DATABASE_URL:-}" ]; then
+    if echo "$DATABASE_URL" | grep -qiE "pgbouncer|pooler|:6432|:6543"; then
+        export DATABASE_PGBOUNCER="true"
+    fi
+fi
+if [ "${DATABASE_PGBOUNCER:-}" = "true" ] || [ "${DATABASE_PGBOUNCER:-}" = "1" ]; then
+    export DATABASE_DISABLE_PREPARED_STATEMENTS="true"
+fi
+
+# Force-disable asyncpg prepared statements in DATABASE_URL as a last-resort safety net.
+# This protects against DuplicatePreparedStatementError behind pgBouncer transaction pools.
+ensure_db_param() {
+    local url="$1"
+    local key="$2"
+    local value="$3"
+
+    if echo "$url" | grep -qE "[?&]${key}="; then
+        url=$(echo "$url" | sed -E "s/([?&])${key}=[^&]*/\\1${key}=${value}/")
+    else
+        if echo "$url" | grep -q "?"; then
+            url="${url}&${key}=${value}"
+        else
+            url="${url}?${key}=${value}"
+        fi
+    fi
+
+    echo "$url"
+}
+
+if [ "${DATABASE_DISABLE_PREPARED_STATEMENTS:-}" = "true" ] && [ -n "${DATABASE_URL:-}" ]; then
+    DATABASE_URL=$(ensure_db_param "$DATABASE_URL" "statement_cache_size" "0")
+    DATABASE_URL=$(ensure_db_param "$DATABASE_URL" "max_cached_statement_lifetime" "0")
+    DATABASE_URL=$(ensure_db_param "$DATABASE_URL" "max_cacheable_statement_size" "0")
+    DATABASE_URL=$(ensure_db_param "$DATABASE_URL" "prepared_statement_cache_size" "0")
+    export DATABASE_URL
+fi
+
 # 프로젝트 디렉토리 (NAS 경로)
 PROJECT_DIR="/volume1/web/focusmate-backend"
 cd "$PROJECT_DIR"
