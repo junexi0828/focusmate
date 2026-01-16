@@ -27,7 +27,6 @@ async def check_alembic_version_table() -> bool:
     connect_args = {}
     # Even on 5432, we disable cache to be absolutely safe during migrations
     connect_args["statement_cache_size"] = 0
-    connect_args["prepared_statement_cache_size"] = 0
 
     engine = create_async_engine(
         db_url,
@@ -60,7 +59,6 @@ async def check_tables_exist() -> bool:
     connect_args = {}
     # Even on 5432, we disable cache to be absolutely safe during migrations
     connect_args["statement_cache_size"] = 0
-    connect_args["prepared_statement_cache_size"] = 0
 
     engine = create_async_engine(
         db_url,

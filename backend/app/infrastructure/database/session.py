@@ -79,7 +79,6 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
         query.get(key) in {"0", "false", "no"}
         for key in (
             "statement_cache_size",
-            "prepared_statement_cache_size",
             "max_cached_statement_lifetime",
             "max_cacheable_statement_size",
         )
@@ -118,10 +117,7 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
             "max_cached_statement_lifetime": 0,
             "max_cacheable_statement_size": 0,
         }
-        engine_args = {
-            # SQLAlchemy asyncpg dialect parameter (not a DBAPI connect arg).
-            "prepared_statement_cache_size": 0,
-        }
+        engine_args = {}
         return connect_args, engine_args, is_pgbouncer, True
 
     return {}, {}, False, False
