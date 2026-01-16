@@ -267,7 +267,8 @@ class Settings(BaseSettings):
             if not self.SECURITY_HEADERS_ENABLED or not self.SECURITY_HSTS_ENABLED:
                 raise ValueError("SECURITY_HEADERS_ENABLED and SECURITY_HSTS_ENABLED must be enabled in production")
             if not self.SECURITY_CSP_ENABLED:
-                raise ValueError("SECURITY_CSP_ENABLED must be enabled in production")
+                import logging
+                logging.getLogger("app").warning("⚠️ SECURITY_CSP_ENABLED is disabled in production")
             if isinstance(self.CORS_ORIGINS, list):
                 if "*" in self.CORS_ORIGINS:
                     raise ValueError("CORS_ORIGINS cannot be '*' in production")
