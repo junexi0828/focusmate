@@ -8,6 +8,7 @@ from functools import lru_cache
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
+from sqlalchemy.engine.url import make_url
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -57,6 +58,8 @@ class Settings(BaseSettings):
     DATABASE_POOL_RECYCLE: int = 1800  # Recycle connections every 30 minutes
     DATABASE_POOL_USE_LIFO: bool = True  # Favor recently used connections
     DATABASE_PGBOUNCER: bool = False  # Set to True when using Supabase Transaction Mode (port 6543)
+    DATABASE_DISABLE_PREPARED_STATEMENTS: bool = True  # Safer default for transaction poolers
+    DATABASE_ENABLE_PREPARED_STATEMENTS: bool = False  # Explicit opt-in for prepared statements
 
     @field_validator("DATABASE_URL")
     @classmethod
@@ -67,6 +70,66 @@ class Settings(BaseSettings):
                 "DATABASE_URL must start with sqlite+aiosqlite:// or postgresql+asyncpg://"
             )
         return v
+
+    @model_validator(mode="after")
+    def enforce_database_safety(self) -> "Settings":
+        """Force safe DB settings when using pgBouncer or production-like environments."""
+        if self.APP_ENV in {"production", "staging"}:
+            self.DATABASE_DISABLE_PREPARED_STATEMENTS = True
+            self.DATABASE_ENABLE_PREPARED_STATEMENTS = False
+
+        if self.DATABASE_URL.startswith("postgresql"):
+            is_pooler = False
+            try:
+                parsed_url = make_url(self.DATABASE_URL)
+                if parsed_url.port in {6432, 6543}:
+                    is_pooler = True
+                hostname = (parsed_url.host or "").lower()
+                if "pooler" in hostname or "pgbouncer" in hostname:
+                    is_pooler = True
+                query_flag = str(parsed_url.query.get("pgbouncer", "")).lower()
+                if query_flag in {"1", "true", "yes"}:
+                    is_pooler = True
+                pool_mode = str(parsed_url.query.get("pool_mode", "")).lower()
+                if pool_mode in {"transaction", "statement"}:
+                    is_pooler = True
+            except Exception:
+                is_pooler = False
+
+            if is_pooler:
+                self.DATABASE_PGBOUNCER = True
+                self.DATABASE_DISABLE_PREPARED_STATEMENTS = True
+                self.DATABASE_ENABLE_PREPARED_STATEMENTS = False
+
+            # Disable prepared statements unless explicitly enabled in a safe context.
+            if self.DATABASE_ENABLE_PREPARED_STATEMENTS:
+                if self.APP_ENV == "development" and not is_pooler:
+                    self.DATABASE_DISABLE_PREPARED_STATEMENTS = False
+                else:
+                    self.DATABASE_ENABLE_PREPARED_STATEMENTS = False
+                    self.DATABASE_DISABLE_PREPARED_STATEMENTS = True
+            else:
+                self.DATABASE_DISABLE_PREPARED_STATEMENTS = True
+
+            if self.DATABASE_DISABLE_PREPARED_STATEMENTS:
+                try:
+                    parsed_url = make_url(self.DATABASE_URL)
+                    query = dict(parsed_url.query)
+                    query.update(
+                        {
+                            "statement_cache_size": "0",
+                            "max_cached_statement_lifetime": "0",
+                            "max_cacheable_statement_size": "0",
+                            "prepared_statement_cache_size": "0",
+                        }
+                    )
+                    self.DATABASE_URL = parsed_url.set(query=query).render_as_string(
+                        hide_password=False
+                    )
+                except Exception:
+                    pass
+
+        return self
 
     # ==========================================================================
     # Redis

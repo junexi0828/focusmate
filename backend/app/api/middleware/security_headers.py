@@ -9,6 +9,8 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from app.core.config import settings
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Middleware to attach security headers to responses."""
@@ -63,10 +65,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if self.enable_csp and self._csp_allowed(request.url.path):
             response.headers.setdefault("Content-Security-Policy", self.csp_policy)
 
-        if self.enable_hsts and request.url.scheme == "https":
-            response.headers.setdefault(
-                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
-            )
+        if self.enable_hsts:
+            scheme = request.url.scheme
+            if settings.TRUST_PROXY_HEADERS:
+                forwarded_proto = request.headers.get("x-forwarded-proto")
+                if forwarded_proto:
+                    scheme = forwarded_proto.split(",")[0].strip()
+            if scheme == "https":
+                response.headers.setdefault(
+                    "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+                )
 
         if self._no_store_required(request.url.path):
             response.headers.setdefault(
