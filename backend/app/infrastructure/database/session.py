@@ -153,18 +153,6 @@ def _force_disable_prepared_statements(
     engine_kwargs["connect_args"] = connect_args
     engine_kwargs["prepared_statement_cache_size"] = 0
 
-    try:
-        parsed_url = make_url(database_url)
-        query = dict(parsed_url.query)
-        query.update(
-            {
-                "statement_cache_size": "0",
-                "max_cached_statement_lifetime": "0",
-                "max_cacheable_statement_size": "0",
-                "prepared_statement_cache_size": "0",
-            }
-        )
-        database_url = parsed_url.set(query=query).render_as_string(hide_password=False)
     except Exception:
         pass
 
@@ -233,19 +221,8 @@ if database_url.startswith("postgresql"):
     engine_kwargs.update(pgbouncer_engine_args)
 
     if disable_prepared:
-        # Force-disable asyncpg prepared statements in the URL query as a last-resort
-        # safety net for transaction poolers that ignore/override connect_args.
-        parsed_url = make_url(database_url)
-        query = dict(parsed_url.query)
-        query.update(
-            {
-                "statement_cache_size": "0",
-                "max_cached_statement_lifetime": "0",
-                "max_cacheable_statement_size": "0",
-                "prepared_statement_cache_size": "0",
-            }
-        )
-        database_url = parsed_url.set(query=query).render_as_string(hide_password=False)
+        # Prepared statements are handled via connect_args to ensure correct types.
+        pass
 
     # pgBouncer already pools connections; using NullPool prevents state leakage and
     # avoids server-side prepared statement collisions in transaction pooling mode.
