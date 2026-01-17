@@ -20,6 +20,7 @@ pyjwt==2.10.1                       # JWT tokens
 passlib[bcrypt]==1.7.4              # Password hashing
 python-jose[cryptography]==3.3.0    # JWT encoding/decoding
 bcrypt==4.2.1                       # Password hashing backend
+itsdangerous==2.2.0                # Required for SessionMiddleware
 
 # Validation & Serialization
 pydantic==2.10.6                    # Data validation
