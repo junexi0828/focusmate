@@ -173,8 +173,9 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize Reservation Notification Worker (polling-based)
     reservation_task = None
     try:
-        reservation_task = asyncio.create_task(reservation_notification_worker.start())
-        logger.info("✅ Reservation Notification Worker started (60s interval)")
+        # reservation_task = asyncio.create_task(reservation_notification_worker.start())
+        # logger.info("✅ Reservation Notification Worker started (60s interval)")
+        raise Exception("Disabled on NAS due to Redis hang")
     except Exception:
         logger.exception("⚠️ Reservation Notification Worker initialization failed")
         # await send_slack_notification(
