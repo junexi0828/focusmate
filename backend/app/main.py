@@ -104,9 +104,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Initialize Redis Pub/Sub
     try:
-        await redis_pubsub_manager.connect()
-        await redis_pubsub_manager.start_listener()
-        logger.info("✅ Redis Pub/Sub initialized")
+        # await redis_pubsub_manager.connect()
+        # await redis_pubsub_manager.start_listener()
+        # logger.info("✅ Redis Pub/Sub initialized")
+        raise Exception("Disabled on NAS due to Redis PubSub spin")
     except Exception:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
