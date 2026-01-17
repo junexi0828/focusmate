@@ -1,7 +1,6 @@
 """Main FastAPI application entry point.
 
-This module initializes the FastAPI app, sets up middleware,
-includes API routers, and defines the application lifespan.
+Simplified and robust version for production on NAS.
 """
 
 import sys
@@ -10,22 +9,31 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-# 1. CRITICAL: Path configuration for NAS and multiprocessing compatibility
+# 1. CRITICAL: Absolute Path setup
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-print(f"DIAGNOSTIC: PROJECT_ROOT={PROJECT_ROOT}")
-print(f"DIAGNOSTIC: sys.path={sys.path}")
-print(f"DIAGNOSTIC: os.listdir={os.listdir(PROJECT_ROOT)}")
+# Debug: Print environment info
+print(f"INFO: Running from {PROJECT_ROOT}")
+print(f"INFO: Python {sys.version}")
 
-# 2. Imports (Absolute imports are preferred after path setup)
+# 2. Imports (Wait, let's try to import app specifically first)
+try:
+    import app
+    print(f"INFO: Found 'app' package at {app.__file__}")
+except Exception as e:
+    print(f"ERROR: Could not import 'app': {e}")
+    # Last resort path hack
+    sys.path.append(PROJECT_ROOT)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
+# Core application components
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.infrastructure.database.session import close_db
@@ -35,7 +43,7 @@ from app.infrastructure.websocket.notification_manager import notification_ws_ma
 # Configure logging
 logging.basicConfig(
     level=settings.LOG_LEVEL,
-    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(module)s", "function": "%(funcName)s", "line": %(lineno)d}',
+    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}',
 )
 logger = logging.getLogger(__name__)
 
@@ -45,32 +53,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manages application startup and shutdown events."""
     logger.info("🚀 Starting Focus Mate Backend...")
     logger.info(f"📍 Environment: {settings.APP_ENV}")
-    logger.info(f"📍 Project Root: {PROJECT_ROOT}")
-    logger.info(f"📍 Python Path: {sys.path[:3]}...")
 
     # Initialize Redis Pub/Sub (Main Event Bus)
     try:
         await redis_pubsub_manager.connect()
-        # Keep listener disabled for the very first stable deployment
-        # await redis_pubsub_manager.start_listener()
-        logger.info("✅ Redis Pub/Sub connected")
+        # RE-ENABLE Redis listener with safety sleep (already added in pubsub_manager.py)
+        await redis_pubsub_manager.start_listener()
+        logger.info("✅ Redis Pub/Sub connected and listener started")
     except Exception:
-        logger.exception("⚠️ Redis Pub/Sub connection failed")
+        logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
-    # DB readiness check (skip auto-migrations in production as requested)
+    # DB ready (using Alembic in production)
     if settings.APP_ENV not in {"production", "staging"}:
         try:
             from app.infrastructure.database.session import init_db
             await init_db()
-            logger.info("✅ Database initialized (dev mode)")
+            logger.info("✅ Database initialized for dev")
         except Exception:
             logger.exception("⚠️ Database initialization failed")
-    else:
-        logger.info("✅ Database ready (migrations managed by Alembic)")
 
     yield
 
-    # Shutdown logic
+    # Shutdown
     logger.info("🛑 Stopping Focus Mate Backend...")
     await redis_pubsub_manager.disconnect()
     await notification_ws_manager.disconnect()
@@ -86,7 +90,7 @@ app = FastAPI(
     docs_url="/docs" if settings.APP_DEBUG else None,
 )
 
-# Middleware setup
+# Middleware
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.TRUSTED_HOSTS))
 
 if settings.CORS_ORIGINS:
@@ -125,4 +129,4 @@ async def root():
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy"}
+    return {"status": "healthy", "mode": "production"}
