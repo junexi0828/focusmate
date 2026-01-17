@@ -203,7 +203,18 @@ echo ""
 
 # 백그라운드 실행 (Miniconda 환경의 Python 직접 사용)
 # WORKERS 변수가 설정되어 있지 않으면 기본값 2 사용 (밸런스 조정)
-WORKERS=1 # Enforce 1 worker on NAS for stability (overrides .env)
+# -------------------------------------------------------------------------
+# NAS STABILITY OVERRIDES (Added by Debugger)
+# -------------------------------------------------------------------------
+# Force use of Session Mode (Port 5432) instead of Transaction Mode (6543)
+# This prevents 'DuplicatePreparedStatementError' causing 400/500 errors.
+# Note: Requires WORKERS=1 to stay within connection limits.
+export DATABASE_URL=${DATABASE_URL//:6543/:5432}
+export DATABASE_PGBOUNCER=false
+export DATABASE_POOL_SIZE=10
+
+# Enforce 1 worker on NAS for stability (overrides .env)
+WORKERS=1
 echo "   Workers: $WORKERS"
 
 # 데이터베이스 연결 풀 설정 (NAS 리소스 제한 고려)
