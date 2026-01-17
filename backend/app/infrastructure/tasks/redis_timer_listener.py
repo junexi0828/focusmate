@@ -50,13 +50,16 @@ class RedisTimerListener:
                 health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
             )
 
+            logger.info("🔄 Redis Timer Listener: configuring keyspace notifications...")
             # Enable keyspace notifications for expired events
             # 'Ex' = Expired events + Keyevent events
             await self.redis.config_set('notify-keyspace-events', 'Ex')
 
+            logger.info("🔄 Redis Timer Listener: creating pubsub instance...")
             self.pubsub = self.redis.pubsub()
 
             # Subscribe to expired key events on database 0
+            logger.info("🔄 Redis Timer Listener: psubscribing to expiry events...")
             await self.pubsub.psubscribe('__keyevent@0__:expired')
 
             logger.info("✅ Redis Timer Listener connected and subscribed to expiry events")
