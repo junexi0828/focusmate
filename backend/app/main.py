@@ -1,4 +1,8 @@
-"""Main FastAPI application entry point (Restoring Middlewares and Routers)."""
+"""Main FastAPI application entry point.
+
+This module initializes the FastAPI app, sets up middleware,
+includes API routers, and defines the application lifespan.
+"""
 
 import sys
 import os
@@ -18,9 +22,12 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
-from app.api.v1.api import api_router
-from app.core.config import settings
-from app.infrastructure.database.session import close_db
+# Use relative imports or be very careful with absolute ones in multiprocessing
+from .api.v1.api import api_router
+from .core.config import settings
+from .infrastructure.database.session import close_db
+from .infrastructure.redis.pubsub_manager import redis_pubsub_manager
+from .infrastructure.websocket.notification_manager import notification_ws_manager
 
 # Configure logging
 logging.basicConfig(
@@ -29,14 +36,43 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    logger.info("🚀 Starting Focus Mate Backend (Restoring Routers)...")
+    """Manages application startup and shutdown events."""
+    logger.info("🚀 Starting Focus Mate Backend...")
     logger.info(f"📍 Environment: {settings.APP_ENV}")
+
+    # Initialize Redis Pub/Sub (Chat/Global Events)
+    try:
+        await redis_pubsub_manager.connect()
+        # Keep listener disabled for now to confirm 0% CPU
+        # await redis_pubsub_manager.start_listener()
+        logger.info("✅ Redis Pub/Sub connected (Listener disabled temporarily)")
+    except Exception:
+        logger.exception("⚠️ Redis Pub/Sub initialization failed")
+
+    # In production/staging, we skip init_db() as requested
+    if settings.APP_ENV not in {"production", "staging"}:
+        try:
+            from .infrastructure.database.session import init_db
+            await init_db()
+            logger.info("✅ Database initialized for development")
+        except Exception:
+            logger.exception("⚠️ Database initialization failed")
+    else:
+        logger.info("✅ Database ready (using Alembic migrations in production)")
+
     yield
+
+    # Shutdown logic
     logger.info("🛑 Stopping Focus Mate Backend...")
+
+    await redis_pubsub_manager.disconnect()
+    await notification_ws_manager.disconnect()
     await close_db()
     logger.info("👋 Focus Mate Backend stopped")
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -52,8 +88,10 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.TRUSTED_HO
 # CORS Middleware
 if settings.CORS_ORIGINS:
     origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [str(settings.CORS_ORIGINS)]
+
     allow_methods = ["*"]
     allow_headers = ["*"]
+
     if settings.APP_ENV == "production":
         allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
         allow_headers = ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"]
@@ -83,14 +121,18 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Include API Router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+
 @app.get("/")
 async def root():
+    """Root endpoint."""
     return {
         "message": f"Welcome to {settings.PROJECT_NAME} API",
         "version": settings.VERSION,
         "environment": settings.APP_ENV,
     }
 
+
 @app.get("/api/health")
 async def health_check():
+    """Health check endpoint for monitoring."""
     return {"status": "healthy", "environment": settings.APP_ENV}
