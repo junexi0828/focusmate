@@ -107,6 +107,10 @@ class RedisTimerListener:
                             # Run handling in background to not block listener
                             asyncio.create_task(self._handle_timer_expiry(room_id))
 
+                # If we reach here, listen() finished or didn't start.
+                # Avoid tight loop if psubscribe or listen() completes immediately.
+                await asyncio.sleep(1)
+
             except Exception as e:
                 logger.error(f"❌ Redis Listener connection lost: {e}")
                 self.available = False

@@ -1,6 +1,6 @@
 """Main FastAPI application entry point.
 
-RESTORATION STEP 1: Enabling Redis Pub/Sub (Main Bus) only.
+FULLY RESTORED VERSION: All workers re-enabled with tight-loop fixes.
 """
 
 import sys
@@ -26,6 +26,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.infrastructure.database.session import close_db
 from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+from app.infrastructure.websocket.notification_manager import notification_ws_manager
 
 # Configure logging
 logging.basicConfig(
@@ -38,10 +39,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manages application startup and shutdown events."""
-    logger.info("🚀 Starting Step 1 Restoration (Pub/Sub Enabled)...")
+    logger.info("🚀 Starting Focus Mate Backend (Full System Restoration)...")
     logger.info(f"📍 Environment: {settings.APP_ENV}")
 
-    # Initialize Redis Pub/Sub (Main Event Bus)
+    # 1. Initialize Redis Pub/Sub (Main Event Bus)
     try:
         await redis_pubsub_manager.connect()
         await redis_pubsub_manager.start_listener()
@@ -49,11 +50,36 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
+    # 2. Start Background Workers
+    try:
+        from app.infrastructure.tasks.redis_timer_listener import redis_timer_listener
+        from app.infrastructure.tasks.reservation_notifications import reservation_notification_worker
+
+        # Timer Listener (Keyspace Notifications)
+        await redis_timer_listener.connect()
+        asyncio.create_task(redis_timer_listener.listen())
+
+        # Reservation Notification Worker (Periodic check)
+        asyncio.create_task(reservation_notification_worker.start())
+
+        logger.info("✅ Background workers (Timer/Notifications) started in background tasks")
+    except Exception:
+        logger.exception("⚠️ Background workers failed to start")
+
     yield
 
     # Shutdown
     logger.info("🛑 Stopping Focus Mate Backend...")
+    try:
+        from app.infrastructure.tasks.redis_timer_listener import redis_timer_listener
+        from app.infrastructure.tasks.reservation_notifications import reservation_notification_worker
+        await redis_timer_listener.disconnect()
+        await reservation_notification_worker.stop()
+    except Exception:
+        pass
+
     await redis_pubsub_manager.disconnect()
+    await notification_ws_manager.disconnect()
     await close_db()
     logger.info("👋 Focus Mate Backend stopped")
 
@@ -61,7 +87,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    openapi_url=f"/api/v1/openapi.json",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan,
     docs_url="/docs" if settings.APP_DEBUG else None,
 )
@@ -75,24 +101,26 @@ if settings.CORS_ORIGINS:
         CORSMiddleware,
         allow_origins=[str(origin).rstrip("/") for origin in origins],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+        expose_headers=["Content-Disposition"],
     )
 
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
     session_cookie="focusmate_session",
+    max_age=3600 * 24 * 7,
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Routers
-app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
-    return {"message": "Focus Mate Step 1 Running (Pub/Sub Enabled)"}
+    return {"message": "Focus Mate API Running", "env": settings.APP_ENV}
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "mode": "restoration-step-1"}
+    return {"status": "healthy", "mode": "production"}
