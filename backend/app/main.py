@@ -111,10 +111,15 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
     # Initialize Redis Timer Listener (TTL-based expiry)
-    from app.infrastructure.tasks import (
-        redis_timer_listener,
-        reservation_notification_worker,
-    )
+    logger.info("🕒 Importing background tasks...")
+    try:
+        from app.infrastructure.tasks import (
+            redis_timer_listener,
+            reservation_notification_worker,
+        )
+        logger.info("✅ Background tasks imported")
+    except Exception:
+        logger.exception("❌ Failed to import background tasks")
 
     from app.core.notify import send_slack_notification
 
@@ -133,6 +138,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     listener_task = None
     fallback_scheduler = None
     try:
+        logger.info("🔌 Connecting Redis Timer Listener...")
         await redis_timer_listener.connect()
         # Start listener in background task
         listener_task = asyncio.create_task(redis_timer_listener.listen())
