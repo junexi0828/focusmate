@@ -24,10 +24,10 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 
 
-# Create async engine with database-specific configuration
-engine_kwargs = {"echo": settings.DATABASE_ECHO}
-logger = logging.getLogger(__name__)
-_engine_reset_lock = asyncio.Lock()
+# Global engine and session variables (initialized lazily)
+_engine: AsyncEngine | None = None
+_AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
+_engine_lock = asyncio.Lock()
 
 def _using_pgbouncer(database_url: str) -> bool:
     """Detect pgBouncer-style connection URLs.
