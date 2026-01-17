@@ -105,6 +105,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
     # Initialize Redis Timer Listener (TTL-based expiry)
+    logger.info("🔄 Initializing background workers...")
     from app.infrastructure.tasks import (
         redis_timer_listener,
         reservation_notification_worker,
@@ -120,8 +121,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     listener_task = None
     fallback_scheduler = None
     try:
+        logger.info("🔄 Connecting Redis Timer Listener...")
         await redis_timer_listener.connect()
         # Start listener in background task
+        logger.info("🔄 Starting Redis Timer Listener loop...")
         listener_task = asyncio.create_task(redis_timer_listener.listen())
         logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
     except Exception:
@@ -133,6 +136,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     if not redis_timer_listener.is_available():
         try:
+            logger.info("🔄 Starting APScheduler fallback...")
             from apscheduler.schedulers.asyncio import AsyncIOScheduler
             from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
 

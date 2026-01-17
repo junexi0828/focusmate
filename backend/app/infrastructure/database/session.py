@@ -26,7 +26,7 @@ from app.core.config import settings
 # Global engine and session variables (initialized lazily to avoid uvicorn worker hangs)
 _engine: AsyncEngine | None = None
 _AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
-_engine_lock = asyncio.Lock()
+_engine_lock: asyncio.Lock | None = None
 logger = logging.getLogger(__name__)
 
 def _using_pgbouncer(database_url: str) -> bool:
