@@ -139,7 +139,8 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     fallback_scheduler = None
     try:
         logger.info("🔌 Connecting Redis Timer Listener...")
-        await redis_timer_listener.connect()
+        # Add timeout to prevent hang/CPU spin on NAS
+        await asyncio.wait_for(redis_timer_listener.connect(), timeout=5.0)
         # Start listener in background task
         listener_task = asyncio.create_task(redis_timer_listener.listen())
         logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
