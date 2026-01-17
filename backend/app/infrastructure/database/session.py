@@ -29,6 +29,13 @@ _AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
 _engine_lock: asyncio.Lock | None = None
 logger = logging.getLogger(__name__)
 
+def _get_lock() -> asyncio.Lock:
+    """Get or create the global engine lock."""
+    global _engine_lock
+    if _engine_lock is None:
+        _engine_lock = asyncio.Lock()
+    return _engine_lock
+
 def _using_pgbouncer(database_url: str) -> bool:
     """Detect pgBouncer-style connection URLs."""
     try:
@@ -72,7 +79,6 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
     is_pgbouncer = env_flag or auto_detected or hostname_detected
     is_production = settings.APP_ENV in {"production", "staging"}
 
-    # Fundamental decision: Disable prepared stays if it's pgbouncer or production (for safety)
     disable_prepared = is_pgbouncer or is_production or query_disables_prepared or settings.DATABASE_DISABLE_PREPARED_STATEMENTS
 
     if disable_prepared:
@@ -81,7 +87,7 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
             "max_cached_statement_lifetime": 0,
             "max_cacheable_statement_size": 0,
         }
-        engine_args = {} # prepared_statement_cache_size=0 causes TypeError with NullPool in some setups
+        engine_args = {}
         return connect_args, engine_args, True, True
 
     return {}, {}, False, False
@@ -94,7 +100,7 @@ async def _get_engine_and_session() -> tuple[AsyncEngine, async_sessionmaker[Asy
     if _engine and _AsyncSessionLocal:
         return _engine, _AsyncSessionLocal
 
-    async with _engine_lock:
+    async with _get_lock():
         if _engine and _AsyncSessionLocal:
             return _engine, _AsyncSessionLocal
 
@@ -109,7 +115,6 @@ async def _get_engine_and_session() -> tuple[AsyncEngine, async_sessionmaker[Asy
             ca.update(connect_args)
             kw["connect_args"] = ca
             kw["poolclass"] = NullPool
-            # Clean up pooling arguments that are incompatible with NullPool
             for key in ("pool_size", "max_overflow", "pool_timeout", "pool_recycle", "pool_use_lifo"):
                 kw.pop(key, None)
         else:
@@ -153,9 +158,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         except Exception as exc:
             await session.rollback()
             if is_duplicate_prepared_statement_error(exc):
-                # Handle error by resetting engine
                 global _engine, _AsyncSessionLocal
-                async with _engine_lock:
+                async with _get_lock():
                     if _engine:
                         await _engine.dispose()
                     _engine = None
@@ -164,13 +168,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
-# Type alias for dependency injection
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
 async def reset_engine_for_prepared_statement_error():
     """Reset the database engine to recover from prepared statement errors."""
     global _engine, _AsyncSessionLocal
-    async with _engine_lock:
+    async with _get_lock():
         if _engine:
             await _engine.dispose()
         _engine = None
