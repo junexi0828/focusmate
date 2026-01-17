@@ -6,6 +6,7 @@ Fully restored and optimized version for production on NAS.
 import sys
 import os
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -51,13 +52,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Start Background Workers (Restored!)
     try:
-        from app.infrastructure.tasks.redis_timer_listener import timer_listener
-        from app.infrastructure.tasks.reservation_notifications import notification_worker
+        from app.infrastructure.tasks.redis_timer_listener import redis_timer_listener
+        from app.infrastructure.tasks.reservation_notifications import reservation_notification_worker
 
-        # Start background tasks
-        await timer_listener.start()
-        await notification_worker.start()
-        logger.info("✅ Background workers (Timer/Notifications) started")
+        # 1. Timer Listener (Keyspace Notifications)
+        await redis_timer_listener.connect()
+        asyncio.create_task(redis_timer_listener.listen())
+
+        # 2. Reservation Notification Worker (Periodic check)
+        asyncio.create_task(reservation_notification_worker.start())
+
+        logger.info("✅ Background workers (Timer/Notifications) started in background tasks")
     except Exception:
         logger.exception("⚠️ Background workers failed to start")
 
@@ -67,10 +72,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("🛑 Stopping Focus Mate Backend...")
     # Stop background workers first
     try:
-        from app.infrastructure.tasks.redis_timer_listener import timer_listener
-        from app.infrastructure.tasks.reservation_notifications import notification_worker
-        await timer_listener.stop()
-        await notification_worker.stop()
+        from app.infrastructure.tasks.redis_timer_listener import redis_timer_listener
+        from app.infrastructure.tasks.reservation_notifications import reservation_notification_worker
+
+        await redis_timer_listener.disconnect()
+        await reservation_notification_worker.stop()
     except Exception:
         pass
 
