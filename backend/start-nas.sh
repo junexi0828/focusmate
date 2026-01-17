@@ -202,22 +202,27 @@ echo "   Logs: logs/app.log"
 echo ""
 
 # 백그라운드 실행 (Miniconda 환경의 Python 직접 사용)
-# WORKERS 변수가 설정되어 있지 않으면 기본값 2 사용 (밸런스 조정)
-WORKERS=${WORKERS:-2}
+# WORKERS 변수가 설정되어 있지 않으면 기본값 1 사용 (CPU 100% 이슈 디버깅을 위해 1로 하향)
+WORKERS=${WORKERS:-1}
 echo "   Workers: $WORKERS"
 
+# PYTHONPATH 설정 (자식 프로세스 임포트 문제 해결)
+export PYTHONPATH="$PROJECT_DIR"
+
 # 데이터베이스 연결 풀 설정 (NAS 리소스 제한 고려)
-# 작업자당 10개 연결 * 2 Workers = 20 (기본값) ~ max limit 안전범위
-export DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-10}
+# 작업자당 10개 연결
+export DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-15}
 export DATABASE_MAX_OVERFLOW=${DATABASE_MAX_OVERFLOW:-5}
 echo "   DB Pool: $DATABASE_POOL_SIZE (Overflow: $DATABASE_MAX_OVERFLOW)"
 
 FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:-127.0.0.1,::1}
 
+# --loop asyncio 추가 (uvloop와 multiprocessing 간의 잠재적 100% CPU 이슈 방지)
 nohup $CONDA_PYTHON -m uvicorn app.main:app \
     --host 0.0.0.0 \
     --port 8000 \
     --workers $WORKERS \
+    --loop asyncio \
     --timeout-keep-alive 75 \
     --proxy-headers \
     --forwarded-allow-ips "$FORWARDED_ALLOW_IPS" \
