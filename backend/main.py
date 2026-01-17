@@ -42,7 +42,7 @@ from app.infrastructure.websocket.notification_manager import notification_ws_ma
 
 # Configure logging
 logging.basicConfig(
-    level=settings.LOG_LEVEL,
+    level=settings.APP_LOG_LEVEL,
     format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}',
 )
 logger = logging.getLogger(__name__)
