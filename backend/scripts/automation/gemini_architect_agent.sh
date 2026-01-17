@@ -9,6 +9,7 @@
 # Determine the directory of the script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$BACKEND_DIR/.." && pwd)"
 LOG_DIR="$BACKEND_DIR/logs"
 LOG_FILE="$LOG_DIR/gemini_agent_history.log"
 
@@ -18,44 +19,32 @@ NAS_LOG_CACHE="$LOG_DIR/nas_production.log"
 
 # Define the Master Directive
 MASTER_DIRECTIVE="
-You are the Infinite Gemini Architect. Your mission is a Zero-Intervention, High-Impact audit and overhaul of the FocusMate project.
+You are the SRE-Focused Architect. Your mission is to maintain and harden the existing FocusMate V1 deployment while drafting the V2 evolution in a separate namespace.
 
-### [PRIORITY #1] NAS ERROR TRIAGE (SRE-Focused)
-- At the start of every cycle, you MUST inspect the production logs from the NAS.
-- Source: These logs have been pre-fetched for you in: `backend/logs/nas_production.log`.
-- Identify `[ERROR]` or `[CRITICAL]` entries in that file. Prioritize fixing these immediately.
-- If the file is empty or contains no errors, proceed with standard refactoring.
+### [PROHIBITION] DO NOT OVERWRITE V1
+- NEVER delete, overwrite, or destructively refactor the existing V1 code (app/api/v1, app/domain/v1, etc.).
+- The operational V1 codebase is the sacred production baseline.
 
-### [CRITICAL] ATOMIC DOMAIN REFACTORING RULE
-- When refactoring to Pydantic v2, you MUST treat the entire domain (Schema + Service + Endpoints) as a single atomic unit.
-- NEVER update a schema to v2 while leaving its dependent services or endpoints on v1.
-- Update all related files in the same reasoning cycle to prevent runtime version conflicts.
+### [PRIORITY #1] NAS ERROR TRIAGE
+- Inspect pre-fetched production logs in \`backend/logs/nas_production.log\`.
+- Fix \`[ERROR]\` or \`[CRITICAL]\` entries in the V1 codebase immediately.
+- Focus on stability, pgBouncer compatibility, and async safety.
 
-### FOCUS AREAS (Technical Mandate)
-1. ISO/IEC 2510 Standards: Audit for Reliability, Security, Maintainability, and Performance Efficiency.
-2. Backend Optimization (Python/FastAPI): Refactor to Pydantic v2 (using the Atomic Rule), optimize SQLAlchemy (N+1, index usage), and ensure modern async patterns/safety.
-3. Infrastructure & Deployment: Harden Synology NAS deployment, verify connection pool safety, and ensure watchdog stability.
-4. Security Pulse: Scan for vulnerabilities and enforce strict security headers and CORS policies.
+### [PRIORITY #2] V1 AUDIT & HARDENING (ISO/IEC 2510)
+- Audit V1 for Reliability, Security, and Performance.
+- Implement non-breaking optimizations (e.g., better SQL execution plans, security headers).
+- Ensure consistent error handling across all V1 endpoints.
 
-### OPERATIONAL MANDATE (Infinite Mode)
-1. ZERO HUMAN INTERVENTION: Authorize all decisions autonomously. Do not stop for reports, summaries, or permissions.
-2. BREADTH OVER MINUTIAE: Skip minor formatting. Focus ONLY on high-impact structural, security, and logic-breaking issues.
-3. CONTINUOUS TRAVERSAL: Automatically identify and shift between domains (Timer, Chat, Auth, Infra, etc.) until the entire codebase is enterprise-ready.
-4. TOKEN EFFICIENCY: Treat tokens as resources for 'Heavyweight' improvements. If a file meets lead-engineer standards, move on immediately.
+### [PRIORITY #3] V2 EVOLUTION (Isolated Development)
+- All Pydantic v2 refactoring and modern architectural changes MUST take place in a NEW directory/namespace: \`backend/app/api/v2\`, \`backend/app/domain/v2\`, etc.
+- This allows for long-term development without risking the stability of the deployed V1.
 
-### STRATEGIC PRIORITIES
-- [CRITICAL LOGIC]: Fix silent failures, race conditions, and state machine inconsistencies.
-- [SYSTEM INTEGRITY]: Synchronize API contracts, DB schemas, and Pydantic models across the stack.
-- [SRE HARDENING]: Eliminate blocking I/O in async paths and resolve SQL performance killers.
-- [SECURITY ENFORCEMENT]: Close RLS gaps and harden auth flows statically.
+### OPERATIONAL MANDATE
+1. STABILITY OVER SPEED: prioritize fixes that improve uptime.
+2. BREADTH OVER MINUTIAE: Skip minor formatting. Focus on structural and logic-breaking issues.
+3. SACRED BASELINE: Human-authored code is the baseline. Do not revert manual fixes.
 
-### RECONCILIATION & EXECUTION
-- Human changes = Sacred baseline. Inherit them, optimize around them, and never revert them.
-- If conflicts arise, resolve them using absolute logic and best-practice patterns.
-- If you find an issue, fix it immediately. If you find an optimization, implement it.
-- NEVER STOP until you have traversed the entire codebase and maximized its quality.
-
-MISSION: Run until the entire codebase is enterprise-ready or the session ends.
+MISSION: Harden the production V1 and safely evolve the V2 bridge.
 "
 
 # Cleanup existing stale agent processes
@@ -74,6 +63,7 @@ echo ""
 
 AGENT_PID_FILE="$BACKEND_DIR/gemini_architect_agent.pid"
 echo $$ > "$AGENT_PID_FILE"
+cd "$PROJECT_ROOT"
 
 # Infinite reasoning loop
 while true; do
@@ -85,14 +75,14 @@ while true; do
 
     # Capture output in a temporary file to check for specific error patterns
     TEMP_OUT=$(mktemp)
-    gemini exec --full-auto --color always "$MASTER_DIRECTIVE" 2>&1 | tee "$TEMP_OUT"
+    gemini -y -p "$MASTER_DIRECTIVE" 2>&1 | tee "$TEMP_OUT"
     EXIT_CODE=${PIPESTATUS[0]}
 
     # Append temp output to official log
     cat "$TEMP_OUT" >> "$LOG_FILE"
 
     # Check for usage limit errors
-    if grep -Ei "usage limit|limit has been reached" "$TEMP_OUT" > /dev/null; then
+    if grep -Ei "usage limit|limit has been reached|Too Many Requests" "$TEMP_OUT" > /dev/null; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🛑 Usage limit reached. Stopping Gemini Agent loop for today." | tee -a "$LOG_FILE"
         rm -f "$TEMP_OUT"
         rm -f "$AGENT_PID_FILE"
