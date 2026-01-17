@@ -147,10 +147,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         raise Exception("Disabled on NAS due to hang")
     except Exception:
         logger.exception("⚠️ Redis Timer Listener initialization failed")
-        await send_slack_notification(
-            message="⚠️ Redis Timer Listener initialization failed",
-            level="error"
-        )
+        # await send_slack_notification(
+        #     message="⚠️ Redis Timer Listener initialization failed",
+        #     level="error"
+        # )
 
     if not redis_timer_listener.is_available():
         try:
@@ -177,10 +177,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("✅ Reservation Notification Worker started (60s interval)")
     except Exception:
         logger.exception("⚠️ Reservation Notification Worker initialization failed")
-        await send_slack_notification(
-            message="⚠️ Reservation Notification Worker initialization failed",
-            level="error"
-        )
+        # await send_slack_notification(
+        #     message="⚠️ Reservation Notification Worker initialization failed",
+        #     level="error"
+        # )
 
     yield
 
