@@ -164,6 +164,10 @@ class RedisPubSubManager:
                 async for message in self.pubsub.listen():
                     if not self._running:
                         break
+
+                    # Safety sleep to prevent tight-loop spinning (CPU 100% fix)
+                    await asyncio.sleep(0.01)
+
                     if message["type"] != "message":
                         continue
 

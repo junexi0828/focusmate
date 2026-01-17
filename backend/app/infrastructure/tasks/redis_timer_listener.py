@@ -95,6 +95,9 @@ class RedisTimerListener:
                     if not self.running:
                         break
 
+                    # Safety sleep to prevent tight-loop spinning (CPU 100% fix)
+                    await asyncio.sleep(0.01)
+
                     if message['type'] == 'pmessage':
                         key = message['data']
                         if key.startswith('timer:expire:'):
