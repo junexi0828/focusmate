@@ -153,9 +153,6 @@ def _force_disable_prepared_statements(
     engine_kwargs["connect_args"] = connect_args
     engine_kwargs["prepared_statement_cache_size"] = 0
 
-    except Exception:
-        pass
-
     engine_kwargs["poolclass"] = NullPool
     for key in (
         "pool_size",
