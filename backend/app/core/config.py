@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Focus Mate"
     APP_VERSION: str = "1.0.0"
     APP_SLOW_REQUEST_THRESHOLD_MS: int = 1500
+    API_V1_STR: str = "/api/v1"
 
     # ==========================================================================
     # Server
@@ -271,14 +272,21 @@ class Settings(BaseSettings):
             if isinstance(self.CORS_ORIGINS, list):
                 if "*" in self.CORS_ORIGINS:
                     raise ValueError("CORS_ORIGINS cannot be '*' in production")
-                if any(origin.startswith("http://") for origin in self.CORS_ORIGINS):
-                    raise ValueError("CORS_ORIGINS must use https in production")
+                # Allow http://localhost in production only if APP_DEBUG is enabled (for testing)
+                non_localhost_origins = [
+                    origin for origin in self.CORS_ORIGINS
+                    if not origin.startswith("http://localhost") and not origin.startswith("http://127.0.0.1")
+                ]
+                if not self.APP_DEBUG and any(origin.startswith("http://") for origin in non_localhost_origins):
+                    raise ValueError("CORS_ORIGINS must use https in production (except localhost when APP_DEBUG=true)")
             if isinstance(self.TRUSTED_HOSTS, list):
                 if "*" in self.TRUSTED_HOSTS:
                     raise ValueError("TRUSTED_HOSTS cannot be '*' in production")
-                disallowed_hosts = {"localhost", "127.0.0.1", "0.0.0.0"}
-                if any(host in disallowed_hosts for host in self.TRUSTED_HOSTS):
-                    raise ValueError("TRUSTED_HOSTS must be set to production domains in production")
+                # Allow localhost in production only if APP_DEBUG is enabled (for testing)
+                if not self.APP_DEBUG:
+                    disallowed_hosts = {"localhost", "127.0.0.1", "0.0.0.0"}
+                    if any(host in disallowed_hosts for host in self.TRUSTED_HOSTS):
+                        raise ValueError("TRUSTED_HOSTS must be set to production domains in production")
         return self
 
     # ==========================================================================
