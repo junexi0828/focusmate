@@ -119,17 +119,18 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     listener_task = None
     fallback_scheduler = None
-    try:
-        await redis_timer_listener.connect()
-        # Start listener in background task
-        listener_task = asyncio.create_task(redis_timer_listener.listen())
-        logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
-    except Exception:
-        logger.exception("⚠️ Redis Timer Listener initialization failed")
-        await send_slack_notification(
-            message="⚠️ Redis Timer Listener initialization failed",
-            level="error"
-        )
+    # TEMPORARILY DISABLED: Causes worker hang (99% CPU)
+    # try:
+    #     await redis_timer_listener.connect()
+    #     # Start listener in background task
+    #     listener_task = asyncio.create_task(redis_timer_listener.listen())
+    #     logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
+    # except Exception:
+    #     logger.exception("⚠️ Redis Timer Listener initialization failed")
+    #     await send_slack_notification(
+    #         message="⚠️ Redis Timer Listener initialization failed",
+    #         level="error"
+    #     )
 
     if not redis_timer_listener.is_available():
         try:
