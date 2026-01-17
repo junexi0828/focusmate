@@ -116,11 +116,10 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
             "statement_cache_size": 0,
             "max_cached_statement_lifetime": 0,
             "max_cacheable_statement_size": 0,
-            # Force asyncpg to never use prepared statements
-            "prepare_threshold": None,  # Disable automatic prepared statement creation
+            # Force PostgreSQL server to use custom plans instead of prepared statements
             "server_settings": {
                 "jit": "off",  # Disable JIT compilation
-                "plan_cache_mode": "force_custom_plan",  # Force custom plans instead of prepared
+                "plan_cache_mode": "force_custom_plan",  # Force custom plans
             },
         }
         engine_args = {}
