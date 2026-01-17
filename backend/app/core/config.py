@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Focus Mate"
     APP_VERSION: str = "1.0.0"
     APP_SLOW_REQUEST_THRESHOLD_MS: int = 1500
+    API_V1_STR: str = "/api/v1"
 
     # ==========================================================================
     # Server
