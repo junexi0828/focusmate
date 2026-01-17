@@ -94,11 +94,13 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Initialize database (only in development to avoid schema drift)
     # In production, use Alembic migrations instead
-    if settings.is_development:
+    # SKIP if using PgBouncer (Transaction Mode does not support DDL)
+    if settings.is_development and not settings.DATABASE_PGBOUNCER:
+        logger.info("🔧 Initializing database tables (development mode)...")
         await init_db()
         logger.info("✅ Database initialized (development mode)")
     else:
-        logger.info("✅ Database ready (using Alembic migrations in production)")
+        logger.info("✅ Database ready (using Migrations)")
 
     # Initialize Redis Pub/Sub
     try:
@@ -109,33 +111,24 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
     # Initialize Redis Timer Listener (TTL-based expiry)
-    logger.info("🕒 Importing background tasks...")
-    try:
-        from app.infrastructure.tasks import (
-            redis_timer_listener,
-            reservation_notification_worker,
-        )
-        logger.info("✅ Background tasks imported")
-    except Exception:
-        logger.exception("❌ Failed to import background tasks")
+    from app.infrastructure.tasks import (
+        redis_timer_listener,
+        reservation_notification_worker,
+    )
 
     from app.core.notify import send_slack_notification
 
     # Send startup notification
-    logger.info("📨 Sending startup notification...")
-    try:
-        await send_slack_notification(
-            message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
-            level="info"
-        )
-        logger.info("✅ Startup notification sent")
-    except Exception:
-        logger.exception("⚠️ Failed to send startup notification")
+    await send_slack_notification(
+        message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
+        level="info"
+    )
 
     listener_task = None
     fallback_scheduler = None
+    listener_task = None
+    fallback_scheduler = None
     try:
-        logger.info("🔌 Connecting Redis Timer Listener...")
         await redis_timer_listener.connect()
         # Start listener in background task
         listener_task = asyncio.create_task(redis_timer_listener.listen())
