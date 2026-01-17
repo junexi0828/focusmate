@@ -273,7 +273,7 @@ class RedisPubSubManager:
             pass
         self.pubsub = None
         self.redis = None
-            self._listener_task = None
+        self._listener_task = None
 
     # Presence operations
     async def publish_presence(self, user_id: str, is_online: bool, metadata: dict | None = None):
