@@ -105,7 +105,8 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
     # Initialize Redis Timer Listener (TTL-based expiry)
-    logger.info("🔄 Initializing background workers...")
+    logger.info("🔄 Background workers currently disabled for 100% CPU troubleshooting...")
+    """
     from app.infrastructure.tasks import (
         redis_timer_listener,
         reservation_notification_worker,
@@ -133,6 +134,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
             message="⚠️ Redis Timer Listener initialization failed",
             level="error"
         )
+    """
 
     if not redis_timer_listener.is_available():
         try:
