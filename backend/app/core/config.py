@@ -111,23 +111,9 @@ class Settings(BaseSettings):
             else:
                 self.DATABASE_DISABLE_PREPARED_STATEMENTS = True
 
-            if self.DATABASE_DISABLE_PREPARED_STATEMENTS:
-                try:
-                    parsed_url = make_url(self.DATABASE_URL)
-                    query = dict(parsed_url.query)
-                    query.update(
-                        {
-                            "statement_cache_size": "0",
-                            "max_cached_statement_lifetime": "0",
-                            "max_cacheable_statement_size": "0",
-                            "prepared_statement_cache_size": "0",
-                        }
-                    )
-                    self.DATABASE_URL = parsed_url.set(query=query).render_as_string(
-                        hide_password=False
-                    )
-                except Exception:
-                    pass
+            # Prepared statements are handled via connect_args in session.py to ensure correct types.
+            # Avoid modifying the URL string directly as asyncpg may fail to coerce types.
+            pass
 
         return self
 

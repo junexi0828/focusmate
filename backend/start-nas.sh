@@ -80,13 +80,8 @@ ensure_db_param() {
     echo "$url"
 }
 
-if [ "${DATABASE_DISABLE_PREPARED_STATEMENTS:-}" = "true" ] && [ -n "${DATABASE_URL:-}" ]; then
-    DATABASE_URL=$(ensure_db_param "$DATABASE_URL" "statement_cache_size" "0")
-    DATABASE_URL=$(ensure_db_param "$DATABASE_URL" "max_cached_statement_lifetime" "0")
-    DATABASE_URL=$(ensure_db_param "$DATABASE_URL" "max_cacheable_statement_size" "0")
-    DATABASE_URL=$(ensure_db_param "$DATABASE_URL" "prepared_statement_cache_size" "0")
-    export DATABASE_URL
-fi
+# Prepared statements are handled via connect_args in session.py to ensure correct types.
+# Avoid modifying the URL string directly as asyncpg may fail to coerce types.
 
 # 프로젝트 디렉토리 (NAS 경로)
 PROJECT_DIR="/volume1/web/focusmate-backend"
