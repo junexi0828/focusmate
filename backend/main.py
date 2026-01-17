@@ -34,7 +34,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
 # Core application components
-from app.api.v1.api import api_router
+from app.api.v1.router import api_router
 from app.core.config import settings
 from app.infrastructure.database.session import close_db
 from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
