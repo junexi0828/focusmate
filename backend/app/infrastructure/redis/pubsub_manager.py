@@ -199,6 +199,7 @@ class RedisPubSubManager:
                     break
                 await asyncio.sleep(backoff_seconds)
                 backoff_seconds = min(backoff_seconds * 2, 60)
+                await asyncio.sleep(0.1)
             else:
                 backoff_seconds = 1
 
