@@ -38,8 +38,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize Redis Pub/Sub (Chat/Global Events)
     try:
         await redis_pubsub_manager.connect()
-        # Note: start_listener() is called after we have some initial subscriptions if needed,
-        # but the current manager handles empty subscription state safely.
         await redis_pubsub_manager.start_listener()
         logger.info("✅ Redis Pub/Sub initialized")
     except Exception:
@@ -57,91 +55,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("✅ Database ready (using Alembic migrations in production)")
 
     # Initialize background workers
-    from app.infrastructure.tasks import (
-        redis_timer_listener,
-        reservation_notification_worker,
-    )
-    from app.core.notify import send_slack_notification
-
-    # Send startup notification
-    await send_slack_notification(
-        message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
-        level="info"
-    )
-
-    listener_task = None
-    fallback_scheduler = None
-    notification_worker_task = None
-
-    try:
-        logger.info("🔄 Starting background tasks...")
-
-        # 1. Redis Timer Listener
-        await redis_timer_listener.connect()
-        listener_task = asyncio.create_task(redis_timer_listener.listen())
-        logger.info("✅ Redis Timer Listener started")
-
-        # 2. Reservation Notification Worker
-        notification_worker_task = asyncio.create_task(reservation_notification_worker.start())
-        logger.info("✅ Reservation Notification Worker started")
-
-    except Exception:
-        logger.exception("⚠️ Background worker initialization failed")
-        await send_slack_notification(
-            message="⚠️ Background worker initialization failed",
-            level="error"
-        )
-
-    # APScheduler Fallback for timers if Redis is not available
-    # Temporarily disabled during troubleshooting
-    """
-    if 'redis_timer_listener' in locals() and not redis_timer_listener.is_available():
-        try:
-            from apscheduler.schedulers.asyncio import AsyncIOScheduler
-            from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
-            # ...
-    """
-            fallback_scheduler.add_job(
-                check_expired_timers,
-                "interval",
-                minutes=1,
-                id="timer_cleanup_fallback",
-                replace_existing=True,
-            )
-            fallback_scheduler.start()
-            logger.info("✅ APScheduler fallback started (timer cleanup every 1 minute)")
-        except Exception:
-            logger.exception("⚠️ APScheduler fallback initialization failed")
+    # Temporarily disabled during troubleshooting to confirm 0% CPU
+    logger.info("🔄 Background workers currently disabled for 0% CPU confirmation...")
 
     yield
 
     # Shutdown logic
     logger.info("🛑 Stopping Focus Mate Backend...")
-
-    # Send shutdown notification
-    await send_slack_notification(
-        message=f"🛑 FocusMate Backend Stopped ({settings.APP_ENV})",
-        level="warning"
-    )
-
-    if listener_task:
-        await redis_timer_listener.stop()
-        listener_task.cancel()
-        try:
-            await listener_task
-        except asyncio.CancelledError:
-            pass
-
-    if notification_worker_task:
-        await reservation_notification_worker.stop()
-        notification_worker_task.cancel()
-        try:
-            await notification_worker_task
-        except asyncio.CancelledError:
-            pass
-
-    if fallback_scheduler:
-        fallback_scheduler.shutdown()
 
     await redis_pubsub_manager.disconnect()
     await notification_ws_manager.disconnect()
@@ -163,21 +83,13 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.TRUSTED_HO
 
 # CORS Middleware
 if settings.CORS_ORIGINS:
-    # Handle both string and list formats for flexibility
     origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [str(settings.CORS_ORIGINS)]
-
-    # Enforce secure CORS policy in production
     allow_methods = ["*"]
     allow_headers = ["*"]
 
     if settings.APP_ENV == "production":
-        # More explicit methods for production
         allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
-        logger.warning(f"⚠️ CORS_ALLOW_METHODS='{settings.CORS_ALLOW_METHODS}' in production; enforcing explicit method allowlist")
-
-        # Explicit headers for production
         allow_headers = ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"]
-        logger.warning(f"⚠️ CORS_ALLOW_HEADERS='{settings.CORS_ALLOW_HEADERS}' in production; enforcing explicit header allowlist")
 
     app.add_middleware(
         CORSMiddleware,
@@ -193,7 +105,7 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
     session_cookie="focusmate_session",
-    max_age=3600 * 24 * 7,  # 1 week
+    max_age=3600 * 24 * 7,
     same_site="lax",
     https_only=settings.APP_ENV == "production",
 )
@@ -212,7 +124,6 @@ async def root():
         "message": f"Welcome to {settings.PROJECT_NAME} API",
         "version": settings.VERSION,
         "environment": settings.APP_ENV,
-        "docs_url": "/docs" if settings.APP_DEBUG else "Disabled in production",
     }
 
 
