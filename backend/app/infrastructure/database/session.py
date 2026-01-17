@@ -116,13 +116,11 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
             "statement_cache_size": 0,
             "max_cached_statement_lifetime": 0,
             "max_cacheable_statement_size": 0,
-            # Force PostgreSQL server to use custom plans instead of prepared statements
-            "server_settings": {
-                "jit": "off",  # Disable JIT compilation
-                "plan_cache_mode": "force_custom_plan",  # Force custom plans
-            },
         }
-        engine_args = {}
+        engine_args = {
+            # SQLAlchemy asyncpg dialect parameter (not a DBAPI connect arg).
+            "prepared_statement_cache_size": 0,
+        }
         return connect_args, engine_args, is_pgbouncer, True
 
     return {}, {}, False, False
@@ -225,13 +223,8 @@ if database_url.startswith("postgresql"):
     engine_kwargs.update(pgbouncer_engine_args)
 
     if disable_prepared:
-        # Prepared statements are handled via connect_args to ensure correct types.
-        # Add server_settings as additional safety measure
-        connect_args = dict(engine_kwargs.get("connect_args", {}))
-        if "server_settings" not in connect_args:
-            connect_args["server_settings"] = {}
-        connect_args["server_settings"]["jit"] = "off"
-        engine_kwargs["connect_args"] = connect_args
+        # Prepared statements are handled via connect_args / engine_kwargs.
+        pass
 
     # pgBouncer already pools connections; using NullPool prevents state leakage and
     # avoids server-side prepared statement collisions in transaction pooling mode.
@@ -258,6 +251,7 @@ if database_url.startswith("postgresql"):
             }
         )
         engine_kwargs["connect_args"] = connect_args
+        engine_kwargs["prepared_statement_cache_size"] = 0
 
 
     # Log final config (sanitized URL)
