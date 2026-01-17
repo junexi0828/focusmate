@@ -272,14 +272,22 @@ class Settings(BaseSettings):
             if isinstance(self.CORS_ORIGINS, list):
                 if "*" in self.CORS_ORIGINS:
                     raise ValueError("CORS_ORIGINS cannot be '*' in production")
-                if any(origin.startswith("http://") for origin in self.CORS_ORIGINS):
-                    raise ValueError("CORS_ORIGINS must use https in production")
+
+                # In production, enforce HTTPS unless APP_DEBUG is enabled for development/testing
+                if not self.APP_DEBUG:
+                    if any(origin.startswith("http://") and not ("localhost" in origin or "127.0.0.1" in origin)
+                           for origin in self.CORS_ORIGINS):
+                        raise ValueError("CORS_ORIGINS must use https in production for remote hosts")
+
             if isinstance(self.TRUSTED_HOSTS, list):
                 if "*" in self.TRUSTED_HOSTS:
                     raise ValueError("TRUSTED_HOSTS cannot be '*' in production")
-                disallowed_hosts = {"localhost", "127.0.0.1", "0.0.0.0"}
-                if any(host in disallowed_hosts for host in self.TRUSTED_HOSTS):
-                    raise ValueError("TRUSTED_HOSTS must be set to production domains in production")
+
+                # In production, enforce production domains unless APP_DEBUG is enabled
+                if not self.APP_DEBUG:
+                    disallowed_hosts = {"localhost", "127.0.0.1", "0.0.0.0"}
+                    if any(host in disallowed_hosts for host in self.TRUSTED_HOSTS):
+                        raise ValueError("TRUSTED_HOSTS must be set to production domains in production")
         return self
 
     # ==========================================================================
