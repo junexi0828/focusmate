@@ -215,6 +215,7 @@ echo "   DB Pool: $DATABASE_POOL_SIZE (Overflow: $DATABASE_MAX_OVERFLOW)"
 FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:-127.0.0.1,::1}
 
 nohup $CONDA_PYTHON -m uvicorn app.main:app \
+    --loop asyncio \
     --host 0.0.0.0 \
     --port 8000 \
     --workers $WORKERS \
