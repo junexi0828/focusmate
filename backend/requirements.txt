@@ -57,3 +57,4 @@ redis==5.2.1                               # Redis client for caching & pub/sub
 # ============================================================================
 aiosmtplib
 psutil
+APScheduler==3.10.4
