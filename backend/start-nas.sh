@@ -202,8 +202,8 @@ echo "   Logs: logs/app.log"
 echo ""
 
 # 백그라운드 실행 (Miniconda 환경의 Python 직접 사용)
-# WORKERS 변수가 설정되어 있지 않으면 기본값 1 사용 (CPU 100% 이슈 디버깅을 위해 1로 하향)
-WORKERS=${WORKERS:-1}
+# 워커 수를 1로 강제 고정하여 디버깅 및 안정성 확보
+WORKERS=1
 echo "   Workers: $WORKERS"
 
 # PYTHONPATH 설정 (자식 프로세스 임포트 문제 해결)

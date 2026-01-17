@@ -11,10 +11,13 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 # 1. CRITICAL: Path configuration for NAS and multiprocessing compatibility
-# This ensures that 'app' can always be imported regardless of how uvicorn is started.
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+
+print(f"DIAGNOSTIC: PROJECT_ROOT={PROJECT_ROOT}")
+print(f"DIAGNOSTIC: sys.path={sys.path}")
+print(f"DIAGNOSTIC: os.listdir={os.listdir(PROJECT_ROOT)}")
 
 # 2. Imports (Absolute imports are preferred after path setup)
 from fastapi import FastAPI
