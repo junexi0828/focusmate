@@ -93,12 +93,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
 
     # APScheduler Fallback for timers if Redis is not available
-    if not redis_timer_listener.is_available():
+    # Temporarily disabled during troubleshooting
+    """
+    if 'redis_timer_listener' in locals() and not redis_timer_listener.is_available():
         try:
             from apscheduler.schedulers.asyncio import AsyncIOScheduler
             from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
-
-            fallback_scheduler = AsyncIOScheduler()
+            # ...
+    """
             fallback_scheduler.add_job(
                 check_expired_timers,
                 "interval",
