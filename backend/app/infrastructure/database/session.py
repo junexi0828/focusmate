@@ -195,149 +195,32 @@ async def reset_engine_for_prepared_statement_error() -> None:
         )
 
 
-# Only add pool settings for PostgreSQL (SQLite doesn't support pooling)
-database_url = settings.DATABASE_URL
-if database_url.startswith("postgresql"):
-    engine_kwargs.update(
-        {
-            "pool_pre_ping": True,
-            "pool_size": settings.DATABASE_POOL_SIZE,
-            "max_overflow": settings.DATABASE_MAX_OVERFLOW,
-            "pool_timeout": settings.DATABASE_POOL_TIMEOUT,
-            "pool_recycle": settings.DATABASE_POOL_RECYCLE,
-            "pool_use_lifo": settings.DATABASE_POOL_USE_LIFO,
-        }
-    )
-
-    # Merge connect_args so nothing else overwrites our statement_cache_size
-    connect_args = dict(engine_kwargs.get("connect_args", {}))
-    (
-        pgbouncer_connect_args,
-        pgbouncer_engine_args,
-        use_null_pool,
-        disable_prepared,
-    ) = _get_connect_args(database_url)
-    connect_args.update(pgbouncer_connect_args)
-    if connect_args:
-        engine_kwargs["connect_args"] = connect_args
-    engine_kwargs.update(pgbouncer_engine_args)
-
-    if disable_prepared:
-        # Prepared statements are handled via connect_args / engine_kwargs.
-        pass
-
-    # pgBouncer already pools connections; using NullPool prevents state leakage and
-    # avoids server-side prepared statement collisions in transaction pooling mode.
-    if use_null_pool:
-        engine_kwargs["poolclass"] = NullPool
-        for key in (
-            "pool_size",
-            "max_overflow",
-            "pool_timeout",
-            "pool_recycle",
-            "pool_use_lifo",
-        ):
-            engine_kwargs.pop(key, None)
-
-    # Fail-safe: asyncpg prepared statements are unsafe behind pgBouncer transaction pools.
-    # Keep them disabled for Postgres when detection or env flags indicate risk.
-    if disable_prepared:
-        connect_args = dict(engine_kwargs.get("connect_args", {}))
-        connect_args.update(
-            {
-                "statement_cache_size": 0,
-                "max_cached_statement_lifetime": 0,
-                "max_cacheable_statement_size": 0,
-            }
-        )
-        engine_kwargs["connect_args"] = connect_args
-        engine_kwargs["prepared_statement_cache_size"] = 0
-
-
-    # Log final config (sanitized URL)
-    try:
-        parsed_url = make_url(database_url)
-        sanitized_url = parsed_url._replace(password="***")
-    except Exception:
-        sanitized_url = "unparseable"
-
-    logger.info(
-        "DB engine init: url=%s connect_args=%s poolclass=%s",
-        sanitized_url,
-        engine_kwargs.get("connect_args"),
-        engine_kwargs.get("poolclass").__name__ if engine_kwargs.get("poolclass") else "QueuePool",
-    )
-
-engine: AsyncEngine = create_async_engine(
-    database_url,
-    **engine_kwargs,
-)
-
-# Create session factory
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
-
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency to get database session.
-
-    Yields:
-        AsyncSession: Database session
-
-    Example:
-        ```python
-        @router.get("/items")
-        async def get_items(db: AsyncSession = Depends(get_db)):
-            result = await db.execute(select(Item))
-            return result.scalars().all()
-        ```
-    """
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception as exc:
-            await session.rollback()
-            if is_duplicate_prepared_statement_error(exc):
-                logger.error(
-                    "Duplicate prepared statement error detected; disposing engine to reset connections.",
-                    exc_info=True,
-                )
-                await reset_engine_for_prepared_statement_error()
-            raise
-        finally:
-            await session.close()
-
-
 # Type alias for dependency injection
-# This is FastAPI's recommended pattern: Annotated[AsyncSession, Depends(get_db)]
-# FastAPI will extract the Depends() at runtime, leaving AsyncSession as the actual type
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
 
+async def reset_engine_for_prepared_statement_error():
+    """Reset the database engine to recover from prepared statement errors."""
+    global _engine, _AsyncSessionLocal
+    async with _engine_lock:
+        if _engine:
+            await _engine.dispose()
+        _engine = None
+        _AsyncSessionLocal = None
+        logging.getLogger(__name__).warning("♻️ Database engine reset due to prepared statement error")
+
+
 async def init_db() -> None:
-    """Initialize database (create tables).
-
-    Note: In production, use Alembic migrations instead.
-    This is only for development/testing.
-    """
+    """Initialize database (create tables)."""
+    engine, _ = await _get_engine_and_session()
     from app.infrastructure.database.base import Base
-
-    # Import all models to ensure they're registered with Base.metadata
     import app.infrastructure.database.models  # noqa: F401
-
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
 async def close_db() -> None:
-    """Close database connections.
-
-    Should be called on application shutdown.
-    """
-    await engine.dispose()
+    """Close database connections."""
+    global _engine
+    if _engine:
+        await _engine.dispose()
