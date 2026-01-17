@@ -151,7 +151,8 @@ def _force_disable_prepared_statements(
         }
     )
     engine_kwargs["connect_args"] = connect_args
-    engine_kwargs["prepared_statement_cache_size"] = 0
+    # Note: prepared_statement_cache_size is handled via connect_args["statement_cache_size"]
+    # Do NOT set it as a direct engine kwarg - it's not valid for create_async_engine()
 
     engine_kwargs["poolclass"] = NullPool
     for key in (
@@ -246,7 +247,7 @@ if database_url.startswith("postgresql"):
             }
         )
         engine_kwargs["connect_args"] = connect_args
-        engine_kwargs["prepared_statement_cache_size"] = 0
+        # Note: prepared_statement_cache_size is handled via connect_args["statement_cache_size"]
 
     # Log final config (sanitized URL)
     try:
@@ -256,10 +257,9 @@ if database_url.startswith("postgresql"):
         sanitized_url = "unparseable"
 
     logger.info(
-        "DB engine init: url=%s connect_args=%s prepared_statement_cache_size=%s pool_size=%s max_overflow=%s timeout=%s",
+        "DB engine init: url=%s connect_args=%s pool_size=%s max_overflow=%s timeout=%s",
         sanitized_url,
         engine_kwargs.get("connect_args"),
-        engine_kwargs.get("prepared_statement_cache_size"),
         engine_kwargs.get("pool_size"),
         engine_kwargs.get("max_overflow"),
         engine_kwargs.get("pool_timeout"),
