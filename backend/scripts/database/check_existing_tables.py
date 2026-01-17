@@ -8,11 +8,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import text
-from app.infrastructure.database.session import engine
+from app.infrastructure.database.session import engine, init_db_engine
 
 
 async def check_tables():
     """실제 데이터베이스 테이블 확인"""
+    if engine is None:
+        init_db_engine()
+
     async with engine.begin() as conn:
         result = await conn.execute(
             text(

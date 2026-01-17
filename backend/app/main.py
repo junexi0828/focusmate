@@ -88,6 +88,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.DEV_RESET_DB and settings.is_development:
         logger.warning("⚠️ Resetting database (development only)...")
 
+    # Initialize database engine (Lazy Loading for fork safety)
+    from app.infrastructure.database.session import init_db_engine
+    init_db_engine()
+
     # Initialize database (only in development to avoid schema drift)
     # In production, use Alembic migrations instead
     if settings.is_development:

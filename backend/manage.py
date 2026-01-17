@@ -143,7 +143,12 @@ async def _reset_db():
 
     import app.infrastructure.database.models  # noqa: F401 - Discover all models for metadata
     from app.infrastructure.database.base import Base
-    from app.infrastructure.database.session import engine
+    from app.infrastructure.database.session import engine, init_db_engine
+
+    # Ensure engine is initialized
+    if engine is None:
+        init_db_engine()
+        from app.infrastructure.database.session import engine
 
     print("Dropping all tables with CASCADE...")
     async with engine.begin() as conn:
@@ -207,6 +212,10 @@ def shell():
     # Import commonly used modules
     from app.core.config import settings
     from app.infrastructure.database import models
+    from app.infrastructure.database.session import AsyncSessionLocal, init_db_engine
+
+    # Ensure engine is initialized
+    init_db_engine()
     from app.infrastructure.database.session import AsyncSessionLocal
 
     local_vars = {

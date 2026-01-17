@@ -6,7 +6,7 @@ import asyncio
 from sqlalchemy import text
 
 from app.core.config import settings
-from app.infrastructure.database.session import engine
+from app.infrastructure.database.session import engine, init_db_engine
 
 
 async def test_connection():
@@ -14,6 +14,9 @@ async def test_connection():
     print("🔍 Testing database connection...")
     print(f"📍 DATABASE_URL: {settings.DATABASE_URL[:60]}...")
     print()
+
+    if engine is None:
+        init_db_engine()
 
     try:
         async with engine.begin() as conn:

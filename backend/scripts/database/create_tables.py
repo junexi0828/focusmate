@@ -12,13 +12,16 @@ from app.infrastructure.database.base import Base
 # Import all models to register them with Base
 import app.infrastructure.database.models  # noqa: F401
 
-from app.infrastructure.database.session import engine
+from app.infrastructure.database.session import engine, init_db_engine
 
 
 async def create_all_tables():
     """Create all database tables."""
     print("🔧 Creating all database tables...")
     print("=" * 70)
+
+    if engine is None:
+        init_db_engine()
 
     async with engine.begin() as conn:
         # Drop all tables first (optional - comment out if you want to keep existing data)

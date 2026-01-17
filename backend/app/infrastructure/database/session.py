@@ -12,7 +12,6 @@ import logging
 
 from fastapi import Depends
 from sqlalchemy.engine.url import make_url
-from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -24,10 +23,15 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 
 
-# Create async engine with database-specific configuration
-engine_kwargs = {"echo": settings.DATABASE_ECHO}
+# Global state for lazy initialization
+engine: AsyncEngine | None = None
+AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
+database_url: str = settings.DATABASE_URL
+engine_kwargs: dict = {"echo": settings.DATABASE_ECHO}
+
 logger = logging.getLogger(__name__)
 _engine_reset_lock = asyncio.Lock()
+
 
 def _using_pgbouncer(database_url: str) -> bool:
     """Detect pgBouncer-style connection URLs.
@@ -148,8 +152,6 @@ def _force_disable_prepared_statements(
         }
     )
     engine_kwargs["connect_args"] = connect_args
-    # Note: prepared_statement_cache_size is handled via connect_args["statement_cache_size"]
-    # Do NOT set it as a direct engine kwarg - it's not valid for create_async_engine()
 
     engine_kwargs["poolclass"] = NullPool
     for key in (
@@ -164,10 +166,117 @@ def _force_disable_prepared_statements(
     return database_url, engine_kwargs
 
 
+def init_db_engine() -> None:
+    """Initialize the database engine.
+
+    This function must be called explicitly (e.g., in app startup) to create the engine.
+    It is lazy-safe and will only initialize if the engine hasn't been created yet.
+    """
+    global engine, AsyncSessionLocal, engine_kwargs, database_url
+
+    if engine is not None:
+        logger.info("Database engine already initialized.")
+        return
+
+    # Only add pool settings for PostgreSQL (SQLite doesn't support pooling)
+    if database_url.startswith("postgresql"):
+        engine_kwargs.update(
+            {
+                "pool_pre_ping": True,
+                "pool_size": settings.DATABASE_POOL_SIZE,
+                "max_overflow": settings.DATABASE_MAX_OVERFLOW,
+                "pool_timeout": settings.DATABASE_POOL_TIMEOUT,
+                "pool_recycle": settings.DATABASE_POOL_RECYCLE,
+                "pool_use_lifo": settings.DATABASE_POOL_USE_LIFO,
+            }
+        )
+
+        # Merge connect_args so nothing else overwrites our statement_cache_size
+        connect_args = dict(engine_kwargs.get("connect_args", {}))
+        (
+            pgbouncer_connect_args,
+            pgbouncer_engine_args,
+            use_null_pool,
+            disable_prepared,
+        ) = _get_connect_args(database_url)
+        connect_args.update(pgbouncer_connect_args)
+        if connect_args:
+            engine_kwargs["connect_args"] = connect_args
+        engine_kwargs.update(pgbouncer_engine_args)
+
+        if disable_prepared:
+            # Prepared statements are handled via connect_args to ensure correct types.
+            pass
+
+        # pgBouncer already pools connections; using NullPool prevents state leakage and
+        # avoids server-side prepared statement collisions in transaction pooling mode.
+        if use_null_pool:
+            engine_kwargs["poolclass"] = NullPool
+            for key in (
+                "pool_size",
+                "max_overflow",
+                "pool_timeout",
+                "pool_recycle",
+                "pool_use_lifo",
+            ):
+                engine_kwargs.pop(key, None)
+
+        # Fail-safe: asyncpg prepared statements are unsafe behind pgBouncer transaction pools.
+        # Keep them disabled for Postgres when detection or env flags indicate risk.
+        if disable_prepared:
+            connect_args = dict(engine_kwargs.get("connect_args", {}))
+            connect_args.update(
+                {
+                    "statement_cache_size": 0,
+                    "max_cached_statement_lifetime": 0,
+                    "max_cacheable_statement_size": 0,
+                }
+            )
+            engine_kwargs["connect_args"] = connect_args
+
+        # Log final config (sanitized URL)
+        try:
+            parsed_url = make_url(database_url)
+            sanitized_url = parsed_url._replace(password="***")
+        except Exception:
+            sanitized_url = "unparseable"
+
+        logger.info(
+            "DB engine init: url=%s connect_args=%s pool_size=%s max_overflow=%s timeout=%s",
+            sanitized_url,
+            engine_kwargs.get("connect_args"),
+            engine_kwargs.get("pool_size"),
+            engine_kwargs.get("max_overflow"),
+            engine_kwargs.get("pool_timeout"),
+        )
+
+    engine = create_async_engine(
+        database_url,
+        **engine_kwargs,
+    )
+
+    # Create session factory
+    AsyncSessionLocal = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
+    logger.info("✅ Database engine initialized.")
+
+
 async def reset_engine_for_prepared_statement_error() -> None:
     """Recreate the engine with prepared statements and pooling disabled."""
     async with _engine_reset_lock:
         global engine, AsyncSessionLocal, engine_kwargs, database_url
+
+        # Ensure engine is initialized before trying to dispose it
+        if engine is None:
+            logger.warning("Attempted to reset uninitialized engine. Initializing now.")
+            init_db_engine()
+            return
+
         await engine.dispose()
         reset_kwargs = dict(engine_kwargs)
         reset_url, reset_kwargs = _force_disable_prepared_statements(
@@ -188,95 +297,6 @@ async def reset_engine_for_prepared_statement_error() -> None:
         )
 
 
-# Only add pool settings for PostgreSQL (SQLite doesn't support pooling)
-database_url = settings.DATABASE_URL
-if database_url.startswith("postgresql"):
-    engine_kwargs.update(
-        {
-            "pool_pre_ping": True,
-            "pool_size": settings.DATABASE_POOL_SIZE,
-            "max_overflow": settings.DATABASE_MAX_OVERFLOW,
-            "pool_timeout": settings.DATABASE_POOL_TIMEOUT,
-            "pool_recycle": settings.DATABASE_POOL_RECYCLE,
-            "pool_use_lifo": settings.DATABASE_POOL_USE_LIFO,
-        }
-    )
-
-    # Merge connect_args so nothing else overwrites our statement_cache_size
-    connect_args = dict(engine_kwargs.get("connect_args", {}))
-    (
-        pgbouncer_connect_args,
-        pgbouncer_engine_args,
-        use_null_pool,
-        disable_prepared,
-    ) = _get_connect_args(database_url)
-    connect_args.update(pgbouncer_connect_args)
-    if connect_args:
-        engine_kwargs["connect_args"] = connect_args
-    engine_kwargs.update(pgbouncer_engine_args)
-
-    if disable_prepared:
-        # Prepared statements are handled via connect_args to ensure correct types.
-        pass
-
-    # pgBouncer already pools connections; using NullPool prevents state leakage and
-    # avoids server-side prepared statement collisions in transaction pooling mode.
-    if use_null_pool:
-        engine_kwargs["poolclass"] = NullPool
-        for key in (
-            "pool_size",
-            "max_overflow",
-            "pool_timeout",
-            "pool_recycle",
-            "pool_use_lifo",
-        ):
-            engine_kwargs.pop(key, None)
-
-    # Fail-safe: asyncpg prepared statements are unsafe behind pgBouncer transaction pools.
-    # Keep them disabled for Postgres when detection or env flags indicate risk.
-    if disable_prepared:
-        connect_args = dict(engine_kwargs.get("connect_args", {}))
-        connect_args.update(
-            {
-                "statement_cache_size": 0,
-                "max_cached_statement_lifetime": 0,
-                "max_cacheable_statement_size": 0,
-            }
-        )
-        engine_kwargs["connect_args"] = connect_args
-        # Note: prepared_statement_cache_size is handled via connect_args["statement_cache_size"]
-
-    # Log final config (sanitized URL)
-    try:
-        parsed_url = make_url(database_url)
-        sanitized_url = parsed_url._replace(password="***")
-    except Exception:
-        sanitized_url = "unparseable"
-
-    logger.info(
-        "DB engine init: url=%s connect_args=%s pool_size=%s max_overflow=%s timeout=%s",
-        sanitized_url,
-        engine_kwargs.get("connect_args"),
-        engine_kwargs.get("pool_size"),
-        engine_kwargs.get("max_overflow"),
-        engine_kwargs.get("pool_timeout"),
-    )
-
-engine: AsyncEngine = create_async_engine(
-    database_url,
-    **engine_kwargs,
-)
-
-# Create session factory
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
-
-
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency to get database session.
 
@@ -291,6 +311,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             return result.scalars().all()
         ```
     """
+    if AsyncSessionLocal is None:
+        logger.warning("⚠️ Database engine not initialized in get_db, performing lazyinit")
+        init_db_engine()
+
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -325,6 +349,9 @@ async def init_db() -> None:
     # Import all models to ensure they're registered with Base.metadata
     import app.infrastructure.database.models  # noqa: F401
 
+    if engine is None:
+        init_db_engine()
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -334,4 +361,5 @@ async def close_db() -> None:
 
     Should be called on application shutdown.
     """
-    await engine.dispose()
+    if engine:
+        await engine.dispose()

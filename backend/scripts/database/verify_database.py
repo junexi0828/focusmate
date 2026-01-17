@@ -16,7 +16,7 @@ from sqlalchemy import text, select, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.infrastructure.database.session import engine, AsyncSessionLocal
+from app.infrastructure.database.session import engine, AsyncSessionLocal, init_db_engine
 from app.infrastructure.database.models import (
     User,
     Room,
@@ -486,6 +486,10 @@ class DatabaseVerifier:
 
     async def run_all_checks(self) -> bool:
         """모든 검증 실행"""
+        # Ensure engine is initialized
+        if engine is None:
+            init_db_engine()
+
         print("\n" + "=" * 70)
         print("🔍 Focus Mate 데이터베이스 종합 검증 시작")
         print("=" * 70)
