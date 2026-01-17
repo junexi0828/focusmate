@@ -116,6 +116,12 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
             "statement_cache_size": 0,
             "max_cached_statement_lifetime": 0,
             "max_cacheable_statement_size": 0,
+            # Force asyncpg to never use prepared statements
+            "prepare_threshold": None,  # Disable automatic prepared statement creation
+            "server_settings": {
+                "jit": "off",  # Disable JIT compilation
+                "plan_cache_mode": "force_custom_plan",  # Force custom plans instead of prepared
+            },
         }
         engine_args = {}
         return connect_args, engine_args, is_pgbouncer, True
@@ -144,6 +150,10 @@ def _force_disable_prepared_statements(
             "statement_cache_size": 0,
             "max_cached_statement_lifetime": 0,
             "max_cacheable_statement_size": 0,
+            # Force asyncpg to disable prepared statements at the protocol level
+            "server_settings": {
+                "jit": "off",  # Disable JIT to prevent prepared statement usage
+            },
         }
     )
     engine_kwargs["connect_args"] = connect_args
@@ -217,7 +227,12 @@ if database_url.startswith("postgresql"):
 
     if disable_prepared:
         # Prepared statements are handled via connect_args to ensure correct types.
-        pass
+        # Add server_settings as additional safety measure
+        connect_args = dict(engine_kwargs.get("connect_args", {}))
+        if "server_settings" not in connect_args:
+            connect_args["server_settings"] = {}
+        connect_args["server_settings"]["jit"] = "off"
+        engine_kwargs["connect_args"] = connect_args
 
     # pgBouncer already pools connections; using NullPool prevents state leakage and
     # avoids server-side prepared statement collisions in transaction pooling mode.
