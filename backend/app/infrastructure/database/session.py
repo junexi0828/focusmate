@@ -263,6 +263,22 @@ def init_db_engine() -> None:
         autocommit=False,
         autoflush=False,
     )
+    # Register event listener to clean up prepared statements on connect
+    from sqlalchemy import event
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _on_connect(dbapi_connection, connection_record):
+        """Run DEALLOCATE ALL on new connections to clear leaked statements."""
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("DEALLOCATE ALL")
+        except Exception as e:
+            # Ignore errors (e.g. if DEALLOCATE ALL is restricted or fails)
+            # logger.warning(f"Failed to run DEALLOCATE ALL: {e}")
+            pass
+        finally:
+            cursor.close()
+
     logger.info("✅ Database engine initialized.")
 
 
