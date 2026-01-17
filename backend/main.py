@@ -1,6 +1,6 @@
 """Main FastAPI application entry point.
 
-Simplified and robust version for production on NAS.
+Fully restored and optimized version for production on NAS.
 """
 
 import sys
@@ -13,19 +13,6 @@ from typing import AsyncGenerator
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
-
-# Debug: Print environment info
-print(f"INFO: Running from {PROJECT_ROOT}")
-print(f"INFO: Python {sys.version}")
-
-# 2. Imports (Wait, let's try to import app specifically first)
-try:
-    import app
-    print(f"INFO: Found 'app' package at {app.__file__}")
-except Exception as e:
-    print(f"ERROR: Could not import 'app': {e}")
-    # Last resort path hack
-    sys.path.append(PROJECT_ROOT)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -57,25 +44,36 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize Redis Pub/Sub (Main Event Bus)
     try:
         await redis_pubsub_manager.connect()
-        # RE-ENABLE Redis listener with safety sleep (already added in pubsub_manager.py)
         await redis_pubsub_manager.start_listener()
         logger.info("✅ Redis Pub/Sub connected and listener started")
     except Exception:
         logger.exception("⚠️ Redis Pub/Sub initialization failed")
 
-    # DB ready (using Alembic in production)
-    if settings.APP_ENV not in {"production", "staging"}:
-        try:
-            from app.infrastructure.database.session import init_db
-            await init_db()
-            logger.info("✅ Database initialized for dev")
-        except Exception:
-            logger.exception("⚠️ Database initialization failed")
+    # Start Background Workers (Restored!)
+    try:
+        from app.infrastructure.tasks.redis_timer_listener import timer_listener
+        from app.infrastructure.tasks.reservation_notifications import notification_worker
+
+        # Start background tasks
+        await timer_listener.start()
+        await notification_worker.start()
+        logger.info("✅ Background workers (Timer/Notifications) started")
+    except Exception:
+        logger.exception("⚠️ Background workers failed to start")
 
     yield
 
     # Shutdown
     logger.info("🛑 Stopping Focus Mate Backend...")
+    # Stop background workers first
+    try:
+        from app.infrastructure.tasks.redis_timer_listener import timer_listener
+        from app.infrastructure.tasks.reservation_notifications import notification_worker
+        await timer_listener.stop()
+        await notification_worker.stop()
+    except Exception:
+        pass
+
     await redis_pubsub_manager.disconnect()
     await notification_ws_manager.disconnect()
     await close_db()
@@ -83,8 +81,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan,
     docs_url="/docs" if settings.APP_DEBUG else None,
