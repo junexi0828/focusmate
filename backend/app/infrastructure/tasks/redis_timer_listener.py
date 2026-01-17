@@ -58,12 +58,9 @@ class RedisTimerListener:
             logger.info("🔄 Redis Timer Listener: creating pubsub instance...")
             self.pubsub = self.redis.pubsub()
 
-            # Subscribe to expired key events on database 0
-            logger.info("🔄 Redis Timer Listener: psubscribing to expiry events...")
-            await self.pubsub.psubscribe('__keyevent@0__:expired')
-
-            logger.info("✅ Redis Timer Listener connected and subscribed to expiry events")
+            # We will handle psubscribe inside the listen() loop to prevent hanging here
             self.available = True
+            logger.info("✅ Redis Timer Listener initialization complete (subscription deferred to listen)")
 
         except Exception as e:
             logger.error(f"❌ Failed to connect Redis Timer Listener: {e}")
@@ -89,7 +86,9 @@ class RedisTimerListener:
                     logger.info("🔄 Redis Listener reconnecting...")
                     await self.connect()
 
-                logger.info("🎧 Redis Timer Listener started monitoring")
+                # Subscription deferred here
+                await self.pubsub.psubscribe('__keyevent@0__:expired')
+                logger.info("🎧 Redis Timer Listener started monitoring (psubscribed)")
 
                 # Reset retry count on successful connection
                 retry_count = 0
@@ -97,6 +96,9 @@ class RedisTimerListener:
                 async for message in self.pubsub.listen():
                     if not self.running:
                         break
+
+                    # Safety sleep to prevent tight-loop spinning on non-blocking listen()
+                    await asyncio.sleep(0.01)
 
                     if message['type'] == 'pmessage':
                         key = message['data']
