@@ -119,10 +119,14 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     from app.core.notify import send_slack_notification
 
     # Send startup notification
-    await send_slack_notification(
-        message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
-        level="info"
-    )
+    # logger.info("📨 Sending startup notification...")
+    # try:
+    #     await send_slack_notification(
+    #         message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
+    #         level="info"
+    #     )
+    # except Exception:
+    #     logger.exception("⚠️ Failed to send startup notification")
 
     listener_task = None
     fallback_scheduler = None
