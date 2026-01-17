@@ -203,7 +203,7 @@ echo ""
 
 # 백그라운드 실행 (Miniconda 환경의 Python 직접 사용)
 # WORKERS 변수가 설정되어 있지 않으면 기본값 2 사용 (밸런스 조정)
-WORKERS=${WORKERS:-2}
+WORKERS=${WORKERS:-1}
 echo "   Workers: $WORKERS"
 
 # 데이터베이스 연결 풀 설정 (NAS 리소스 제한 고려)
