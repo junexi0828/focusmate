@@ -213,6 +213,13 @@ if database_url.startswith("postgresql"):
 
     # Apply PgBouncer-safe connect_args
     connect_args.update(pgbouncer_connect_args)
+
+    # HOTFIX: Force disable prepared statements for PgBouncer compatibility
+    # This ensures prepared statements are ALWAYS disabled when using pooler
+    connect_args["statement_cache_size"] = 0
+    connect_args["max_cached_statement_lifetime"] = 0
+    connect_args["max_cacheable_statement_size"] = 0
+
     if connect_args:
         engine_kwargs["connect_args"] = connect_args
 
