@@ -71,40 +71,42 @@ if [ "$DISK_USAGE" -gt 90 ]; then
     send_slack "warning" "Disk Usage Alert" "Disk usage on /volume1 is at ${DISK_USAGE}%."
 fi
 
-# 4. Check if Backend is running (Watchdog)
-PID_FILE="$BACKEND_DIR/app.pid"
-backend_running=false
-
-if [ -f "$PID_FILE" ]; then
-    PID=$(cat "$PID_FILE" 2>/dev/null || echo "")
-    if [ -n "$PID" ] && ps -p "$PID" > /dev/null 2>&1; then
-        backend_running=true
-    else
-        rm -f "$PID_FILE"
-    fi
-else
-    if pgrep -f "uvicorn app.main:app" > /dev/null; then
-        backend_running=true
-    fi
-fi
-
-if [ "$backend_running" != true ]; then
-    send_slack "error" "Service Down" "FocusMate backend process is not running! Attempting to restart..."
-
-    # Attempt to restart
-    if [ -f "$BACKEND_DIR/start-nas.sh" ]; then
-        cd "$BACKEND_DIR" && bash start-nas.sh >> "$BACKEND_DIR/logs/monitor.log" 2>&1
-
-        sleep 5
-        if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE" 2>/dev/null)" > /dev/null 2>&1; then
-            send_slack "info" "Watchdog Success" "FocusMate backend has been successfully restarted."
-        else
-            send_slack "critical" "Watchdog Failure" "Failed to restart FocusMate backend. Manual intervention required."
-        fi
-    else
-        send_slack "error" "Watchdog Error" "start-nas.sh not found at $BACKEND_DIR"
-    fi
-fi
+# 4. Check if Backend is running (Watchdog) - DISABLED for Docker Environment
+# Docker 'restart: always' policy handles this now.
+# PID_FILE="$BACKEND_DIR/app.pid"
+# backend_running=false
+#
+# if [ -f "$PID_FILE" ]; then
+#     PID=$(cat "$PID_FILE" 2>/dev/null || echo "")
+#     if [ -n "$PID" ] && ps -p "$PID" > /dev/null 2>&1; then
+#         backend_running=true
+#     else
+#         rm -f "$PID_FILE"
+#     fi
+# else
+#     if pgrep -f "uvicorn app.main:app" > /dev/null; then
+#         backend_running=true
+#     fi
+# fi
+#
+# if [ "$backend_running" != true ]; then
+#     # send_slack "error" "Service Down" "FocusMate backend process is not running! Attempting to restart..."
+#     echo "Watchdog disabled: Docker handles restarts."
+#
+#     # Attempt to restart
+#     # if [ -f "$BACKEND_DIR/start-nas.sh" ]; then
+#     #     cd "$BACKEND_DIR" && bash start-nas.sh >> "$BACKEND_DIR/logs/monitor.log" 2>&1
+#     #
+#     #     sleep 5
+#     #     if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE" 2>/dev/null)" > /dev/null 2>&1; then
+#     #         send_slack "info" "Watchdog Success" "FocusMate backend has been successfully restarted."
+#     #     else
+#     #         send_slack "critical" "Watchdog Failure" "Failed to restart FocusMate backend. Manual intervention required."
+#     #     fi
+#     # else
+#     #     send_slack "error" "Watchdog Error" "start-nas.sh not found at $BACKEND_DIR"
+#     # fi
+# fi
 
 # 5. Log Rotation (Cleanup logs older than 3 days)
 # We keep 3 days of logs to balance disk space and audit needs
