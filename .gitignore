@@ -152,3 +152,4 @@ playwright/.cache/
 dev_tmp/
 
 .vercel
+backend/*.tar
