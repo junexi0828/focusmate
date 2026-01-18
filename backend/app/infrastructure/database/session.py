@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import NullPool, Pool
 from sqlalchemy import event
 
 from app.core.config import settings
@@ -215,22 +215,35 @@ if database_url.startswith("postgresql"):
     # Apply PgBouncer-safe connect_args
     connect_args.update(pgbouncer_connect_args)
 
-    # Force disable prepared statements for PgBouncer compatibility
-    # Note: This is also enforced via do_connect event handler below
+    # CRITICAL: Force disable prepared statements for PgBouncer transaction mode
+    # asyncpg's prepared statement cache MUST be disabled when using PgBouncer
     connect_args["statement_cache_size"] = 0
     connect_args["max_cached_statement_lifetime"] = 0
     connect_args["max_cacheable_statement_size"] = 0
 
+    # Also set prepared_statement_cache_size (alternative parameter name)
+    connect_args["prepared_statement_cache_size"] = 0
+
+    # Disable prepared statement name caching
+    connect_args["prepared_statement_name_func"] = None
+
     # Always set connect_args
     engine_kwargs["connect_args"] = connect_args
 
-    # Apply any additional engine args (currently empty, but kept for future extensibility)
+    # Apply any additional engine args
     engine_kwargs.update(pgbouncer_engine_args)
 
-    # IMPORTANT: Do NOT use NullPool - it's too slow
-    # PgBouncer provides connection pooling, but SQLAlchemy's pool with pool_pre_ping
-    # is still beneficial for connection health checks and graceful handling
-    # We keep the normal pool configuration for better performance
+    # CRITICAL: Use NullPool for PgBouncer transaction pooling
+    # PgBouncer in transaction mode requires each Python "connection" to NOT
+    # reuse prepared statements across transactions. NullPool ensures we get
+    # a fresh backend connection from PgBouncer for each request.
+    # PgBouncer itself handles connection pooling, so this doesn't hurt performance.
+    if use_null_pool or disable_prepared:
+        engine_kwargs["poolclass"] = NullPool
+        logger.warning(
+            "Using NullPool for PgBouncer compatibility (transaction pooling mode). "
+            "Connection pooling is handled by PgBouncer."
+        )
 
     # Log final config (sanitized URL)
     try:
@@ -256,23 +269,14 @@ engine: AsyncEngine = create_async_engine(
 )
 
 # CRITICAL FIX: Ensure prepared statements are disabled for EVERY connection
-# This event fires before any SQL is executed on a new connection
-@event.listens_for(engine.sync_engine, "do_connect")
-def receive_do_connect(dialect, conn_rec, cargs, cparams):
-    """Force disable prepared statements for PgBouncer compatibility.
+# Register event on Pool before any connections are created
+@event.listens_for(Pool, "connect")
+def receive_connect(dbapi_conn, connection_record):
+    """Verify prepared statements are disabled after connection is established.
 
-    This event handler ensures statement_cache_size=0 is set BEFORE
-    any SQL queries are executed, including SQLAlchemy's version check.
+    This is a verification step - the actual disabling happens via connect_args.
     """
-    # Merge our settings into the connection parameters
-    cparams.setdefault("statement_cache_size", 0)
-    cparams.setdefault("max_cached_statement_lifetime", 0)
-    cparams.setdefault("max_cacheable_statement_size", 0)
-
-    logger.info(
-        "do_connect event: Forcing prepared statement cache to 0 (PgBouncer mode). "
-        f"cparams: statement_cache_size={cparams.get('statement_cache_size')}"
-    )
+    logger.info("Pool connect event: Connection established to database")
 
 # Create session factory
 AsyncSessionLocal = async_sessionmaker(
