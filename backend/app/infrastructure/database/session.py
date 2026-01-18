@@ -239,6 +239,15 @@ if database_url.startswith("postgresql"):
     # a fresh backend connection from PgBouncer for each request.
     # PgBouncer itself handles connection pooling, so this doesn't hurt performance.
     if use_null_pool or disable_prepared:
+        # Remove pool-related kwargs as they're incompatible with NullPool
+        engine_kwargs.pop("pool_pre_ping", None)
+        engine_kwargs.pop("pool_size", None)
+        engine_kwargs.pop("max_overflow", None)
+        engine_kwargs.pop("pool_timeout", None)
+        engine_kwargs.pop("pool_recycle", None)
+        engine_kwargs.pop("pool_use_lifo", None)
+
+        # Set NullPool
         engine_kwargs["poolclass"] = NullPool
         logger.warning(
             "Using NullPool for PgBouncer compatibility (transaction pooling mode). "
