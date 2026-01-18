@@ -101,8 +101,14 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         await redis_pubsub_manager.connect()
         await redis_pubsub_manager.start_listener()
         logger.info("✅ Redis Pub/Sub initialized")
-    except Exception:
-        logger.exception("⚠️ Redis Pub/Sub initialization failed")
+    except Exception as e:
+        logger.warning(
+            "⚠️ Redis Pub/Sub initialization failed: %s. "
+            "Real-time chat synchronization will use fallback mode. "
+            "To enable Redis Pub/Sub, ensure Redis is running at %s",
+            str(e)[:100],
+            settings.REDIS_URL
+        )
 
     # Initialize Redis Timer Listener (TTL-based expiry)
     from app.infrastructure.tasks import (
@@ -124,12 +130,15 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         # Start listener in background task
         listener_task = asyncio.create_task(redis_timer_listener.listen())
         logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
-    except Exception:
-        logger.exception("⚠️ Redis Timer Listener initialization failed")
-        await send_slack_notification(
-            message="⚠️ Redis Timer Listener initialization failed",
-            level="error"
+    except Exception as e:
+        logger.warning(
+            "⚠️ Redis Timer Listener initialization failed: %s. "
+            "Falling back to APScheduler for timer expiry. "
+            "To enable Redis Timer Listener, ensure Redis is running at %s",
+            str(e)[:100],
+            settings.REDIS_URL
         )
+        # Don't send Slack notification for expected failures in development
 
     if not redis_timer_listener.is_available():
         try:
@@ -154,12 +163,13 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         reservation_task = asyncio.create_task(reservation_notification_worker.start())
         logger.info("✅ Reservation Notification Worker started (60s interval)")
-    except Exception:
-        logger.exception("⚠️ Reservation Notification Worker initialization failed")
-        await send_slack_notification(
-            message="⚠️ Reservation Notification Worker initialization failed",
-            level="error"
+    except Exception as e:
+        logger.warning(
+            "⚠️ Reservation Notification Worker initialization failed: %s. "
+            "Reservation notifications will not be sent automatically.",
+            str(e)[:100]
         )
+        # Don't send Slack notification for expected failures in development
 
     yield
 

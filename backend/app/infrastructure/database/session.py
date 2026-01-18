@@ -79,7 +79,6 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
         query.get(key) in {"0", "false", "no"}
         for key in (
             "statement_cache_size",
-            "prepared_statement_cache_size",
             "max_cached_statement_lifetime",
             "max_cacheable_statement_size",
         )
@@ -113,16 +112,15 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
     if disable_prepared:
         # pgBouncer transaction/statement pool mode cannot handle prepared statements.
         # Production/staging default to disabling to avoid DuplicatePreparedStatementError.
+        # CRITICAL: asyncpg only respects statement_cache_size in connect_args, not engine args.
         connect_args = {
             "statement_cache_size": 0,
             "max_cached_statement_lifetime": 0,
             "max_cacheable_statement_size": 0,
         }
-        engine_args = {
-            # SQLAlchemy asyncpg dialect parameter (not a DBAPI connect arg).
-            "prepared_statement_cache_size": 0,
-        }
-        return connect_args, engine_args, is_pgbouncer, True
+        # Note: Do NOT use NullPool - it creates new connection per request which is slow
+        # PgBouncer already handles connection pooling, so we use normal pool with pre_ping
+        return connect_args, {}, is_pgbouncer, True
 
     return {}, {}, False, False
 
@@ -138,10 +136,14 @@ def is_duplicate_prepared_statement_error(exc: BaseException) -> bool:
 def _force_disable_prepared_statements(
     database_url: str, engine_kwargs: dict
 ) -> tuple[str, dict]:
-    """Force-disable asyncpg prepared statements and pooling for pgBouncer safety."""
+    """Force-disable asyncpg prepared statements for pgBouncer safety.
+
+    This is used as a last resort when DuplicatePreparedStatementError occurs.
+    """
     if not database_url.startswith("postgresql"):
         return database_url, engine_kwargs
 
+    # Ensure connect_args has the correct asyncpg parameters
     connect_args = dict(engine_kwargs.get("connect_args", {}))
     connect_args.update(
         {
@@ -151,32 +153,13 @@ def _force_disable_prepared_statements(
         }
     )
     engine_kwargs["connect_args"] = connect_args
-    engine_kwargs["prepared_statement_cache_size"] = 0
 
-    try:
-        parsed_url = make_url(database_url)
-        query = dict(parsed_url.query)
-        query.update(
-            {
-                "statement_cache_size": "0",
-                "max_cached_statement_lifetime": "0",
-                "max_cacheable_statement_size": "0",
-                "prepared_statement_cache_size": "0",
-            }
-        )
-        database_url = parsed_url.set(query=query).render_as_string(hide_password=False)
-    except Exception:
-        pass
-
-    engine_kwargs["poolclass"] = NullPool
-    for key in (
-        "pool_size",
-        "max_overflow",
-        "pool_timeout",
-        "pool_recycle",
-        "pool_use_lifo",
-    ):
-        engine_kwargs.pop(key, None)
+    # Keep normal pooling - NullPool is too slow
+    # PgBouncer does its own pooling, but SQLAlchemy pool with pool_pre_ping is still beneficial
+    logger.warning(
+        "Force-disabling prepared statements due to DuplicatePreparedStatementError. "
+        "This should not happen if initial detection worked correctly."
+    )
 
     return database_url, engine_kwargs
 
@@ -227,52 +210,19 @@ if database_url.startswith("postgresql"):
         use_null_pool,
         disable_prepared,
     ) = _get_connect_args(database_url)
+
+    # Apply PgBouncer-safe connect_args
     connect_args.update(pgbouncer_connect_args)
     if connect_args:
         engine_kwargs["connect_args"] = connect_args
+
+    # Apply any additional engine args (currently empty, but kept for future extensibility)
     engine_kwargs.update(pgbouncer_engine_args)
 
-    if disable_prepared:
-        # Force-disable asyncpg prepared statements in the URL query as a last-resort
-        # safety net for transaction poolers that ignore/override connect_args.
-        parsed_url = make_url(database_url)
-        query = dict(parsed_url.query)
-        query.update(
-            {
-                "statement_cache_size": "0",
-                "max_cached_statement_lifetime": "0",
-                "max_cacheable_statement_size": "0",
-                "prepared_statement_cache_size": "0",
-            }
-        )
-        database_url = parsed_url.set(query=query).render_as_string(hide_password=False)
-
-    # pgBouncer already pools connections; using NullPool prevents state leakage and
-    # avoids server-side prepared statement collisions in transaction pooling mode.
-    if use_null_pool:
-        engine_kwargs["poolclass"] = NullPool
-        for key in (
-            "pool_size",
-            "max_overflow",
-            "pool_timeout",
-            "pool_recycle",
-            "pool_use_lifo",
-        ):
-            engine_kwargs.pop(key, None)
-
-    # Fail-safe: asyncpg prepared statements are unsafe behind pgBouncer transaction pools.
-    # Keep them disabled for Postgres when detection or env flags indicate risk.
-    if disable_prepared:
-        connect_args = dict(engine_kwargs.get("connect_args", {}))
-        connect_args.update(
-            {
-                "statement_cache_size": 0,
-                "max_cached_statement_lifetime": 0,
-                "max_cacheable_statement_size": 0,
-            }
-        )
-        engine_kwargs["connect_args"] = connect_args
-        engine_kwargs["prepared_statement_cache_size"] = 0
+    # IMPORTANT: Do NOT use NullPool - it's too slow
+    # PgBouncer provides connection pooling, but SQLAlchemy's pool with pool_pre_ping
+    # is still beneficial for connection health checks and graceful handling
+    # We keep the normal pool configuration for better performance
 
     # Log final config (sanitized URL)
     try:
@@ -281,14 +231,15 @@ if database_url.startswith("postgresql"):
     except Exception:
         sanitized_url = "unparseable"
 
+    connect_args_info = engine_kwargs.get("connect_args", {})
     logger.info(
-        "DB engine init: url=%s connect_args=%s prepared_statement_cache_size=%s pool_size=%s max_overflow=%s timeout=%s",
+        "DB engine init: url=%s statement_cache_size=%s pool_size=%s max_overflow=%s pool_timeout=%s disable_prepared=%s",
         sanitized_url,
-        engine_kwargs.get("connect_args"),
-        engine_kwargs.get("prepared_statement_cache_size"),
+        connect_args_info.get("statement_cache_size", "default"),
         engine_kwargs.get("pool_size"),
         engine_kwargs.get("max_overflow"),
         engine_kwargs.get("pool_timeout"),
+        disable_prepared,
     )
 
 engine: AsyncEngine = create_async_engine(
