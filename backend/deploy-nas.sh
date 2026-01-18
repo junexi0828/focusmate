@@ -30,8 +30,9 @@ if [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "master" ] && [ "$C
 fi
 
 # 0. Stop Service (Release Locks)
-echo "🛑 Stopping Remote Service..."
-ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash stop-nas.sh"
+# ⚠️ DISABLED: Now using Docker - restart manually with docker-compose
+# echo "🛑 Stopping Remote Service..."
+# ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash stop-nas.sh"
 
 # 1. Deployment: Rsync Code
 # Excludes virtual environments, cache, git history, and local .env (protecting remote config)
@@ -63,7 +64,9 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
 fi
 
 # 2. Restart Service (Start only)
-echo "🔄 Starting Remote Service..."
-ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash start-nas.sh"
+# ⚠️ DISABLED: Now using Docker - restart manually with docker-compose
+# echo "🔄 Starting Remote Service..."
+# ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash start-nas.sh"
 
-echo "🎉 Deployment & Restart Successfully Completed!"
+echo "🎉 File Sync Successfully Completed!"
+echo "ℹ️  Docker restart: ssh to NAS and run 'sudo docker-compose -f docker-compose.nas.yml restart backend'"
