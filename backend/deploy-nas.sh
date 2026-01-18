@@ -52,16 +52,18 @@ rsync -avz --progress \
 echo "✅ File sync complete."
 
 # 1.5 Optional: Install dependencies on NAS (mirrors old webhook safety)
-if [ "${INSTALL_DEPS:-1}" = "1" ]; then
-    echo "📦 Installing dependencies on NAS (requirements.txt)..."
-    ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && if [ -f requirements.txt ] && [ -x $REMOTE_PYTHON ]; then $REMOTE_PYTHON -m pip install -r requirements.txt --quiet; else echo 'ℹ️  requirements.txt or python missing, skipping deps'; fi"
-fi
+# ⚠️ DISABLED: Now using Docker - dependencies managed in Docker image
+# if [ "${INSTALL_DEPS:-1}" = "1" ]; then
+#     echo "📦 Installing dependencies on NAS (requirements.txt)..."
+#     ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && if [ -f requirements.txt ] && [ -x $REMOTE_PYTHON ]; then $REMOTE_PYTHON -m pip install -r requirements.txt --quiet; else echo 'ℹ️  requirements.txt or python missing, skipping deps'; fi"
+# fi
 
 # 1.6 Optional: Run Database Migrations
-if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
-    echo "🗄️  Running Database Migrations..."
-    ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && export PYTHONPATH=. && $REMOTE_PYTHON scripts/database/smart_migrate.py"
-fi
+# ⚠️ DISABLED: Now using Docker - run migrations inside Docker container
+# if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
+#     echo "🗄️  Running Database Migrations..."
+#     ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && export PYTHONPATH=. && $REMOTE_PYTHON scripts/database/smart_migrate.py"
+# fi
 
 # 2. Restart Service (Start only)
 # ⚠️ DISABLED: Now using Docker - restart manually with docker-compose
