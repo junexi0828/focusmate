@@ -190,6 +190,7 @@ async def reset_engine_for_prepared_statement_error() -> None:
 
 # Only add pool settings for PostgreSQL (SQLite doesn't support pooling)
 database_url = settings.DATABASE_URL
+logger.warning(f"DEBUG: database_url={database_url[:50]}... starts_with_postgresql={database_url.startswith('postgresql')}")
 if database_url.startswith("postgresql"):
     engine_kwargs.update(
         {
