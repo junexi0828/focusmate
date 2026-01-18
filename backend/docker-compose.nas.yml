@@ -69,7 +69,7 @@ services:
       - "6379:6379"
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --loglevel notice
     volumes:
-      - redis-data:/data
+      - ./redis-data:/data
     restart: always
     networks:
       - focusmate-network
@@ -127,13 +127,6 @@ services:
     command: --interval 300 focusmate-backend
     restart: always
 
-volumes:
-  redis-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PWD}/docker-volumes/redis-data
 
 networks:
   focusmate-network:
