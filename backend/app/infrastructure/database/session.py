@@ -220,8 +220,13 @@ if database_url.startswith("postgresql"):
     connect_args["max_cached_statement_lifetime"] = 0
     connect_args["max_cacheable_statement_size"] = 0
 
-    if connect_args:
-        engine_kwargs["connect_args"] = connect_args
+    # Always set connect_args (remove conditional that might skip it)
+    engine_kwargs["connect_args"] = connect_args
+
+    # Debug logging
+    logger.warning(
+        "HOTFIX applied - connect_args set: %s", connect_args
+    )
 
     # Apply any additional engine args (currently empty, but kept for future extensibility)
     engine_kwargs.update(pgbouncer_engine_args)
