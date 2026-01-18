@@ -24,10 +24,12 @@ async def check_alembic_version_table() -> bool:
     # Transaction Pooler (6543) does not support prepared statements
     db_url = settings.DATABASE_URL.replace(":6543/", ":5432/")
 
-    connect_args = {}
-    # Even on 5432, we disable cache to be absolutely safe during migrations
-    connect_args["statement_cache_size"] = 0
-    connect_args["prepared_statement_cache_size"] = 0
+    connect_args = {
+        # asyncpg only supports these parameters in connect_args
+        "statement_cache_size": 0,
+        "max_cached_statement_lifetime": 0,
+        "max_cacheable_statement_size": 0,
+    }
 
     engine = create_async_engine(
         db_url,
@@ -57,10 +59,12 @@ async def check_tables_exist() -> bool:
     # Administrative checks should use Session Pooler (5432) to avoid PgBouncer issues
     db_url = settings.DATABASE_URL.replace(":6543/", ":5432/")
 
-    connect_args = {}
-    # Even on 5432, we disable cache to be absolutely safe during migrations
-    connect_args["statement_cache_size"] = 0
-    connect_args["prepared_statement_cache_size"] = 0
+    connect_args = {
+        # asyncpg only supports these parameters in connect_args
+        "statement_cache_size": 0,
+        "max_cached_statement_lifetime": 0,
+        "max_cacheable_statement_size": 0,
+    }
 
     engine = create_async_engine(
         db_url,

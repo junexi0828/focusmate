@@ -66,13 +66,16 @@ def convert_async_url_to_sync(url: str) -> str:
     Alembic uses synchronous SQLAlchemy, so we need to convert:
     - sqlite+aiosqlite:// -> sqlite://
     - postgresql+asyncpg:// -> postgresql://
+    - Remove asyncpg-specific query parameters (psycopg2 doesn't support them)
 
     Args:
         url: Async database URL
 
     Returns:
-        Synchronous database URL
+        Synchronous database URL compatible with psycopg2
     """
+    from sqlalchemy.engine.url import make_url
+
     # Administrative checks should use Session Pooler (5432) to avoid PgBouncer issues
     url = url.replace(":6543/", ":5432/")
 
@@ -82,9 +85,27 @@ def convert_async_url_to_sync(url: str) -> str:
 
     # Convert async PostgreSQL URL to sync
     if url.startswith("postgresql+asyncpg://"):
-        return url.replace("postgresql+asyncpg://", "postgresql://")
+        url = url.replace("postgresql+asyncpg://", "postgresql://")
 
-    # Already sync URL, return as-is
+    # Remove asyncpg-specific query parameters that psycopg2 doesn't support
+    try:
+        parsed_url = make_url(url)
+        query = dict(parsed_url.query)
+        # Remove asyncpg-only parameters
+        asyncpg_params = [
+            "statement_cache_size",
+            "max_cached_statement_lifetime",
+            "max_cacheable_statement_size",
+            "prepared_statement_cache_size",
+        ]
+        for param in asyncpg_params:
+            query.pop(param, None)
+
+        # Reconstruct URL without asyncpg params
+        url = parsed_url.set(query=query).render_as_string(hide_password=False)
+    except Exception:
+        pass
+
     return url
 
 
