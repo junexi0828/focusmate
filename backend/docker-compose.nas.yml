@@ -1,26 +1,32 @@
 # ============================================================================
-# FocusMate - Docker Compose for Synology NAS (DS223j) - Hybrid Mode
+# FocusMate - Docker Compose for Synology NAS (DS223j)
 # ============================================================================
 #
-# 아키텍처: Hybrid Docker Deployment
-# - Code: NAS의 /volume1/web/focusmate-backend 폴더를 직접 마운트 (rsync 호환)
+# 아키텍처: 이미지 기반 배포
+# - Code: Docker 이미지에 포함됨 (빌드 시점에 번들링)
 # - Env: Docker Container로 격리된 실행 환경 제공
-# - Services: Backend + Redis + Tunnel + Monitoring을 한 번에 관리
+# - Services: Backend + Redis
 #
 # 사용법:
-#   1. 코드 배포: rsync로 NAS에 코드 전송
-#   2. 재시작: docker-compose -f docker-compose.nas.yml restart backend
-#   (이미지 빌드 불필요!)
+#   1. 로컬에서 이미지 빌드 & NAS로 전송 (최초 1회 또는 코드 변경 시)
+#   2. docker-compose -f docker-compose.nas.yml up -d
+#   3. 로그 확인: docker-compose -f docker-compose.nas.yml logs -f backend
+#
+# 코드 업데이트 시:
+#   1. 로컬에서: docker build -t focusmate-backend:latest .
+#   2. 로컬에서: docker save focusmate-backend:latest -o /tmp/focusmate-backend.tar
+#   3. NAS로 전송 및 로드
+#   4. docker-compose -f docker-compose.nas.yml up -d --force-recreate
 # ============================================================================
 
 version: '3.8'
 
 services:
   # ==========================================================================
-  # 1. Backend API Server
+  # Backend API Server
   # ==========================================================================
   backend:
-    image: focusmate-backend:latest  # 최초 1회만 빌드하면 됨 (베이스 환경용)
+    image: focusmate-backend:latest
     container_name: focusmate-backend
     ports:
       - "8000:8000"
@@ -34,21 +40,16 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       - WORKERS=${WORKERS:-2}
-      # Tunnel Token (Tunnel 컨테이너용, 여기서 안 쓰더라도 .env 공유를 위해 명시)
-      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
 
     volumes:
-      # [핵심] Hybrid Mode: 호스트(NAS)의 코드를 컨테이너에 덮어씌움
-      # 코드가 수정되면 컨테이너 재시작만으로 즉시 반영됨
-      - /volume1/web/focusmate-backend:/app
-      # 로그 파일 공유
+      # 로그 파일만 외부 저장
       - ./logs:/app/logs
 
     depends_on:
       redis:
         condition: service_healthy
 
-    restart: always  # 죽으면 무조건 되살림 (Watchdog 대체)
+    restart: unless-stopped
 
     networks:
       - focusmate-network
@@ -58,9 +59,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   # ==========================================================================
-  # 2. Redis - Caching & Pub/Sub
+  # Redis - Caching & Pub/Sub
   # ==========================================================================
   redis:
     image: redis:7-alpine
@@ -69,8 +71,8 @@ services:
       - "6379:6379"
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --loglevel notice
     volumes:
-      - ./redis-data:/data
-    restart: always
+      - redis-data:/data
+    restart: unless-stopped
     networks:
       - focusmate-network
     healthcheck:
@@ -79,55 +81,16 @@ services:
       timeout: 5s
       retries: 5
 
-  # ==========================================================================
-  # 3. Cloudflare Tunnel (Start Script 대체)
-  # ==========================================================================
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: focusmate-tunnel
-    restart: always
-    command: tunnel run
-    environment:
-      # .env 파일에 CLOUDFLARE_TUNNEL_TOKEN=... 이 있어야 함
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
-    networks:
-      - focusmate-network
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  redis-data:
+    driver: local
 
-  # ==========================================================================
-  # 4. Log Alerter (Monitoring Script 대체)
-  # ==========================================================================
-  log-alerter:
-    image: python:3.11-slim
-    container_name: focusmate-log-alerter
-    restart: always
-    volumes:
-      # 백엔드 로그를 같이 바라봄
-      - ./logs:/app/logs
-      # 실행할 스크립트 접근 (NAS 코드 마운트)
-      - /volume1/web/focusmate-backend/scripts:/app/scripts
-      # 필요한 패키지 설치를 위해 (requests 등)
-      - /volume1/web/focusmate-backend/requirements.txt:/app/requirements.txt
-    # 시작 시 패키지 설치 후 스크립트 실행
-    command: >
-      sh -c "pip install requests && python /app/scripts/monitoring/log_alerter.py"
-    environment:
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
-    networks:
-      - focusmate-network
-
-  # ==========================================================================
-  # 5. Watchtower (Auto Updater - Optional)
-  # ==========================================================================
-  # 베이스 이미지(focusmate-backend:latest) 자체가 업데이트되었을 때 자동 반영
-  watchtower:
-    image: containrrr/watchtower
-    container_name: focusmate-watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300 focusmate-backend
-    restart: always
-
-
+# ============================================================================
+# Networks
+# ============================================================================
 networks:
   focusmate-network:
     driver: bridge
