@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.pool import NullPool
+from sqlalchemy import event
 
 from app.core.config import settings
 
@@ -190,7 +191,6 @@ async def reset_engine_for_prepared_statement_error() -> None:
 
 # Only add pool settings for PostgreSQL (SQLite doesn't support pooling)
 database_url = settings.DATABASE_URL
-logger.warning(f"DEBUG: database_url={database_url[:50]}... starts_with_postgresql={database_url.startswith('postgresql')}")
 if database_url.startswith("postgresql"):
     engine_kwargs.update(
         {
@@ -215,19 +215,14 @@ if database_url.startswith("postgresql"):
     # Apply PgBouncer-safe connect_args
     connect_args.update(pgbouncer_connect_args)
 
-    # HOTFIX: Force disable prepared statements for PgBouncer compatibility
-    # This ensures prepared statements are ALWAYS disabled when using pooler
+    # Force disable prepared statements for PgBouncer compatibility
+    # Note: This is also enforced via do_connect event handler below
     connect_args["statement_cache_size"] = 0
     connect_args["max_cached_statement_lifetime"] = 0
     connect_args["max_cacheable_statement_size"] = 0
 
-    # Always set connect_args (remove conditional that might skip it)
+    # Always set connect_args
     engine_kwargs["connect_args"] = connect_args
-
-    # Debug logging
-    logger.warning(
-        "HOTFIX applied - connect_args set: %s", connect_args
-    )
 
     # Apply any additional engine args (currently empty, but kept for future extensibility)
     engine_kwargs.update(pgbouncer_engine_args)
@@ -259,6 +254,25 @@ engine: AsyncEngine = create_async_engine(
     database_url,
     **engine_kwargs,
 )
+
+# CRITICAL FIX: Ensure prepared statements are disabled for EVERY connection
+# This event fires before any SQL is executed on a new connection
+@event.listens_for(engine.sync_engine, "do_connect")
+def receive_do_connect(dialect, conn_rec, cargs, cparams):
+    """Force disable prepared statements for PgBouncer compatibility.
+
+    This event handler ensures statement_cache_size=0 is set BEFORE
+    any SQL queries are executed, including SQLAlchemy's version check.
+    """
+    # Merge our settings into the connection parameters
+    cparams.setdefault("statement_cache_size", 0)
+    cparams.setdefault("max_cached_statement_lifetime", 0)
+    cparams.setdefault("max_cacheable_statement_size", 0)
+
+    logger.info(
+        "do_connect event: Forcing prepared statement cache to 0 (PgBouncer mode). "
+        f"cparams: statement_cache_size={cparams.get('statement_cache_size')}"
+    )
 
 # Create session factory
 AsyncSessionLocal = async_sessionmaker(
