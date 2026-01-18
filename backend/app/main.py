@@ -117,10 +117,12 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     )
     from app.core.notify import send_slack_notification
 
-    # Send startup notification
-    await send_slack_notification(
-        message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
-        level="info"
+    # Send startup notification (non-blocking)
+    asyncio.create_task(
+        send_slack_notification(
+            message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
+            level="info"
+        )
     )
 
     listener_task = None
@@ -175,10 +177,17 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     logger.info("🛑 Shutting down Focus Mate Backend...")
-    await send_slack_notification(
-        message=f"🛑 FocusMate Backend Shutting Down ({settings.APP_ENV})",
-        level="warning"
-    )
+    # Send shutdown notification (with timeout to prevent hanging)
+    try:
+        await asyncio.wait_for(
+            send_slack_notification(
+                message=f"🛑 FocusMate Backend Shutting Down ({settings.APP_ENV})",
+                level="warning"
+            ),
+            timeout=2.0
+        )
+    except asyncio.TimeoutError:
+        logger.warning("Slack shutdown notification timed out")
 
     # Stop Redis Timer Listener
     try:
