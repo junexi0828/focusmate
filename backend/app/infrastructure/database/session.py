@@ -57,7 +57,10 @@ def _using_pgbouncer(database_url: str) -> bool:
 
 
 def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
-    """Build connect args/engine args, disabling prepared statements for pgBouncer.
+    """Build connect args/engine args for psycopg3 driver.
+
+    psycopg3 is natively compatible with PgBouncer Transaction Mode.
+    We only need to set prepare_threshold=0 to disable prepared statements.
 
     Returns (connect_args, engine_args, use_null_pool, disable_prepared).
     """
@@ -71,23 +74,13 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
 
     try:
         parsed_url = make_url(database_url)
-        query = {key.lower(): str(value).lower() for key, value in parsed_url.query.items()}
     except Exception:
         parsed_url = None
-        query = {}
-
-    query_disables_prepared = any(
-        query.get(key) in {"0", "false", "no"}
-        for key in (
-            "statement_cache_size",
-            "max_cached_statement_lifetime",
-            "max_cacheable_statement_size",
-        )
-    )
 
     is_pgbouncer = env_flag or auto_detected or hostname_detected
     parsed_host = ((parsed_url.host if parsed_url else None) or "").lower()
     is_local_host = parsed_host in {"localhost", "127.0.0.1", "::1"}
+
     # If APP_ENV is misconfigured, favor safety for non-local DB hosts.
     force_disable_prepared = settings.APP_ENV in {"production", "staging"}
     remote_host_default = not is_local_host
@@ -96,31 +89,26 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
         or is_pgbouncer
         or force_disable_prepared
         or remote_host_default
-        or query_disables_prepared
     )
 
     logger.info(
-        "PgBouncer detection: env_flag=%s auto_detected=%s hostname_detected=%s using=%s remote_host_default=%s query_disables_prepared=%s disable_prepared=%s",
+        "PgBouncer detection: env_flag=%s auto_detected=%s hostname_detected=%s using=%s remote_host_default=%s disable_prepared=%s",
         env_flag,
         auto_detected,
         hostname_detected,
         is_pgbouncer,
         remote_host_default,
-        query_disables_prepared,
         disable_prepared,
     )
 
     if disable_prepared:
-        # pgBouncer transaction/statement pool mode cannot handle prepared statements.
-        # Production/staging default to disabling to avoid DuplicatePreparedStatementError.
-        # CRITICAL: asyncpg only respects statement_cache_size in connect_args, not engine args.
+        # psycopg3 uses prepare_threshold to control prepared statements
+        # prepare_threshold=0 means never use prepared statements
+        # This is safe for PgBouncer Transaction Mode
         connect_args = {
-            "statement_cache_size": 0,
-            "max_cached_statement_lifetime": 0,
-            "max_cacheable_statement_size": 0,
+            "prepare_threshold": 0,  # Disable prepared statements for PgBouncer
         }
-        # Note: Do NOT use NullPool - it creates new connection per request which is slow
-        # PgBouncer already handles connection pooling, so we use normal pool with pre_ping
+        logger.info("Disabling prepared statements for PgBouncer (psycopg3: prepare_threshold=0)")
         return connect_args, {}, is_pgbouncer, True
 
     return {}, {}, False, False
@@ -137,28 +125,22 @@ def is_duplicate_prepared_statement_error(exc: BaseException) -> bool:
 def _force_disable_prepared_statements(
     database_url: str, engine_kwargs: dict
 ) -> tuple[str, dict]:
-    """Force-disable asyncpg prepared statements for pgBouncer safety.
+    """Force-disable prepared statements for psycopg3 driver.
 
     This is used as a last resort when DuplicatePreparedStatementError occurs.
+    With psycopg3, this should rarely happen as it handles PgBouncer well.
     """
     if not database_url.startswith("postgresql"):
         return database_url, engine_kwargs
 
-    # Ensure connect_args has the correct asyncpg parameters
+    # Ensure connect_args has the correct psycopg3 parameter
     connect_args = dict(engine_kwargs.get("connect_args", {}))
-    connect_args.update(
-        {
-            "statement_cache_size": 0,
-            "max_cached_statement_lifetime": 0,
-            "max_cacheable_statement_size": 0,
-        }
-    )
+    connect_args["prepare_threshold"] = 0  # psycopg3: disable prepared statements
+
     engine_kwargs["connect_args"] = connect_args
 
-    # Keep normal pooling - NullPool is too slow
-    # PgBouncer does its own pooling, but SQLAlchemy pool with pool_pre_ping is still beneficial
     logger.warning(
-        "Force-disabling prepared statements due to DuplicatePreparedStatementError. "
+        "Force-disabling prepared statements (psycopg3: prepare_threshold=0). "
         "This should not happen if initial detection worked correctly."
     )
 
@@ -203,7 +185,7 @@ if database_url.startswith("postgresql"):
         }
     )
 
-    # Merge connect_args so nothing else overwrites our statement_cache_size
+    # Get PgBouncer-specific settings for psycopg3
     connect_args = dict(engine_kwargs.get("connect_args", {}))
     (
         pgbouncer_connect_args,
@@ -212,20 +194,8 @@ if database_url.startswith("postgresql"):
         disable_prepared,
     ) = _get_connect_args(database_url)
 
-    # Apply PgBouncer-safe connect_args
+    # Apply PgBouncer-safe connect_args (psycopg3: prepare_threshold=0)
     connect_args.update(pgbouncer_connect_args)
-
-    # CRITICAL: Force disable prepared statements for PgBouncer transaction mode
-    # asyncpg's prepared statement cache MUST be disabled when using PgBouncer
-    connect_args["statement_cache_size"] = 0
-    connect_args["max_cached_statement_lifetime"] = 0
-    connect_args["max_cacheable_statement_size"] = 0
-
-    # Also set prepared_statement_cache_size (alternative parameter name)
-    connect_args["prepared_statement_cache_size"] = 0
-
-    # Disable prepared statement name caching
-    connect_args["prepared_statement_name_func"] = None
 
     # Always set connect_args
     engine_kwargs["connect_args"] = connect_args
@@ -233,12 +203,10 @@ if database_url.startswith("postgresql"):
     # Apply any additional engine args
     engine_kwargs.update(pgbouncer_engine_args)
 
-    # CRITICAL: Use NullPool for PgBouncer transaction pooling
-    # PgBouncer in transaction mode requires each Python "connection" to NOT
-    # reuse prepared statements across transactions. NullPool ensures we get
-    # a fresh backend connection from PgBouncer for each request.
-    # PgBouncer itself handles connection pooling, so this doesn't hurt performance.
-    if use_null_pool or disable_prepared:
+    # NOTE: With psycopg3, NullPool is optional for PgBouncer
+    # psycopg3 handles prepared statements smartly, so normal pooling works fine
+    # However, we keep NullPool option for maximum safety in transaction mode
+    if use_null_pool:
         # Remove pool-related kwargs as they're incompatible with NullPool
         engine_kwargs.pop("pool_pre_ping", None)
         engine_kwargs.pop("pool_size", None)
@@ -250,7 +218,7 @@ if database_url.startswith("postgresql"):
         # Set NullPool
         engine_kwargs["poolclass"] = NullPool
         logger.warning(
-            "Using NullPool for PgBouncer compatibility (transaction pooling mode). "
+            "Using NullPool for PgBouncer Transaction Mode (psycopg3). "
             "Connection pooling is handled by PgBouncer."
         )
 
@@ -263,9 +231,9 @@ if database_url.startswith("postgresql"):
 
     connect_args_info = engine_kwargs.get("connect_args", {})
     logger.info(
-        "DB engine init: url=%s statement_cache_size=%s pool_size=%s max_overflow=%s pool_timeout=%s disable_prepared=%s",
+        "DB engine init (psycopg3): url=%s prepare_threshold=%s pool_size=%s max_overflow=%s pool_timeout=%s disable_prepared=%s",
         sanitized_url,
-        connect_args_info.get("statement_cache_size", "default"),
+        connect_args_info.get("prepare_threshold", "default"),
         engine_kwargs.get("pool_size"),
         engine_kwargs.get("max_overflow"),
         engine_kwargs.get("pool_timeout"),
