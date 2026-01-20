@@ -57,8 +57,9 @@ services:
   redis:
     image: redis:alpine
     container_name: focusmate-redis
-    ports:
-      - "6379:6379"
+    # 포트 매핑 제거 (내부 네트워크만 사용, 시스템 Redis 충돌 방지)
+    # ports:
+    #   - "6379:6379"
     volumes:
       # Synology 전용: 상대 경로 바인드 마운트 (권한 문제 해결)
       - ./redis-data:/data
