@@ -102,6 +102,7 @@ services:
                python /app/scripts/monitoring/log_alerter.py"
     environment:
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - LOG_FILE=/app/logs/app.log
     restart: always
     network_mode: "host" # 호스트 네트워크 사용 for resource monitoring
 
