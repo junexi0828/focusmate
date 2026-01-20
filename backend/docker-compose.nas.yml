@@ -89,8 +89,7 @@ services:
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     restart: always
-    networks:
-      - focusmate-network
+    network_mode: "host"  # host 네트워크로 localhost:8000 접근 가능
 
   # ==========================================================================
   # Log Alerter (Slack 알림)
