@@ -25,8 +25,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # [핵심] NAS의 코드를 컨테이너 내부로 마운트 (실시간 코드 반영)
-      - /volume1/web/focusmate-backend:/app
+      # 로그만 외부 저장 (코드는 이미지에 포함)
+      - ./logs:/app/logs
     environment:
       - APP_ENV=production
       - DATABASE_URL=${DATABASE_URL}
