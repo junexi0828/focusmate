@@ -18,10 +18,10 @@ export function HeroLogo() {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  // Golden Ratio Physics: Responsive but smooth (stiffness 250, damping 35)
-  // Much faster than 100/40, but slightly smoother than original 300/30
-  const xSpring = useSpring(x, { stiffness: 250, damping: 35 });
-  const ySpring = useSpring(y, { stiffness: 250, damping: 35 });
+  // Adjusted Physics: Slower start, heavy finish (stiffness 160, damping 30)
+  // Reduced from 250/35 to address "too fast initial reaction"
+  const xSpring = useSpring(x, { stiffness: 160, damping: 30 });
+  const ySpring = useSpring(y, { stiffness: 160, damping: 30 });
 
   const transform = useMotionTemplate`rotateX(${xSpring}deg) rotateY(${ySpring}deg)`;
 
