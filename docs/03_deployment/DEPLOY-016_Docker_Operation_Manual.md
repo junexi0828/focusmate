@@ -60,15 +60,85 @@ When you change `requirements.txt` or `Dockerfile`.
 
    # 3. Start up
    sudo docker-compose -f docker-compose.nas.yml up -d
+   sudo docker-compose -f docker-compose.nas.yml restart backend
    ```
 
-### C. Basic Controls
-| Action | Command |
-| :--- | :--- |
-| **Check Status** | `sudo docker ps` |
-| **View Logs** | `sudo docker-compose -f docker-compose.nas.yml logs -f backend` |
-| **Stop All** | `sudo docker-compose -f docker-compose.nas.yml down` |
-| **Start All** | `sudo docker-compose -f docker-compose.nas.yml up -d` |
+### A-2. Manual Deployment (When Git Auth Fails)
+If `git pull` fails on NAS due to authentication/password issues, use **Rsync** or **SCP** from your local machine.
+
+#### Option 1: Full Code Sync (Recommended)
+Use the provided script or `rsync` to overwrite NAS code with local code.
+1. **Run locally (Mac)**:
+   ```bash
+   # Option A: Use Script (Safe, Excludes venv/logs)
+   ./backend/deploy-nas.sh
+
+   # Option B: Manual Rsync Command
+   rsync -avz --progress \
+     --exclude 'venv' --exclude '.venv' --exclude '__pycache__' --exclude '*.pyc' \
+     --exclude '.git' --exclude '.DS_Store' --exclude 'logs' \
+     backend/ juns@192.168.45.58:/volume1/web/focusmate-backend/
+   ```
+2. **Restart on NAS**:
+   ```bash
+   sudo docker-compose -f docker-compose.nas.yml restart backend
+   ```
+
+#### Option 2: Single Config File Update (SCP)
+If `scp` fails (Synology default), use **SSH Pipe** to transfer a single file (e.g., `docker-compose.nas.yml`).
+1. **Run locally (Mac)**:
+   ```bash
+   # Syntax: cat [LocalFile] | ssh [User]@[Host] "cat > [RemoteFile]"
+   cat backend/docker-compose.nas.yml | ssh juns@192.168.45.58 "cat > /volume1/web/focusmate-backend/docker-compose.nas.yml"
+   ```
+2. **Apply Config on NAS** (Important: restart won't apply config changes):
+   ```bash
+   sudo docker-compose -f docker-compose.nas.yml up -d
+   ```
+
+### C. Command Reference (Cheat Sheet)
+
+#### 1. Docker Operations (Run on NAS)
+| Category | Command | Description |
+| :--- | :--- | :--- |
+| **Lifecycle** | `sudo docker-compose -f docker-compose.nas.yml up -d` | Start/Update containers (Recreates if config changed) |
+| | `sudo docker-compose -f docker-compose.nas.yml down` | Stop and remove containers |
+| | `sudo docker-compose -f docker-compose.nas.yml restart [service]` | Simple restart (No config changes applied) |
+| **Inspection** | `sudo docker ps` | Show running containers |
+| | `sudo docker-compose -f docker-compose.nas.yml logs -f [service]` | Stream logs (Ctrl+C to exit) |
+| | `sudo docker logs --tail 100 focusmate-backend` | View last 100 lines of specific container |
+| **Debugging** | `sudo docker exec -it focusmate-backend /bin/bash` | **Enter container shell** (Run commands inside) |
+| | `sudo docker stats` | Live CPU/Memory usage stats |
+| | `sudo docker network inspect focusmate-network` | Inspect network connections |
+| **Cleanup** | `sudo docker system prune -a` | Delete unused images/containers (Free up space) |
+
+#### 2. File Transfer Tools (Run on Mac)
+Use these when you need to move files manually without our scripts.
+
+**RSYNC** (Smart Synchronization)
+*   **Best for:** Syncing entire folders, codebases. Only sends changed parts.
+*   **Syntax:** `rsync [options] [Source] [Destination]`
+*   **Example**:
+    ```bash
+    # Sync local 'backend' folder to NAS (recursively)
+    rsync -avz backend/ juns@192.168.45.58:/volume1/web/focusmate-backend/
+    ```
+    *   `-a`: Archive mode (preserve permissions/dates)
+    *   `-v`: Verbose (show progress)
+    *   `-z`: Compress (faster over network)
+
+**SCP** (Secure Copy)
+*   **Best for:** Sending a single file quickly.
+*   **Syntax:** `scp [SourceFile] [User]@[Host]:[RemotePath]`
+*   **Example**:
+    ```bash
+    # Send a config file to NAS
+    scp .env juns@192.168.45.58:/volume1/web/focusmate-backend/.env
+    ```
+
+**SSH Pipe** (When SCP is disabled)
+*   **Best for:** Bypassing restrictions or writing text directly.
+*   **Syntax:** `cat [LocalFile] | ssh [Remote] "cat > [Destination]"`
 
 ---
 
