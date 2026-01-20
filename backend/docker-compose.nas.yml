@@ -27,6 +27,8 @@ services:
     volumes:
       # 로그만 외부 저장 (코드는 이미지에 포함)
       - ./logs:/app/logs
+    env_file:
+      - .env
     environment:
       - APP_ENV=production
       - DATABASE_URL=${DATABASE_URL}
