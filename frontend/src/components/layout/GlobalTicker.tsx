@@ -44,7 +44,7 @@ export function ScrollingTicker({ className, messages = [
   "📢 서버 점검 안내: NAS 기기 교체 작업으로 인해 서비스가 일시 중단됩니다. 2월 말, 더 나은 모습의 리뉴얼 베타 서비스로 찾아뵙겠습니다. 감사합니다."
 ]}: GlobalTickerProps) {
   return (
-    <div className={cn("overflow-hidden flex items-center w-[60rem] mask-linear-fade", className)}>
+    <div className={cn("overflow-hidden flex items-center w-[40rem] mask-linear-fade", className)}>
       <motion.div
         className="flex gap-8 whitespace-nowrap text-sm text-muted-foreground font-medium"
         animate={{ x: ["100%", "-100%"] }}
