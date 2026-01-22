@@ -57,7 +57,12 @@ class RedisTimerListener:
             self.pubsub = self.redis.pubsub()
 
             # Subscribe to expired key events on database 0
-            await self.pubsub.psubscribe('__keyevent@0__:expired')
+            # Use timeout to prevent infinite blocking
+            import asyncio
+            await asyncio.wait_for(
+                self.pubsub.psubscribe('__keyevent@0__:expired'),
+                timeout=3.0
+            )
 
             logger.info("✅ Redis Timer Listener connected and subscribed to expiry events")
             self.available = True

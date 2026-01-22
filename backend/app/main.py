@@ -127,38 +127,47 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     listener_task = None
     fallback_scheduler = None
+
+    # Try to start Redis Timer Listener (optional, for real-time accuracy)
     try:
         await asyncio.wait_for(redis_timer_listener.connect(), timeout=5.0)
         # Start listener in background task
         listener_task = asyncio.create_task(redis_timer_listener.listen())
-        logger.info("✅ Redis Timer Listener started (TTL-based expiry)")
+        logger.info("✅ Redis Timer Listener started (real-time TTL-based expiry)")
+    except asyncio.TimeoutError:
+        logger.warning(
+            "⚠️ Redis Timer Listener connection timeout after 5s. "
+            "Continuing with APScheduler safety net."
+        )
     except Exception as e:
         logger.warning(
             "⚠️ Redis Timer Listener initialization failed: %s. "
-            "Falling back to APScheduler for timer expiry. "
-            "To enable Redis Timer Listener, ensure Redis is running at %s",
-            str(e)[:100],
-            settings.REDIS_URL
+            "Continuing with APScheduler safety net.",
+            str(e)[:100]
         )
-        # Don't send Slack notification for expected failures in development
 
-    if not redis_timer_listener.is_available():
-        try:
-            from apscheduler.schedulers.asyncio import AsyncIOScheduler
-            from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
+    # ALWAYS start APScheduler as safety net (dual protection strategy)
+    # This ensures no timer expiry events are lost, even if Redis Listener misses them
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
 
-            fallback_scheduler = AsyncIOScheduler()
-            fallback_scheduler.add_job(
-                check_expired_timers,
-                "interval",
-                minutes=1,
-                id="timer_cleanup_fallback",
-                replace_existing=True,
-            )
-            fallback_scheduler.start()
-            logger.info("✅ APScheduler fallback started (timer cleanup every 1 minute)")
-        except Exception:
-            logger.exception("⚠️ APScheduler fallback initialization failed")
+        fallback_scheduler = AsyncIOScheduler()
+        fallback_scheduler.add_job(
+            check_expired_timers,
+            "interval",
+            minutes=1,
+            id="timer_cleanup_safety_net",
+            replace_existing=True,
+        )
+        fallback_scheduler.start()
+
+        if redis_timer_listener.is_available():
+            logger.info("✅ APScheduler started as safety net (checks every 1 minute, dual protection)")
+        else:
+            logger.info("✅ APScheduler started as primary timer (checks every 1 minute)")
+    except Exception:
+        logger.exception("❌ APScheduler initialization failed - timer expiry may not work!")
 
     # Initialize Reservation Notification Worker (polling-based)
     reservation_task = None
