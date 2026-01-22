@@ -128,24 +128,27 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     listener_task = None
     fallback_scheduler = None
 
-    # Try to start Redis Timer Listener (optional, for real-time accuracy)
-    logger.info("🔄 Attempting to initialize Redis Timer Listener (5s timeout)...")
-    try:
-        await asyncio.wait_for(redis_timer_listener.connect(), timeout=5.0)
-        # Start listener in background task
-        listener_task = asyncio.create_task(redis_timer_listener.listen())
-        logger.info("✅ Redis Timer Listener started (real-time TTL-based expiry)")
-    except asyncio.TimeoutError:
-        logger.warning(
-            "⚠️ Redis Timer Listener connection timeout after 5s. "
-            "Continuing with APScheduler safety net."
-        )
-    except Exception as e:
-        logger.warning(
-            "⚠️ Redis Timer Listener initialization failed: %s. "
-            "Continuing with APScheduler safety net.",
-            str(e)[:100]
-        )
+    # [DISABLED] Redis Timer Listener due to persistent blocking/hang issues with psubscribe.
+    # We rely fully on APScheduler (running every 1 minute) for timer cleanup.
+    # This guarantees stability over the potential (but fragile) speed of Redis notifications.
+    logger.info("⚠️ Redis Timer Listener disabled (using APScheduler only)")
+
+    # try:
+    #     await asyncio.wait_for(redis_timer_listener.connect(), timeout=5.0)
+    #     # Start listener in background task
+    #     listener_task = asyncio.create_task(redis_timer_listener.listen())
+    #     logger.info("✅ Redis Timer Listener started (real-time TTL-based expiry)")
+    # except asyncio.TimeoutError:
+    #     logger.warning(
+    #         "⚠️ Redis Timer Listener connection timeout after 5s. "
+    #         "Continuing with APScheduler safety net."
+    #     )
+    # except Exception as e:
+    #     logger.warning(
+    #         "⚠️ Redis Timer Listener initialization failed: %s. "
+    #         "Continuing with APScheduler safety net.",
+    #         str(e)[:100]
+    #     )
 
     # ALWAYS start APScheduler as safety net (dual protection strategy)
     # This ensures no timer expiry events are lost, even if Redis Listener misses them
@@ -171,17 +174,16 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.exception("❌ APScheduler initialization failed - timer expiry may not work!")
 
     # Initialize Reservation Notification Worker (polling-based)
+    # DISABLING WORKER TEMPORARILY TO RESOLVE STARTUP HANG (502 INFO)
     reservation_task = None
-    try:
-        reservation_task = asyncio.create_task(reservation_notification_worker.start())
-        logger.info("✅ Reservation Notification Worker started (60s interval)")
-    except Exception as e:
-        logger.warning(
-            "⚠️ Reservation Notification Worker initialization failed: %s. "
-            "Reservation notifications will not be sent automatically.",
-            str(e)[:100]
-        )
-        # Don't send Slack notification for expected failures in development
+    # try:
+    #     reservation_task = asyncio.create_task(reservation_notification_worker.start())
+    #     logger.info("✅ Reservation Notification Worker started (60s interval)")
+    # except Exception as e:
+    #     logger.warning(
+    #         "⚠️ Reservation Notification Worker initialization failed: %s.",
+    #         str(e)[:100]
+    #     )
 
     yield
 
@@ -592,8 +594,8 @@ app.include_router(api_router, prefix="/api/v1")
 
 # Prometheus metrics instrumentation
 # Exposes metrics at /metrics endpoint
-if settings.PROMETHEUS_ENABLED:
-    Instrumentator().instrument(app).expose(app)
+# if settings.PROMETHEUS_ENABLED:
+#     Instrumentator().instrument(app).expose(app)
 
 # Mount static files for uploads
 uploads_dir = Path("uploads")
