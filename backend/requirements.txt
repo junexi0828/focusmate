@@ -45,6 +45,8 @@ greenlet>=3.0.0                     # Async support (required for SQLAlchemy)
 prometheus-fastapi-instrumentator==7.0.0  # Prometheus metrics for FastAPI
 prometheus-client==0.21.1                  # Prometheus client library
 redis==5.2.1                               # Redis client for caching & pub/sub
+apscheduler==3.11.2                     # Task scheduling (Timer safety net)
+tzlocal>=5.3                            # Timezone support for APScheduler
 
 
 # ============================================================================

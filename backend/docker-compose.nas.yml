@@ -21,11 +21,13 @@ services:
   backend:
     image: focusmate-backend:latest
     container_name: focusmate-backend
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--loop", "asyncio"]
     ports:
       - "8000:8000"
     volumes:
-      # 로그만 외부 저장 (코드는 이미지에 포함)
+      # Mount code from host (Hybrid Deployment)
+      - ./:/app
+      # 로그만 외부 저장 (코드는 이미지에 포함 - BUT mounted via ./)
       - ./logs:/app/logs
     env_file:
       - .env

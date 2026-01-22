@@ -72,5 +72,5 @@ echo "✅ File sync complete."
 
 echo "🎉 File Sync Successfully Completed!"
 # 4. Restart services on NAS
-echo -e "${GREEN}ℹ️  Docker restart: ssh to NAS and run 'sudo docker-compose -f docker-compose.nas.yml restart backend'${NC}"
-ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml restart backend"
+echo -e "${GREEN}ℹ️  Fixing permissions and restarting Docker...${NC}"
+ssh "juns@$NAS_HOST" "chmod -R 755 $NAS_DIR/app && chmod 777 $NAS_DIR/.env && cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml restart backend"
