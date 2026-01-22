@@ -50,9 +50,9 @@ class RedisTimerListener:
                 health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
             )
 
-            # Enable keyspace notifications for expired events
-            # 'Ex' = Expired events + Keyevent events
-            await self.redis.config_set('notify-keyspace-events', 'Ex')
+            # NOTE: Keyspace notifications are configured in docker-compose.nas.yml
+            # via --notify-keyspace-events Ex flag. No need to set via config_set
+            # to avoid potential blocking issues.
 
             self.pubsub = self.redis.pubsub()
 

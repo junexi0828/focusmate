@@ -71,4 +71,6 @@ echo "✅ File sync complete."
 # ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash start-nas.sh"
 
 echo "🎉 File Sync Successfully Completed!"
-echo "ℹ️  Docker restart: ssh to NAS and run 'sudo docker-compose -f docker-compose.nas.yml restart backend'"
+# 4. Restart services on NAS
+echo -e "${GREEN}ℹ️  Docker restart: ssh to NAS and run 'sudo docker-compose -f docker-compose.nas.yml restart backend'${NC}"
+ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml restart backend"
