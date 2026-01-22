@@ -12,7 +12,7 @@ Advantages over APScheduler:
 import logging
 from datetime import datetime, UTC
 from redis import asyncio as aioredis
-from redis.asyncio.connection import PythonParser
+from redis.asyncio.connection import _AsyncRESP2Parser as PythonParser
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -42,7 +42,7 @@ class RedisTimerListener:
         try:
             logger.info("🔌 Redis Timer Listener: Starting connection...")
 
-            # Force PythonParser to avoid potential blocking issues with C extension (hiredis)
+            # Force PythonParser (_AsyncRESP2Parser) to avoid potential blocking issues with C extension (hiredis)
             # during psubscribe operations in asyncio loop.
             self.redis = aioredis.from_url(
                 settings.REDIS_URL,
