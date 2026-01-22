@@ -129,6 +129,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     fallback_scheduler = None
 
     # Try to start Redis Timer Listener (optional, for real-time accuracy)
+    logger.info("🔄 Attempting to initialize Redis Timer Listener (5s timeout)...")
     try:
         await asyncio.wait_for(redis_timer_listener.connect(), timeout=5.0)
         # Start listener in background task

@@ -39,6 +39,8 @@ class RedisTimerListener:
     async def connect(self):
         """Connect to Redis and enable keyspace notifications."""
         try:
+            logger.info("🔌 Redis Timer Listener: Starting connection...")
+
             self.redis = aioredis.from_url(
                 settings.REDIS_URL,
                 decode_responses=settings.REDIS_DECODE_RESPONSES,
@@ -49,20 +51,24 @@ class RedisTimerListener:
                 retry_on_timeout=settings.REDIS_RETRY_ON_TIMEOUT,
                 health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
             )
+            logger.info("🔌 Redis Timer Listener: Redis client created")
 
             # NOTE: Keyspace notifications are configured in docker-compose.nas.yml
             # via --notify-keyspace-events Ex flag. No need to set via config_set
             # to avoid potential blocking issues.
 
             self.pubsub = self.redis.pubsub()
+            logger.info("🔌 Redis Timer Listener: PubSub object created")
 
             # Subscribe to expired key events on database 0
             # Use timeout to prevent infinite blocking
             import asyncio
+            logger.info("🔌 Redis Timer Listener: Attempting psubscribe with 3s timeout...")
             await asyncio.wait_for(
                 self.pubsub.psubscribe('__keyevent@0__:expired'),
                 timeout=3.0
             )
+            logger.info("🔌 Redis Timer Listener: psubscribe completed")
 
             logger.info("✅ Redis Timer Listener connected and subscribed to expiry events")
             self.available = True
