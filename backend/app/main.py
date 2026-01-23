@@ -152,39 +152,46 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ALWAYS start APScheduler as safety net (dual protection strategy)
     # This ensures no timer expiry events are lost, even if Redis Listener misses them
-    try:
-        from apscheduler.schedulers.asyncio import AsyncIOScheduler
-        from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
-
-        fallback_scheduler = AsyncIOScheduler()
-        fallback_scheduler.add_job(
-            check_expired_timers,
-            "interval",
-            minutes=1,
-            id="timer_cleanup_safety_net",
-            replace_existing=True,
-        )
-        fallback_scheduler.start()
-
-        if redis_timer_listener.is_available():
-            logger.info("✅ APScheduler started as safety net (checks every 1 minute, dual protection)")
-        else:
-            logger.info("✅ APScheduler started as primary timer (checks every 1 minute)")
-    except Exception:
-        logger.exception("❌ APScheduler initialization failed - timer expiry may not work!")
+    # [TEMPORARILY DISABLED FOR DEBUGGING]
+    fallback_scheduler = None
+    logger.info("⚠️ APScheduler DISABLED for debugging")
+    # try:
+    #     from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    #     from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
+    #
+    #     fallback_scheduler = AsyncIOScheduler()
+    #     fallback_scheduler.add_job(
+    #         check_expired_timers,
+    #         "interval",
+    #         minutes=1,
+    #         id="timer_cleanup_safety_net",
+    #         replace_existing=True,
+    #     )
+    #     fallback_scheduler.start()
+    #
+    #     if redis_timer_listener.is_available():
+    #         logger.info("✅ APScheduler started as safety net (checks every 1 minute, dual protection)")
+    #     else:
+    #         logger.info("✅ APScheduler started as primary timer (checks every 1 minute)")
+    # except Exception:
+    #     logger.exception("❌ APScheduler initialization failed - timer expiry may not work!")
 
     # Initialize Reservation Notification Worker (polling-based)
+    # [TEMPORARILY DISABLED FOR DEBUGGING]
     reservation_task = None
-    try:
-        reservation_task = asyncio.create_task(reservation_notification_worker.start())
-        logger.info("✅ Reservation Notification Worker started (60s interval)")
-    except Exception as e:
-        logger.warning(
-            "⚠️ Reservation Notification Worker initialization failed: %s.",
-            str(e)[:100]
-        )
+    logger.info("⚠️ Reservation Notification Worker DISABLED for debugging")
+    # try:
+    #     reservation_task = asyncio.create_task(reservation_notification_worker.start())
+    #     logger.info("✅ Reservation Notification Worker started (60s interval)")
+    # except Exception as e:
+    #     logger.warning(
+    #         "⚠️ Reservation Notification Worker initialization failed: %s.",
+    #         str(e)[:100]
+    #     )
 
+    logger.info("🔍 DEBUG: About to reach yield statement...")
     yield
+    logger.info("🔍 DEBUG: Passed yield statement (should not appear until shutdown)")
 
     # Shutdown
     logger.info("🛑 Shutting down Focus Mate Backend...")
