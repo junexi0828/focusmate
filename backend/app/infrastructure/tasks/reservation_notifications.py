@@ -44,14 +44,17 @@ class ReservationNotificationWorker:
         # Distributed coordination via Redis to prevent duplicate processing
         try:
             import redis.asyncio as aioredis
+            from redis.asyncio.connection import _AsyncRESP2Parser as PythonParser
             from app.core.config import settings
 
             # Using a very short connection just for the lock check
             # In a production app, we might want to maintain a persistent connection pool
+            # Force PythonParser to avoid C extension blocking issues
             redis = aioredis.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
-                encoding="utf-8"
+                encoding="utf-8",
+                parser_class=PythonParser,
             )
 
             # Try to acquire a lock for this interval (55s TTL for 60s interval)
