@@ -80,7 +80,8 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("✅ Database ready (using Alembic migrations in production)")
 
     # Initialize Redis Pub/Sub
-    await redis_pubsub_manager.initialize()
+    await redis_pubsub_manager.connect()
+    await redis_pubsub_manager.start_listener()
     logger.info("✅ Redis Pub/Sub initialized")
 
     logger.info("🔍 DEBUG: About to yield (with DB and Redis only)...")
