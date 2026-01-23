@@ -423,9 +423,33 @@ if settings.SECURITY_HEADERS_ENABLED:
 
 # Trusted Host middleware - protects against Host header attacks
 # In production, only allow specific domains
+# But allow localhost for health checks (Docker healthcheck needs this)
 if not settings.is_development:
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.types import ASGIApp
+
+    class TrustedHostWithHealthCheckMiddleware(BaseHTTPMiddleware):
+        """TrustedHostMiddleware wrapper that exempts /health endpoint."""
+
+        def __init__(self, app: ASGIApp, allowed_hosts: list[str]):
+            super().__init__(app)
+            self.allowed_hosts = allowed_hosts
+            # Add TrustedHostMiddleware as inner middleware
+            from fastapi.middleware.trustedhost import TrustedHostMiddleware
+            self.trusted_host_middleware = TrustedHostMiddleware(
+                app=app,
+                allowed_hosts=allowed_hosts
+            )
+
+        async def dispatch(self, request: Request, call_next):
+            # Bypass host check for health endpoint (needed for Docker healthcheck)
+            if request.url.path == "/health":
+                return await call_next(request)
+            # Otherwise, apply normal TrustedHostMiddleware logic
+            return await self.trusted_host_middleware.dispatch(request, call_next)
+
     app.add_middleware(
-        TrustedHostMiddleware,
+        TrustedHostWithHealthCheckMiddleware,
         allowed_hosts=settings.TRUSTED_HOSTS,
     )
 
