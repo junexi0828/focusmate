@@ -69,13 +69,34 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     Handles startup and shutdown events.
     """
     logger = logging.getLogger("app")
-    logger.info("🚀 MINIMAL LIFESPAN - Starting...")
+    logger.info("🚀 Starting Focus Mate Backend (gradual restoration)...")
+    logger.info("📍 Environment: %s", settings.APP_ENV)
 
-    # MINIMAL VERSION - just yield immediately
+    # Initialize database
+    if settings.is_development:
+        await init_db()
+        logger.info("✅ Database initialized (development)")
+    else:
+        logger.info("✅ Database ready (using Alembic migrations in production)")
+
+    # Initialize Redis Pub/Sub
+    await redis_pubsub_manager.initialize()
+    logger.info("✅ Redis Pub/Sub initialized")
+
+    logger.info("🔍 DEBUG: About to yield (with DB and Redis only)...")
     yield
+    logger.info("🔍 DEBUG: Passed yield - shutting down...")
 
-    logger.info("🛑 MINIMAL LIFESPAN - Shutting down...")
-    return
+    # Shutdown
+    logger.info("🛑 Shutting down Focus Mate Backend...")
+    try:
+        await redis_pubsub_manager.disconnect()
+        logger.info("✅ Redis Pub/Sub disconnected")
+    except Exception:
+        logger.exception("⚠️ Error disconnecting Redis")
+
+    await close_db()
+    logger.info("✅ Database connections closed")
 
 # ORIGINAL LIFESPAN (disabled for testing)
 @asynccontextmanager
