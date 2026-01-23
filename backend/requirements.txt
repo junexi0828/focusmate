@@ -12,6 +12,7 @@ python-dotenv==1.0.1                # Environment variables
 # Database - FIXED VERSIONS for Python 3.13
 sqlalchemy[asyncio]>=2.0.35,<2.1    # ORM with async support (Python 3.14 compatible)
 psycopg[binary,pool]==3.2.3         # PostgreSQL async/sync driver (PgBouncer Transaction Mode compatible)
+asyncpg>=0.30.0                     # Async PostgreSQL driver (Required for SQLAlchemy asyncpg dialect)
 psycopg2-binary==2.9.11             # PostgreSQL sync driver (for Alembic migrations)
 alembic==1.14.0                     # Database migrations
 

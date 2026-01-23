@@ -21,7 +21,7 @@ services:
 
       # Database
       # - DATABASE_URL=sqlite+aiosqlite:////app/data/focus_mate.db
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/focus_mate
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/focus_mate
 
       # Redis
       - REDIS_URL=redis://redis:6379/0
