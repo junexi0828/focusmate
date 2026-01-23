@@ -69,6 +69,22 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     Handles startup and shutdown events.
     """
     logger = logging.getLogger("app")
+    logger.info("🚀 MINIMAL LIFESPAN - Starting...")
+
+    # MINIMAL VERSION - just yield immediately
+    yield
+
+    logger.info("🛑 MINIMAL LIFESPAN - Shutting down...")
+    return
+
+# ORIGINAL LIFESPAN (disabled for testing)
+@asynccontextmanager
+async def lifespan_ORIGINAL(_app: FastAPI) -> AsyncGenerator[None, None]:
+    """Application lifespan manager.
+
+    Handles startup and shutdown events.
+    """
+    logger = logging.getLogger("app")
 
     async def _cancel_task(task: asyncio.Task | None, task_name: str) -> None:
         if not task:
