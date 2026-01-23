@@ -81,9 +81,8 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Initialize Redis Pub/Sub
     await redis_pubsub_manager.connect()
-    # TEMPORARILY DISABLED: start_listener() appears to be blocking/spinning
-    # await redis_pubsub_manager.start_listener()
-    logger.info("✅ Redis Pub/Sub connected (listener disabled for debugging)")
+    await redis_pubsub_manager.start_listener()
+    logger.info("✅ Redis Pub/Sub initialized (with PythonParser fix)")
 
     logger.info("🔍 DEBUG: About to yield (with DB and Redis only)...")
     yield

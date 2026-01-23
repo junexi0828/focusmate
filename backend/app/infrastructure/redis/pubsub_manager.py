@@ -39,6 +39,9 @@ class RedisPubSubManager:
 
     async def connect(self):
         """Connect to Redis."""
+        # Force PythonParser to avoid C extension blocking in asyncio context
+        from redis.asyncio.connection import _AsyncRESP2Parser as PythonParser
+
         # aioredis.from_url() returns a Redis client directly, no await needed
         self.redis = aioredis.from_url(
             self.redis_url,
@@ -49,6 +52,7 @@ class RedisPubSubManager:
             socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
             retry_on_timeout=settings.REDIS_RETRY_ON_TIMEOUT,
             health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
+            parser_class=PythonParser,  # Force Python parser to avoid C extension blocking
         )
         self.pubsub = self.redis.pubsub()
 
