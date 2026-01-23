@@ -174,16 +174,15 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.exception("❌ APScheduler initialization failed - timer expiry may not work!")
 
     # Initialize Reservation Notification Worker (polling-based)
-    # DISABLING WORKER TEMPORARILY TO RESOLVE STARTUP HANG (502 INFO)
     reservation_task = None
-    # try:
-    #     reservation_task = asyncio.create_task(reservation_notification_worker.start())
-    #     logger.info("✅ Reservation Notification Worker started (60s interval)")
-    # except Exception as e:
-    #     logger.warning(
-    #         "⚠️ Reservation Notification Worker initialization failed: %s.",
-    #         str(e)[:100]
-    #     )
+    try:
+        reservation_task = asyncio.create_task(reservation_notification_worker.start())
+        logger.info("✅ Reservation Notification Worker started (60s interval)")
+    except Exception as e:
+        logger.warning(
+            "⚠️ Reservation Notification Worker initialization failed: %s.",
+            str(e)[:100]
+        )
 
     yield
 
