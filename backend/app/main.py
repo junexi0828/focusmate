@@ -69,7 +69,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     Handles startup and shutdown events.
     """
     logger = logging.getLogger("app")
-    logger.info("🚀 Starting Focus Mate Backend (gradual restoration)...")
+    logger.info("🚀 Starting Focus Mate Backend...")
     logger.info("📍 Environment: %s", settings.APP_ENV)
 
     # Initialize database
@@ -81,15 +81,116 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Initialize Redis Pub/Sub
     await redis_pubsub_manager.connect()
-    await redis_pubsub_manager.start_listener()
-    logger.info("✅ Redis Pub/Sub initialized (with PythonParser fix)")
+    # NOTE: Listener disabled due to redis-py async pubsub CPU burn issue (#3208)
+    # The listener is only needed for cross-server message sync in multi-server deployments
+    # await redis_pubsub_manager.start_listener()
+    logger.info("✅ Redis Pub/Sub connected (listener disabled - single server mode)")
 
-    logger.info("🔍 DEBUG: About to yield (with DB and Redis only)...")
+    # Initialize Redis Timer Listener and other tasks
+    from app.infrastructure.tasks import (
+        redis_timer_listener,
+        reservation_notification_worker,
+    )
+    from app.core.notify import send_slack_notification
+
+    # Send startup notification (non-blocking)
+    asyncio.create_task(
+        send_slack_notification(
+            message=f"🚀 FocusMate Backend Started ({settings.APP_ENV})",
+            level="info"
+        )
+    )
+
+    listener_task = None
+    fallback_scheduler = None
+
+    # [DISABLED] Redis Timer Listener due to persistent blocking/hang issues with psubscribe.
+    # We rely fully on APScheduler (running every 1 minute) for timer cleanup.
+    logger.info("⚠️ Redis Timer Listener disabled (using APScheduler only)")
+
+    # ALWAYS start APScheduler as safety net (dual protection strategy)
+    # This ensures no timer expiry events are lost, even if Redis Listener misses them
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
+
+        fallback_scheduler = AsyncIOScheduler()
+        fallback_scheduler.add_job(
+            check_expired_timers,
+            "interval",
+            minutes=1,
+            id="timer_cleanup_safety_net",
+            replace_existing=True,
+        )
+        fallback_scheduler.start()
+
+        if redis_timer_listener.is_available():
+            logger.info("✅ APScheduler started as safety net (checks every 1 minute, dual protection)")
+        else:
+            logger.info("✅ APScheduler started as primary timer (checks every 1 minute)")
+    except Exception:
+        logger.exception("❌ APScheduler initialization failed - timer expiry may not work!")
+
+    # Initialize Reservation Notification Worker (polling-based)
+    try:
+        reservation_task = asyncio.create_task(reservation_notification_worker.start())
+        logger.info("✅ Reservation Notification Worker started (60s interval)")
+    except Exception as e:
+        logger.warning(
+            "⚠️ Reservation Notification Worker initialization failed: %s.",
+            str(e)[:100]
+        )
+
     yield
-    logger.info("🔍 DEBUG: Passed yield - shutting down...")
 
     # Shutdown
     logger.info("🛑 Shutting down Focus Mate Backend...")
+
+    async def _cancel_task(task: asyncio.Task | None, task_name: str) -> None:
+        if not task:
+            return
+        task.cancel()
+        try:
+            await task
+            logger.info("✅ %s task stopped", task_name)
+        except asyncio.CancelledError:
+            logger.info("✅ %s task cancelled", task_name)
+        except Exception:
+            logger.exception("⚠️ Error stopping %s task", task_name)
+
+    # Send shutdown notification (with timeout to prevent hanging)
+    try:
+        await asyncio.wait_for(
+            send_slack_notification(
+                message=f"🛑 FocusMate Backend Shutting Down ({settings.APP_ENV})",
+                level="warning"
+            ),
+            timeout=2.0
+        )
+    except asyncio.TimeoutError:
+        logger.warning("Slack shutdown notification timed out")
+
+    # Stop Redis Timer Listener
+    try:
+        await redis_timer_listener.disconnect()
+        await _cancel_task(listener_task, "Redis Timer Listener")
+    except Exception:
+        logger.exception("⚠️ Error stopping Redis Timer Listener")
+
+    # Stop APScheduler fallback
+    try:
+        if fallback_scheduler:
+            fallback_scheduler.shutdown(wait=False)
+        logger.info("✅ APScheduler fallback stopped")
+    except Exception:
+        logger.exception("⚠️ Error stopping APScheduler fallback")
+
+    # Stop Reservation Notification Worker
+    try:
+        await _cancel_task(reservation_task, "Reservation Notification Worker")
+    except Exception:
+        logger.exception("⚠️ Error stopping Reservation Notification Worker")
+
     try:
         await redis_pubsub_manager.disconnect()
         logger.info("✅ Redis Pub/Sub disconnected")
@@ -190,42 +291,36 @@ async def lifespan_ORIGINAL(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ALWAYS start APScheduler as safety net (dual protection strategy)
     # This ensures no timer expiry events are lost, even if Redis Listener misses them
-    # [TEMPORARILY DISABLED FOR DEBUGGING]
-    fallback_scheduler = None
-    logger.info("⚠️ APScheduler DISABLED for debugging")
-    # try:
-    #     from apscheduler.schedulers.asyncio import AsyncIOScheduler
-    #     from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
-    #
-    #     fallback_scheduler = AsyncIOScheduler()
-    #     fallback_scheduler.add_job(
-    #         check_expired_timers,
-    #         "interval",
-    #         minutes=1,
-    #         id="timer_cleanup_safety_net",
-    #         replace_existing=True,
-    #     )
-    #     fallback_scheduler.start()
-    #
-    #     if redis_timer_listener.is_available():
-    #         logger.info("✅ APScheduler started as safety net (checks every 1 minute, dual protection)")
-    #     else:
-    #         logger.info("✅ APScheduler started as primary timer (checks every 1 minute)")
-    # except Exception:
-    #     logger.exception("❌ APScheduler initialization failed - timer expiry may not work!")
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from app.infrastructure.tasks.timer_cleanup_apscheduler import check_expired_timers
+
+        fallback_scheduler = AsyncIOScheduler()
+        fallback_scheduler.add_job(
+            check_expired_timers,
+            "interval",
+            minutes=1,
+            id="timer_cleanup_safety_net",
+            replace_existing=True,
+        )
+        fallback_scheduler.start()
+
+        if redis_timer_listener.is_available():
+            logger.info("✅ APScheduler started as safety net (checks every 1 minute, dual protection)")
+        else:
+            logger.info("✅ APScheduler started as primary timer (checks every 1 minute)")
+    except Exception:
+        logger.exception("❌ APScheduler initialization failed - timer expiry may not work!")
 
     # Initialize Reservation Notification Worker (polling-based)
-    # [TEMPORARILY DISABLED FOR DEBUGGING]
-    reservation_task = None
-    logger.info("⚠️ Reservation Notification Worker DISABLED for debugging")
-    # try:
-    #     reservation_task = asyncio.create_task(reservation_notification_worker.start())
-    #     logger.info("✅ Reservation Notification Worker started (60s interval)")
-    # except Exception as e:
-    #     logger.warning(
-    #         "⚠️ Reservation Notification Worker initialization failed: %s.",
-    #         str(e)[:100]
-    #     )
+    try:
+        reservation_task = asyncio.create_task(reservation_notification_worker.start())
+        logger.info("✅ Reservation Notification Worker started (60s interval)")
+    except Exception as e:
+        logger.warning(
+            "⚠️ Reservation Notification Worker initialization failed: %s.",
+            str(e)[:100]
+        )
 
     logger.info("🔍 DEBUG: About to reach yield statement...")
     yield
