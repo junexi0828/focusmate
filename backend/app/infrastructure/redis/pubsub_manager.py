@@ -169,6 +169,8 @@ class RedisPubSubManager:
                     if not self._running:
                         break
                     if message["type"] != "message":
+                        # Yield to event loop to prevent CPU burn (redis-py issue #3208)
+                        await asyncio.sleep(0.001)
                         continue
 
                     try:
