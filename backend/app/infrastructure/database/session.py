@@ -267,12 +267,15 @@ def receive_connect(dbapi_conn, connection_record):
     This ensures prepared statements are disabled even for internal SQLAlchemy queries.
     Required for PgBouncer Transaction Mode compatibility.
     """
-    # For psycopg3, set prepare_threshold to None on the connection object
-    if hasattr(dbapi_conn, 'prepare_threshold'):
-        dbapi_conn.prepare_threshold = None
-        logger.info("Pool connect event: Set prepare_threshold=None on connection")
+    # For psycopg3 with SQLAlchemy, need to access the underlying driver connection
+    # SQLAlchemy wraps it in AsyncAdapt_psycopg_connection
+    underlying_conn = getattr(dbapi_conn, '_connection', None) or getattr(dbapi_conn, 'driver_connection', None) or dbapi_conn
+
+    if hasattr(underlying_conn, 'prepare_threshold'):
+        underlying_conn.prepare_threshold = None
+        logger.info("Pool connect event: Set prepare_threshold=None on underlying connection")
     else:
-        logger.info("Pool connect event: Connection established (prepare_threshold not available)")
+        logger.info(f"Pool connect event: Connection established (prepare_threshold not available on {type(underlying_conn).__name__})")
 
 # Create session factory
 AsyncSessionLocal = async_sessionmaker(
