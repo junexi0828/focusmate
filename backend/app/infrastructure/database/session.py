@@ -117,9 +117,16 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
 def is_duplicate_prepared_statement_error(exc: BaseException) -> bool:
     """Detect asyncpg prepared statement collisions (pgBouncer transaction pool)."""
     orig = getattr(exc, "orig", None)
-    if orig and orig.__class__.__name__ == "DuplicatePreparedStatementError":
-        return True
-    return "DuplicatePreparedStatementError" in str(exc)
+    if orig:
+        orig_name = orig.__class__.__name__
+        if orig_name in {"DuplicatePreparedStatementError", "DuplicatePreparedStatement"}:
+            return True
+    error_text = str(exc)
+    return (
+        "DuplicatePreparedStatementError" in error_text
+        or "DuplicatePreparedStatement" in error_text
+        or ("prepared statement" in error_text.lower() and "already exists" in error_text.lower())
+    )
 
 
 def _force_disable_prepared_statements(

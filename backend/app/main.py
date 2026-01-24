@@ -425,28 +425,45 @@ if settings.SECURITY_HEADERS_ENABLED:
 # In production, only allow specific domains
 # But allow localhost for health checks (Docker healthcheck needs this)
 if not settings.is_development:
-    from starlette.middleware.base import BaseHTTPMiddleware
-    from starlette.types import ASGIApp
+    from starlette.datastructures import Headers
+    from starlette.types import ASGIApp, Scope, Receive, Send
+    from starlette.responses import PlainTextResponse
 
-    class TrustedHostWithHealthCheckMiddleware(BaseHTTPMiddleware):
+    class TrustedHostWithHealthCheckMiddleware:
         """TrustedHostMiddleware wrapper that exempts /health endpoint."""
 
         def __init__(self, app: ASGIApp, allowed_hosts: list[str]):
-            super().__init__(app)
+            self.app = app
             self.allowed_hosts = allowed_hosts
-            # Add TrustedHostMiddleware as inner middleware
-            from fastapi.middleware.trustedhost import TrustedHostMiddleware
-            self.trusted_host_middleware = TrustedHostMiddleware(
-                app=app,
-                allowed_hosts=allowed_hosts
-            )
 
-        async def dispatch(self, request: Request, call_next):
+        def _is_allowed_host(self, host: str) -> bool:
+            if not host:
+                return False
+            if "*" in self.allowed_hosts:
+                return True
+            for pattern in self.allowed_hosts:
+                if host == pattern or (pattern.startswith("*") and host.endswith(pattern[1:])):
+                    return True
+            return False
+
+        async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
             # Bypass host check for health endpoint (needed for Docker healthcheck)
-            if request.url.path == "/health":
-                return await call_next(request)
-            # Otherwise, apply normal TrustedHostMiddleware logic
-            return await self.trusted_host_middleware.dispatch(request, call_next)
+            if scope.get("type") == "http" and scope.get("path") == "/health":
+                await self.app(scope, receive, send)
+                return
+
+            headers = Headers(scope=scope)
+            host = headers.get("host", "").split(":")[0].rstrip(".")
+            forwarded_host = headers.get("x-forwarded-host", "").split(",")[0].strip()
+            forwarded_host = forwarded_host.split(":")[0].rstrip(".")
+
+            if self._is_allowed_host(host) or self._is_allowed_host(forwarded_host):
+                await self.app(scope, receive, send)
+                return
+
+            # Invalid host - return 400 Bad Request
+            response = PlainTextResponse("Invalid host header", status_code=400)
+            await response(scope, receive, send)
 
     app.add_middleware(
         TrustedHostWithHealthCheckMiddleware,
