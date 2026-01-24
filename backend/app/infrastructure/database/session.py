@@ -250,17 +250,27 @@ if database_url.startswith("postgresql"):
 engine: AsyncEngine = create_async_engine(
     database_url,
     **engine_kwargs,
+).execution_options(
+    # Disable prepared statements at engine level for PgBouncer compatibility
+    # This ensures all queries (including SQLAlchemy internal queries) don't use prepared statements
+    compiled_cache=None,  # Disable statement caching
 )
 
 # CRITICAL FIX: Ensure prepared statements are disabled for EVERY connection
 # Register event on Pool before any connections are created
 @event.listens_for(Pool, "connect")
 def receive_connect(dbapi_conn, connection_record):
-    """Verify prepared statements are disabled after connection is established.
+    """Disable prepared statements for each new connection.
 
-    This is a verification step - the actual disabling happens via connect_args.
+    This ensures prepared statements are disabled even for internal SQLAlchemy queries.
+    Required for PgBouncer Transaction Mode compatibility.
     """
-    logger.info("Pool connect event: Connection established to database")
+    # For psycopg3, set prepare_threshold to 0 on the connection object
+    if hasattr(dbapi_conn, 'prepare_threshold'):
+        dbapi_conn.prepare_threshold = 0
+        logger.info("Pool connect event: Set prepare_threshold=0 on connection")
+    else:
+        logger.info("Pool connect event: Connection established (prepare_threshold not available)")
 
 # Create session factory
 AsyncSessionLocal = async_sessionmaker(

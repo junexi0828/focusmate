@@ -53,13 +53,10 @@ async def health_check(
         is_healthy = False
 
     # Check Database
-    # Use raw SQL with execution options to avoid prepared statement issues with PgBouncer
+    # Note: prepared statements are already disabled at connection level for PgBouncer
     try:
-        # Explicitly disable prepared statements for this query (PgBouncer transaction mode)
-        result = await db.execute(
-            text("SELECT 1"),
-            execution_options={"prepare_threshold": None}
-        )
+        # Simple query to check database connectivity
+        result = await db.execute(text("SELECT 1"))
         # Verify we got a result
         result.scalar()
         health_status["components"]["database"] = "connected"
