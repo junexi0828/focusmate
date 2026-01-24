@@ -60,7 +60,8 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
     """Build connect args/engine args for psycopg3 driver.
 
     psycopg3 is natively compatible with PgBouncer Transaction Mode.
-    We only need to set prepare_threshold=0 to disable prepared statements.
+    We only need to set prepare_threshold=None to disable prepared statements.
+    Note: prepare_threshold=0 means "prepare all queries immediately" (wrong!)
 
     Returns (connect_args, engine_args, use_null_pool, disable_prepared).
     """
@@ -103,7 +104,8 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
 
     if disable_prepared:
         # psycopg3 uses prepare_threshold to control prepared statements
-        # prepare_threshold=0 means never use prepared statements
+        # prepare_threshold=None disables prepared statements completely
+        # prepare_threshold=0 would prepare ALL queries (wrong for PgBouncer!)
         # This is safe for PgBouncer Transaction Mode
         connect_args = {
             "prepare_threshold": None,  # Disable prepared statements for PgBouncer
