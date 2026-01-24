@@ -185,7 +185,7 @@ async def websocket_endpoint(
                         "participant": {
                             "id": current_user.id,
                             "username": current_user.username,
-                            "name": current_user.name,
+                            "name": current_user.username,
                         },
                         "current_count": participant_count,
                         "room_id": room_id,
@@ -248,8 +248,7 @@ async def websocket_endpoint(
 
                             content = data.get("data", {}).get("content", "")
                             sender_name = (
-                                current_user.name
-                                or current_user.username
+                                current_user.username
                                 or "사용자"
                             )
                             chat_message = chat_service.build_message(
