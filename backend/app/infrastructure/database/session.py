@@ -106,9 +106,9 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
         # prepare_threshold=0 means never use prepared statements
         # This is safe for PgBouncer Transaction Mode
         connect_args = {
-            "prepare_threshold": 0,  # Disable prepared statements for PgBouncer
+            "prepare_threshold": None,  # Disable prepared statements for PgBouncer
         }
-        logger.info("Disabling prepared statements for PgBouncer (psycopg3: prepare_threshold=0)")
+        logger.info("Disabling prepared statements for PgBouncer (psycopg3: prepare_threshold=None)")
         return connect_args, {}, is_pgbouncer, True
 
     return {}, {}, False, False
@@ -142,12 +142,12 @@ def _force_disable_prepared_statements(
 
     # Ensure connect_args has the correct psycopg3 parameter
     connect_args = dict(engine_kwargs.get("connect_args", {}))
-    connect_args["prepare_threshold"] = 0  # psycopg3: disable prepared statements
+    connect_args["prepare_threshold"] = None  # psycopg3: disable prepared statements
 
     engine_kwargs["connect_args"] = connect_args
 
     logger.warning(
-        "Force-disabling prepared statements (psycopg3: prepare_threshold=0). "
+        "Force-disabling prepared statements (psycopg3: prepare_threshold=None). "
         "This should not happen if initial detection worked correctly."
     )
 
@@ -201,7 +201,7 @@ if database_url.startswith("postgresql"):
         disable_prepared,
     ) = _get_connect_args(database_url)
 
-    # Apply PgBouncer-safe connect_args (psycopg3: prepare_threshold=0)
+    # Apply PgBouncer-safe connect_args (psycopg3: prepare_threshold=None)
     connect_args.update(pgbouncer_connect_args)
 
     # Always set connect_args
@@ -265,10 +265,10 @@ def receive_connect(dbapi_conn, connection_record):
     This ensures prepared statements are disabled even for internal SQLAlchemy queries.
     Required for PgBouncer Transaction Mode compatibility.
     """
-    # For psycopg3, set prepare_threshold to 0 on the connection object
+    # For psycopg3, set prepare_threshold to None on the connection object
     if hasattr(dbapi_conn, 'prepare_threshold'):
-        dbapi_conn.prepare_threshold = 0
-        logger.info("Pool connect event: Set prepare_threshold=0 on connection")
+        dbapi_conn.prepare_threshold = None
+        logger.info("Pool connect event: Set prepare_threshold=None on connection")
     else:
         logger.info("Pool connect event: Connection established (prepare_threshold not available)")
 
