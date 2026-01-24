@@ -65,10 +65,10 @@ export function GoalProgressRing({
           <p className="text-sm text-muted-foreground mt-1">{label}</p>
           <div className="mt-3 space-y-1">
             <p className="text-xs text-muted-foreground">
-              현재: <span className="font-semibold text-foreground">{current}{unit}</span>
+              현재: <span className="font-semibold text-foreground">{Number(current.toFixed(1))}{unit}</span>
             </p>
             <p className="text-xs text-muted-foreground">
-              목표: <span className="font-semibold text-foreground">{goal}{unit}</span>
+              목표: <span className="font-semibold text-foreground">{Number(goal.toFixed(1))}{unit}</span>
             </p>
           </div>
         </motion.div>

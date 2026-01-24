@@ -11,7 +11,7 @@ const getWebSocketUrl = (token?: string | null): string => {
   const wsBaseUrl = getWebSocketBaseUrl()
     .replace(/^http:\/\//, "ws://")
     .replace(/^https:\/\//, "wss://");
-  const baseUrl = `${wsBaseUrl}/chats/ws`;
+  const baseUrl = `${wsBaseUrl}/api/v1/chats/ws`;
   if (!token) {
     return baseUrl;
   }

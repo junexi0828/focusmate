@@ -476,7 +476,7 @@ export function StatsPage({
           {weeklyGoal ? (
             <GoalProgressRing
               current={roundToDecimal(weeklyGoal.current_value / 60, 1)}
-              goal={weeklyGoal.goal_value / 60}
+              goal={roundToDecimal(weeklyGoal.goal_value / 60, 1)}
               label="주간 목표"
             />
           ) : (
@@ -490,7 +490,7 @@ export function StatsPage({
           {monthlyGoal ? (
             <GoalProgressRing
               current={roundToDecimal(monthlyGoal.current_value / 60, 1)}
-              goal={monthlyGoal.goal_value / 60}
+              goal={roundToDecimal(monthlyGoal.goal_value / 60, 1)}
               label="월간 목표"
             />
           ) : (
@@ -504,7 +504,7 @@ export function StatsPage({
           {yearlyGoal ? (
             <GoalProgressRing
               current={roundToDecimal(yearlyGoal.current_value / 60, 1)}
-              goal={yearlyGoal.goal_value / 60}
+              goal={roundToDecimal(yearlyGoal.goal_value / 60, 1)}
               label="연간 목표"
             />
           ) : (
