@@ -14,8 +14,10 @@ NAS_HOST="192.168.45.58"
 NAS_DIR="/volume1/web/focusmate-backend"
 REMOTE_PYTHON="/volume1/web/miniconda3/envs/focusmate_env/bin/python"
 
-# Ensure we are in the 'backend' directory (where this script lives)
-cd "$(dirname "$0")"
+# Ensure we are in the 'backend' directory (project root for backend)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BACKEND_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$BACKEND_ROOT"
 
 # Safety: ensure we are in a git repo and on main/master
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
