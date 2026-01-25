@@ -97,12 +97,12 @@ export function Footer() {
             <h3 className="font-semibold mb-3 text-[#7ED6E8] text-sm">지원</h3>
             <ul className="space-y-1.5">
               <li>
-                <a
-                  href="#"
+                <Link
+                  to="/guide"
                   className="text-sm text-muted-foreground hover:text-[#7ED6E8] transition-colors"
                 >
                   사용 가이드
-                </a>
+                </Link>
               </li>
               <li>
                 <Link
@@ -113,12 +113,12 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  to="/contact"
                   className="text-sm text-muted-foreground hover:text-[#7ED6E8] transition-colors"
                 >
                   문의하기
-                </a>
+                </Link>
               </li>
               <li>
                 <Link
@@ -136,7 +136,7 @@ export function Footer() {
             <h3 className="font-semibold mb-3 text-[#7ED6E8] text-sm">연락처</h3>
             <div className="flex gap-3 mb-3">
               <a
-                href="https://github.com"
+                href="https://github.com/junexi0828/focusmate"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7ED6E8] to-[#F9A8D4] flex items-center justify-center text-white hover:scale-110 transition-transform"
@@ -166,18 +166,18 @@ export function Footer() {
               © 2024 FocusMate. All rights reserved.
             </p>
             <div className="flex gap-6">
-              <a
-                href="#"
+              <Link
+                to="/privacy"
                 className="text-sm text-muted-foreground hover:text-[#7ED6E8] transition-colors"
               >
                 개인정보처리방침
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                to="/terms"
                 className="text-sm text-muted-foreground hover:text-[#7ED6E8] transition-colors"
               >
                 이용약관
-              </a>
+              </Link>
               <OpenSourceLicenseDialog />
             </div>
           </div>

@@ -163,6 +163,22 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
     isFlushingRef.current = false;
   }, [queryClient, savePendingQueue, selectedRoom?.room_id]);
 
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      // Find the scroll viewport (Radix ScrollArea structure: Root > Viewport > Content > ... > Ref)
+      // We need to scroll the Viewport, which is usually a few parents up or query selector
+      const scrollViewport = messagesEndRef.current.closest(
+        '[data-slot="scroll-area-viewport"]'
+      );
+      if (scrollViewport) {
+        scrollViewport.scrollTop = scrollViewport.scrollHeight;
+      } else {
+        // Fallback for immediate scroll
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, []);
+
   useEffect(() => {
     loadPendingQueue();
   }, [loadPendingQueue]);
@@ -465,7 +481,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
 
       // Scroll to bottom after sending
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        scrollToBottom();
       }, 100);
     },
     onError: (error: any) => {
@@ -567,8 +583,8 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [allMessages]);
+    scrollToBottom();
+  }, [allMessages, scrollToBottom]);
 
   const filteredRooms = rooms.filter((room) => {
     if (!searchQuery) return true;
