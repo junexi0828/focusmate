@@ -75,4 +75,4 @@ echo "✅ File sync complete."
 echo "🎉 File Sync Successfully Completed!"
 # 4. Restart services on NAS
 echo -e "ℹ️  Fixing permissions and restarting Docker..."
-ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo chmod -R 777 app .env requirements.txt pyproject.toml && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml up -d --build backend"
+ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo chmod -R 777 app .env requirements.txt pyproject.toml && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml up -d backend"

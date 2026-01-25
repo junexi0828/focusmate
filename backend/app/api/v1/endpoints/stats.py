@@ -346,9 +346,19 @@ async def save_user_goal(
     user_id = current_user["id"]
 
     # Check if user already has goals
-    stmt = select(UserGoal).where(UserGoal.user_id == user_id)
+    existing_goal = None
+
+    # Check if user already has goals
+    stmt = select(UserGoal).where(UserGoal.user_id == user_id).order_by(UserGoal.updated_at.desc())
     result = await db.execute(stmt)
-    existing_goal = result.scalar_one_or_none()
+    goals = result.scalars().all()
+
+    if goals:
+        existing_goal = goals[0]
+        # Self-heal: Delete duplicates if found
+        if len(goals) > 1:
+            for duplicate in goals[1:]:
+                await db.delete(duplicate)
 
     if existing_goal:
         # Update existing
