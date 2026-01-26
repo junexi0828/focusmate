@@ -43,7 +43,9 @@ class RoomReservationService:
         from app.infrastructure.database.models.room_reservation import RoomReservation
 
         # Validate scheduled_at is in the future
-        if data.scheduled_at <= datetime.now(UTC):
+        # Validate scheduled_at is in the future (allow 5 min grace period for clock skew)
+        from datetime import timedelta
+        if data.scheduled_at <= datetime.now(UTC) - timedelta(minutes=5):
             raise ValueError("Scheduled time must be in the future")
 
         # Normalize recurrence_type (handle both Enum and string)
