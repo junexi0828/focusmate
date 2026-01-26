@@ -60,7 +60,7 @@ function RootComponent() {
   const isHomePage = location.pathname === "/";
 
   return (
-  return (
+
     <ErrorBoundary>
       <RoomProvider>
         <div className="flex h-screen bg-background text-foreground font-sans antialiased selection:bg-primary/20">
