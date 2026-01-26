@@ -87,7 +87,7 @@ class RoomReservationService:
         created = await self.repository.create(reservation)
 
         # Create recurring reservations if specified
-        if data.recurrence_type and data.recurrence_type.value != "none" and data.recurrence_end_date:
+        if recurrence_type_value != "none" and data.recurrence_end_date:
             await self._create_recurring_reservations(user_id, data, created.scheduled_at)
 
         return RoomReservationResponse.model_validate(created)
