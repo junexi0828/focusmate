@@ -34,7 +34,7 @@ class NotificationCreate(BaseModel):
 class NotificationResponse(BaseModel):
     """Notification response."""
 
-    model_config = ConfigDict(strict=True, from_attributes=True)
+    model_config = ConfigDict(strict=True, from_attributes=True, use_enum_values=True)
 
     notification_id: str
     user_id: str
