@@ -87,7 +87,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       room,
       isLoading,
       listParticipants,
-      participantCount,
+
       currentParticipantId,
       isHost,
       timer,
@@ -201,10 +201,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     const optimisticMsg: RoomChatMessage = {
         id: `temp-${Date.now()}`,
         room_id: roomId,
-        participant_id: currentParticipantId,
-        participant_name: participantName,
-        message: content,
-        type: "text",
+        sender_id: currentParticipantId,
+        sender_name: participantName,
+        content: content,
         created_at: new Date().toISOString()
     };
     addChatMessage(optimisticMsg);
@@ -302,16 +301,13 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
             </div>
             <div className="flex items-center gap-2">
               <RoomSettingsDialog
-                roomId={roomId!}
-                initialSettings={{
-                   workDuration: focusTime,
-                   breakDuration: breakTime,
-                   autoStartBreak: autoStart,
-                   removeOnLeave: removeOnLeave,
-                }}
-                onSettingsUpdated={() => {
-                   // Context auto-handles updates via WS usually, or wait for next load
-                }}
+                focusTime={focusTime}
+                breakTime={breakTime}
+                autoStart={autoStart}
+                removeOnLeave={removeOnLeave}
+                onUpdateSettings={handleUpdateSettings}
+                onDeleteRoom={handleDeleteRoom}
+                isHost={isHost}
               />
               {isHost && (
                 <Button
@@ -335,13 +331,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       {/* WebSocket Status Banner */}
       <div className="container mx-auto px-4 py-2">
         <WebSocketConnectionBanner
-          status={
-            wsConnected
-              ? WebSocketStatus.CONNECTED
-              : wsConnecting
-              ? WebSocketStatus.CONNECTING
-              : WebSocketStatus.DISCONNECTED
-          }
+          isConnected={wsConnected}
+          isConnecting={wsConnecting}
+          connectionError={wsError}
           reconnectAttempts={0}
         />
       </div>
@@ -355,19 +347,17 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
               minutes={timer.minutes}
               seconds={timer.seconds}
               status={timer.status}
-              sessionType={timer.sessionType}
+              sessionType={timer.displaySessionType}
               totalSeconds={timer.totalSeconds}
+              remainingSeconds={timer.remainingSeconds}
             />
             <TimerControls
               status={timer.status}
-              sessionType={timer.sessionType}
-              isHost={isHost}
-              onStart={() => timer.startTimer()}
+              onStart={() => timer.status === 'paused' ? timer.resumeTimer() : timer.startTimer()}
               onPause={timer.pauseTimer}
-              onResume={timer.resumeTimer}
               onReset={timer.resetTimer}
-              onComplete={timer.completeSession}
-              isLoading={timer.isLoading}
+              // onComplete={timer.completeSession} // TimerControls doesn't have onComplete prop? Check definition
+
             />
           </div>
 
@@ -375,8 +365,6 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           <div className="lg:block hidden">
             <ParticipantList
               participants={listParticipants}
-              currentUserId={currentParticipantId || ""}
-              hostId={room?.host_id || ""}
             />
           </div>
         </div>
@@ -385,8 +373,6 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         <div className="lg:hidden mt-8">
             <ParticipantList
               participants={listParticipants}
-              currentUserId={currentParticipantId || ""}
-              hostId={room?.host_id || ""}
             />
         </div>
 
@@ -422,7 +408,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 ) : (
                   <div className="flex flex-col gap-3">
                     {chatMessages.map((message) => {
-                      const isMine = message.participant_id === currentParticipantId;
+                      const isMine = message.sender_id === currentParticipantId;
                       const timeLabel = new Date(
                         message.created_at
                       ).toLocaleTimeString("ko-KR", {
@@ -442,10 +428,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                             }`}
                           >
                             <div className="mb-1 text-xs opacity-70">
-                              {isMine ? "나" : message.participant_name} · {timeLabel}
+                              {isMine ? "나" : message.sender_name} · {timeLabel}
                             </div>
                             <div className="whitespace-pre-wrap">
-                              {message.message}
+                              {message.content}
                             </div>
                           </div>
                         </div>
