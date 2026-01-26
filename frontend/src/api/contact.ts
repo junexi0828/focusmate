@@ -10,7 +10,7 @@ export interface ContactData {
 
 export const contactApi = {
   sendContactEmail: async (data: ContactData) => {
-    const response = await api.post("/api/v1/contact", data);
+    const response = await api.post("/contact", data);
     return response.data;
   },
 };
