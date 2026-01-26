@@ -17,7 +17,7 @@ export const Route = createFileRoute("/dashboard")({
   },
   loaderDeps: () => ({
     userId: authService.getCurrentUser()?.id || "",
-    days: 7, // Dashboard는 최근 7일 데이터 사용
+    days: 365, // Dashboard는 스트릭 계산을 위해 1년치 데이터 사용
   }),
   loader: async ({ deps }) => {
     if (!deps.userId) {
@@ -82,10 +82,10 @@ function DashboardComponent() {
 
   // TanStack Query로 데이터 캐싱 및 실시간 업데이트
   const { data, isLoading, error } = useQuery({
-    queryKey: ["dashboard", "stats", user?.id, 7],
+    queryKey: ["dashboard", "stats", user?.id, 365],
     queryFn: async () => {
       if (!user?.id) throw new Error("User not authenticated");
-      const response = await statsService.getUserStats(user.id, 7);
+      const response = await statsService.getUserStats(user.id, 365);
       if (response.status === "error") {
         throw new Error(response.error?.message || "Failed to load dashboard stats");
       }

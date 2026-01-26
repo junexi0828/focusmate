@@ -55,13 +55,13 @@ function StatsPageWithData({ userId }: { userId: string }) {
     };
   }, [queryClient, userId]);
 
-  // 기본 통계 데이터 (최근 7일)
+  // 기본 통계 데이터 (최근 365일 - 히트맵용)
   // Admin can access even with no data
   const { data: basicStats, isLoading: isLoadingBasic, error: basicError } = useQuery({
-    queryKey: ["stats", "basic", userId, 7],
+    queryKey: ["stats", "basic", userId, 365],
     queryFn: async () => {
       console.log("[Stats] Loading basic stats for user:", userId);
-      const response = await statsService.getUserStats(userId, 7);
+      const response = await statsService.getUserStats(userId, 365);
       if (response.status === "error") {
         console.error("[Stats] Basic stats error:", response.error);
         // Admin can proceed with empty data
