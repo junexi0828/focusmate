@@ -310,17 +310,28 @@ class NotificationService:
         """
         return await self.repository.mark_all_as_read(user_id)
 
-    async def delete_notification(self, notification_id: str) -> bool:
+    async def delete_notification(self, notification_id: str, user_id: str) -> bool:
         """Delete a notification.
 
         Args:
             notification_id: Notification identifier
+            user_id: User identifier (for ownership check)
 
         Returns:
-            True if deleted successfully
+            True if deleted successfully or already gone (idempotent)
+            False if found but belongs to another user
         """
         notification = await self.repository.get_by_id(notification_id)
         if not notification:
+            # Idempotent: If it's already gone, consider it a success
+            return True
+
+        if notification.user_id != user_id:
+            # Security: Cannot delete others' notifications
+            # Return False to trigger 404 (Not Found) behavior to hide existence
+            logger.warning(
+                f"User {user_id} attempted to delete notification {notification_id} belonging to {notification.user_id}"
+            )
             return False
 
         await self.repository.delete(notification)

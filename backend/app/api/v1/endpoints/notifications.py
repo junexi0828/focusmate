@@ -231,7 +231,8 @@ async def delete_notification(
     Raises:
         HTTPException: If notification not found
     """
-    success = await service.delete_notification(notification_id)
+    user_id = current_user["id"]
+    success = await service.delete_notification(notification_id, user_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
