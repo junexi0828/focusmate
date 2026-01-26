@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     achievements,
     auth,
     chat,
+    contact,
     community,
     friends,
     health,
@@ -35,6 +36,7 @@ api_router = APIRouter()
 api_router.include_router(health.router)  # Health checks first
 api_router.include_router(auth.router)
 api_router.include_router(users.router)
+api_router.include_router(contact.router)
 api_router.include_router(rooms.router)
 api_router.include_router(timer.router)
 api_router.include_router(participants.router)
