@@ -56,6 +56,16 @@ async def send_contact_email(data: ContactSchema):
     message.set_content(body)
 
     # 4. Send via SMTP
+    # Determine security settings based on port
+    use_tls = settings.SMTP_USE_TLS and settings.SMTP_PORT == 465
+    start_tls = settings.SMTP_USE_TLS and settings.SMTP_PORT == 587
+
+    # Log attempt details (masking password)
+    logger.info(
+        f"Sending email via {settings.SMTP_HOST}:{settings.SMTP_PORT} "
+        f"(use_tls={use_tls}, start_tls={start_tls})"
+    )
+
     try:
         await aiosmtplib.send(
             message,
@@ -63,14 +73,13 @@ async def send_contact_email(data: ContactSchema):
             port=settings.SMTP_PORT,
             username=settings.SMTP_USER,
             password=settings.SMTP_PASSWORD,
-            use_tls=settings.SMTP_USE_TLS,
+            use_tls=use_tls,
+            start_tls=start_tls,
         )
+        logger.info("Email sent successfully")
         return {"message": "Email sent successfully"}
     except Exception as e:
-        logger.error(f"Failed to send email: {e}")
-        # Return 200 to user but log error (User doesn't need to know SMTP failed if we logged it)
-        # But for FocusMate, maybe it's better to fail?
-        # No, better to succeed UI-wise if possible, but let's throw 500 if real failure for now to debug.
+        logger.exception("Failed to send email") # Log full stack trace
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to send email. Please try again later."
