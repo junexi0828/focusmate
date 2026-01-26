@@ -1,5 +1,4 @@
-
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -9,7 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { toast } from "sonner";
-import { TimerState, SessionType } from "../features/timer/types/timer.types";
+import { SessionType } from "../features/timer/types/timer.types";
 import { Participant } from "../features/participants/types/participant.types";
 import { Room } from "../features/room/types/room.types";
 import { roomService } from "../features/room/services/roomService";
@@ -225,8 +224,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
                   id: p.id || "",
                   participant_id: p.id,
                   room_id: id,
-                  username: p.username || p.name || "",
-                  name: p.name || p.username || "",
+                  username: p.name || "",
+                  name: p.name || "",
                   is_host: false,
                   joined_at: new Date().toISOString(),
               };

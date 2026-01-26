@@ -10,17 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerificationRouteImport } from './routes/verification'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReservationsRouteImport } from './routes/reservations'
 import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MatchingRouteImport } from './routes/matching'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as GuideRouteImport } from './routes/guide'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RankingIndexRouteImport } from './routes/ranking.index'
@@ -42,6 +46,11 @@ import { Route as RankingTeamsTeamIdManageRouteImport } from './routes/ranking.t
 const VerificationRoute = VerificationRouteImport.update({
   id: '/verification',
   path: '/verification',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StatsRoute = StatsRouteImport.update({
@@ -69,6 +78,11 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
@@ -84,6 +98,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FriendsRoute = FriendsRouteImport.update({
   id: '/friends',
   path: '/friends',
@@ -97,6 +116,11 @@ const FaqRoute = FaqRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunityRoute = CommunityRouteImport.update({
@@ -191,17 +215,21 @@ const RankingTeamsTeamIdManageRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/community': typeof CommunityRouteWithChildren
+  '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/faq': typeof FaqRoute
   '/friends': typeof FriendsRoute
+  '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
   '/matching': typeof MatchingRouteWithChildren
   '/messages': typeof MessagesRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
   '/verification': typeof VerificationRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/community/$postId': typeof CommunityPostIdRoute
@@ -221,15 +249,19 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/faq': typeof FaqRoute
   '/friends': typeof FriendsRoute
+  '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/reservations': typeof ReservationsRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
   '/verification': typeof VerificationRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/community/$postId': typeof CommunityPostIdRoute
@@ -251,17 +283,21 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/community': typeof CommunityRouteWithChildren
+  '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/faq': typeof FaqRoute
   '/friends': typeof FriendsRoute
+  '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
   '/matching': typeof MatchingRouteWithChildren
   '/messages': typeof MessagesRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/ranking': typeof RankingRouteWithChildren
   '/reservations': typeof ReservationsRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
   '/verification': typeof VerificationRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/community/$postId': typeof CommunityPostIdRoute
@@ -284,17 +320,21 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/community'
+    | '/contact'
     | '/dashboard'
     | '/faq'
     | '/friends'
+    | '/guide'
     | '/login'
     | '/matching'
     | '/messages'
+    | '/privacy'
     | '/profile'
     | '/ranking'
     | '/reservations'
     | '/settings'
     | '/stats'
+    | '/terms'
     | '/verification'
     | '/auth/reset-password'
     | '/community/$postId'
@@ -314,15 +354,19 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/contact'
     | '/dashboard'
     | '/faq'
     | '/friends'
+    | '/guide'
     | '/login'
     | '/messages'
+    | '/privacy'
     | '/profile'
     | '/reservations'
     | '/settings'
     | '/stats'
+    | '/terms'
     | '/verification'
     | '/auth/reset-password'
     | '/community/$postId'
@@ -343,17 +387,21 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/community'
+    | '/contact'
     | '/dashboard'
     | '/faq'
     | '/friends'
+    | '/guide'
     | '/login'
     | '/matching'
     | '/messages'
+    | '/privacy'
     | '/profile'
     | '/ranking'
     | '/reservations'
     | '/settings'
     | '/stats'
+    | '/terms'
     | '/verification'
     | '/auth/reset-password'
     | '/community/$postId'
@@ -375,17 +423,21 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CommunityRoute: typeof CommunityRouteWithChildren
+  ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   FaqRoute: typeof FaqRoute
   FriendsRoute: typeof FriendsRoute
+  GuideRoute: typeof GuideRoute
   LoginRoute: typeof LoginRoute
   MatchingRoute: typeof MatchingRouteWithChildren
   MessagesRoute: typeof MessagesRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RankingRoute: typeof RankingRouteWithChildren
   ReservationsRoute: typeof ReservationsRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
+  TermsRoute: typeof TermsRoute
   VerificationRoute: typeof VerificationRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   RoomRoomIdRoute: typeof RoomRoomIdRoute
@@ -400,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/verification'
       fullPath: '/verification'
       preLoaderRoute: typeof VerificationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stats': {
@@ -437,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/messages': {
       id: '/messages'
       path: '/messages'
@@ -458,6 +524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/friends': {
       id: '/friends'
       path: '/friends'
@@ -477,6 +550,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community': {
@@ -664,17 +744,21 @@ const RankingRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CommunityRoute: CommunityRouteWithChildren,
+  ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   FaqRoute: FaqRoute,
   FriendsRoute: FriendsRoute,
+  GuideRoute: GuideRoute,
   LoginRoute: LoginRoute,
   MatchingRoute: MatchingRouteWithChildren,
   MessagesRoute: MessagesRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RankingRoute: RankingRouteWithChildren,
   ReservationsRoute: ReservationsRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
+  TermsRoute: TermsRoute,
   VerificationRoute: VerificationRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   RoomRoomIdRoute: RoomRoomIdRoute,
