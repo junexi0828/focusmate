@@ -1,4 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import React from "react";
+import { toast } from "sonner";
+import { contactApi } from "../api/contact";
 import { motion } from "framer-motion";
 import { Mail, MessageSquare, Send } from "lucide-react";
 import { PageTransition } from "../components/PageTransition";
@@ -13,6 +16,51 @@ export const Route = createFileRoute("/contact")({
 });
 
 function ContactPage() {
+  const [loading, setLoading] = React.useState(false);
+  const [formData, setFormData] = React.useState({
+    name: "",
+    email: "",
+    type: "",
+    subject: "",
+    message: "",
+  });
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { id, value } = e.target;
+    // For select, id is "category" but our data needs "type"
+    const key = id === "category" ? "type" : id;
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name || !formData.email || !formData.type || !formData.subject || !formData.message) {
+      toast.error("모든 항목을 입력해주세요.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await contactApi.sendContactEmail(formData);
+      toast.success("문의가 성공적으로 전송되었습니다.");
+      setFormData({
+        name: "",
+        email: "",
+        type: "",
+        subject: "",
+        message: "",
+      });
+    } catch (error) {
+      toast.error("전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -100,11 +148,17 @@ function ContactPage() {
             {/* Contact Form */}
             <motion.div variants={item} className="md:col-span-2">
               <Card className="p-8 border-[#E0F7FD] bg-white dark:bg-slate-800 shadow-xl">
-                <form className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">이름</Label>
-                      <Input id="name" placeholder="홍길동" />
+                      <Input
+                        id="name"
+                        placeholder="홍길동"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">이메일</Label>
@@ -112,6 +166,9 @@ function ContactPage() {
                         id="email"
                         type="email"
                         placeholder="example@email.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
                       />
                     </div>
                   </div>
@@ -121,6 +178,9 @@ function ContactPage() {
                     <select
                       id="category"
                       className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={formData.type}
+                      onChange={handleChange}
+                      required
                     >
                       <option value="">선택해주세요</option>
                       <option value="bug">버그 제보</option>
@@ -132,7 +192,13 @@ function ContactPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="subject">제목</Label>
-                    <Input id="subject" placeholder="문의 제목을 입력해주세요" />
+                    <Input
+                      id="subject"
+                      placeholder="문의 제목을 입력해주세요"
+                      value={formData.subject}
+                      onChange={handleChange}
+                      required
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -141,15 +207,19 @@ function ContactPage() {
                       id="message"
                       placeholder="자세한 내용을 적어주시면 빠르게 도와드릴 수 있습니다."
                       className="min-h-[150px]"
+                      value={formData.message}
+                      onChange={handleChange}
+                      required
                     />
                   </div>
 
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] text-white font-medium py-6"
+                    disabled={loading}
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    문의 보내기
+                    {loading ? "전송 중..." : "문의 보내기"}
                   </Button>
                 </form>
               </Card>

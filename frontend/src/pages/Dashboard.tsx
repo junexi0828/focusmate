@@ -433,6 +433,16 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
     );
   }
 
+  // Celebration Triggers - MUST be before any conditional returns (React Hook rules)
+  const currentStreak = dashboardStats ? parseInt(dashboardStats[2]?.value.replace("일", "") || "0") : 0;
+  const prevStreak = usePrevious(currentStreak);
+
+  const goalProgress = weeklyGoal ? (weeklyGoal.current_value / weeklyGoal.goal_value) * 100 : 0;
+  const prevGoalProgress = usePrevious(goalProgress);
+
+  const isPerfectWeek = streakData && streakData.length >= 7 && streakData.slice(-7).every(d => d.sessions > 0);
+  const prevPerfectWeek = usePrevious(isPerfectWeek);
+
   // 데이터가 없는 경우
   if (!stats || !dashboardStats || !chartData) {
     return (
@@ -458,16 +468,6 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
       </div>
     );
   }
-
-  // Celebration Triggers
-  const currentStreak = parseInt(dashboardStats?.[2]?.value.replace("일", "") || "0");
-  const prevStreak = usePrevious(currentStreak);
-
-  const goalProgress = weeklyGoal ? (weeklyGoal.current_value / weeklyGoal.goal_value) * 100 : 0;
-  const prevGoalProgress = usePrevious(goalProgress);
-
-  const isPerfectWeek = streakData && streakData.length >= 7 && streakData.slice(-7).every(d => d.sessions > 0);
-  const prevPerfectWeek = usePrevious(isPerfectWeek);
 
   useEffect(() => {
     // 1. Streak Increased
