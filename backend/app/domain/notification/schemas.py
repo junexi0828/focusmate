@@ -39,7 +39,7 @@ class NotificationResponse(BaseModel):
     notification_id: str
     user_id: str
     type: str
-    priority: NotificationPriority = NotificationPriority.MEDIUM
+    priority: str = "medium"
     title: str
     message: str
     data: dict | None = None
