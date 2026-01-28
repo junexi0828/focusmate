@@ -43,8 +43,10 @@ export function useTimerPiP({
     if (!videoRef.current) {
       const video = document.createElement("video");
       video.muted = true;
-      video.playsInline = true; // Important for generic browser support
-      // Mount to DOM key for browser recognition
+      video.playsInline = true;
+      video.loop = true;
+
+      // Mount to DOM - REQUIRED for browser PiP button
       video.style.position = 'absolute';
       video.style.width = '1px';
       video.style.height = '1px';
@@ -53,6 +55,20 @@ export function useTimerPiP({
       video.style.zIndex = '-1';
       document.body.appendChild(video);
       videoRef.current = video;
+
+      // Connect canvas stream and start playing
+      // This makes the browser PiP button active
+      if (canvasRef.current) {
+        const stream = canvasRef.current.captureStream(30);
+        video.srcObject = stream;
+
+        // Start playing (required for browser PiP button)
+        video.play().catch(err => {
+          console.debug('Auto-play failed (expected):', err);
+          // This is OK - browser may block auto-play
+          // User clicking our PiP button will trigger play with user gesture
+        });
+      }
     }
 
     // Cleanup on unmount
@@ -166,7 +182,16 @@ export function useTimerPiP({
     rafRef.current = requestAnimationFrame(loop);
   }, [drawTimer]);
 
-  // Start/Stop loop based on PiP status
+  // Always update canvas when timer changes (for browser PiP button)
+  useEffect(() => {
+    if (!isPipActive) {
+      // Not in PiP mode - just draw once per timer update
+      drawTimer();
+    }
+    // If isPipActive, the loop below handles it
+  }, [minutes, seconds, status, isPipActive, drawTimer]);
+
+  // Start/Stop animation loop based on PiP status
   useEffect(() => {
     if (isPipActive) {
       loop();
@@ -198,22 +223,26 @@ export function useTimerPiP({
         if (isMounted.current) setIsPipActive(false);
         toast.success("PiP 모드를 종료했습니다");
       } else {
-        // connect stream if needed
+        // Ensure stream is connected (should already be from init)
         if (videoRef.current.srcObject == null) {
-          const stream = canvasRef.current.captureStream(30); // 30 FPS
+          const stream = canvasRef.current.captureStream(30);
           videoRef.current.srcObject = stream;
         }
 
-        // Ensure video is playing for PiP to work
-        await videoRef.current.play();
+        // Ensure video is playing (may have been paused by browser)
+        if (videoRef.current.paused) {
+          await videoRef.current.play();
+        }
 
-        // Initial draw before opening
+        // Draw current frame
         drawTimer();
 
+        // Request PiP
         await videoRef.current.requestPictureInPicture();
         if (isMounted.current) setIsPipActive(true);
         toast.success("타이머가 PiP 모드로 전환되었습니다");
 
+        // Handle PiP close
         videoRef.current.onleavepictureinpicture = () => {
           if (isMounted.current) setIsPipActive(false);
         };
