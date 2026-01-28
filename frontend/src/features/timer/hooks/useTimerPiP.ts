@@ -240,34 +240,26 @@ export function useTimerPiP({
   }, [minutes, seconds, status, sessionType, progress, userName]);
 
   // Loop to keep updating the canvas stream
-  const loop = useCallback(() => {
-    drawTimer();
-    rafRef.current = requestAnimationFrame(loop);
-  }, [drawTimer]);
-
-  // Always update canvas when timer changes (for browser PiP button)
+  // Use setInterval instead of requestAnimationFrame for better background performance
   useEffect(() => {
-    if (!isPipActive) {
-      // Not in PiP mode - just draw once per timer update
+    let intervalId: number | null = null;
+
+    if (isPipActive && status === 'running') {
+      // 20fps (50ms) - Balanced for battery life vs animation smoothness
+      // Reduced from 30fps to save resources while keeping breathing effect acceptable
+      intervalId = window.setInterval(() => {
+        drawTimer();
+      }, 50);
+    } else {
+      // If paused or not PiP, just draw once when dependencies change
+      // (This effect re-runs when drawTimer changes, which happens when time changes)
       drawTimer();
     }
-    // If isPipActive, the loop below handles it
-  }, [minutes, seconds, status, isPipActive, drawTimer]);
 
-  // Start/Stop animation loop based on PiP status
-  useEffect(() => {
-    if (isPipActive) {
-      loop();
-    } else {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    }
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (intervalId) window.clearInterval(intervalId);
     };
-  }, [isPipActive, loop]);
+  }, [isPipActive, status, drawTimer]);
 
   const togglePiP = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) {

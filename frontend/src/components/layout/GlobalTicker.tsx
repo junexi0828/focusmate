@@ -41,7 +41,7 @@ export function GlobalTicker({ className, messages = [
 
 // Alternative: Scrolling Marquee Style
 export function ScrollingTicker({ className, messages = [
-  "📢 서버 점검 안내: NAS 기기 교체 작업으로 인해 서비스가 일시 중단됩니다. 2월 말, 더 나은 모습의 리뉴얼 베타 서비스로 찾아뵙겠습니다. 감사합니다."
+  "📢 서버 점검 안내: NAS 기기 교체 및 테스팅 작업으로 인해 서비스가 일시 중단됩니다. 2월 말, 더 나은 모습의 리뉴얼 베타 서비스로 찾아뵙겠습니다. 감사합니다."
 ]}: GlobalTickerProps) {
   return (
     <div className={cn("overflow-hidden flex items-center w-[40rem] mask-linear-fade", className)}>
