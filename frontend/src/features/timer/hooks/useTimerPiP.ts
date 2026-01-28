@@ -21,16 +21,11 @@ export function useTimerPiP({
   userName = "User",
   onPlayPause,
 }: UseTimerPiPProps) {
-  const [isPipActive, setIsPipActive] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const rafRef = useRef<number | null>(null);
-
-  // Check browser support
-  const isSupported = 'pictureInPictureEnabled' in document;
+  const isMounted = useRef(true);
 
   // Initialize canvas and video elements once
   useEffect(() => {
+    isMounted.current = true;
     if (!canvasRef.current) {
       const canvas = document.createElement("canvas");
       canvas.width = 512;
@@ -47,13 +42,18 @@ export function useTimerPiP({
 
     // Cleanup on unmount
     return () => {
+      isMounted.current = false;
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
-      if (document.pictureInPictureElement) {
-        document.exitPictureInPicture().catch(() => {});
+
+      // Cleanup PiP only if active
+      if (document.pictureInPictureElement && videoRef.current && document.pictureInPictureElement === videoRef.current) {
+         // We don't await here as it's cleanup
+         document.exitPictureInPicture().catch(() => {});
       }
+
       // Clear MediaSession
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = null;
@@ -214,7 +214,7 @@ export function useTimerPiP({
     try {
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
-        setIsPipActive(false);
+        if (isMounted.current) setIsPipActive(false);
         toast.success("PiP 모드를 종료했습니다");
       } else {
         // connect stream if needed
@@ -230,11 +230,11 @@ export function useTimerPiP({
         drawTimer();
 
         await videoRef.current.requestPictureInPicture();
-        setIsPipActive(true);
+        if (isMounted.current) setIsPipActive(true);
         toast.success("타이머가 PiP 모드로 전환되었습니다");
 
         videoRef.current.onleavepictureinpicture = () => {
-          setIsPipActive(false);
+          if (isMounted.current) setIsPipActive(false);
         };
       }
     } catch (error) {
