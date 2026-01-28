@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
 import { GlassCard } from "../components/ui/glass-card";
 import { Button } from "../components/ui/button";
@@ -10,12 +10,15 @@ import { LogOut, Copy, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { roomService } from "../features/room/services/roomService";
 // import { Room } from "../features/room/types/room.types"; // Handled by context
-import { wsClient } from "../lib/websocket";
+
 import { RoomPageSkeleton } from "../components/ui/room-skeleton";
 import { WebSocketStatus } from "../components/WebSocketStatus";
 import { WebSocketConnectionBanner } from "../components/WebSocketConnectionBanner";
 import { RoomChatMessage } from "../types/room-chat";
 import { useRoomContext } from "../contexts/RoomContext";
+import { wsClient } from "../lib/websocket";
+import { timerService } from "../features/timer/services/timerService";
+import { authService } from "../features/auth/services/authService";
 
 type QuickSignalIcon = {
   type: "emoji" | "custom";
@@ -86,8 +89,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       roomId: currentRoomId,
       room,
       isLoading,
+      isLoadingParticipants,
       listParticipants,
-
+      participantCount,
+      maxParticipants,
       currentParticipantId,
       isHost,
       timer,
@@ -96,8 +101,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       isConnected: wsConnected,
       isConnecting: wsConnecting,
       connectionError: wsError,
+      reconnectAttempts,
       chatMessages,
       addChatMessage,
+      sendChatMessage,
   } = useRoomContext();
 
   const [focusTime, setFocusTime] = useState(25);
@@ -109,25 +116,19 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const CHAT_MAX_LENGTH = 300;
 
-  const lastToastRef = useRef<Record<string, number>>({});
-  const notifyOnce = useCallback(
-    (key: string, message: string, intervalMs = 8000) => {
-      const now = Date.now();
-      if (now - (lastToastRef.current[key] || 0) < intervalMs) {
-        return;
-      }
-      lastToastRef.current[key] = now;
-      toast.error(message, { duration: 3000 });
-    },
-    []
-  );
-
   // Initial Join Logic
   useEffect(() => {
-    if (roomId && roomId !== currentRoomId) {
-       joinRoom(roomId);
+    if (!roomId) {
+      toast.error("방 ID가 없습니다");
+      onLeaveRoom();
+      return;
     }
-  }, [roomId, currentRoomId, joinRoom]);
+
+    if (roomId && roomId !== currentRoomId) {
+      // joinRoom will automatically handle leaving previous room if needed
+      joinRoom(roomId);
+    }
+  }, [roomId, currentRoomId, joinRoom, onLeaveRoom]);
 
   // Sync Room Settings to Local State for Dialog
   useEffect(() => {
@@ -139,24 +140,24 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     }
   }, [room]);
 
-  // WebSocket Error Notification
-  useEffect(() => {
-    if (wsError) {
-      notifyOnce("ws_error", wsError);
-    }
-  }, [notifyOnce, wsError]);
-
   // Chat Scroll
   useEffect(() => {
     if (!chatScrollRef.current) return;
     chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [chatMessages]);
 
-  const getQuickSignalIcon = (signal: QuickSignal) => {
-    if (signal.icon.type === "emoji") {
-      return <span className="text-lg">{signal.icon.value}</span>;
-    }
-    return <span className="text-lg">{signal.icon.fallback}</span>;
+  // Leave room on unmount (브라우저 탭 닫을 때 자동 퇴장)
+  useEffect(() => {
+    return () => {
+      if (currentRoomId && currentParticipantId) {
+        // Cleanup: leave room on unmount
+        void leaveRoom();
+      }
+    };
+  }, [currentRoomId, currentParticipantId, leaveRoom]);
+
+  const getQuickSignalIcon = (signal: QuickSignal): string => {
+    return signal.icon.type === "emoji" ? signal.icon.value : signal.icon.fallback;
   };
 
   const handleCopyInviteLink = async () => {
@@ -171,15 +172,27 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   };
 
   const handleDeleteRoom = async () => {
+    if (!currentRoomId) return;
     if (!confirm("정말 방을 삭제하시겠습니까?")) return;
 
     try {
-      await roomService.deleteRoom(roomId!);
-      toast.success("방이 삭제되었습니다");
-      onLeaveRoom();
-      leaveRoom();
+      const response = await roomService.deleteRoom(currentRoomId);
+      if (response.status === "success") {
+        toast.success("방이 삭제되었습니다");
+        setTimeout(() => {
+          onLeaveRoom();
+          leaveRoom();
+        }, 1000);
+      } else {
+        if (response.error?.code === "FORBIDDEN" || response.error?.code === "ROOM_HOST_REQUIRED") {
+          toast.error("방장만 방을 삭제할 수 있습니다");
+        } else {
+          toast.error(response.error?.message || "방 삭제에 실패했습니다");
+        }
+      }
     } catch (error) {
-      toast.error("방 삭제에 실패했습니다");
+      console.error("Failed to delete room:", error);
+      toast.error("네트워크 오류가 발생했습니다");
     }
   };
 
@@ -192,7 +205,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
   const handleSendMessage = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!chatInput.trim() || !currentParticipantId || !roomId) return;
+    if (!chatInput.trim() || !currentParticipantId || !currentRoomId) return;
 
     const content = chatInput.trim();
 
@@ -200,7 +213,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     const participantName = listParticipants.find(p => p.id === currentParticipantId)?.name || "나";
     const optimisticMsg: RoomChatMessage = {
         id: `temp-${Date.now()}`,
-        room_id: roomId,
+        room_id: currentRoomId,
         sender_id: currentParticipantId,
         sender_name: participantName,
         content: content,
@@ -209,13 +222,29 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     addChatMessage(optimisticMsg);
     setChatInput("");
 
-    // Send via WebSocket
-    wsClient.sendChatMessage(content);
+    // Send via Context (validation handled in context)
+    sendChatMessage(content);
   };
 
   const handleQuickSignal = (signal: QuickSignal) => {
-      const content = `[${signal.label}] ${signal.text}`;
-      setChatInput(content);
+      if (!currentParticipantId || !currentRoomId) return;
+      const icon = getQuickSignalIcon(signal);
+      const content = `${icon} ${signal.text}`.trim();
+
+      // Optimistic UI
+      const participantName = listParticipants.find(p => p.id === currentParticipantId)?.name || "나";
+      const optimisticMsg: RoomChatMessage = {
+          id: `temp-${Date.now()}`,
+          room_id: currentRoomId,
+          sender_id: currentParticipantId,
+          sender_name: participantName,
+          content: content,
+          created_at: new Date().toISOString()
+      };
+      addChatMessage(optimisticMsg);
+
+      // Send immediately
+      sendChatMessage(content);
   };
 
   const handleUpdateSettings = async (
@@ -224,10 +253,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     newAutoStart: boolean,
     newRemoveOnLeave: boolean
   ) => {
-    if (!roomId) return;
+    if (!currentRoomId) return;
 
     try {
-      const response = await roomService.updateRoomSettings(roomId, {
+      const response = await roomService.updateRoomSettings(currentRoomId, {
         work_duration: newFocusTime * 60,
         break_duration: newBreakTime * 60,
         auto_start_break: newAutoStart,
@@ -239,6 +268,19 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         setBreakTime(newBreakTime);
         setAutoStart(newAutoStart);
         setRemoveOnLeave(newRemoveOnLeave);
+
+        // Reload timer state to reflect duration changes
+        if (currentRoomId) {
+          try {
+            const timerResponse = await timerService.getTimer(currentRoomId);
+            if (timerResponse.status === "success" && timerResponse.data) {
+              timer.updateTimerState(timerResponse.data);
+            }
+          } catch (error) {
+            console.error("Failed to reload timer state:", error);
+          }
+        }
+
         toast.success("설정이 업데이트되었습니다");
       } else {
         if (response.error?.code === "FORBIDDEN" || response.error?.code === "ROOM_HOST_REQUIRED") {
@@ -334,7 +376,16 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           isConnected={wsConnected}
           isConnecting={wsConnecting}
           connectionError={wsError}
-          reconnectAttempts={0}
+          reconnectAttempts={reconnectAttempts}
+          maxReconnectAttempts={wsClient.getMaxReconnectAttempts()}
+          onReconnect={() => {
+            if (currentRoomId) {
+              wsClient.connect(currentRoomId).catch((error) => {
+                console.error("Manual reconnect failed:", error);
+                toast.error("재연결에 실패했습니다");
+              });
+            }
+          }}
         />
       </div>
 
@@ -353,11 +404,40 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
             />
             <TimerControls
               status={timer.status}
-              onStart={() => timer.status === 'paused' ? timer.resumeTimer() : timer.startTimer()}
-              onPause={timer.pauseTimer}
-              onReset={timer.resetTimer}
-              // onComplete={timer.completeSession} // TimerControls doesn't have onComplete prop? Check definition
+              onStart={async () => {
+                if (timer.status === "running") {
+                  toast.error("타이머가 이미 실행 중입니다");
+                  return;
+                }
 
+                if (timer.status === "paused") {
+                  timer.resumeTimer();
+                  wsClient.sendResumeTimer();
+                } else if (timer.status === "completed") {
+                  const nextSessionType = timer.sessionType === "work" ? "break" : "work";
+                  const newState = await timer.completeSession();
+                  if (newState) {
+                    if (newState.status === "idle") {
+                      await timer.startTimer(nextSessionType);
+                      wsClient.sendStartTimer(nextSessionType);
+                    } else if (newState.status === "running") {
+                      wsClient.sendStartTimer(nextSessionType);
+                    }
+                  }
+                } else {
+                  // idle state: start current session type
+                  timer.startTimer(timer.sessionType);
+                  wsClient.sendStartTimer(timer.sessionType);
+                }
+              }}
+              onPause={() => {
+                timer.pauseTimer();
+                wsClient.sendPauseTimer();
+              }}
+              onReset={() => {
+                timer.resetTimer();
+                wsClient.sendResetTimer();
+              }}
             />
           </div>
 
@@ -365,6 +445,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
           <div className="lg:block hidden">
             <ParticipantList
               participants={listParticipants}
+              isLoading={isLoadingParticipants}
+              currentCount={participantCount ?? undefined}
+              maxCount={maxParticipants}
             />
           </div>
         </div>
@@ -373,6 +456,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
         <div className="lg:hidden mt-8">
             <ParticipantList
               participants={listParticipants}
+              isLoading={isLoadingParticipants}
+              currentCount={participantCount ?? undefined}
+              maxCount={maxParticipants}
             />
         </div>
 
@@ -383,18 +469,21 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
             </div>
             <div className="flex flex-col gap-4 p-4">
               <div className="flex flex-wrap gap-2">
-                {QUICK_SIGNALS.map((signal) => (
-                  <Button
-                    key={signal.id}
-                    variant="secondary"
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={() => handleQuickSignal(signal)}
-                  >
-                    <span className="mr-1">{getQuickSignalIcon(signal)}</span>
-                    {signal.label}
-                  </Button>
-                ))}
+                {QUICK_SIGNALS.map((signal) => {
+                  const icon = getQuickSignalIcon(signal);
+                  return (
+                    <Button
+                      key={signal.id}
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 px-3"
+                      onClick={() => handleQuickSignal(signal)}
+                    >
+                      <span className="mr-1 text-lg">{icon}</span>
+                      {signal.label}
+                    </Button>
+                  );
+                })}
               </div>
 
               <div
@@ -408,7 +497,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 ) : (
                   <div className="flex flex-col gap-3">
                     {chatMessages.map((message) => {
-                      const isMine = message.sender_id === currentParticipantId;
+                      // Check both currentParticipantId and user ID for anonymous users
+                      const currentUserId = authService.getCurrentUser()?.id;
+                      const isMine = message.sender_id === currentParticipantId ||
+                                     (currentUserId && message.sender_id === currentUserId);
                       const timeLabel = new Date(
                         message.created_at
                       ).toLocaleTimeString("ko-KR", {
