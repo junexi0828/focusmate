@@ -12,7 +12,8 @@ export function GlobalTimerWidget() {
   const {
     roomId,
     timer,
-    room
+    room,
+    participantName
   } = useRoomContext();
   const location = useLocation();
   const navigate = useNavigate();
@@ -41,18 +42,43 @@ export function GlobalTimerWidget() {
   const remainingTotal = (minutes * 60) + seconds;
   const progress = totalSeconds > 0 ? ((totalSeconds - remainingTotal) / totalSeconds) * 100 : 0;
 
-  const { togglePiP, isPipActive } = useTimerPiP({
+  const handlePlayPause = () => {
+    if (status === 'running') {
+      timer.pauseTimer();
+    } else if (status === 'paused') {
+      timer.resumeTimer();
+    } else {
+      timer.startTimer();
+    }
+  };
+
+  const { togglePiP, isPipActive, isSupported } = useTimerPiP({
     minutes,
     seconds,
     status,
     sessionType: isWork ? "focus" : "break",
     progress,
+    userName: participantName || "User",
+    onPlayPause: handlePlayPause,
   });
 
   // Hide if no active room or if we are already on the room page
   if (!roomId || location.pathname.startsWith(`/room/${roomId}`)) {
     return null;
   }
+
+  // Keyboard shortcut: Alt + P to toggle PiP
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === 'p' && isSupported) {
+        e.preventDefault();
+        togglePiP();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [togglePiP, isSupported]);
 
   // Hide if position hasn't loaded (prevents jump)
   if (!position) return null;
@@ -90,20 +116,22 @@ export function GlobalTimerWidget() {
             </div>
         </div>
 
-        {/* PiP Toggle */}
-         <Button
-            size="icon"
-            variant="ghost"
-            className={`h-8 w-8 rounded-full ml-1 ${isPipActive ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
-            onClick={(e) => {
-                e.stopPropagation();
-                togglePiP();
-            }}
-             onPointerDown={(e) => e.stopPropagation()}
-             title="채팅/타이머 팝업 (PiP)"
-        >
-            <PictureInPicture2 className="h-4 w-4" />
-        </Button>
+        {/* PiP Toggle - Only show if supported */}
+        {isSupported && (
+          <Button
+              size="icon"
+              variant="ghost"
+              className={`h-8 w-8 rounded-full ml-1 ${isPipActive ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
+              onClick={(e) => {
+                  e.stopPropagation();
+                  togglePiP();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              title="타이머 팝업 (PiP) - Alt+P"
+          >
+              <PictureInPicture2 className="h-4 w-4" />
+          </Button>
+        )}
 
         {/* Simple Controls */}
         <Button
