@@ -109,70 +109,133 @@ export function useTimerPiP({
     const height = canvasRef.current.height;
     const centerX = width / 2;
     const centerY = height / 2;
-    const radius = 200;
+    const radius = 180; // Slightly smaller to accommodate glow
 
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Background (Dark theme for PiP legibility)
-    ctx.fillStyle = "#09090b"; // zinc-950
+    // 1. Modern Deep Gradient Background
+    // Create a radial gradient for a "spotlight" effect
+    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width);
+    bgGradient.addColorStop(0, "#27272a"); // zinc-800 center
+    bgGradient.addColorStop(0.7, "#18181b"); // zinc-900 mid
+    bgGradient.addColorStop(1, "#09090b");   // zinc-950 edge
+    ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // Draw User Name (top)
-    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    // 2. Draw Status Indicator (User Name & Session) - Top
+    // User Name
+    ctx.font = "500 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
     ctx.fillStyle = "#a1a1aa"; // zinc-400
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(userName, centerX, centerY - 120);
+    ctx.fillText(userName, centerX, centerY - 100);
 
-    // Draw Session Type Text
-    ctx.font = "bold 36px Inter, sans-serif";
-    ctx.fillStyle = "#71717a"; // zinc-500
+    // Session Type Active Text
     const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
-    ctx.fillText(sessionLabel, centerX, centerY - 70);
+    ctx.font = "800 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd"; // Soft Red or Blue
+    ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
+    ctx.shadowBlur = 15;
+    ctx.fillText(sessionLabel, centerX, centerY - 60);
+    ctx.shadowBlur = 0; // Reset shadow
 
-    // Draw Time (large, centered)
+    // 3. Draw Time (Modern Typography)
     const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-    ctx.font = "bold 120px 'SF Mono', 'Monaco', 'Courier New', monospace";
-    ctx.fillStyle = status === "running" ? "#ffffff" : "#fbbf24"; // White or Amber (paused)
-    if (status === "completed") ctx.fillStyle = "#22c55e"; // Green
+    // Use tabular-nums feature settings if possible, or a font known for good tabular numbers
+    ctx.font = "700 130px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
 
-    ctx.fillText(timeStr, centerX, centerY + 20);
+    // Time color based on state
+    if (status === "completed") {
+        ctx.fillStyle = "#4ade80"; // Bright Green
+        ctx.shadowColor = "rgba(74, 222, 128, 0.4)";
+        ctx.shadowBlur = 20;
+    } else if (status === "paused") {
+        ctx.fillStyle = "#fcd34d"; // Amber
+        ctx.shadowColor = "rgba(251, 191, 36, 0.2)";
+        ctx.shadowBlur = 10;
+    } else {
+        ctx.fillStyle = "#ffffff"; // White
+        ctx.shadowColor = "rgba(255, 255, 255, 0.1)";
+        ctx.shadowBlur = 10;
+    }
 
-    // Draw Progress Ring
-    // Background Ring
+    ctx.fillText(timeStr, centerX, centerY + 25);
+    ctx.shadowBlur = 0; // Reset
+
+    // 4. Progress Ring with Gradient & Glow
+    // Background Ring (Track)
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.strokeStyle = "#27272a"; // zinc-800
-    ctx.lineWidth = 20;
-    ctx.stroke();
-
-    // Foreground Ring (Progress)
-    const startAngle = -0.5 * Math.PI; // Top
-    const endAngle = startAngle + (2 * Math.PI * (progress / 100));
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-    ctx.strokeStyle = status === 'completed' ? '#22c55e' : (sessionType === 'focus' ? '#ef4444' : '#3b82f6');
-    ctx.lineWidth = 20;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Very subtle white track
+    ctx.lineWidth = 12;
     ctx.lineCap = "round";
     ctx.stroke();
 
-    // Draw Status Indicator Dot (bottom center)
-    const dotY = centerY + radius + 40;
-    const dotRadius = 8;
+    // Foreground Ring (Progress)
+    if (progress > 0) {
+        const startAngle = -0.5 * Math.PI; // Top
+        const endAngle = startAngle + (2 * Math.PI * (progress / 100));
 
-    ctx.fillStyle = status === "running" ? "#22c55e" : (status === "paused" ? "#fbbf24" : "#71717a");
-    ctx.beginPath();
-    ctx.arc(centerX, dotY, dotRadius, 0, Math.PI * 2);
-    ctx.fill();
+        ctx.beginPath();
+        // Counter-clockwise for "countdown" feel? No, standard clockwise is better for "progress done"
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
 
-    // Pulse effect for running status
+        // Gradient Stroke
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        if (status === 'completed') {
+            gradient.addColorStop(0, "#22c55e");
+            gradient.addColorStop(1, "#86efac");
+        } else if (sessionType === 'focus') {
+            gradient.addColorStop(0, "#ef4444"); // Red-500
+            gradient.addColorStop(1, "#f97316"); // Orange-500
+        } else {
+            gradient.addColorStop(0, "#3b82f6"); // Blue-500
+            gradient.addColorStop(1, "#06b6d4"); // Cyan-500
+        }
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 12;
+        ctx.lineCap = "round";
+
+        // Add Glow to the ring
+        ctx.shadowColor = sessionType === 'focus' ? "rgba(239, 68, 68, 0.4)" : "rgba(59, 130, 246, 0.4)";
+        ctx.shadowBlur = 15;
+
+        ctx.stroke();
+        ctx.shadowBlur = 0; // Reset
+
+        // 5. End Cap Dot (Indicator)
+        // Calculate position of the end of the arc
+        const endX = centerX + radius * Math.cos(endAngle);
+        const endY = centerY + radius * Math.sin(endAngle);
+
+        ctx.beginPath();
+        ctx.arc(endX, endY, 10, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = "rgba(255,255,255,0.8)";
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    // 6. Pulse / Breathing Effect (Bottom Indicator)
     if (status === "running") {
-      ctx.fillStyle = "rgba(34, 197, 94, 0.3)";
+      const time = Date.now() / 1000;
+      const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
+
+      const dotY = centerY + radius + 45;
+
       ctx.beginPath();
-      ctx.arc(centerX, dotY, dotRadius * 1.8, 0, Math.PI * 2);
+      ctx.arc(centerX, dotY, 6, 0, 2 * Math.PI);
+
+      ctx.fillStyle = sessionType === 'focus' ? `rgba(239, 68, 68, ${alpha})` : `rgba(59, 130, 246, ${alpha})`;
+      ctx.shadowColor = sessionType === 'focus' ? "#ef4444" : "#3b82f6";
+      ctx.shadowBlur = 10 * alpha;
       ctx.fill();
+      ctx.shadowBlur = 0;
     }
   }, [minutes, seconds, status, sessionType, progress, userName]);
 
