@@ -44,6 +44,14 @@ export function useTimerPiP({
       const video = document.createElement("video");
       video.muted = true;
       video.playsInline = true; // Important for generic browser support
+      // Mount to DOM key for browser recognition
+      video.style.position = 'absolute';
+      video.style.width = '1px';
+      video.style.height = '1px';
+      video.style.opacity = '0';
+      video.style.pointerEvents = 'none';
+      video.style.zIndex = '-1';
+      document.body.appendChild(video);
       videoRef.current = video;
     }
 
@@ -66,6 +74,10 @@ export function useTimerPiP({
         navigator.mediaSession.metadata = null;
         navigator.mediaSession.setActionHandler('play', null);
         navigator.mediaSession.setActionHandler('pause', null);
+      }
+      // Remove video from DOM
+      if (videoRef.current && videoRef.current.parentNode) {
+        videoRef.current.parentNode.removeChild(videoRef.current);
       }
       // Clear refs
       canvasRef.current = null;
@@ -169,47 +181,6 @@ export function useTimerPiP({
     };
   }, [isPipActive, loop]);
 
-  // Setup MediaSession API for PiP controls
-  useEffect(() => {
-    if (!isPipActive || !('mediaSession' in navigator) || !onPlayPause) {
-      // Return empty cleanup function when conditions not met
-      return () => {};
-    }
-
-    const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-    const sessionLabel = sessionType === "focus" ? "집중 시간" : "휴식 시간";
-
-    // Set metadata
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: `FocusMate - ${sessionLabel}`,
-      artist: userName,
-      album: timeStr,
-    });
-
-    // Set action handlers
-    navigator.mediaSession.setActionHandler('play', () => {
-      if (status === 'paused' || status === 'idle') {
-        onPlayPause();
-      }
-    });
-
-    navigator.mediaSession.setActionHandler('pause', () => {
-      if (status === 'running') {
-        onPlayPause();
-      }
-    });
-
-    // Update playback state
-    navigator.mediaSession.playbackState = status === 'running' ? 'playing' : 'paused';
-
-    return () => {
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.setActionHandler('play', null);
-        navigator.mediaSession.setActionHandler('pause', null);
-      }
-    };
-  }, [isPipActive, status, minutes, seconds, sessionType, userName, onPlayPause]);
-
   const togglePiP = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) {
       toast.error("PiP 초기화 실패");
@@ -262,6 +233,66 @@ export function useTimerPiP({
       }
     }
   }, [isSupported, drawTimer]);
+
+  // Handle Browser Native PiP Button
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.setActionHandler('enterpictureinpicture' as any, () => {
+        togglePiP();
+      });
+    } catch (e) {
+      console.debug('MediaSession enterpictureinpicture action not supported');
+    }
+    return () => {
+      try {
+        navigator.mediaSession.setActionHandler('enterpictureinpicture' as any, null);
+      } catch (e) {}
+    };
+  }, [togglePiP]);
+
+  // Setup MediaSession API for PiP controls
+  useEffect(() => {
+    if (!isPipActive || !('mediaSession' in navigator) || !onPlayPause) {
+      // Return empty cleanup function when conditions not met
+      return () => {};
+    }
+
+    const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    const sessionLabel = sessionType === "focus" ? "집중 시간" : "휴식 시간";
+
+    // Set metadata
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: `FocusMate - ${sessionLabel}`,
+      artist: userName,
+      album: timeStr,
+    });
+
+    // Set action handlers
+    navigator.mediaSession.setActionHandler('play', () => {
+      if (status === 'paused' || status === 'idle') {
+        onPlayPause();
+      }
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (status === 'running') {
+        onPlayPause();
+      }
+    });
+
+    // Update playback state
+    navigator.mediaSession.playbackState = status === 'running' ? 'playing' : 'paused';
+
+    return () => {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+      }
+    };
+  }, [isPipActive, status, minutes, seconds, sessionType, userName, onPlayPause]);
+
+
 
   return { togglePiP, isPipActive, isSupported };
 }
