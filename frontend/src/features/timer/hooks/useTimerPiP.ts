@@ -171,7 +171,10 @@ export function useTimerPiP({
 
   // Setup MediaSession API for PiP controls
   useEffect(() => {
-    if (!isPipActive || !('mediaSession' in navigator) || !onPlayPause) return;
+    if (!isPipActive || !('mediaSession' in navigator) || !onPlayPause) {
+      // Return empty cleanup function when conditions not met
+      return () => {};
+    }
 
     const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
     const sessionLabel = sessionType === "focus" ? "집중 시간" : "휴식 시간";
@@ -207,7 +210,7 @@ export function useTimerPiP({
     };
   }, [isPipActive, status, minutes, seconds, sessionType, userName, onPlayPause]);
 
-  const togglePiP = async () => {
+  const togglePiP = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) {
       toast.error("PiP 초기화 실패");
       return;
@@ -258,7 +261,7 @@ export function useTimerPiP({
         toast.error("PiP 실행 중 오류가 발생했습니다");
       }
     }
-  };
+  }, [isSupported, drawTimer]);
 
   return { togglePiP, isPipActive, isSupported };
 }
