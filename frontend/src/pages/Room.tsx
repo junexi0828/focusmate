@@ -145,15 +145,11 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
     chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [chatMessages]);
 
-  // Leave room on unmount (브라우저 탭 닫을 때 자동 퇴장)
+  // Leave room on unmount disabled to support Global Timer
+  // User must explicitly leave via the Exit button
   useEffect(() => {
-    return () => {
-      if (currentRoomId && currentParticipantId) {
-        // Cleanup: leave room on unmount
-        void leaveRoom();
-      }
-    };
-  }, [currentRoomId, currentParticipantId, leaveRoom]);
+    // No cleanup needed
+  }, []);
 
   const getQuickSignalIcon = (signal: QuickSignal): string => {
     return signal.icon.type === "emoji" ? signal.icon.value : signal.icon.fallback;

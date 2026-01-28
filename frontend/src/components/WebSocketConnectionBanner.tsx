@@ -34,21 +34,29 @@ export function WebSocketConnectionBanner({
     return null;
   }
 
+  // 초기 로딩 중이거나 아직 연결 시도가 확실치 않을 때는 배너 숨김
+  // (에러가 없는데 연결도 안 된 상태 = 초기 진입/대기 상태)
+  if (!isConnected && !isConnecting && !connectionError) {
+    return null;
+  }
+
   // 재연결 중
   if (isConnecting) {
     return (
-      <Alert className={cn("border-yellow-500 bg-yellow-50 dark:bg-yellow-950", className)}>
-        <RefreshCw className="h-4 w-4 animate-spin text-yellow-600 dark:text-yellow-400" />
-        <AlertTitle className="text-yellow-800 dark:text-yellow-200">
-          실시간 동기화 재연결 중...
-        </AlertTitle>
-        <AlertDescription className="text-yellow-700 dark:text-yellow-300">
-          {reconnectAttempts > 0 && (
-            <span className="block mt-1">
-              재연결 시도: {reconnectAttempts}/{maxReconnectAttempts}
-            </span>
-          )}
-        </AlertDescription>
+      <Alert className={cn("border-yellow-500 bg-yellow-50 dark:bg-yellow-950 w-full", className)}>
+        <RefreshCw className="h-4 w-4 animate-spin text-yellow-600 dark:text-yellow-400 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <AlertTitle className="text-yellow-800 dark:text-yellow-200">
+            실시간 동기화 재연결 중...
+          </AlertTitle>
+          <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+            {reconnectAttempts > 0 && (
+              <span className="block mt-1">
+                재연결 시도: {reconnectAttempts}/{maxReconnectAttempts}
+              </span>
+            )}
+          </AlertDescription>
+        </div>
       </Alert>
     );
   }
@@ -60,18 +68,18 @@ export function WebSocketConnectionBanner({
     return (
       <Alert
         className={cn(
-          "border-destructive bg-destructive/10 dark:bg-destructive/20",
+          "border-destructive bg-destructive/10 dark:bg-destructive/20 w-full",
           className
         )}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 flex-1">
-            <WifiOff className="h-4 w-4 text-destructive mt-0.5" />
-            <div className="flex-1">
-              <AlertTitle className="text-destructive">
+        <div className="flex items-start justify-between gap-4 w-full">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <WifiOff className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <AlertTitle className="text-destructive whitespace-nowrap overflow-hidden text-ellipsis">
                 실시간 동기화 연결 끊김
               </AlertTitle>
-              <AlertDescription className="text-destructive/80 mt-1">
+              <AlertDescription className="text-destructive/80 mt-1 break-keep">
                 {isMaxAttemptsReached ? (
                   <div className="space-y-2">
                     <p>
@@ -91,7 +99,7 @@ export function WebSocketConnectionBanner({
                   </div>
                 ) : (
                   <div>
-                    <p>{connectionError || "연결이 끊어졌습니다."}</p>
+                    <p className="break-words">{connectionError || "연결이 끊어졌습니다."}</p>
                     {reconnectAttempts > 0 && (
                       <p className="text-sm mt-1">
                         재연결 시도 중: {reconnectAttempts}/{maxReconnectAttempts}
@@ -107,7 +115,7 @@ export function WebSocketConnectionBanner({
               variant="ghost"
               size="sm"
               onClick={onDismiss}
-              className="h-6 w-6 p-0"
+              className="h-6 w-6 p-0 shrink-0"
             >
               <X className="h-4 w-4" />
             </Button>
