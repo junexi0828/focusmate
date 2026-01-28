@@ -28,6 +28,7 @@ import { ScrollingTicker } from "../components/layout/GlobalTicker";
 import { Sparkles } from "lucide-react";
 import { authService } from "../features/auth/services/authService";
 import { RoomProvider } from "../contexts/RoomContext";
+import { GlobalTimerWidget } from "../features/timer/components/GlobalTimerWidget";
 
 export const Route = createRootRoute({
   beforeLoad: ({ location }) => {
@@ -128,6 +129,9 @@ function RootComponent() {
               <TanStackRouterDevtools />
             </Suspense>
           )}
+
+          {/* Global Timer Widget */}
+          <GlobalTimerWidget />
         </div>
       </RoomProvider>
     </ErrorBoundary>
