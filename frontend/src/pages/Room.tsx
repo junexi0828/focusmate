@@ -14,7 +14,7 @@ import { roomService } from "../features/room/services/roomService";
 import { RoomPageSkeleton } from "../components/ui/room-skeleton";
 import { WebSocketStatus } from "../components/WebSocketStatus";
 import { WebSocketConnectionBanner } from "../components/WebSocketConnectionBanner";
-import { RoomChatMessage } from "../types/room-chat";
+// import { RoomChatMessage } from "../types/room-chat";
 import { useRoomContext } from "../contexts/RoomContext";
 import { wsClient } from "../lib/websocket";
 import { timerService } from "../features/timer/services/timerService";
@@ -103,7 +103,6 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
       connectionError: wsError,
       reconnectAttempts,
       chatMessages,
-      addChatMessage,
       sendChatMessage,
   } = useRoomContext();
 
@@ -209,39 +208,15 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
 
     const content = chatInput.trim();
 
-    // Optimistic UI
-    const participantName = listParticipants.find(p => p.id === currentParticipantId)?.name || "나";
-    const optimisticMsg: RoomChatMessage = {
-        id: `temp-${Date.now()}`,
-        room_id: currentRoomId,
-        sender_id: currentParticipantId,
-        sender_name: participantName,
-        content: content,
-        created_at: new Date().toISOString()
-    };
-    addChatMessage(optimisticMsg);
-    setChatInput("");
-
     // Send via Context (validation handled in context)
     sendChatMessage(content);
+    setChatInput("");
   };
 
   const handleQuickSignal = (signal: QuickSignal) => {
       if (!currentParticipantId || !currentRoomId) return;
       const icon = getQuickSignalIcon(signal);
       const content = `${icon} ${signal.text}`.trim();
-
-      // Optimistic UI
-      const participantName = listParticipants.find(p => p.id === currentParticipantId)?.name || "나";
-      const optimisticMsg: RoomChatMessage = {
-          id: `temp-${Date.now()}`,
-          room_id: currentRoomId,
-          sender_id: currentParticipantId,
-          sender_name: participantName,
-          content: content,
-          created_at: new Date().toISOString()
-      };
-      addChatMessage(optimisticMsg);
 
       // Send immediately
       sendChatMessage(content);
@@ -522,7 +497,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                             <div className="mb-1 text-xs opacity-70">
                               {isMine ? "나" : message.sender_name} · {timeLabel}
                             </div>
-                            <div className="whitespace-pre-wrap">
+                            <div className="whitespace-pre-wrap break-all">
                               {message.content}
                             </div>
                           </div>
