@@ -1,17 +1,17 @@
-import React from "react";
 import { useRoomContext } from "../../../contexts/RoomContext";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Button } from "../../../components/ui/button";
-import { Loader2, Pause, Play } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useTimerPiP } from "../hooks/useTimerPiP";
+import { PictureInPicture2 } from "lucide-react";
 
 export function GlobalTimerWidget() {
   const {
     roomId,
     timer,
-    isConnected,
     room
   } = useRoomContext();
   const location = useLocation();
@@ -32,6 +32,23 @@ export function GlobalTimerWidget() {
     }
   }, []);
 
+  const { minutes, seconds, status, sessionType } = timer;
+  const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  const isWork = sessionType === "work";
+
+  // Calculate progress for PiP
+  const totalSeconds = isWork ? (timer as any).work_duration || 1500 : (timer as any).break_duration || 300; // Fallback or type assertion if needed
+  const remainingTotal = (minutes * 60) + seconds;
+  const progress = totalSeconds > 0 ? ((totalSeconds - remainingTotal) / totalSeconds) * 100 : 0;
+
+  const { togglePiP, isPipActive } = useTimerPiP({
+    minutes,
+    seconds,
+    status,
+    sessionType: isWork ? "focus" : "break",
+    progress,
+  });
+
   // Hide if no active room or if we are already on the room page
   if (!roomId || location.pathname.startsWith(`/room/${roomId}`)) {
     return null;
@@ -39,10 +56,6 @@ export function GlobalTimerWidget() {
 
   // Hide if position hasn't loaded (prevents jump)
   if (!position) return null;
-
-  const { minutes, seconds, status, sessionType } = timer;
-  const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  const isWork = sessionType === "work";
 
   return (
     <motion.div
@@ -76,6 +89,21 @@ export function GlobalTimerWidget() {
                 </span>
             </div>
         </div>
+
+        {/* PiP Toggle */}
+         <Button
+            size="icon"
+            variant="ghost"
+            className={`h-8 w-8 rounded-full ml-1 ${isPipActive ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
+            onClick={(e) => {
+                e.stopPropagation();
+                togglePiP();
+            }}
+             onPointerDown={(e) => e.stopPropagation()}
+             title="채팅/타이머 팝업 (PiP)"
+        >
+            <PictureInPicture2 className="h-4 w-4" />
+        </Button>
 
         {/* Simple Controls */}
         <Button
