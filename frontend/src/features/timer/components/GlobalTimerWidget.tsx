@@ -4,7 +4,7 @@ import { Button } from "../../../components/ui/button";
 import { Pause, Play } from "lucide-react";
 
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTimerPiP } from "../hooks/useTimerPiP";
 import { PictureInPicture2 } from "lucide-react";
 
@@ -33,24 +33,26 @@ export function GlobalTimerWidget() {
     }
   }, []);
 
+  // Destructure stable functions from timer
+  const { startTimer, pauseTimer, resumeTimer } = timer;
   const { minutes, seconds, status, sessionType } = timer;
   const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   const isWork = sessionType === "work";
 
   // Calculate progress for PiP
-  const totalSeconds = isWork ? (timer as any).work_duration || 1500 : (timer as any).break_duration || 300; // Fallback or type assertion if needed
+  const totalSeconds = isWork ? (timer as any).work_duration || 1500 : (timer as any).break_duration || 300;
   const remainingTotal = (minutes * 60) + seconds;
   const progress = totalSeconds > 0 ? ((totalSeconds - remainingTotal) / totalSeconds) * 100 : 0;
 
-  const handlePlayPause = () => {
+  const handlePlayPause = useCallback(() => {
     if (status === 'running') {
-      timer.pauseTimer();
+      pauseTimer();
     } else if (status === 'paused') {
-      timer.resumeTimer();
+      resumeTimer();
     } else {
-      timer.startTimer();
+      startTimer();
     }
-  };
+  }, [status, startTimer, pauseTimer, resumeTimer]); // Dependencies are now clearer and mostly stable
 
   const { togglePiP, isPipActive, isSupported } = useTimerPiP({
     minutes,
