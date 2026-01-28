@@ -22,6 +22,13 @@ export function useTimerPiP({
   onPlayPause,
 }: UseTimerPiPProps) {
   const isMounted = useRef(true);
+  const [isPipActive, setIsPipActive] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  // Check browser support
+  const isSupported = 'pictureInPictureEnabled' in document;
 
   // Initialize canvas and video elements once
   useEffect(() => {
