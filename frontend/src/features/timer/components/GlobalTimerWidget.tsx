@@ -64,11 +64,6 @@ export function GlobalTimerWidget() {
     onPlayPause: handlePlayPause,
   });
 
-  // Hide if no active room or if we are already on the room page
-  if (!roomId || location.pathname.startsWith(`/room/${roomId}`)) {
-    return null;
-  }
-
   // Keyboard shortcut: Alt + P to toggle PiP
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,6 +76,13 @@ export function GlobalTimerWidget() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [togglePiP, isSupported]);
+
+  // Hide if no active room or if we are already on the room page
+  if (!roomId || location.pathname.startsWith(`/room/${roomId}`)) {
+    return null;
+  }
+
+
 
   // Hide if position hasn't loaded (prevents jump)
   if (!position) return null;
