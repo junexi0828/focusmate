@@ -284,7 +284,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   }
 
   return (
-    <div className="h-[calc(100vh-0.5rem)] m-1 rounded-2xl flex flex-col bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-3xl overflow-hidden transition-all duration-300">
+    <div className="min-h-screen m-1 rounded-2xl flex flex-col bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-3xl overflow-hidden transition-all duration-300">
       {/* Header */}
       <header className="border-b bg-white/70 dark:bg-black/60 backdrop-blur-md border-white/20 dark:border-white/10 shadow-sm transition-colors duration-300">
         <div className="container mx-auto px-4 py-4">
