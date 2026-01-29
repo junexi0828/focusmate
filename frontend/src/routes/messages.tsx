@@ -25,7 +25,7 @@ function MessagesComponent() {
   const { roomId } = Route.useSearch();
 
   return (
-    <PageContainer>
+    <PageContainer scrollable={false}>
       <MessagesPage initialRoomId={roomId} />
     </PageContainer>
   );
