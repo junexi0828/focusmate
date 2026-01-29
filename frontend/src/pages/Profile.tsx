@@ -72,8 +72,8 @@ export function ProfilePage({
   };
 
   return (
-    <div className="min-h-full bg-muted/30 flex flex-col">
-      {/* Profile Header (Discourse 스타일) */}
+    <div className="space-y-6">
+      {/* Profile Header (Dashboard 스타일로 통일) */}
       <ProfileHeader
         user={currentUser}
         isOwnProfile={true}

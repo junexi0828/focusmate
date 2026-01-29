@@ -77,7 +77,7 @@ function RootComponent() {
           >
             {/* Top Header Placeholder (optional) - Hidden on Login */}
             {!isLoginPage && (
-              <header className="h-14 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10 flex items-center px-4 relative">
+              <header className="h-12 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-10 flex items-center px-4 relative">
                 {/* Left Spacer / Breadcrumbs area */}
                 <div className="flex-1" />
 

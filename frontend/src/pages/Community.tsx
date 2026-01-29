@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { Post } from "../types/community";
 import { PostListHeader, PostList } from "../features/community/components";
-import { EmptyState } from "../components/EmptyState";
-import { Button } from "../components/ui/button-enhanced";
-import { Users } from "lucide-react";
 
 interface CommunityPageProps {
   posts: Post[];
@@ -68,16 +65,14 @@ export function CommunityPage({
   );
 
   return (
-    <div className="min-h-full bg-muted/30 flex flex-col">
-      {/* Header (Discourse 스타일) */}
-      <div className="bg-background border-b">
-        <div className="container mx-auto px-4 py-6 max-w-6xl">
-          <div className="mb-2">
-            <h1 className="text-2xl font-bold">커뮤니티</h1>
-            <p className="text-muted-foreground mt-1">
-              팁을 공유하고 질문하세요
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Header (Dashboard 스타일로 통일) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">커뮤니티</h1>
+          <p className="text-muted-foreground mt-1">
+            팁을 공유하고 질문하세요
+          </p>
         </div>
       </div>
 

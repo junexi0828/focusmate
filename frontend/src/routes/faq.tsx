@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Accordion,
   AccordionContent,
@@ -98,35 +99,55 @@ function FAQPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-b from-[#E0F7FD]/50 to-background dark:from-slate-900 dark:to-background pt-24 pb-12 px-4">
+      <div className="relative pt-24 pb-12 px-4 overflow-hidden">
+        {/* Background Accents */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#7ED6E8]/10 rounded-full blur-3xl -z-10" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#F9A8D4]/10 rounded-full blur-3xl -z-10" />
+
         <div className="container mx-auto max-w-4xl text-center space-y-6">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] bg-clip-text text-transparent pb-2">
-            자주 묻는 질문
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            FocusMate 사용에 대해 궁금한 점이 있으신가요? <br className="hidden sm:block" />
-            자주 묻는 질문들을 모아두었습니다.
-          </p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] bg-clip-text text-transparent pb-2">
+              자주 묻는 질문
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mt-4">
+              FocusMate 사용에 대해 궁금한 점이 있으신가요? <br className="hidden sm:block" />
+              자주 묻는 질문들을 모아두었습니다.
+            </p>
+          </motion.div>
 
           {/* Search Bar */}
-          <div className="max-w-xl mx-auto relative mt-8">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="max-w-xl mx-auto relative mt-8"
+          >
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
               <Search className="w-5 h-5" />
             </div>
             <Input
               type="text"
               placeholder="질문을 검색해보세요..."
-              className="pl-10 py-6 text-lg bg-background/50 backdrop-blur-sm border-2 focus-visible:ring-[#7ED6E8] focus-visible:border-[#7ED6E8] transition-all rounded-2xl shadow-sm"
+              className="pl-12 py-6 text-lg bg-background/50 backdrop-blur-xl border-border/50 focus-visible:ring-[#7ED6E8] focus-visible:border-[#7ED6E8] transition-all rounded-2xl shadow-sm hover:border-[#7ED6E8]/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
+          </motion.div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 max-w-4xl py-12">
         {/* Category Filters */}
-        <div className="flex flex-wrap gap-2 justify-center mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="flex flex-wrap gap-2 justify-center mb-12"
+        >
           {categories.map((category) => {
             const Icon = category.icon;
             const isActive = activeCategory === category.id;
@@ -137,8 +158,8 @@ function FAQPage() {
                 onClick={() => setActiveCategory(category.id)}
                 className={`rounded-full px-6 transition-all duration-300 ${
                   isActive
-                    ? "bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] border-transparent hover:opacity-90 text-white shadow-md transform scale-105"
-                    : "hover:border-[#7ED6E8] hover:text-[#7ED6E8]"
+                    ? "bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] text-white border-transparent shadow-md transform scale-105 hover:opacity-90"
+                    : "hover:border-[#7ED6E8] hover:text-[#7ED6E8] bg-background/50 backdrop-blur-sm"
                 }`}
               >
                 <Icon className="w-4 h-4 mr-2" />
@@ -146,17 +167,22 @@ function FAQPage() {
               </Button>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* FAQ List */}
-        <div className="bg-card/50 backdrop-blur-sm rounded-3xl border shadow-sm p-6 md:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="bg-card/30 backdrop-blur-xl rounded-3xl border border-border/50 shadow-sm p-6 md:p-8"
+        >
           {filteredFaqs.length > 0 ? (
             <Accordion type="single" collapsible className="space-y-4">
               {filteredFaqs.map((faq) => (
                 <AccordionItem
                   key={faq.id}
                   value={faq.id}
-                  className="border rounded-xl px-4 data-[state=open]:bg-muted/50 data-[state=open]:border-[#7ED6E8]/30 transition-all duration-200"
+                  className="border border-border/50 rounded-xl px-4 data-[state=open]:bg-muted/30 data-[state=open]:border-[#7ED6E8]/30 transition-all duration-200"
                 >
                   <AccordionTrigger className="text-left font-medium text-lg hover:no-underline py-4 hover:text-[#7ED6E8] transition-colors">
                     {faq.question}
@@ -174,12 +200,17 @@ function FAQPage() {
               <p>다른 검색어를 입력해보세요.</p>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Contact Support Section */}
-        <div className="mt-16 text-center bg-gradient-to-br from-[#E0F7FD] to-[#FCE7F5] dark:from-slate-800 dark:to-slate-900 rounded-3xl p-8 md:p-12 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-12 opacity-10 transform translate-x-1/2 -translate-y-1/2 group-hover:rotate-12 transition-transform duration-700">
-            <Mail className="w-64 h-64" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-16 text-center rounded-3xl p-8 md:p-12 relative overflow-hidden group border border-[#7ED6E8]/20 bg-gradient-to-br from-[#7ED6E8]/5 to-[#F9A8D4]/5"
+        >
+          <div className="absolute top-0 right-0 p-12 opacity-5 transform translate-x-1/2 -translate-y-1/2 group-hover:rotate-12 transition-transform duration-700">
+            <Mail className="w-64 h-64 text-foreground" />
           </div>
 
           <div className="relative z-10 space-y-4">
@@ -191,16 +222,18 @@ function FAQPage() {
             <div className="pt-4">
               <Button
                 size="lg"
-                className="rounded-full bg-white text-black hover:bg-gray-50 border shadow-lg dark:bg-slate-950 dark:text-white dark:hover:bg-slate-900 group"
+                className="rounded-full bg-background hover:bg-muted text-foreground border border-border/50 shadow-lg group transition-all duration-300 hover:border-[#7ED6E8]"
                 onClick={() => window.location.href = 'mailto:support@focusmate.com'}
               >
-                <Mail className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                문의하기
-                <ChevronRight className="w-4 h-4 ml-1 opacity-50 group-hover:translate-x-1 transition-transform" />
+                <Mail className="w-4 h-4 mr-2 group-hover:text-[#F9A8D4] transition-colors" />
+                <span className="group-hover:bg-gradient-to-r group-hover:from-[#7ED6E8] group-hover:to-[#F9A8D4] group-hover:bg-clip-text group-hover:text-transparent transition-all">
+                  문의하기
+                </span>
+                <ChevronRight className="w-4 h-4 ml-1 opacity-50 group-hover:translate-x-1 transition-transform group-hover:text-[#7ED6E8]" />
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
