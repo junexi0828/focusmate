@@ -1,13 +1,10 @@
-import React from "react";
 import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
 
 import { motion } from "framer-motion";
-import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
 import { HeroLogo } from "../components/HeroLogo";
-import { useTheme } from "../hooks/useTheme";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -49,10 +46,11 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
         전체 레이아웃 설정
         - py-4: 세로 패딩만 적용 (가로 패딩은 __root.tsx에서 처리)
         - 상위 컴포넌트(__root.tsx)에서 배경 처리됨
+        - overflow-hidden 제거: 사이드바 토글 버튼이 겹칠 때 잘리는 문제 해결
       */
-      className="flex flex-col items-center justify-center py-4 min-h-full relative overflow-hidden"
+      className="flex flex-col items-center justify-center py-4 min-h-full relative"
     >
-      <BackgroundBlobs />
+      {/* BackgroundBlobs removed - already rendered globally in __root.tsx */}
 
       {/*
         컨테이너 최대 너비 설정
