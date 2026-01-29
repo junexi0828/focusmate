@@ -126,13 +126,16 @@ export function useTimerPiP({
     ctx.clearRect(0, 0, width, height);
 
     // Determine display level based on PiP window size
-    // Level 1 (Small <180x140): Timer only - minimal distraction
-    // Level 2 (Medium 180x140~250x180): Timer + Participant count
-    // Level 3 (Large ≥250x180): Timer + Participant count + Chat
+    // Level 1 (Small): Timer only - matches browser minimum (<300px width)
+    // Level 2 (Medium): Timer + Participant count (300-450px)
+    // Level 3 (Large): Full info (>450px)
     const pipWidth = pipWindowSize.width;
     const pipHeight = pipWindowSize.height;
-    const isSmall = pipWidth < 180 || pipHeight < 140;
-    const isMedium = !isSmall && (pipWidth < 250 || pipHeight < 180);
+
+    // Browser minimum is typically around 260px width.
+    // We set threshold to 300 to ensure "Small" is reachable at min size.
+    const isSmall = pipWidth < 300 || pipHeight < 250;
+    const isMedium = !isSmall && (pipWidth < 450 || pipHeight < 350);
     const isLarge = !isSmall && !isMedium;
 
     // 1. Modern Deep Gradient Background
