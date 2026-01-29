@@ -664,7 +664,8 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
   };
 
   return (
-    <div className="h-full flex bg-transparent">
+    <>
+      <div className="h-full flex bg-transparent">
         {/* Sidebar */}
         <div className="w-full sm:w-80 lg:w-96 xl:w-[420px] border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col flex-shrink-0">
           {/* Header */}
@@ -1122,6 +1123,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
         </DialogContent>
       </Dialog>
 
+    </>
   );
 }
 
