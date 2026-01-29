@@ -125,12 +125,17 @@ export function useTimerPiP({
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Determine display level based on PiP window size
+    // Determine display level based on ACTUAL PiP window size
+    // Get real-time size from pictureInPictureElement instead of state
+    const pipElement = document.pictureInPictureElement as HTMLVideoElement | null;
+    const actualWidth = pipElement?.width || pipWindowSize.width;
+    const actualHeight = pipElement?.height || pipWindowSize.height;
+
     // Level 1 (Small): Timer only - matches browser minimum (<300px width)
     // Level 2 (Medium): Timer + Participant count (300-360px)
     // Level 3 (Large): Full info (>=360px) - Easily reachable on 400x400 canvas
-    const pipWidth = pipWindowSize.width;
-    const pipHeight = pipWindowSize.height;
+    const pipWidth = actualWidth;
+    const pipHeight = actualHeight;
 
     // Browser minimum is typically around 260px width.
     // We set threshold to 300 to ensure "Small" is reachable at min size.
@@ -138,6 +143,11 @@ export function useTimerPiP({
     // Lowered upper bound from 450 to 360 to make "Large" (Chat) easier to access
     const isMedium = !isSmall && (pipWidth < 360 || pipHeight < 360);
     const isLarge = !isSmall && !isMedium;
+
+    // Debug: Log size and level (only when PiP is active)
+    if (document.pictureInPictureElement) {
+      console.log(`[PiP] Size: ${pipWidth}x${pipHeight}, Level: ${isSmall ? 'Small' : isMedium ? 'Medium' : 'Large'}`);
+    }
 
     // 1. Modern Deep Gradient Background
     // Create a radial gradient for a "spotlight" effect
@@ -258,7 +268,7 @@ export function useTimerPiP({
       ctx.textBaseline = "middle";
 
       const participantText = `${participantCount}명 집중 중`;
-      participantTextY = centerY + radius + 20; // Reduced spacing to fit chat
+      participantTextY = centerY + radius + 18; // Further reduced to fit chat + pulse
 
       ctx.fillText(participantText, centerX, participantTextY);
     }
@@ -267,14 +277,14 @@ export function useTimerPiP({
     let chatEndY = participantTextY;
     if (isLarge && recentMessages.length > 0) {
       const messages = recentMessages.slice(-2); // Last 2 messages
-      let yOffset = participantTextY > 0 ? participantTextY + 15 : centerY + radius + 20; // Reduced spacing
+      let yOffset = participantTextY > 0 ? participantTextY + 12 : centerY + radius + 18; // Further reduced
 
-      ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.font = "500 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
       ctx.textAlign = "center";
 
       messages.forEach((msg, index) => {
         // Truncate long messages (shorter for smaller canvas)
-        const maxLength = 28;
+        const maxLength = 30;
         const shortText = msg.text.length > maxLength
           ? msg.text.substring(0, maxLength) + '...'
           : msg.text;
@@ -289,7 +299,7 @@ export function useTimerPiP({
         ctx.fillStyle = "#71717a"; // zinc-500
         ctx.fillText(fullText, centerX, yOffset);
 
-        yOffset += 15; // Reduced line spacing to fit within canvas
+        yOffset += 12; // Further reduced to ensure everything fits within 400px
       });
 
       chatEndY = yOffset;
@@ -376,14 +386,20 @@ export function useTimerPiP({
         const pipWindow = await videoRef.current.requestPictureInPicture();
         if (isMounted.current) {
           setIsPipActive(true);
-          setPipWindowSize({ width: pipWindow.width, height: pipWindow.height });
+          const initialSize = { width: pipWindow.width, height: pipWindow.height };
+          setPipWindowSize(initialSize);
+          console.log('[PiP] Opened with size:', initialSize);
         }
         toast.success("타이머가 PiP 모드로 전환되었습니다");
 
         // Track PiP window size changes
         pipWindow.addEventListener('resize', () => {
           if (isMounted.current) {
-            setPipWindowSize({ width: pipWindow.width, height: pipWindow.height });
+            const newSize = { width: pipWindow.width, height: pipWindow.height };
+            setPipWindowSize(newSize);
+            console.log('[PiP] Window resized:', newSize);
+            // Immediately redraw when size changes
+            drawTimer();
           }
         });
 
