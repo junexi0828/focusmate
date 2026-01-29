@@ -26,7 +26,12 @@ export function useTimerPiP({
   const isMounted = useRef(true);
   const [isPipActive, setIsPipActive] = useState(false);
   const [pipWindowSize, setPipWindowSize] = useState<{ width: number; height: number }>({ width: 400, height: 400 });
-  const [etaInfo, setEtaInfo] = useState<{ text: string; percentText: string }>({ text: "", percentText: "" });
+  const [etaInfo, setEtaInfo] = useState<{ text: string; percentText: string; percentValue: number; etaText: string }>({
+    text: "",
+    percentText: "",
+    percentValue: 0,
+    etaText: ""
+  });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -110,8 +115,9 @@ export function useTimerPiP({
     const remainingSeconds = minutes * 60 + seconds;
     const eta = new Date(Date.now() + remainingSeconds * 1000);
     const etaText = `${String(eta.getHours()).padStart(2, "0")}:${String(eta.getMinutes()).padStart(2, "0")}`;
-    const percentText = `${Math.round(progress)}%`;
-    setEtaInfo({ text: `종료 ${etaText} · ${percentText}`, percentText });
+    const percentValue = Math.round(progress);
+    const percentText = `${percentValue}%`;
+    setEtaInfo({ text: `종료 ${etaText} · ${percentText}`, percentText, percentValue, etaText });
   }, [minutes, seconds, progress]);
 
   const drawTimer = useCallback(() => {
@@ -138,12 +144,86 @@ export function useTimerPiP({
 
     // Level 1 (Small): Timer only - matches browser minimum (<300px width)
     // Level 2 (Medium): Timer + Participant count (>=300px)
+    const isWide = pipWidth / Math.max(1, pipHeight) >= 1.8;
     const isSmall = pipWidth < 300 || pipHeight < 250;
     const isMedium = !isSmall;
 
     // Debug: Log size and level (only when PiP is active)
     if (document.pictureInPictureElement) {
-      console.log(`[PiP] Size: ${pipWidth}x${pipHeight}, Level: ${isSmall ? 'Small' : 'Medium'}`);
+      console.log(
+        `[PiP] Size: ${pipWidth}x${pipHeight}, Level: ${isWide ? 'Wide' : isSmall ? 'Small' : 'Medium'}`
+      );
+    }
+
+    const drawRoundRect = (x: number, y: number, w: number, h: number, r: number) => {
+      if ("roundRect" in ctx) {
+        (ctx as CanvasRenderingContext2D & { roundRect: Function }).roundRect(x, y, w, h, r);
+      } else {
+        ctx.rect(x, y, w, h);
+      }
+    };
+
+    if (isWide) {
+      // Wide bar-only layout
+      const paddingX = 16;
+      const barHeight = 8;
+      const barWidth = Math.max(120, width - paddingX * 2);
+      const barX = (width - barWidth) / 2;
+      const barY = Math.round(height * 0.55);
+
+      // Background
+      const bgGradient = ctx.createLinearGradient(0, 0, width, 0);
+      bgGradient.addColorStop(0, "#18181b");
+      bgGradient.addColorStop(1, "#09090b");
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Left text: participants + percent
+      const leftText = participantCount > 0
+        ? `${participantCount}명 집중 중 · ${etaInfo.percentText}`
+        : `${etaInfo.percentText}`;
+      ctx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.fillStyle = "#a1a1aa";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(leftText, barX, Math.round(height * 0.35));
+
+      // Right text: ETA
+      if (etaInfo.etaText) {
+        ctx.textAlign = "right";
+        ctx.fillText(`종료 ${etaInfo.etaText}`, barX + barWidth, Math.round(height * 0.35));
+      }
+
+      // Track
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+      drawRoundRect(barX, barY, barWidth, barHeight, 4);
+      ctx.fill();
+
+      // Fill
+      const fillWidth = (Math.max(0, Math.min(100, etaInfo.percentValue)) / 100) * barWidth;
+      if (fillWidth > 0) {
+        ctx.beginPath();
+        ctx.fillStyle = sessionType === "focus" ? "#ef4444" : "#3b82f6";
+        drawRoundRect(barX, barY, fillWidth, barHeight, 4);
+        ctx.fill();
+      }
+
+      // Pulse at fill edge
+      if (status === "running") {
+        const time = Date.now() / 1000;
+        const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2;
+        const pulseX = barX + Math.max(6, fillWidth);
+        const pulseY = barY + barHeight / 2;
+        ctx.beginPath();
+        ctx.arc(pulseX, pulseY, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = sessionType === "focus" ? `rgba(239, 68, 68, ${alpha})` : `rgba(59, 130, 246, ${alpha})`;
+        ctx.shadowColor = sessionType === "focus" ? "#ef4444" : "#3b82f6";
+        ctx.shadowBlur = 10 * alpha;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      return;
     }
 
     // 1. Modern Deep Gradient Background
@@ -280,14 +360,6 @@ export function useTimerPiP({
       if (infoText) ctx.fillText(infoText, centerX, infoY);
 
       // Mini progress bar
-      const drawRoundRect = (x: number, y: number, w: number, h: number, r: number) => {
-        if ("roundRect" in ctx) {
-          (ctx as CanvasRenderingContext2D & { roundRect: Function }).roundRect(x, y, w, h, r);
-        } else {
-          ctx.rect(x, y, w, h);
-        }
-      };
-
       const barWidth = 140;
       const barHeight = 6;
       const barX = centerX - barWidth / 2;
