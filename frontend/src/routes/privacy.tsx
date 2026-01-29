@@ -10,7 +10,7 @@ export const Route = createFileRoute("/privacy")({
 function PrivacyPage() {
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
         {/* Background Accents */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#7ED6E8]/10 rounded-full blur-3xl -z-10" />
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#F9A8D4]/10 rounded-full blur-3xl -z-10" />
@@ -25,12 +25,12 @@ function PrivacyPage() {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] bg-clip-text text-transparent mb-4">
               개인정보처리방침
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-slate-600 dark:text-slate-400">
               최종 수정일: 2024년 3월 15일
             </p>
           </div>
 
-          <Card className="p-8 md:p-12 bg-card/30 dark:bg-black/20 backdrop-blur-xl shadow-2xl border border-white/20 dark:border-white/20 ring-1 ring-white/10">
+          <Card className="p-8 md:p-12 bg-card/30 backdrop-blur-xl border-border/50 shadow-sm hover:shadow-lg hover:border-[#7ED6E8]/50 transition-all duration-300">
             <div className="prose prose-slate dark:prose-invert max-w-none space-y-8">
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">
