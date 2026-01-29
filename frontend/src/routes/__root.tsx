@@ -59,9 +59,6 @@ function RootComponent() {
   // Hide sidebar on login page
   const isLoginPage = location.pathname === "/login";
   const isHomePage = location.pathname === "/";
-  const isMessagesPage = location.pathname === "/messages";
-  const isFriendsPage = location.pathname === "/friends";
-  const isSettingsPage = location.pathname === "/settings";
 
   return (
 
@@ -108,7 +105,7 @@ function RootComponent() {
 
             <div
               className={
-                isLoginPage || isHomePage || isMessagesPage || isFriendsPage || isSettingsPage
+                isLoginPage || isHomePage
                   ? "flex-1 w-full"
                   : "flex-1 p-8 max-w-7xl mx-auto w-full"
               }
