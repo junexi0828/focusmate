@@ -36,6 +36,7 @@ export function useTimerPiP({
   });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const pipWindowRef = useRef<PictureInPictureWindow | null>(null);
   const rafRef = useRef<number | null>(null);
 
   // Check browser support
@@ -153,11 +154,13 @@ export function useTimerPiP({
     // Determine display level based on ACTUAL PiP window size
     // Get real-time size from pictureInPictureElement instead of state
     const pipElement = document.pictureInPictureElement as HTMLVideoElement | null;
-    const actualWidth = pipElement?.width || pipWindowSize.width || width;
-    const actualHeight = pipElement?.height || pipWindowSize.height || height;
+    const windowWidth = pipWindowRef.current?.width || 0;
+    const windowHeight = pipWindowRef.current?.height || 0;
+    const actualWidth = windowWidth || pipElement?.width || pipWindowSize.width || width;
+    const actualHeight = windowHeight || pipElement?.height || pipWindowSize.height || height;
 
-    const pipWidth = actualWidth;
-    const pipHeight = actualHeight;
+    const pipWidth = actualWidth > 0 ? actualWidth : width;
+    const pipHeight = actualHeight > 0 ? actualHeight : height;
 
     // Level 1 (Small): Timer only - matches browser minimum (<300px width)
     // Level 2 (Medium): Timer + Participant count (>=300px)
@@ -228,8 +231,8 @@ export function useTimerPiP({
         const time = Date.now() / 1000;
         const breathe = (Math.sin(time * 2) + 1) / 2; // 0..1
         ctx.fillStyle = sessionType === "focus"
-          ? `rgba(239, 68, 68, ${0.7 + 0.3 * breathe})`
-          : `rgba(59, 130, 246, ${0.7 + 0.3 * breathe})`;
+          ? `rgba(239, 68, 68, ${0.65 + 0.2 * breathe})`
+          : `rgba(59, 130, 246, ${0.65 + 0.2 * breathe})`;
         drawRoundRect(barX, barY, fillWidth, barHeight, Math.round(4 * scale));
         ctx.fill();
       }
@@ -245,7 +248,7 @@ export function useTimerPiP({
 
         ctx.beginPath();
         ctx.globalCompositeOperation = "lighter";
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
         drawRoundRect(sweepX, barY - Math.round(1 * scale), sweepWidth, barHeight + Math.round(2 * scale), Math.round(6 * scale));
         ctx.fill();
         ctx.globalCompositeOperation = "source-over";
@@ -254,10 +257,10 @@ export function useTimerPiP({
       // Neon baseline glow under bar
       ctx.beginPath();
       ctx.globalCompositeOperation = "lighter";
-      ctx.strokeStyle = sessionType === "focus" ? "rgba(239, 68, 68, 0.18)" : "rgba(59, 130, 246, 0.18)";
+      ctx.strokeStyle = sessionType === "focus" ? "rgba(239, 68, 68, 0.1)" : "rgba(59, 130, 246, 0.1)";
       ctx.lineWidth = Math.max(1, Math.round(2 * scale));
-      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.35)" : "rgba(59, 130, 246, 0.35)";
-      ctx.shadowBlur = 10 * scale;
+      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.2)" : "rgba(59, 130, 246, 0.2)";
+      ctx.shadowBlur = 6 * scale;
       ctx.moveTo(barX, barY + barHeight + Math.round(6 * scale));
       ctx.lineTo(barX + barWidth, barY + barHeight + Math.round(6 * scale));
       ctx.stroke();
@@ -267,14 +270,14 @@ export function useTimerPiP({
       // Pulse at fill edge
       if (status === "running") {
         const time = Date.now() / 1000;
-        const alpha = (Math.sin(time * 2) + 1) / 2 * 0.6 + 0.2;
+        const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2;
         const pulseX = barX + Math.max(6, fillWidth);
         const pulseY = barY + barHeight / 2;
         ctx.beginPath();
-        ctx.arc(pulseX, pulseY, Math.round(6 * scale), 0, 2 * Math.PI);
+        ctx.arc(pulseX, pulseY, Math.round(5 * scale), 0, 2 * Math.PI);
         ctx.fillStyle = sessionType === "focus" ? `rgba(239, 68, 68, ${alpha})` : `rgba(59, 130, 246, ${alpha})`;
         ctx.shadowColor = sessionType === "focus" ? "#ef4444" : "#3b82f6";
-        ctx.shadowBlur = 14 * alpha * scale;
+        ctx.shadowBlur = 10 * alpha * scale;
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -332,59 +335,7 @@ export function useTimerPiP({
     ctx.fillText(timeStr, centerX, centerY + 20);
     ctx.shadowBlur = 0; // Reset
 
-    // 4. Hologram-like accents (Square mode only)
-    if (!isWide && status === "running") {
-      const time = Date.now() / 1000;
-      const pulse = (Math.sin(time * 1.6) + 1) / 2;
-
-      ctx.save();
-      ctx.translate(centerX, centerY);
-
-      // Outer faint halo
-      ctx.beginPath();
-      ctx.strokeStyle = sessionType === "focus"
-        ? `rgba(239, 68, 68, ${0.08 + 0.08 * pulse})`
-        : `rgba(59, 130, 246, ${0.08 + 0.08 * pulse})`;
-      ctx.lineWidth = 2;
-      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.25)" : "rgba(59, 130, 246, 0.25)";
-      ctx.shadowBlur = 12;
-      ctx.arc(0, 0, radius + 16, 0, 2 * Math.PI);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Rotating thin rings
-      const ringAlpha = 0.12 + 0.12 * pulse;
-      ctx.rotate(time * 0.4);
-      ctx.beginPath();
-      ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha})`;
-      ctx.lineWidth = 1;
-      ctx.arc(0, 0, radius + 8, 0.1, 2.2 * Math.PI);
-      ctx.stroke();
-
-      ctx.rotate(-time * 0.9);
-      ctx.beginPath();
-      ctx.strokeStyle = sessionType === "focus"
-        ? `rgba(239, 68, 68, ${0.12 + 0.1 * pulse})`
-        : `rgba(59, 130, 246, ${0.12 + 0.1 * pulse})`;
-      ctx.lineWidth = 1;
-      ctx.arc(0, 0, radius + 4, 1.3, 2.6 * Math.PI);
-      ctx.stroke();
-
-      // Subtle sparkle points
-      for (let i = 0; i < 6; i++) {
-        const angle = time * 0.8 + i * (Math.PI / 3);
-        const x = Math.cos(angle) * (radius + 14);
-        const y = Math.sin(angle) * (radius + 14);
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(255,255,255, ${0.15 + 0.2 * pulse})`;
-        ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-
-      ctx.restore();
-    }
-
-    // 5. Progress Ring with Gradient & Glow
+    // 4. Progress Ring with Gradient & Glow
     // Background Ring (Track)
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
@@ -449,7 +400,7 @@ export function useTimerPiP({
       ctx.textBaseline = "middle";
 
       const participantText = `${participantCount}명 집중 중`;
-      participantTextY = centerY + radius + (isMedium ? 38 : 25);
+      participantTextY = centerY + radius + (isMedium ? 25 : 20);
 
       ctx.fillText(participantText, centerX, participantTextY);
     }
@@ -459,9 +410,9 @@ export function useTimerPiP({
       const time = Date.now() / 1000;
       const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
 
-      let dotY = 390; // Fixed near bottom to ensure visibility
+      let dotY = centerY + radius + 45;
       if (participantTextY > 0) {
-        dotY = Math.min(390, participantTextY + 20);
+        dotY = Math.max(dotY, participantTextY + 18);
       }
 
       ctx.beginPath();
@@ -537,6 +488,7 @@ export function useTimerPiP({
 
         // Request PiP
         const pipWindow = await videoRef.current.requestPictureInPicture();
+        pipWindowRef.current = pipWindow;
         if (isMounted.current) {
           setIsPipActive(true);
           const initialSize = { width: pipWindow.width || 400, height: pipWindow.height || 400 };
@@ -558,6 +510,7 @@ export function useTimerPiP({
 
         // Handle PiP close
         videoRef.current.onleavepictureinpicture = () => {
+          pipWindowRef.current = null;
           if (isMounted.current) {
             setIsPipActive(false);
             setPipWindowSize({ width: 400, height: 400 });

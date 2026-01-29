@@ -14,7 +14,7 @@ import { staggerContainer, staggerItem } from "../components/PageTransition";
 import { FocusTimeChart } from "../components/charts/FocusTimeChart";
 import { SessionDistributionChart } from "../components/charts/SessionDistributionChart";
 import { Button } from "../components/ui/button-enhanced";
-import { Skeleton } from "../components/ui/skeleton";
+
 import { GoalSettingModal } from "../components/GoalSettingModal";
 import { SharingModal } from "../components/SharingCard";
 import { statsService, UserStatsResponse, GoalAchievementResponse } from "../features/stats/services/statsService";
@@ -25,12 +25,12 @@ import { transformSessionRecordsForStats } from "../utils/api-transformers";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { authService } from "../features/auth/services/authService";
 import { GoalProgressRing } from "../components/charts/GoalProgressRing";
-import { PomodoroWidget } from "../components/PomodoroWidget";
+import { FocusTimeline } from "../components/dashboard/FocusTimeline";
 import { StreakCalendar } from "../components/StreakCalendar";
 
 // Helper hook for tracking previous values
 function usePrevious<T>(value: T): T | undefined {
-  const ref = useRef<T>();
+  const ref = useRef<T | undefined>(undefined);
   useEffect(() => {
     ref.current = value;
   }, [value]);
@@ -334,22 +334,7 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
     }
   };
 
-  const handleSessionComplete = async (duration: number, type: "work" | "break") => {
-    try {
-      const { saveManualSession } = await import("../api/stats");
-      await saveManualSession({
-        duration_minutes: duration,
-        session_type: type === "work" ? "focus" : "break",
-        completed_at: new Date().toISOString(),
-      });
-      console.log("Session completed:", duration, type);
-      if (type === "work") {
-        CelebrationSystem.firstSession();
-      }
-    } catch (error) {
-      console.error("Failed to save session:", error);
-    }
-  };
+
 
   const handleShare = (type: "weekly" | "streak") => {
     if (!stats) return;
@@ -594,7 +579,7 @@ export function DashboardPage({ stats, isLoading, error }: DashboardPageProps) {
 
         {/* Right Column - Pomodoro Widget & Goal Progress */}
         <div className="space-y-6">
-          <PomodoroWidget onSessionComplete={handleSessionComplete} />
+          <FocusTimeline sessions={stats.sessions} />
 
           {/* Dashboard Goal Progress Widget */}
           <div className="rounded-xl border border-border bg-card p-6">
