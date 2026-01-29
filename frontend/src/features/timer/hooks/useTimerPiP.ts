@@ -119,125 +119,117 @@ export function useTimerPiP({
     const width = canvasRef.current.width;
     const height = canvasRef.current.height;
     const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = 145; // Adjusted for 400x400 canvas
+    let centerY = 175;
+    let radius = 130;
 
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
     // Determine display level based on PiP window size
-    // Level 1 (Small): Timer only - matches browser minimum (<300px width)
-    // Level 2 (Medium): Timer + Participant count (300-450px)
-    // Level 3 (Large): Full info (>450px)
     const pipWidth = pipWindowSize.width;
     const pipHeight = pipWindowSize.height;
 
-    // Browser minimum is typically around 260px width.
-    // We set threshold to 300 to ensure "Small" is reachable at min size.
-    const isSmall = pipWidth < 300 || pipHeight < 250;
-    const isMedium = !isSmall && (pipWidth < 450 || pipHeight < 350);
+    // isSmall: Tiny mode (minimalist timer only)
+    const isSmall = pipWidth < 260 || pipHeight < 200;
+    const isMedium = !isSmall && (pipWidth < 360 || pipHeight < 360);
     const isLarge = !isSmall && !isMedium;
 
+    centerY = isSmall ? 200 : 175; // Perfectly center in small mode, shift up for others
+    radius = isSmall ? 140 : 130;  // Slightly larger radius for tiny mode since it's centered
+
     // 1. Modern Deep Gradient Background
-    // Create a radial gradient for a "spotlight" effect
     const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width);
-    bgGradient.addColorStop(0, "#27272a"); // zinc-800 center
-    bgGradient.addColorStop(0.7, "#18181b"); // zinc-900 mid
-    bgGradient.addColorStop(1, "#09090b");   // zinc-950 edge
+    bgGradient.addColorStop(0, "#27272a");
+    bgGradient.addColorStop(0.7, "#18181b");
+    bgGradient.addColorStop(1, "#09090b");
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Draw Status Indicator (User Name & Session) - Top
-    // User Name
-    ctx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-    ctx.fillStyle = "#a1a1aa"; // zinc-400
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(userName, centerX, centerY - 80);
+    // 2. Draw Status Indicator (User Name & Session) - Top (Only if not Small)
+    if (!isSmall) {
+      // User Name
+      ctx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.fillStyle = "#a1a1aa";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(userName, centerX, centerY - 75);
 
-    // Session Type Active Text
-    const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
-    ctx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-    ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd"; // Soft Red or Blue
-    ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
-    ctx.shadowBlur = 12;
-    ctx.fillText(sessionLabel, centerX, centerY - 50);
-    ctx.shadowBlur = 0; // Reset shadow
+      // Session Type Active Text
+      const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
+      ctx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd";
+      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
+      ctx.shadowBlur = 12;
+      ctx.fillText(sessionLabel, centerX, centerY - 45);
+      ctx.shadowBlur = 0;
+    }
 
     // 3. Draw Time (Modern Typography)
     const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-    // Use tabular-nums feature settings if possible, or a font known for good tabular numbers
-    ctx.font = "700 100px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    const fontSize = isSmall ? 100 : 90;
+    ctx.font = `700 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    // Time color based on state
     if (status === "completed") {
-        ctx.fillStyle = "#4ade80"; // Bright Green
+        ctx.fillStyle = "#4ade80";
         ctx.shadowColor = "rgba(74, 222, 128, 0.4)";
         ctx.shadowBlur = 20;
     } else if (status === "paused") {
-        ctx.fillStyle = "#fcd34d"; // Amber
+        ctx.fillStyle = "#fcd34d";
         ctx.shadowColor = "rgba(251, 191, 36, 0.2)";
         ctx.shadowBlur = 10;
     } else {
-        ctx.fillStyle = "#ffffff"; // White
+        ctx.fillStyle = "#ffffff";
         ctx.shadowColor = "rgba(255, 255, 255, 0.1)";
         ctx.shadowBlur = 10;
     }
 
-    ctx.fillText(timeStr, centerX, centerY + 20);
-    ctx.shadowBlur = 0; // Reset
+    const timeYOffset = isSmall ? 0 : 25;
+    ctx.fillText(timeStr, centerX, centerY + timeYOffset);
+    ctx.shadowBlur = 0;
 
-    // 4. Progress Ring with Gradient & Glow
-    // Background Ring (Track)
+    // 4. Progress Ring
+    const ringWidth = isSmall ? 8 : 12;
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Very subtle white track
-    ctx.lineWidth = 12;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.lineWidth = ringWidth;
     ctx.lineCap = "round";
     ctx.stroke();
 
-    // Foreground Ring (Progress)
     if (progress > 0) {
-        const startAngle = -0.5 * Math.PI; // Top
+        const startAngle = -0.5 * Math.PI;
         const endAngle = startAngle + (2 * Math.PI * (progress / 100));
 
         ctx.beginPath();
-        // Counter-clockwise for "countdown" feel? No, standard clockwise is better for "progress done"
         ctx.arc(centerX, centerY, radius, startAngle, endAngle);
 
-        // Gradient Stroke
         const gradient = ctx.createLinearGradient(0, 0, width, height);
         if (status === 'completed') {
             gradient.addColorStop(0, "#22c55e");
             gradient.addColorStop(1, "#86efac");
         } else if (sessionType === 'focus') {
-            gradient.addColorStop(0, "#ef4444"); // Red-500
-            gradient.addColorStop(1, "#f97316"); // Orange-500
+            gradient.addColorStop(0, "#ef4444");
+            gradient.addColorStop(1, "#f97316");
         } else {
-            gradient.addColorStop(0, "#3b82f6"); // Blue-500
-            gradient.addColorStop(1, "#06b6d4"); // Cyan-500
+            gradient.addColorStop(0, "#3b82f6");
+            gradient.addColorStop(1, "#06b6d4");
         }
 
         ctx.strokeStyle = gradient;
-        ctx.lineWidth = 12;
+        ctx.lineWidth = ringWidth;
         ctx.lineCap = "round";
-
-        // Add Glow to the ring
         ctx.shadowColor = sessionType === 'focus' ? "rgba(239, 68, 68, 0.4)" : "rgba(59, 130, 246, 0.4)";
         ctx.shadowBlur = 15;
-
         ctx.stroke();
-        ctx.shadowBlur = 0; // Reset
+        ctx.shadowBlur = 0;
 
-        // 5. End Cap Dot (Indicator)
-        // Calculate position of the end of the arc
         const endX = centerX + radius * Math.cos(endAngle);
         const endY = centerY + radius * Math.sin(endAngle);
 
         ctx.beginPath();
-        ctx.arc(endX, endY, 10, 0, 2 * Math.PI);
+        ctx.arc(endX, endY, isSmall ? 7 : 10, 0, 2 * Math.PI);
         ctx.fillStyle = "#ffffff";
         ctx.shadowColor = "rgba(255,255,255,0.8)";
         ctx.shadowBlur = 10;
@@ -249,40 +241,36 @@ export function useTimerPiP({
     let participantTextY = 0;
     if ((isMedium || isLarge) && participantCount > 0) {
       ctx.font = "600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-      ctx.fillStyle = "#a1a1aa"; // zinc-400
+      ctx.fillStyle = "#a1a1aa";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const participantText = `${participantCount}명 집중 중`;
-      participantTextY = centerY + radius + 25;
+      participantTextY = centerY + radius + 25; // 175 + 130 + 25 = 330
 
       ctx.fillText(participantText, centerX, participantTextY);
     }
 
     // 7. Chat Messages (Level 3: Large only)
-    let chatEndY = participantTextY;
+    let chatEndY = 0;
     if (isLarge && recentMessages.length > 0) {
-      const messages = recentMessages.slice(-2); // Last 2 messages
-      let yOffset = participantTextY > 0 ? participantTextY + 20 : centerY + radius + 25;
+      const messages = recentMessages.slice(-2);
+      let yOffset = participantTextY > 0 ? participantTextY + 20 : centerY + radius + 25; // 350
 
       ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
       ctx.textAlign = "center";
 
-      messages.forEach((msg, index) => {
-        // Truncate long messages (shorter for smaller canvas)
+      messages.forEach((msg) => {
         const maxLength = 28;
         const shortText = msg.text.length > maxLength
           ? msg.text.substring(0, maxLength) + '...'
           : msg.text;
 
-        // Sender name (slightly brighter)
-        ctx.fillStyle = "#a1a1aa"; // zinc-400
         const senderText = `${msg.sender}:`;
         const messageText = shortText;
-
-        // Draw as single line
         const fullText = `${senderText} ${messageText}`;
-        ctx.fillStyle = "#71717a"; // zinc-500
+
+        ctx.fillStyle = "#71717a";
         ctx.fillText(fullText, centerX, yOffset);
 
         yOffset += 18;
@@ -291,28 +279,27 @@ export function useTimerPiP({
       chatEndY = yOffset;
     }
 
-    // 8. Pulse / Breathing Effect (Bottom Indicator)
-    if (status === "running") {
+    // 8. Pulse / Breathing Effect (Bottom Indicator) - Only if not Small
+    if (status === "running" && !isSmall) {
       const time = Date.now() / 1000;
-      const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
+      const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2;
 
-      // Position dot below all content
-      let dotY = centerY + radius + 35;
+      let dotY = 390; // Fixed near bottom to ensure visibility
       if (chatEndY > 0) {
-        dotY = chatEndY + 8;
+        dotY = Math.min(390, chatEndY + 5);
       } else if (participantTextY > 0) {
-        dotY = participantTextY + 20;
+        dotY = Math.min(390, participantTextY + 20);
       }
 
       ctx.beginPath();
       ctx.arc(centerX, dotY, 6, 0, 2 * Math.PI);
-
       ctx.fillStyle = sessionType === 'focus' ? `rgba(239, 68, 68, ${alpha})` : `rgba(59, 130, 246, ${alpha})`;
       ctx.shadowColor = sessionType === 'focus' ? "#ef4444" : "#3b82f6";
       ctx.shadowBlur = 10 * alpha;
       ctx.fill();
       ctx.shadowBlur = 0;
     }
+
   }, [minutes, seconds, status, sessionType, progress, userName, participantCount, recentMessages, pipWindowSize]);
 
   // Loop to keep updating the canvas stream
