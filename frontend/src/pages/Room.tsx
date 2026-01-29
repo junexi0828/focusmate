@@ -284,7 +284,7 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   }
 
   return (
-    <div className="h-[calc(100vh-2rem)] m-4 rounded-[2rem] flex flex-col bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-3xl shadow-2xl overflow-y-auto transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-3xl transition-colors duration-300">
       {/* Header */}
       <header className="border-b bg-white/70 dark:bg-black/60 backdrop-blur-md border-white/20 dark:border-white/10 shadow-sm transition-colors duration-300">
         <div className="container mx-auto px-4 py-4">
@@ -457,9 +457,9 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
                 })}
               </div>
 
-              <div
+                <div
                 ref={chatScrollRef}
-                className="min-h-[300px] rounded-lg border bg-background p-3"
+                className="h-[400px] overflow-y-auto rounded-lg border bg-background p-3"
               >
                 {chatMessages.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
