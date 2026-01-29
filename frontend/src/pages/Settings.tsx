@@ -164,8 +164,10 @@ export default function Settings() {
   if (loading || !settings) {
     return (
       <PageTransition>
-        <div className="min-h-full flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="min-h-full">
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
         </div>
       </PageTransition>
     );
@@ -174,11 +176,8 @@ export default function Settings() {
   return (
     <PageTransition>
       <div className="min-h-full">
-        <div className="mb-6">
-          <div className="flex items-center gap-3">
-            <SettingsIcon className="h-8 w-8" />
-            <h1 className="text-3xl font-bold tracking-tight">설정</h1>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold">설정</h1>
           <p className="text-muted-foreground mt-1">
             계정 및 앱 설정을 관리하세요
           </p>

@@ -247,22 +247,66 @@ export function useTimerPiP({
         ctx.shadowBlur = 0;
     }
 
-    // 6. Participant Count (Level 2: Medium)
+    // 6. Participant Count (Small/Medium)
     let participantTextY = 0;
-    if (isMedium && participantCount > 0) {
+    if (participantCount > 0) {
       ctx.font = "600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
       ctx.fillStyle = "#a1a1aa"; // zinc-400
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const participantText = `${participantCount}명 집중 중`;
-      participantTextY = centerY + radius + 25;
+      participantTextY = centerY + radius + (isMedium ? 38 : 25);
 
       ctx.fillText(participantText, centerX, participantTextY);
     }
 
+    // 7. Medium Info (ETA + Percent + Mini Bar)
+    if (isMedium) {
+      const remainingSeconds = minutes * 60 + seconds;
+      const eta = new Date(Date.now() + remainingSeconds * 1000);
+      const etaText = `${String(eta.getHours()).padStart(2, "0")}:${String(eta.getMinutes()).padStart(2, "0")}`;
+      const percentText = `${Math.round(progress)}%`;
+
+      const infoText = `종료 ${etaText} · ${percentText}`;
+      ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.fillStyle = "#a1a1aa";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const infoY = centerY + radius + 12;
+      ctx.fillText(infoText, centerX, infoY);
+
+      // Mini progress bar
+      const drawRoundRect = (x: number, y: number, w: number, h: number, r: number) => {
+        if ("roundRect" in ctx) {
+          (ctx as CanvasRenderingContext2D & { roundRect: Function }).roundRect(x, y, w, h, r);
+        } else {
+          ctx.rect(x, y, w, h);
+        }
+      };
+
+      const barWidth = 140;
+      const barHeight = 6;
+      const barX = centerX - barWidth / 2;
+      const barY = infoY + 10;
+
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+      drawRoundRect(barX, barY, barWidth, barHeight, 3);
+      ctx.fill();
+
+      const fillWidth = Math.max(0, Math.min(1, progress / 100)) * barWidth;
+      if (fillWidth > 0) {
+        ctx.beginPath();
+        ctx.fillStyle = sessionType === "focus" ? "#ef4444" : "#3b82f6";
+        drawRoundRect(barX, barY, fillWidth, barHeight, 3);
+        ctx.fill();
+      }
+    }
+
     // 8. Pulse / Breathing Effect (Bottom Indicator)
-    if (status === "running" && !isSmall) {
+    if (status === "running") {
       const time = Date.now() / 1000;
       const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
 

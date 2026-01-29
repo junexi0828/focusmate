@@ -1,7 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { MessagesPage } from '../pages/Messages';
 import { authService } from '../features/auth/services/authService';
-import { PageTransition } from '../components/PageTransition';
+
+import { PageContainer } from '../components/layout/PageContainer';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -24,9 +25,9 @@ function MessagesComponent() {
   const { roomId } = Route.useSearch();
 
   return (
-    <PageTransition>
+    <PageContainer>
       <MessagesPage initialRoomId={roomId} />
-    </PageTransition>
+    </PageContainer>
   );
 }
 

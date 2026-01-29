@@ -41,15 +41,16 @@ export function HourlyPatternChart({ data, focusTime }: HourlyPatternChartProps)
           <PolarGrid stroke="hsl(var(--border))" />
           <PolarAngleAxis
             dataKey="hour"
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
+            tick={{ fill: "hsl(var(--foreground))", fontSize: 12, opacity: 0.8 }}
+            stroke="transparent"
             tickFormatter={(value) => `${value}시`}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, "auto"]}
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={10}
+            tick={{ fill: "hsl(var(--foreground))", fontSize: 10, opacity: 0.8 }}
+            stroke="hsl(var(--border))"
+            axisLine={false}
           />
           <Radar
             name={focusTime ? "집중 시간 (분)" : "세션 수"}

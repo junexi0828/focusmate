@@ -91,11 +91,21 @@ export function ProfileHeader({
           {/* 액션 버튼 (자신의 프로필일 때만) */}
           {isOwnProfile && (
             <div className="flex gap-2 flex-shrink-0">
-              <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEdit}
+                className="bg-background/50 backdrop-blur-sm border-border/50 hover:border-[#7ED6E8] hover:text-[#7ED6E8] transition-all"
+              >
                 <Edit className="w-4 h-4 mr-2" />
                 수정
               </Button>
-              <Button variant="outline" size="sm" onClick={handleSettings}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSettings}
+                className="bg-background/50 backdrop-blur-sm border-border/50 hover:border-[#F9A8D4] hover:text-[#F9A8D4] transition-all"
+              >
                 <Settings className="w-4 h-4 mr-2" />
                 설정
               </Button>

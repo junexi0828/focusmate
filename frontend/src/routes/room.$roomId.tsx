@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { RoomPage } from "../pages/Room";
+import { PageContainer } from "../components/layout/PageContainer";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { authService } from "../features/auth/services/authService";
@@ -27,5 +28,9 @@ function RoomComponent() {
     return null;
   }
 
-  return <RoomPage onLeaveRoom={handleLeaveRoom} />;
+  return (
+    <PageContainer>
+      <RoomPage onLeaveRoom={handleLeaveRoom} />
+    </PageContainer>
+  );
 }

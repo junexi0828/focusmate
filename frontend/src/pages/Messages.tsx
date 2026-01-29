@@ -664,8 +664,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
   };
 
   return (
-    <PageTransition>
-      <div className="h-[calc(100vh-4rem)] flex bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+    <div className="h-full flex bg-transparent">
         {/* Sidebar */}
         <div className="w-full sm:w-80 lg:w-96 xl:w-[420px] border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col flex-shrink-0">
           {/* Header */}
@@ -1122,7 +1121,7 @@ export function MessagesPage({ initialRoomId }: MessagesPageProps) {
           </Tabs>
         </DialogContent>
       </Dialog>
-    </PageTransition>
+
   );
 }
 

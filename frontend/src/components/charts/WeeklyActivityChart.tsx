@@ -49,14 +49,12 @@ export function WeeklyActivityChart({ data }: WeeklyActivityChartProps) {
           />
           <XAxis
             dataKey="day"
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
+            tick={{ fill: "hsl(var(--foreground))", fontSize: 12, opacity: 0.8 }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
+            tick={{ fill: "hsl(var(--foreground))", fontSize: 12, opacity: 0.8 }}
             tickLine={false}
             axisLine={false}
             tickFormatter={(value) => `${value}h`}

@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CommunityPage } from "../pages/Community";
 import { authService } from "../features/auth/services/authService";
 import { communityService } from "../features/community/services/communityService";
-import { PageTransition } from "../components/PageTransition";
+
+import { PageContainer } from "../components/layout/PageContainer";
 import { CreatePostDialog } from "../features/community/components/CreatePostDialog";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -266,31 +267,33 @@ function CommunityComponent() {
   }));
 
   return (
-    <PageTransition>
-      <CommunityPage
-        posts={uiPosts}
-        onCreatePost={handleCreatePost}
-        onViewPost={handleViewPost}
-        onLike={handleLike}
-        selectedCategory={category === "tips" ? "tips" : category === "achievement" ? "achievement" : category === "question" ? "question" : "all"}
-        onCategoryChange={handleCategoryChange}
-        sortBy={sort_by}
-        onSortByChange={handleSortByChange}
-        authorUsername={author_username || ""}
-        dateFrom={date_from || ""}
-        dateTo={date_to || ""}
-        onAuthorUsernameChange={handleAuthorUsernameChange}
-        onDateFromChange={handleDateFromChange}
-        onDateToChange={handleDateToChange}
-        onClearAdvancedFilters={handleClearAdvancedFilters}
-        searchQuery={searchQuery || ""}
-        onSearchChange={handleSearchChange}
-      />
+    <PageContainer>
+      <div className="h-full overflow-y-auto custom-scrollbar">
+        <CommunityPage
+          posts={uiPosts}
+          onCreatePost={handleCreatePost}
+          onViewPost={handleViewPost}
+          onLike={handleLike}
+          selectedCategory={category === "tips" ? "tips" : category === "achievement" ? "achievement" : category === "question" ? "question" : "all"}
+          onCategoryChange={handleCategoryChange}
+          sortBy={sort_by}
+          onSortByChange={handleSortByChange}
+          authorUsername={author_username || ""}
+          dateFrom={date_from || ""}
+          dateTo={date_to || ""}
+          onAuthorUsernameChange={handleAuthorUsernameChange}
+          onDateFromChange={handleDateFromChange}
+          onDateToChange={handleDateToChange}
+          onClearAdvancedFilters={handleClearAdvancedFilters}
+          searchQuery={searchQuery || ""}
+          onSearchChange={handleSearchChange}
+        />
+      </div>
       <CreatePostDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onSubmit={handleSubmitPost}
       />
-    </PageTransition>
+    </PageContainer>
   );
 }
