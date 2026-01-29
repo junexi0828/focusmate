@@ -1,3 +1,4 @@
+import React from "react";
 import { CreateRoomCard } from "../features/room/components/CreateRoomCard";
 import { JoinRoomCard } from "../features/room/components/JoinRoomCard";
 import { RoomReservationSection } from "../features/room-reservation/components/RoomReservationSection";
@@ -5,6 +6,8 @@ import { RoomReservationSection } from "../features/room-reservation/components/
 import { motion } from "framer-motion";
 import { MyRoomsSection } from "../features/room/components/MyRoomsSection";
 import { HeroLogo } from "../components/HeroLogo";
+import { BackgroundBlobs } from "../components/ui/BackgroundBlobs";
+import { useTheme } from "../hooks/useTheme";
 
 interface HomePageProps {
   onCreateRoom: (
@@ -16,6 +19,7 @@ interface HomePageProps {
 }
 
 export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
+  const { isFunMode } = useTheme();
 
 
   const containerVariants = {
@@ -50,7 +54,7 @@ export function HomePage({ onCreateRoom, onJoinRoom }: HomePageProps) {
       */
       className="flex flex-col items-center justify-center py-4 min-h-full relative"
     >
-      {/* BackgroundBlobs removed - already rendered globally in __root.tsx */}
+      {isFunMode && <BackgroundBlobs />}
 
       {/*
         컨테이너 최대 너비 설정
