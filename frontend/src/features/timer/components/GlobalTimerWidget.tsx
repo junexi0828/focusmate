@@ -14,7 +14,8 @@ export function GlobalTimerWidget() {
     timer,
     room,
     participantName,
-    participants
+    participants,
+    chatMessages
   } = useRoomContext();
   const location = useLocation();
   const navigate = useNavigate();
@@ -55,6 +56,12 @@ export function GlobalTimerWidget() {
     }
   }, [status, startTimer, pauseTimer, resumeTimer]); // Dependencies are now clearer and mostly stable
 
+  // Prepare recent chat messages for PiP
+  const recentChatMessages = chatMessages.slice(-2).map(msg => ({
+    sender: msg.sender_name || "익명",
+    text: msg.message || ""
+  }));
+
   const { togglePiP, isPipActive, isSupported } = useTimerPiP({
     minutes,
     seconds,
@@ -64,6 +71,7 @@ export function GlobalTimerWidget() {
     userName: participantName || "User",
     onPlayPause: handlePlayPause,
     participantCount: participants.length,
+    recentMessages: recentChatMessages,
   });
 
   // Keyboard shortcut: Alt + P to toggle PiP

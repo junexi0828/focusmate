@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { TimerStatus, SessionType } from "../components/TimerDisplay";
 import { toast } from "sonner";
 
+interface ChatMessage {
+  sender: string;
+  text: string;
+}
+
 interface UseTimerPiPProps {
   minutes: number;
   seconds: number;
@@ -11,6 +16,7 @@ interface UseTimerPiPProps {
   userName?: string; // User name to display
   onPlayPause?: () => void; // Callback for play/pause from PiP controls
   participantCount?: number; // Number of active participants
+  recentMessages?: ChatMessage[]; // Recent chat messages (max 2)
 }
 
 export function useTimerPiP({
@@ -22,9 +28,11 @@ export function useTimerPiP({
   userName = "User",
   onPlayPause,
   participantCount = 0,
+  recentMessages = [],
 }: UseTimerPiPProps) {
   const isMounted = useRef(true);
   const [isPipActive, setIsPipActive] = useState(false);
+  const [pipWindowSize, setPipWindowSize] = useState<{ width: number; height: number }>({ width: 512, height: 512 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -115,6 +123,16 @@ export function useTimerPiP({
 
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
+
+    // Determine display level based on PiP window size
+    // Level 1 (Small): Timer only
+    // Level 2 (Medium): Timer + Participant count
+    // Level 3 (Large): Timer + Participant count + Chat
+    const pipWidth = pipWindowSize.width;
+    const pipHeight = pipWindowSize.height;
+    const isSmall = pipWidth < 300 || pipHeight < 200;
+    const isMedium = !isSmall && (pipWidth < 400 || pipHeight < 300);
+    const isLarge = !isSmall && !isMedium;
 
     // 1. Modern Deep Gradient Background
     // Create a radial gradient for a "spotlight" effect
@@ -223,25 +241,64 @@ export function useTimerPiP({
         ctx.shadowBlur = 0;
     }
 
-    // 6. Participant Count (Bottom Info)
-    if (participantCount > 0) {
+    // 6. Participant Count (Level 2+: Medium and Large)
+    let participantTextY = 0;
+    if ((isMedium || isLarge) && participantCount > 0) {
       ctx.font = "600 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
       ctx.fillStyle = "#a1a1aa"; // zinc-400
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const participantText = `${participantCount}명 집중 중`;
-      const textY = centerY + radius + 30;
+      participantTextY = centerY + radius + 30;
 
-      ctx.fillText(participantText, centerX, textY);
+      ctx.fillText(participantText, centerX, participantTextY);
     }
 
-    // 7. Pulse / Breathing Effect (Bottom Indicator)
+    // 7. Chat Messages (Level 3: Large only)
+    let chatEndY = participantTextY;
+    if (isLarge && recentMessages.length > 0) {
+      const messages = recentMessages.slice(-2); // Last 2 messages
+      let yOffset = participantTextY > 0 ? participantTextY + 25 : centerY + radius + 30;
+
+      ctx.font = "500 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.textAlign = "center";
+
+      messages.forEach((msg, index) => {
+        // Truncate long messages
+        const maxLength = 35;
+        const shortText = msg.text.length > maxLength
+          ? msg.text.substring(0, maxLength) + '...'
+          : msg.text;
+
+        // Sender name (slightly brighter)
+        ctx.fillStyle = "#a1a1aa"; // zinc-400
+        const senderText = `${msg.sender}:`;
+        const messageText = shortText;
+
+        // Draw as single line
+        const fullText = `${senderText} ${messageText}`;
+        ctx.fillStyle = "#71717a"; // zinc-500
+        ctx.fillText(fullText, centerX, yOffset);
+
+        yOffset += 22;
+      });
+
+      chatEndY = yOffset;
+    }
+
+    // 8. Pulse / Breathing Effect (Bottom Indicator)
     if (status === "running") {
       const time = Date.now() / 1000;
       const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
 
-      const dotY = centerY + radius + (participantCount > 0 ? 55 : 45);
+      // Position dot below all content
+      let dotY = centerY + radius + 45;
+      if (chatEndY > 0) {
+        dotY = chatEndY + 10;
+      } else if (participantTextY > 0) {
+        dotY = participantTextY + 25;
+      }
 
       ctx.beginPath();
       ctx.arc(centerX, dotY, 6, 0, 2 * Math.PI);
@@ -252,7 +309,7 @@ export function useTimerPiP({
       ctx.fill();
       ctx.shadowBlur = 0;
     }
-  }, [minutes, seconds, status, sessionType, progress, userName, participantCount]);
+  }, [minutes, seconds, status, sessionType, progress, userName, participantCount, recentMessages, pipWindowSize]);
 
   // Loop to keep updating the canvas stream
   // Use setInterval instead of requestAnimationFrame for better background performance
@@ -308,13 +365,26 @@ export function useTimerPiP({
         drawTimer();
 
         // Request PiP
-        await videoRef.current.requestPictureInPicture();
-        if (isMounted.current) setIsPipActive(true);
+        const pipWindow = await videoRef.current.requestPictureInPicture();
+        if (isMounted.current) {
+          setIsPipActive(true);
+          setPipWindowSize({ width: pipWindow.width, height: pipWindow.height });
+        }
         toast.success("타이머가 PiP 모드로 전환되었습니다");
+
+        // Track PiP window size changes
+        pipWindow.addEventListener('resize', () => {
+          if (isMounted.current) {
+            setPipWindowSize({ width: pipWindow.width, height: pipWindow.height });
+          }
+        });
 
         // Handle PiP close
         videoRef.current.onleavepictureinpicture = () => {
-          if (isMounted.current) setIsPipActive(false);
+          if (isMounted.current) {
+            setIsPipActive(false);
+            setPipWindowSize({ width: 512, height: 512 }); // Reset to default
+          }
         };
       }
     } catch (error) {
