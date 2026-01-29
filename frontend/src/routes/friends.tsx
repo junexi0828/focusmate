@@ -6,6 +6,7 @@ import { friendService } from "../features/friends/services/friendService";
 import { chatService } from "../features/chat/services/chatService";
 import { userService, type UserSearchResult } from "../features/users/services/userService";
 import { PageTransition } from "../components/PageTransition";
+import { PageContainer } from "../components/layout/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -182,7 +183,7 @@ function FriendsComponent() {
   const pendingReceivedRequests = receivedRequests.filter((req) => req.status === "pending");
 
   return (
-    <PageTransition>
+    <PageContainer>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -562,6 +563,6 @@ function FriendsComponent() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </PageTransition>
+    </PageContainer>sition>
   );
 }

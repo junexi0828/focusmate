@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PageTransition } from "../components/PageTransition";
+import { PageContainer } from "../components/layout/PageContainer";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -174,8 +175,8 @@ export default function Settings() {
   }
 
   return (
-    <PageTransition>
-      <div className="min-h-full">
+    <PageContainer>
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">설정</h1>
           <p className="text-muted-foreground mt-1">
@@ -468,7 +469,7 @@ export default function Settings() {
               </Card>
             </TabsContent>
           </Tabs>
-        </div>
-    </PageTransition>
+      </div>
+    </PageContainer>
   );
 }
