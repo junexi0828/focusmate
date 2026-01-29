@@ -563,6 +563,6 @@ function FriendsComponent() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </PageContainer>sition>
+    </PageContainer>
   );
 }
