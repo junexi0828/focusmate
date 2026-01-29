@@ -165,7 +165,7 @@ export function Sidebar() {
             className="flex items-center justify-center w-10 h-10 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             title="로그인"
           >
-            <User size={30} strokeWidth={2.5} />
+            <User size={24} />
           </Link>
         </div>
       )}
@@ -173,62 +173,62 @@ export function Sidebar() {
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <NavItem
           to="/"
-          icon={<Home size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<Home size={isCollapsed ? 24 : 20} />}
           label="홈"
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/dashboard"
-          icon={<LayoutDashboard size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<LayoutDashboard size={isCollapsed ? 24 : 20} />}
           label="대시보드"
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/stats"
-          icon={<BarChart2 size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<BarChart2 size={isCollapsed ? 24 : 20} />}
           label="통계"
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/community"
-          icon={<Users size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<Users size={isCollapsed ? 24 : 20} />}
           label="커뮤니티"
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/ranking"
-          icon={<Trophy size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<Trophy size={isCollapsed ? 24 : 20} />}
           label="랭킹전"
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/matching"
-          icon={<Heart size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<Heart size={isCollapsed ? 24 : 20} />}
           label="핑크캠퍼스"
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/messages"
-          icon={<MessageSquare size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<MessageSquare size={isCollapsed ? 24 : 20} />}
           label="메시지"
           badge={unreadCount > 0 ? unreadCount : undefined}
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/friends"
-          icon={<UserPlus size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<UserPlus size={isCollapsed ? 24 : 20} />}
           label="친구"
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/profile"
-          icon={<User size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<User size={isCollapsed ? 24 : 20} />}
           label="프로필"
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/settings"
-          icon={<Settings size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />}
+          icon={<Settings size={isCollapsed ? 24 : 20} />}
           label="설정"
           isCollapsed={isCollapsed}
         />
@@ -260,14 +260,8 @@ export function Sidebar() {
               className="border-0 bg-transparent shadow-none p-1.5 h-auto w-auto hover:bg-transparent flex items-center justify-center cursor-pointer"
               onClick={(e) => e.stopPropagation()}
             >
-              <Sun className={cn(
-                "rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0",
-                isCollapsed ? "h-7 w-7" : "h-[1.2rem] w-[1.2rem]"
-              )} />
-              <Moon className={cn(
-                "absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100",
-                isCollapsed ? "h-7 w-7" : "h-[1.2rem] w-[1.2rem]"
-              )} />
+              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </div>
           </ThemeToggle>
         </div>
@@ -282,7 +276,7 @@ export function Sidebar() {
             )}
             title={isCollapsed ? "로그아웃" : undefined}
           >
-            <LogOut size={isCollapsed ? 30 : 20} strokeWidth={isCollapsed ? 2.5 : 2} />
+            <LogOut size={isCollapsed ? 24 : 20} />
             {!isCollapsed && (
               <span className="text-sm font-medium">로그아웃</span>
             )}
