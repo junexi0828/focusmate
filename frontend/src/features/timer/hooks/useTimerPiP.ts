@@ -26,6 +26,7 @@ export function useTimerPiP({
   const isMounted = useRef(true);
   const [isPipActive, setIsPipActive] = useState(false);
   const [pipWindowSize, setPipWindowSize] = useState<{ width: number; height: number }>({ width: 400, height: 400 });
+  const [etaInfo, setEtaInfo] = useState<{ text: string; percentText: string }>({ text: "", percentText: "" });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -105,6 +106,14 @@ export function useTimerPiP({
     };
   }, []);
 
+  useEffect(() => {
+    const remainingSeconds = minutes * 60 + seconds;
+    const eta = new Date(Date.now() + remainingSeconds * 1000);
+    const etaText = `${String(eta.getHours()).padStart(2, "0")}:${String(eta.getMinutes()).padStart(2, "0")}`;
+    const percentText = `${Math.round(progress)}%`;
+    setEtaInfo({ text: `종료 ${etaText} · ${percentText}`, percentText });
+  }, [minutes, seconds, progress]);
+
   const drawTimer = useCallback(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx || !canvasRef.current) return;
@@ -147,24 +156,21 @@ export function useTimerPiP({
     ctx.fillRect(0, 0, width, height);
 
     // 2. Draw Status Indicator (User Name & Session) - Top
-    // Hide in Small mode for clean minimal view (YouTube PiP style)
-    if (!isSmall) {
-      // User Name
-      ctx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-      ctx.fillStyle = "#a1a1aa"; // zinc-400
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(userName, centerX, centerY - 80);
+    // Always show in Small/Medium
+    ctx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    ctx.fillStyle = "#a1a1aa"; // zinc-400
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(userName, centerX, centerY - 80);
 
-      // Session Type Active Text
-      const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
-      ctx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-      ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd"; // Soft Red or Blue
-      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
-      ctx.shadowBlur = 12;
-      ctx.fillText(sessionLabel, centerX, centerY - 50);
-      ctx.shadowBlur = 0; // Reset shadow
-    }
+    // Session Type Active Text
+    const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
+    ctx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd"; // Soft Red or Blue
+    ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
+    ctx.shadowBlur = 12;
+    ctx.fillText(sessionLabel, centerX, centerY - 50);
+    ctx.shadowBlur = 0; // Reset shadow
 
     // 3. Draw Time (Modern Typography)
     const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
@@ -262,20 +268,16 @@ export function useTimerPiP({
     }
 
     // 7. Medium Info (ETA + Percent + Mini Bar)
+    let barBottomY = 0;
     if (isMedium) {
-      const remainingSeconds = minutes * 60 + seconds;
-      const eta = new Date(Date.now() + remainingSeconds * 1000);
-      const etaText = `${String(eta.getHours()).padStart(2, "0")}:${String(eta.getMinutes()).padStart(2, "0")}`;
-      const percentText = `${Math.round(progress)}%`;
-
-      const infoText = `종료 ${etaText} · ${percentText}`;
+      const infoText = etaInfo.text;
       ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
       ctx.fillStyle = "#a1a1aa";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const infoY = centerY + radius + 12;
-      ctx.fillText(infoText, centerX, infoY);
+      if (infoText) ctx.fillText(infoText, centerX, infoY);
 
       // Mini progress bar
       const drawRoundRect = (x: number, y: number, w: number, h: number, r: number) => {
@@ -296,13 +298,16 @@ export function useTimerPiP({
       drawRoundRect(barX, barY, barWidth, barHeight, 3);
       ctx.fill();
 
-      const fillWidth = Math.max(0, Math.min(1, progress / 100)) * barWidth;
+      const percentValue = Math.max(0, Math.min(100, Number(etaInfo.percentText.replace("%", "")) || 0));
+      const fillWidth = (percentValue / 100) * barWidth;
       if (fillWidth > 0) {
         ctx.beginPath();
         ctx.fillStyle = sessionType === "focus" ? "#ef4444" : "#3b82f6";
         drawRoundRect(barX, barY, fillWidth, barHeight, 3);
         ctx.fill();
       }
+
+      barBottomY = barY + barHeight;
     }
 
     // 8. Pulse / Breathing Effect (Bottom Indicator)
@@ -311,7 +316,9 @@ export function useTimerPiP({
       const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
 
       let dotY = 390; // Fixed near bottom to ensure visibility
-      if (participantTextY > 0) {
+      if (barBottomY > 0) {
+        dotY = Math.min(390, barBottomY + 16);
+      } else if (participantTextY > 0) {
         dotY = Math.min(390, participantTextY + 20);
       }
 
@@ -324,7 +331,7 @@ export function useTimerPiP({
       ctx.fill();
       ctx.shadowBlur = 0;
     }
-  }, [minutes, seconds, status, sessionType, progress, userName, participantCount, pipWindowSize]);
+  }, [minutes, seconds, status, sessionType, userName, participantCount, pipWindowSize, etaInfo]);
 
   // Loop to keep updating the canvas stream
   // Use setInterval instead of requestAnimationFrame for better background performance

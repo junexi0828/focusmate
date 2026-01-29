@@ -164,7 +164,7 @@ export default function Settings() {
   if (loading || !settings) {
     return (
       <PageTransition>
-        <div className="min-h-full">
+        <div className="min-h-full p-6">
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
@@ -175,7 +175,7 @@ export default function Settings() {
 
   return (
     <PageTransition>
-      <div className="min-h-full">
+      <div className="min-h-full p-6">
         <div>
           <h1 className="text-2xl font-bold">설정</h1>
           <p className="text-muted-foreground mt-1">
