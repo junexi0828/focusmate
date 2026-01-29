@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Timer, Users, Trophy, Heart } from "lucide-react";
+import { Timer, Users, Trophy, MessageSquare, Heart } from "lucide-react";
 import { PageTransition } from "../components/PageTransition";
 import { Card } from "../components/ui/card";
 
@@ -53,11 +53,7 @@ function GuidePage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
-        {/* Background Accents */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#7ED6E8]/10 rounded-full blur-3xl -z-10" />
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#F9A8D4]/10 rounded-full blur-3xl -z-10" />
-
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
         <motion.div
           variants={container}
           initial="hidden"
@@ -69,7 +65,7 @@ function GuidePage() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] bg-clip-text text-transparent">
               FocusMate 사용 가이드
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
               FocusMate와 함께 더 효율적으로, 더 즐겁게 공부하는 방법을
               알아보세요.
             </p>
@@ -101,17 +97,17 @@ function GuidePage() {
           {/* FAQ Section Preview */}
           <motion.div
             variants={item}
-            className="text-center rounded-3xl p-8 border border-[#F9A8D4]/20 bg-gradient-to-br from-[#F9A8D4]/5 to-[#7ED6E8]/5"
+            className="text-center bg-gradient-to-r from-[#E0F7FD] to-[#FCE7F5] dark:from-slate-800 dark:to-slate-900 rounded-3xl p-8"
           >
-            <h2 className="text-2xl font-bold mb-4">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
               더 궁금한 점이 있으신가요?
             </h2>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
               자주 묻는 질문에서 더 자세한 내용을 확인하실 수 있습니다.
             </p>
             <a
               href="/faq"
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] hover:opacity-90 transition-all shadow-md hover:scale-105"
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-gradient-to-r from-[#7ED6E8] to-[#F9A8D4] hover:opacity-90 transition-opacity shadow-md"
             >
               FAQ 바로가기
             </a>
