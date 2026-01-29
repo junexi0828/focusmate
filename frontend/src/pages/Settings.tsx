@@ -173,12 +173,16 @@ export default function Settings() {
 
   return (
     <PageTransition>
-      <div className="min-h-full bg-background p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
+      <div className="min-h-full">
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
             <SettingsIcon className="h-8 w-8" />
-            <h1 className="text-3xl font-bold">설정</h1>
+            <h1 className="text-3xl font-bold tracking-tight">설정</h1>
           </div>
+          <p className="text-muted-foreground mt-1">
+            계정 및 앱 설정을 관리하세요
+          </p>
+        </div>
 
           <Tabs defaultValue="account" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
