@@ -10,6 +10,7 @@ interface UseTimerPiPProps {
   progress: number; // 0-100
   userName?: string; // User name to display
   onPlayPause?: () => void; // Callback for play/pause from PiP controls
+  participantCount?: number; // Number of active participants
 }
 
 export function useTimerPiP({
@@ -20,6 +21,7 @@ export function useTimerPiP({
   progress,
   userName = "User",
   onPlayPause,
+  participantCount = 0,
 }: UseTimerPiPProps) {
   const isMounted = useRef(true);
   const [isPipActive, setIsPipActive] = useState(false);
@@ -221,12 +223,25 @@ export function useTimerPiP({
         ctx.shadowBlur = 0;
     }
 
-    // 6. Pulse / Breathing Effect (Bottom Indicator)
+    // 6. Participant Count (Bottom Info)
+    if (participantCount > 0) {
+      ctx.font = "600 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.fillStyle = "#a1a1aa"; // zinc-400
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const participantText = `${participantCount}명 집중 중`;
+      const textY = centerY + radius + 30;
+
+      ctx.fillText(participantText, centerX, textY);
+    }
+
+    // 7. Pulse / Breathing Effect (Bottom Indicator)
     if (status === "running") {
       const time = Date.now() / 1000;
       const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
 
-      const dotY = centerY + radius + 45;
+      const dotY = centerY + radius + (participantCount > 0 ? 55 : 45);
 
       ctx.beginPath();
       ctx.arc(centerX, dotY, 6, 0, 2 * Math.PI);
@@ -237,7 +252,7 @@ export function useTimerPiP({
       ctx.fill();
       ctx.shadowBlur = 0;
     }
-  }, [minutes, seconds, status, sessionType, progress, userName]);
+  }, [minutes, seconds, status, sessionType, progress, userName, participantCount]);
 
   // Loop to keep updating the canvas stream
   // Use setInterval instead of requestAnimationFrame for better background performance

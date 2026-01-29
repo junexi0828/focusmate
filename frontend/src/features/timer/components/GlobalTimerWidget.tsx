@@ -13,7 +13,8 @@ export function GlobalTimerWidget() {
     roomId,
     timer,
     room,
-    participantName
+    participantName,
+    participants
   } = useRoomContext();
   const location = useLocation();
   const navigate = useNavigate();
@@ -62,6 +63,7 @@ export function GlobalTimerWidget() {
     progress,
     userName: participantName || "User",
     onPlayPause: handlePlayPause,
+    participantCount: participants.length,
   });
 
   // Keyboard shortcut: Alt + P to toggle PiP

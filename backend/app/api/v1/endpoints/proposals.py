@@ -13,6 +13,14 @@ from app.infrastructure.repositories.chat_repository import ChatRepository
 from app.infrastructure.repositories.matching_pool_repository import (
     MatchingPoolRepository,
 )
+from app.domain.notification.service import NotificationService
+from app.infrastructure.repositories.notification_repository import (
+    NotificationRepository,
+)
+from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.repositories.user_settings_repository import (
+    UserSettingsRepository,
+)
 from app.infrastructure.websocket.notification_manager import notification_ws_manager
 from app.shared.utils.uuid import generate_uuid
 
@@ -27,7 +35,21 @@ def get_proposal_service(
     proposal_repo = ProposalRepository(db)
     pool_repo = MatchingPoolRepository(db)
     chat_repo = ChatRepository(db)
-    return ProposalService(proposal_repo, pool_repo, chat_repo)
+    notification_repo = NotificationRepository(db)
+    user_repo = UserRepository(db)
+    settings_repo = UserSettingsRepository(db)
+    notification_service = NotificationService(
+        notification_repo,
+        settings_repository=settings_repo,
+        user_repository=user_repo,
+    )
+    return ProposalService(
+        proposal_repo,
+        pool_repo,
+        chat_repo,
+        user_repo=user_repo,
+        notification_service=notification_service,
+    )
 
 async def broadcast_matching_stats_update() -> None:
     """Broadcast matching stats update to all online users."""

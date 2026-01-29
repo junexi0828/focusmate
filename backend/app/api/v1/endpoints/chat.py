@@ -641,6 +641,8 @@ async def websocket_chat(
     else:
         await websocket.accept()
 
+    chat_repo = ChatRepository(db)
+
     # Send welcome message to confirm connection is established
     try:
         await websocket.send_json(
@@ -680,7 +682,25 @@ async def websocket_chat(
                     continue
 
                 elif data.get("type") == "join_room":
-                    room_id = UUID(data["room_id"])
+                    try:
+                        room_id = UUID(data["room_id"])
+                    except (TypeError, ValueError):
+                        await websocket.send_json(
+                            {"type": "error", "message": "Invalid room_id"}
+                        )
+                        continue
+
+                    member = await chat_repo.get_member(room_id, user_id)
+                    if not member or not getattr(member, "is_active", True):
+                        await websocket.send_json(
+                            {
+                                "type": "error",
+                                "message": "Not a member of this room",
+                                "room_id": str(room_id),
+                            }
+                        )
+                        continue
+
                     await connection_manager.connect(websocket, room_id, user_id)
                     await websocket.send_json(
                         {"type": "joined", "room_id": str(room_id)}

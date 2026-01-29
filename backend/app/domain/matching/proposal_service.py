@@ -188,8 +188,8 @@ class ProposalService:
             update_data["chat_room_id"] = chat_room.room_id
 
             # Update pool statuses
-            await self.pool_repo.update_pool(pool_id_a, {"status": "matched"})
-            await self.pool_repo.update_pool(pool_id_b, {"status": "matched"})
+            await self.pool_repo.update_pool(proposal.pool_id_a, {"status": "matched"})
+            await self.pool_repo.update_pool(proposal.pool_id_b, {"status": "matched"})
 
             # Notify success
             if self.notification_service:
