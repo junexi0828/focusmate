@@ -173,7 +173,7 @@ export default function Settings() {
 
   return (
     <PageTransition>
-      <div className="min-h-full bg-background">
+      <div className="min-h-full bg-background p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <SettingsIcon className="h-8 w-8" />
