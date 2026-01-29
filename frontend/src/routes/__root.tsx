@@ -107,7 +107,7 @@ function RootComponent() {
               className={
                 isLoginPage || isHomePage
                   ? "flex-1 w-full"
-                  : "flex-1 p-8 max-w-7xl mx-auto w-full"
+                  : "flex-1 p-4 max-w-7xl mx-auto w-full"
               }
             >
               <Outlet />
