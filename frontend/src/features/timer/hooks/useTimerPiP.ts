@@ -119,25 +119,21 @@ export function useTimerPiP({
     const width = canvasRef.current.width;
     const height = canvasRef.current.height;
     const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = 145; // Adjusted for 400x400 canvas
+
+    // Adjust layout for large windows to fit chat within canvas
+    const pipWidth = pipWindowSize.width;
+    const pipHeight = pipWindowSize.height;
+    const isTiny = pipWidth < 260 || pipHeight < 230;
+    const isSmall = !isTiny && (pipWidth < 300 || pipHeight < 250);
+    const isMedium = !isTiny && !isSmall && (pipWidth < 360 || pipHeight < 360);
+    const isLarge = !isTiny && !isSmall && !isMedium;
+
+    // Move center up and reduce radius for large windows to prevent chat cutoff
+    const centerY = isLarge ? 170 : height / 2;
+    const radius = isLarge ? 135 : 145;
 
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
-
-    // Determine display level based on PiP window size
-    // Level 1 (Small): Timer only - matches browser minimum (<300px width)
-    // Level 2 (Medium): Timer + Participant count (300-360px)
-    // Level 3 (Large): Full info (>=360px) - Easily reachable on 400x400 canvas
-    const pipWidth = pipWindowSize.width;
-    const pipHeight = pipWindowSize.height;
-
-    // Browser minimum is typically around 260px width.
-    // We set threshold to 300 to ensure "Small" is reachable at min size.
-    const isSmall = pipWidth < 300 || pipHeight < 250;
-    // Lowered upper bound from 450 to 360 to make "Large" (Chat) easier to access
-    const isMedium = !isSmall && (pipWidth < 360 || pipHeight < 360);
-    const isLarge = !isSmall && !isMedium;
 
     // 1. Modern Deep Gradient Background
     // Create a radial gradient for a "spotlight" effect
@@ -148,22 +144,26 @@ export function useTimerPiP({
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Draw Status Indicator (User Name & Session) - Top
-    // User Name
-    ctx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-    ctx.fillStyle = "#a1a1aa"; // zinc-400
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(userName, centerX, centerY - 80);
+    // 2. Draw Status Indicator (User Name & Session)
+    // User Name - Medium+ only (hide in Tiny and Small for cleaner minimal view)
+    if (isMedium || isLarge) {
+      ctx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.fillStyle = "#a1a1aa"; // zinc-400
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(userName, centerX, centerY - 80);
+    }
 
-    // Session Type Active Text
-    const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
-    ctx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-    ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd"; // Soft Red or Blue
-    ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
-    ctx.shadowBlur = 12;
-    ctx.fillText(sessionLabel, centerX, centerY - 50);
-    ctx.shadowBlur = 0; // Reset shadow
+    // Session Type Active Text - Small+ (hide only in Tiny mode)
+    if (!isTiny) {
+      const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
+      ctx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd"; // Soft Red or Blue
+      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
+      ctx.shadowBlur = 12;
+      ctx.fillText(sessionLabel, centerX, centerY - 50);
+      ctx.shadowBlur = 0; // Reset shadow
+    }
 
     // 3. Draw Time (Modern Typography)
     const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
