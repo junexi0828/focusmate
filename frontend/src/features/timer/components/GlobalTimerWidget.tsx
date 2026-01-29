@@ -19,6 +19,11 @@ export function GlobalTimerWidget() {
   const location = useLocation();
   const navigate = useNavigate();
   const [position, setPosition] = useState<{ x: number, y: number } | null>(null);
+  const [pipMode, setPipMode] = useState<"square" | "wide">(() => {
+    if (typeof window === "undefined") return "square";
+    const savedMode = localStorage.getItem("pip-mode");
+    return savedMode === "wide" ? "wide" : "square";
+  });
 
   // Load saved position on mount
   useEffect(() => {
@@ -32,6 +37,18 @@ export function GlobalTimerWidget() {
     } else {
       setPosition({ x: 0, y: 0 });
     }
+  }, []);
+
+  useEffect(() => {
+    const handleModeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      if (customEvent.detail === "wide" || customEvent.detail === "square") {
+        setPipMode(customEvent.detail);
+      }
+    };
+
+    window.addEventListener("pip-mode-change", handleModeChange as EventListener);
+    return () => window.removeEventListener("pip-mode-change", handleModeChange as EventListener);
   }, []);
 
   // Destructure stable functions from timer
@@ -61,6 +78,7 @@ export function GlobalTimerWidget() {
     status,
     sessionType: isWork ? "focus" : "break",
     progress,
+    pipMode,
     userName: participantName || "User",
     onPlayPause: handlePlayPause,
     participantCount: participants.length,

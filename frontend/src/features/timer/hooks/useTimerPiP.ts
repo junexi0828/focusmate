@@ -8,6 +8,7 @@ interface UseTimerPiPProps {
   status: TimerStatus;
   sessionType: SessionType;
   progress: number; // 0-100
+  pipMode?: "square" | "wide";
   userName?: string; // User name to display
   onPlayPause?: () => void; // Callback for play/pause from PiP controls
   participantCount?: number; // Number of active participants
@@ -19,6 +20,7 @@ export function useTimerPiP({
   status,
   sessionType,
   progress,
+  pipMode = "square",
   userName = "User",
   onPlayPause,
   participantCount = 0,
@@ -120,6 +122,21 @@ export function useTimerPiP({
     setEtaInfo({ text: `종료 ${etaText} · ${percentText}`, percentText, percentValue, etaText });
   }, [minutes, seconds, progress]);
 
+  useEffect(() => {
+    const nextSize = pipMode === "wide" ? { width: 800, height: 200 } : { width: 400, height: 400 };
+    if (canvasRef.current) {
+      canvasRef.current.width = nextSize.width;
+      canvasRef.current.height = nextSize.height;
+    }
+    setPipWindowSize(nextSize);
+
+    if (isPipActive && document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(() => {});
+      setIsPipActive(false);
+      toast.info("PiP 모드가 변경되어 종료되었습니다. 다시 켜주세요.");
+    }
+  }, [pipMode, isPipActive]);
+
   const drawTimer = useCallback(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx || !canvasRef.current) return;
@@ -144,9 +161,9 @@ export function useTimerPiP({
 
     // Level 1 (Small): Timer only - matches browser minimum (<300px width)
     // Level 2 (Medium): Timer + Participant count (>=300px)
-    const isWide = pipWidth / Math.max(1, pipHeight) >= 1.8;
-    const isSmall = pipWidth < 300 || pipHeight < 250;
-    const isMedium = !isSmall;
+    const isWide = pipMode === "wide";
+    const isSmall = !isWide && (pipWidth < 300 || pipHeight < 250);
+    const isMedium = !isWide && !isSmall;
 
     // Debug: Log size and level (only when PiP is active)
     if (document.pictureInPictureElement) {
@@ -347,50 +364,13 @@ export function useTimerPiP({
       ctx.fillText(participantText, centerX, participantTextY);
     }
 
-    // 7. Medium Info (ETA + Percent + Mini Bar)
-    let barBottomY = 0;
-    if (isMedium) {
-      const infoText = etaInfo.text;
-      ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-      ctx.fillStyle = "#a1a1aa";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-
-      const infoY = centerY + radius + 12;
-      if (infoText) ctx.fillText(infoText, centerX, infoY);
-
-      // Mini progress bar
-      const barWidth = 140;
-      const barHeight = 6;
-      const barX = centerX - barWidth / 2;
-      const barY = infoY + 10;
-
-      ctx.beginPath();
-      ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
-      drawRoundRect(barX, barY, barWidth, barHeight, 3);
-      ctx.fill();
-
-      const percentValue = Math.max(0, Math.min(100, Number(etaInfo.percentText.replace("%", "")) || 0));
-      const fillWidth = (percentValue / 100) * barWidth;
-      if (fillWidth > 0) {
-        ctx.beginPath();
-        ctx.fillStyle = sessionType === "focus" ? "#ef4444" : "#3b82f6";
-        drawRoundRect(barX, barY, fillWidth, barHeight, 3);
-        ctx.fill();
-      }
-
-      barBottomY = barY + barHeight;
-    }
-
     // 8. Pulse / Breathing Effect (Bottom Indicator)
     if (status === "running") {
       const time = Date.now() / 1000;
       const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
 
       let dotY = 390; // Fixed near bottom to ensure visibility
-      if (barBottomY > 0) {
-        dotY = Math.min(390, barBottomY + 16);
-      } else if (participantTextY > 0) {
+      if (participantTextY > 0) {
         dotY = Math.min(390, participantTextY + 20);
       }
 
@@ -403,7 +383,7 @@ export function useTimerPiP({
       ctx.fill();
       ctx.shadowBlur = 0;
     }
-  }, [minutes, seconds, status, sessionType, userName, participantCount, pipWindowSize, etaInfo]);
+  }, [minutes, seconds, status, sessionType, userName, participantCount, pipWindowSize, etaInfo, pipMode]);
 
   // Loop to keep updating the canvas stream
   // Use setInterval instead of requestAnimationFrame for better background performance
@@ -458,6 +438,13 @@ export function useTimerPiP({
         // Draw current frame
         drawTimer();
 
+        const modeSize = pipMode === "wide" ? { width: 800, height: 200 } : { width: 400, height: 400 };
+        if (canvasRef.current) {
+          canvasRef.current.width = modeSize.width;
+          canvasRef.current.height = modeSize.height;
+        }
+        setPipWindowSize(modeSize);
+
         // Request PiP
         const pipWindow = await videoRef.current.requestPictureInPicture();
         if (isMounted.current) {
@@ -501,7 +488,7 @@ export function useTimerPiP({
         toast.error("PiP 실행 중 오류가 발생했습니다");
       }
     }
-  }, [isSupported, drawTimer]);
+  }, [isSupported, drawTimer, pipMode]);
 
   // Handle Browser Native PiP Button
   useEffect(() => {

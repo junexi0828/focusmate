@@ -6,7 +6,7 @@ import { TimerDisplay } from "../features/timer/components/TimerDisplay";
 import { TimerControls } from "../features/timer/components/TimerControls";
 import { ParticipantList } from "../features/participants/components/ParticipantListOriginal";
 import { RoomSettingsDialog } from "../features/room/components/RoomSettingsDialog";
-import { LogOut, Copy, Check, Trash2 } from "lucide-react";
+import { LogOut, Copy, Check, Trash2, PictureInPicture2 } from "lucide-react";
 import { toast } from "sonner";
 import { roomService } from "../features/room/services/roomService";
 // import { Room } from "../features/room/types/room.types"; // Handled by context
@@ -78,12 +78,15 @@ const QUICK_SIGNALS: QuickSignal[] = [
   },
 ];
 
+const PIP_MODE_KEY = "pip-mode";
+
 interface RoomPageProps {
   onLeaveRoom: () => void;
 }
 
 export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const { roomId } = useParams({ from: "/room/$roomId" });
+  const [pipMode, setPipMode] = useState<"square" | "wide">("square");
 
   const {
       roomId: currentRoomId,
@@ -114,6 +117,21 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
   const [chatInput, setChatInput] = useState("");
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const CHAT_MAX_LENGTH = 300;
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem(PIP_MODE_KEY);
+    if (savedMode === "wide" || savedMode === "square") {
+      setPipMode(savedMode);
+    }
+  }, []);
+
+  const togglePipMode = () => {
+    const nextMode = pipMode === "square" ? "wide" : "square";
+    setPipMode(nextMode);
+    localStorage.setItem(PIP_MODE_KEY, nextMode);
+    window.dispatchEvent(new CustomEvent("pip-mode-change", { detail: nextMode }));
+    toast.success(`PiP 모드가 ${nextMode === "square" ? "원형" : "가로바"}로 변경되었습니다`);
+  };
 
   // Initial Join Logic
   useEffect(() => {
@@ -313,6 +331,10 @@ export function RoomPage({ onLeaveRoom }: RoomPageProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={togglePipMode}>
+                <PictureInPicture2 className="w-4 h-4 mr-2" />
+                PiP {pipMode === "square" ? "원형" : "가로바"}
+              </Button>
               <RoomSettingsDialog
                 focusTime={focusTime}
                 breakTime={breakTime}
