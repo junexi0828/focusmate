@@ -59,25 +59,43 @@ class NotificationWebSocketManager(BaseConnectionManager[str]):
                 logger.error(f"Failed to unsubscribe from user notifications: {e}")
 
     async def send_notification(self, notification: dict[str, Any], user_id: str) -> bool:
-        """Send notification to user via Redis Pub/Sub.
+        """Send notification to user via Redis Pub/Sub with local fallback.
 
-        This method publishes the notification to Redis, ensuring it reaches the user
-        regardless of which server they are connected to.
+        ARCHITECTURE NOTE (Single Server Mode):
+        Since the Redis Pub/Sub listener is disabled (see main.py:84-87),
+        we immediately deliver to local connections after publishing.
+        This ensures notifications are delivered in single-server deployments.
+
+        TODO (Multi-Server Mode):
+        When scaling to multiple servers, enable the Redis listener and
+        add a condition: only call send_notification_local() if listener is inactive.
+        Otherwise, the listener will handle delivery to avoid duplicate sends.
 
         Args:
             notification: Notification data
             user_id: User identifier
 
         Returns:
-            True (always returns True as delivery is async via Redis)
+            True if delivered locally, False otherwise
         """
         try:
             from app.infrastructure.redis.pubsub_manager import redis_pubsub_manager
+
+            # Publish to Redis (for future multi-server support & persistence)
             await redis_pubsub_manager.publish_notification(user_id, notification)
-            return True
+
+            # IMMEDIATE local delivery (since listener is disabled)
+            # This prevents notification loss in single-server mode
+            return await self.send_notification_local(notification, user_id)
+
         except Exception as e:
             logger.error(f"Error publishing notification: {e}")
-            return False
+            # Fallback: try local delivery even if Redis publish failed
+            try:
+                return await self.send_notification_local(notification, user_id)
+            except Exception as local_error:
+                logger.error(f"Local notification delivery also failed: {local_error}")
+                return False
 
     async def send_notification_local(self, notification: dict[str, Any], user_id: str) -> bool:
         """Send notification to local active connections for a specific user.
