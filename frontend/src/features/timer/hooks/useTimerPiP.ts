@@ -182,9 +182,10 @@ export function useTimerPiP({
 
     if (isWide) {
       // Wide bar-only layout
-      const paddingX = 16;
-      const barHeight = 8;
-      const barWidth = Math.max(120, width - paddingX * 2);
+      const scale = Math.min(1.6, Math.max(1, width / 800));
+      const paddingX = Math.round(16 * scale);
+      const barHeight = Math.round(8 * scale);
+      const barWidth = Math.max(Math.round(120 * scale), width - paddingX * 2);
       const barX = (width - barWidth) / 2;
       const barY = Math.round(height * 0.55);
 
@@ -199,10 +200,12 @@ export function useTimerPiP({
       const leftText = participantCount > 0
         ? `${participantCount}명 집중 중 · ${etaInfo.percentText}`
         : `${etaInfo.percentText}`;
-      ctx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.font = `${Math.round(12 * scale)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
       ctx.fillStyle = "#a1a1aa";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
+      ctx.shadowBlur = 6 * scale;
       ctx.fillText(leftText, barX, Math.round(height * 0.35));
 
       // Right text: ETA
@@ -210,33 +213,68 @@ export function useTimerPiP({
         ctx.textAlign = "right";
         ctx.fillText(`종료 ${etaInfo.etaText}`, barX + barWidth, Math.round(height * 0.35));
       }
+      ctx.shadowBlur = 0;
 
       // Track
       ctx.beginPath();
       ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
-      drawRoundRect(barX, barY, barWidth, barHeight, 4);
+      drawRoundRect(barX, barY, barWidth, barHeight, Math.round(4 * scale));
       ctx.fill();
 
       // Fill
       const fillWidth = (Math.max(0, Math.min(100, etaInfo.percentValue)) / 100) * barWidth;
       if (fillWidth > 0) {
         ctx.beginPath();
-        ctx.fillStyle = sessionType === "focus" ? "#ef4444" : "#3b82f6";
-        drawRoundRect(barX, barY, fillWidth, barHeight, 4);
+        const time = Date.now() / 1000;
+        const breathe = (Math.sin(time * 2) + 1) / 2; // 0..1
+        ctx.fillStyle = sessionType === "focus"
+          ? `rgba(239, 68, 68, ${0.7 + 0.3 * breathe})`
+          : `rgba(59, 130, 246, ${0.7 + 0.3 * breathe})`;
+        drawRoundRect(barX, barY, fillWidth, barHeight, Math.round(4 * scale));
         ctx.fill();
       }
+
+      // Moving highlight sweep on the bar (subtle)
+      if (status === "running" && fillWidth > 0) {
+        const time = Date.now() / 1000;
+        const sweepWidth = Math.max(Math.round(24 * scale), Math.round(barWidth * 0.15));
+        const speed = 90 * scale; // px/sec
+        const travel = barWidth + sweepWidth;
+        const offset = (time * speed) % travel;
+        const sweepX = barX + offset - sweepWidth;
+
+        ctx.beginPath();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        drawRoundRect(sweepX, barY - Math.round(1 * scale), sweepWidth, barHeight + Math.round(2 * scale), Math.round(6 * scale));
+        ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
+      }
+
+      // Neon baseline glow under bar
+      ctx.beginPath();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = sessionType === "focus" ? "rgba(239, 68, 68, 0.18)" : "rgba(59, 130, 246, 0.18)";
+      ctx.lineWidth = Math.max(1, Math.round(2 * scale));
+      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.35)" : "rgba(59, 130, 246, 0.35)";
+      ctx.shadowBlur = 10 * scale;
+      ctx.moveTo(barX, barY + barHeight + Math.round(6 * scale));
+      ctx.lineTo(barX + barWidth, barY + barHeight + Math.round(6 * scale));
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalCompositeOperation = "source-over";
 
       // Pulse at fill edge
       if (status === "running") {
         const time = Date.now() / 1000;
-        const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2;
+        const alpha = (Math.sin(time * 2) + 1) / 2 * 0.6 + 0.2;
         const pulseX = barX + Math.max(6, fillWidth);
         const pulseY = barY + barHeight / 2;
         ctx.beginPath();
-        ctx.arc(pulseX, pulseY, 5, 0, 2 * Math.PI);
+        ctx.arc(pulseX, pulseY, Math.round(6 * scale), 0, 2 * Math.PI);
         ctx.fillStyle = sessionType === "focus" ? `rgba(239, 68, 68, ${alpha})` : `rgba(59, 130, 246, ${alpha})`;
         ctx.shadowColor = sessionType === "focus" ? "#ef4444" : "#3b82f6";
-        ctx.shadowBlur = 10 * alpha;
+        ctx.shadowBlur = 14 * alpha * scale;
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -294,7 +332,59 @@ export function useTimerPiP({
     ctx.fillText(timeStr, centerX, centerY + 20);
     ctx.shadowBlur = 0; // Reset
 
-    // 4. Progress Ring with Gradient & Glow
+    // 4. Hologram-like accents (Square mode only)
+    if (!isWide && status === "running") {
+      const time = Date.now() / 1000;
+      const pulse = (Math.sin(time * 1.6) + 1) / 2;
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+
+      // Outer faint halo
+      ctx.beginPath();
+      ctx.strokeStyle = sessionType === "focus"
+        ? `rgba(239, 68, 68, ${0.08 + 0.08 * pulse})`
+        : `rgba(59, 130, 246, ${0.08 + 0.08 * pulse})`;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.25)" : "rgba(59, 130, 246, 0.25)";
+      ctx.shadowBlur = 12;
+      ctx.arc(0, 0, radius + 16, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Rotating thin rings
+      const ringAlpha = 0.12 + 0.12 * pulse;
+      ctx.rotate(time * 0.4);
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha})`;
+      ctx.lineWidth = 1;
+      ctx.arc(0, 0, radius + 8, 0.1, 2.2 * Math.PI);
+      ctx.stroke();
+
+      ctx.rotate(-time * 0.9);
+      ctx.beginPath();
+      ctx.strokeStyle = sessionType === "focus"
+        ? `rgba(239, 68, 68, ${0.12 + 0.1 * pulse})`
+        : `rgba(59, 130, 246, ${0.12 + 0.1 * pulse})`;
+      ctx.lineWidth = 1;
+      ctx.arc(0, 0, radius + 4, 1.3, 2.6 * Math.PI);
+      ctx.stroke();
+
+      // Subtle sparkle points
+      for (let i = 0; i < 6; i++) {
+        const angle = time * 0.8 + i * (Math.PI / 3);
+        const x = Math.cos(angle) * (radius + 14);
+        const y = Math.sin(angle) * (radius + 14);
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255,255,255, ${0.15 + 0.2 * pulse})`;
+        ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    // 5. Progress Ring with Gradient & Glow
     // Background Ring (Track)
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
