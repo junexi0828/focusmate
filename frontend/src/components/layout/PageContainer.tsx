@@ -14,7 +14,7 @@ export function PageContainer({ children, className }: PageContainerProps) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
       className={cn(
-        "flex-1 m-4 h-[calc(100vh-2rem)] overflow-hidden rounded-[2rem]",
+        "flex-1 m-4 min-h-[calc(100vh-2rem)] h-auto rounded-[2rem]",
         "border border-white/10 dark:border-white/5",
         "bg-white/40 dark:bg-black/40 backdrop-blur-3xl",
         "shadow-2xl",

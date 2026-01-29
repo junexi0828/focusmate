@@ -268,7 +268,7 @@ function CommunityComponent() {
 
   return (
     <PageContainer>
-      <div className="h-full overflow-y-auto custom-scrollbar">
+      <div className="h-full">
         <CommunityPage
           posts={uiPosts}
           onCreatePost={handleCreatePost}
