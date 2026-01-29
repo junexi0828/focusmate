@@ -33,12 +33,29 @@ export function useTimerPiP({
   const isMounted = useRef(true);
   const [isPipActive, setIsPipActive] = useState(false);
   const [pipWindowSize, setPipWindowSize] = useState<{ width: number; height: number }>({ width: 400, height: 400 });
+  const lastPipSizeRef = useRef<{ width: number; height: number }>({ width: 400, height: 400 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
 
   // Check browser support
   const isSupported = 'pictureInPictureEnabled' in document;
+
+  const updateCanvasSize = useCallback((width: number, height: number) => {
+    const nextWidth = Math.round(width || 400);
+    const nextHeight = Math.round(height || 400);
+    const canvas = canvasRef.current;
+    if (canvas && (canvas.width !== nextWidth || canvas.height !== nextHeight)) {
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
+    }
+
+    const last = lastPipSizeRef.current;
+    if (last.width !== nextWidth || last.height !== nextHeight) {
+      lastPipSizeRef.current = { width: nextWidth, height: nextHeight };
+      setPipWindowSize({ width: nextWidth, height: nextHeight });
+    }
+  }, []);
 
   // Initialize canvas and video elements once
   useEffect(() => {
@@ -119,8 +136,6 @@ export function useTimerPiP({
     const width = canvasRef.current.width;
     const height = canvasRef.current.height;
     const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = 145; // Adjusted for 400x400 canvas
 
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
@@ -128,26 +143,30 @@ export function useTimerPiP({
     // Determine display level based on ACTUAL PiP window size
     // Get real-time size from pictureInPictureElement instead of state
     const pipElement = document.pictureInPictureElement as HTMLVideoElement | null;
-    const actualWidth = pipElement?.width || pipWindowSize.width;
-    const actualHeight = pipElement?.height || pipWindowSize.height;
+    const actualWidth = pipElement?.width || pipWindowSize.width || width;
+    const actualHeight = pipElement?.height || pipWindowSize.height || height;
 
-    // Level 1 (Small): Timer only - matches browser minimum (<300px width)
-    // Level 2 (Medium): Timer + Participant count (300-360px)
-    // Level 3 (Large): Full info (>=360px) - Easily reachable on 400x400 canvas
     const pipWidth = actualWidth;
     const pipHeight = actualHeight;
+    const minDim = Math.min(pipWidth, pipHeight);
 
-    // Browser minimum is typically around 260px width.
-    // We set threshold to 300 to ensure "Small" is reachable at min size.
-    const isSmall = pipWidth < 300 || pipHeight < 250;
-    // Lowered upper bound from 450 to 360 to make "Large" (Chat) easier to access
-    const isMedium = !isSmall && (pipWidth < 360 || pipHeight < 360);
+    // Level 1 (Small): Timer only - matches browser minimum
+    // Level 2 (Medium): Timer + Participant count
+    // Level 3 (Large): Full info (chat)
+    const isSmall = minDim < 280;
+    const isMedium = !isSmall && minDim < 340;
     const isLarge = !isSmall && !isMedium;
 
     // Debug: Log size and level (only when PiP is active)
     if (document.pictureInPictureElement) {
       console.log(`[PiP] Size: ${pipWidth}x${pipHeight}, Level: ${isSmall ? 'Small' : isMedium ? 'Medium' : 'Large'}`);
     }
+
+    const scale = Math.min(width, height) / 400;
+    const padding = 16 * scale;
+    const centerY = height * (isLarge ? 0.46 : isMedium ? 0.48 : 0.5);
+    const radiusMax = Math.min(width, height) / 2 - padding - (isLarge ? 40 * scale : 20 * scale);
+    const radius = Math.min(145 * scale, radiusMax);
 
     // 1. Modern Deep Gradient Background
     // Create a radial gradient for a "spotlight" effect
@@ -162,26 +181,26 @@ export function useTimerPiP({
     // Hide in Small mode for clean minimal view (YouTube PiP style)
     if (!isSmall) {
       // User Name
-      ctx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.font = `500 ${Math.round(20 * scale)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
       ctx.fillStyle = "#a1a1aa"; // zinc-400
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(userName, centerX, centerY - 80);
+      ctx.fillText(userName, centerX, centerY - 80 * scale);
 
       // Session Type Active Text
       const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
-      ctx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.font = `800 ${Math.round(26 * scale)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
       ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd"; // Soft Red or Blue
       ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
       ctx.shadowBlur = 12;
-      ctx.fillText(sessionLabel, centerX, centerY - 50);
+      ctx.fillText(sessionLabel, centerX, centerY - 50 * scale);
       ctx.shadowBlur = 0; // Reset shadow
     }
 
     // 3. Draw Time (Modern Typography)
     const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
     // Use tabular-nums feature settings if possible, or a font known for good tabular numbers
-    ctx.font = "700 100px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    ctx.font = `700 ${Math.round(100 * scale)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -200,7 +219,7 @@ export function useTimerPiP({
         ctx.shadowBlur = 10;
     }
 
-    ctx.fillText(timeStr, centerX, centerY + 20);
+    ctx.fillText(timeStr, centerX, centerY + 20 * scale);
     ctx.shadowBlur = 0; // Reset
 
     // 4. Progress Ring with Gradient & Glow
@@ -208,7 +227,7 @@ export function useTimerPiP({
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Very subtle white track
-    ctx.lineWidth = 12;
+    ctx.lineWidth = 12 * scale;
     ctx.lineCap = "round";
     ctx.stroke();
 
@@ -235,7 +254,7 @@ export function useTimerPiP({
         }
 
         ctx.strokeStyle = gradient;
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 12 * scale;
         ctx.lineCap = "round";
 
         // Add Glow to the ring
@@ -251,10 +270,10 @@ export function useTimerPiP({
         const endY = centerY + radius * Math.sin(endAngle);
 
         ctx.beginPath();
-        ctx.arc(endX, endY, 10, 0, 2 * Math.PI);
+        ctx.arc(endX, endY, 10 * scale, 0, 2 * Math.PI);
         ctx.fillStyle = "#ffffff";
         ctx.shadowColor = "rgba(255,255,255,0.8)";
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 10 * scale;
         ctx.fill();
         ctx.shadowBlur = 0;
     }
@@ -262,13 +281,13 @@ export function useTimerPiP({
     // 6. Participant Count (Level 2+: Medium and Large)
     let participantTextY = 0;
     if ((isMedium || isLarge) && participantCount > 0) {
-      ctx.font = "600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.font = `600 ${Math.round(15 * scale)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
       ctx.fillStyle = "#a1a1aa"; // zinc-400
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const participantText = `${participantCount}명 집중 중`;
-      participantTextY = centerY + radius + 18; // Further reduced to fit chat + pulse
+      participantTextY = centerY + radius + 18 * scale;
 
       ctx.fillText(participantText, centerX, participantTextY);
     }
@@ -277,29 +296,35 @@ export function useTimerPiP({
     let chatEndY = participantTextY;
     if (isLarge && recentMessages.length > 0) {
       const messages = recentMessages.slice(-2); // Last 2 messages
-      let yOffset = participantTextY > 0 ? participantTextY + 12 : centerY + radius + 18; // Further reduced
+      let yOffset = participantTextY > 0 ? participantTextY + 12 * scale : centerY + radius + 18 * scale;
 
-      ctx.font = "500 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.font = `500 ${Math.round(11 * scale)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
       ctx.textAlign = "center";
 
-      messages.forEach((msg, index) => {
-        // Truncate long messages (shorter for smaller canvas)
-        const maxLength = 30;
-        const shortText = msg.text.length > maxLength
-          ? msg.text.substring(0, maxLength) + '...'
-          : msg.text;
+      const lineHeight = 12 * scale;
+      const availableWidth = width - padding * 2;
+      const availableHeight = height - padding - yOffset;
+      const maxLines = Math.min(messages.length, Math.floor(availableHeight / lineHeight));
+      const visibleMessages = maxLines > 0 ? messages.slice(-maxLines) : [];
 
-        // Sender name (slightly brighter)
-        ctx.fillStyle = "#a1a1aa"; // zinc-400
+      const truncateToWidth = (text: string) => {
+        if (ctx.measureText(text).width <= availableWidth) return text;
+        let truncated = text;
+        while (truncated.length > 0 && ctx.measureText(`${truncated}...`).width > availableWidth) {
+          truncated = truncated.slice(0, -1);
+        }
+        return truncated.length > 0 ? `${truncated}...` : text;
+      };
+
+      visibleMessages.forEach((msg) => {
         const senderText = `${msg.sender}:`;
-        const messageText = shortText;
+        const messageText = msg.text;
 
-        // Draw as single line
-        const fullText = `${senderText} ${messageText}`;
+        const fullText = truncateToWidth(`${senderText} ${messageText}`);
         ctx.fillStyle = "#71717a"; // zinc-500
         ctx.fillText(fullText, centerX, yOffset);
 
-        yOffset += 12; // Further reduced to ensure everything fits within 400px
+        yOffset += lineHeight;
       });
 
       chatEndY = yOffset;
@@ -311,21 +336,23 @@ export function useTimerPiP({
       const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
 
       // Position dot below all content
-      let dotY = centerY + radius + 35;
+      let dotY = centerY + radius + 35 * scale;
       if (chatEndY > 0) {
-        dotY = chatEndY + 8;
+        dotY = chatEndY + 8 * scale;
       } else if (participantTextY > 0) {
-        dotY = participantTextY + 20;
+        dotY = participantTextY + 20 * scale;
       }
 
-      ctx.beginPath();
-      ctx.arc(centerX, dotY, 6, 0, 2 * Math.PI);
+      if (dotY + 8 * scale < height - padding) {
+        ctx.beginPath();
+        ctx.arc(centerX, dotY, 6 * scale, 0, 2 * Math.PI);
 
-      ctx.fillStyle = sessionType === 'focus' ? `rgba(239, 68, 68, ${alpha})` : `rgba(59, 130, 246, ${alpha})`;
-      ctx.shadowColor = sessionType === 'focus' ? "#ef4444" : "#3b82f6";
-      ctx.shadowBlur = 10 * alpha;
-      ctx.fill();
-      ctx.shadowBlur = 0;
+        ctx.fillStyle = sessionType === 'focus' ? `rgba(239, 68, 68, ${alpha})` : `rgba(59, 130, 246, ${alpha})`;
+        ctx.shadowColor = sessionType === 'focus' ? "#ef4444" : "#3b82f6";
+        ctx.shadowBlur = 10 * alpha;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
     }
   }, [minutes, seconds, status, sessionType, progress, userName, participantCount, recentMessages, pipWindowSize]);
 
@@ -386,8 +413,8 @@ export function useTimerPiP({
         const pipWindow = await videoRef.current.requestPictureInPicture();
         if (isMounted.current) {
           setIsPipActive(true);
-          const initialSize = { width: pipWindow.width, height: pipWindow.height };
-          setPipWindowSize(initialSize);
+          const initialSize = { width: pipWindow.width || 400, height: pipWindow.height || 400 };
+          updateCanvasSize(initialSize.width, initialSize.height);
           console.log('[PiP] Opened with size:', initialSize);
         }
         toast.success("타이머가 PiP 모드로 전환되었습니다");
@@ -396,7 +423,7 @@ export function useTimerPiP({
         pipWindow.addEventListener('resize', () => {
           if (isMounted.current) {
             const newSize = { width: pipWindow.width, height: pipWindow.height };
-            setPipWindowSize(newSize);
+            updateCanvasSize(newSize.width, newSize.height);
             console.log('[PiP] Window resized:', newSize);
             // Immediately redraw when size changes
             drawTimer();
@@ -407,7 +434,7 @@ export function useTimerPiP({
         videoRef.current.onleavepictureinpicture = () => {
           if (isMounted.current) {
             setIsPipActive(false);
-            setPipWindowSize({ width: 400, height: 400 }); // Reset to default
+            updateCanvasSize(400, 400);
           }
         };
       }
@@ -425,7 +452,7 @@ export function useTimerPiP({
         toast.error("PiP 실행 중 오류가 발생했습니다");
       }
     }
-  }, [isSupported, drawTimer]);
+  }, [isSupported, drawTimer, updateCanvasSize]);
 
   // Handle Browser Native PiP Button
   useEffect(() => {
