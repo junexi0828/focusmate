@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PageTransition } from "../components/PageTransition";
-import { PageContainer } from "../components/layout/PageContainer";
+import { motion } from "framer-motion";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -21,7 +21,7 @@ import {
 } from "../api/settings";
 import { UserSettings } from "../types/settings";
 import { toast } from "sonner";
-import { Loader2, Settings as SettingsIcon, Lock, Bell, Palette } from "lucide-react";
+import { Loader2, Lock, Bell, Palette } from "lucide-react";
 import { getErrorMessage } from "../utils/error";
 import { useTheme } from "../hooks/useTheme";
 
@@ -175,14 +175,18 @@ export default function Settings() {
   }
 
   return (
-    <PageContainer>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">설정</h1>
-          <p className="text-muted-foreground mt-1">
-            계정 및 앱 설정을 관리하세요
-          </p>
-        </div>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="space-y-6"
+    >
+      <div>
+        <h1 className="text-2xl font-bold">설정</h1>
+        <p className="text-muted-foreground mt-1">
+          계정 및 앱 설정을 관리하세요
+        </p>
+      </div>
 
           <Tabs defaultValue="account" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
@@ -469,7 +473,6 @@ export default function Settings() {
               </Card>
             </TabsContent>
           </Tabs>
-      </div>
-    </PageContainer>
+    </motion.div>
   );
 }

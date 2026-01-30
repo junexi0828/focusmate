@@ -38,6 +38,22 @@ export function useTimerPiP({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const pipWindowRef = useRef<PictureInPictureWindow | null>(null);
   const rafRef = useRef<number | null>(null);
+  const squareBgRef = useRef<HTMLCanvasElement | null>(null);
+  const wideBgRef = useRef<HTMLCanvasElement | null>(null);
+  const squareBgKeyRef = useRef<string>("");
+  const wideBgKeyRef = useRef<string>("");
+  const squareTextRef = useRef<HTMLCanvasElement | null>(null);
+  const wideTextRef = useRef<HTMLCanvasElement | null>(null);
+  const squareTextKeyRef = useRef<string>("");
+  const wideTextKeyRef = useRef<string>("");
+  const squareTrackRef = useRef<HTMLCanvasElement | null>(null);
+  const squareTrackKeyRef = useRef<string>("");
+  const squareProgressGradientRef = useRef<CanvasGradient | null>(null);
+  const squareProgressKeyRef = useRef<string>("");
+  const wideTrackPatternRef = useRef<CanvasPattern | null>(null);
+  const wideTrackPatternKeyRef = useRef<string>("");
+  const wideFillPatternRef = useRef<CanvasPattern | null>(null);
+  const wideFillPatternKeyRef = useRef<string>("");
 
   // Check browser support
   const isSupported = 'pictureInPictureEnabled' in document;
@@ -147,6 +163,7 @@ export function useTimerPiP({
     const centerX = width / 2;
     const centerY = height / 2;
     const radius = 145; // Adjusted for 400x400 canvas
+    const now = Date.now() / 1000;
 
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
@@ -183,6 +200,213 @@ export function useTimerPiP({
       }
     };
 
+    const drawSquareBackground = () => {
+      const key = `${width}x${height}`;
+      if (!squareBgRef.current || squareBgKeyRef.current !== key) {
+        const bg = document.createElement("canvas");
+        bg.width = width;
+        bg.height = height;
+        const bgCtx = bg.getContext("2d");
+        if (bgCtx) {
+          const bgGradient = bgCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width);
+          bgGradient.addColorStop(0, "#27272a");
+          bgGradient.addColorStop(0.7, "#18181b");
+          bgGradient.addColorStop(1, "#09090b");
+          bgCtx.fillStyle = bgGradient;
+          bgCtx.fillRect(0, 0, width, height);
+        }
+        squareBgRef.current = bg;
+        squareBgKeyRef.current = key;
+      }
+      if (squareBgRef.current) {
+        ctx.drawImage(squareBgRef.current, 0, 0);
+      }
+    };
+
+    const drawWideBackground = () => {
+      const key = `${width}x${height}`;
+      if (!wideBgRef.current || wideBgKeyRef.current !== key) {
+        const bg = document.createElement("canvas");
+        bg.width = width;
+        bg.height = height;
+        const bgCtx = bg.getContext("2d");
+        if (bgCtx) {
+          const bgGradient = bgCtx.createLinearGradient(0, 0, width, 0);
+          bgGradient.addColorStop(0, "#18181b");
+          bgGradient.addColorStop(1, "#09090b");
+          bgCtx.fillStyle = bgGradient;
+          bgCtx.fillRect(0, 0, width, height);
+        }
+        wideBgRef.current = bg;
+        wideBgKeyRef.current = key;
+      }
+      if (wideBgRef.current) {
+        ctx.drawImage(wideBgRef.current, 0, 0);
+      }
+    };
+
+    const drawSquareText = () => {
+      const key = `${width}x${height}|${userName}|${sessionType}|${isSmall ? "S" : "M"}|${status}`;
+      if (!squareTextRef.current || squareTextKeyRef.current !== key) {
+        const textCanvas = document.createElement("canvas");
+        textCanvas.width = width;
+        textCanvas.height = height;
+        const textCtx = textCanvas.getContext("2d");
+        if (textCtx) {
+          // Name
+          textCtx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+          textCtx.fillStyle = "#a1a1aa";
+          textCtx.textAlign = "center";
+          textCtx.textBaseline = "middle";
+          textCtx.fillText(userName, centerX, centerY - 80);
+
+          // Session label
+          const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
+          textCtx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+          textCtx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd";
+          textCtx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
+          textCtx.shadowBlur = 12;
+          textCtx.fillText(sessionLabel, centerX, centerY - 50);
+          textCtx.shadowBlur = 0;
+        }
+        squareTextRef.current = textCanvas;
+        squareTextKeyRef.current = key;
+      }
+      if (squareTextRef.current) {
+        ctx.drawImage(squareTextRef.current, 0, 0);
+      }
+    };
+
+    const drawWideText = () => {
+      const leftText = participantCount > 0
+        ? `${participantCount}명 집중 중 · ${etaInfo.percentText}`
+        : `${etaInfo.percentText}`;
+      const rightText = etaInfo.etaText ? `종료 ${etaInfo.etaText}` : "";
+      const key = `${width}x${height}|${leftText}|${rightText}|${status}|${sessionType}`;
+      if (!wideTextRef.current || wideTextKeyRef.current !== key) {
+        const textCanvas = document.createElement("canvas");
+        textCanvas.width = width;
+        textCanvas.height = height;
+        const textCtx = textCanvas.getContext("2d");
+        if (textCtx) {
+          const scale = Math.min(1.6, Math.max(1, width / 800));
+          const paddingX = Math.round(16 * scale);
+          const barWidth = Math.max(Math.round(120 * scale), width - paddingX * 2);
+          const barX = (width - barWidth) / 2;
+
+          textCtx.font = `${Math.round(12 * scale)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
+          textCtx.fillStyle = "#a1a1aa";
+          textCtx.textAlign = "left";
+          textCtx.textBaseline = "middle";
+          textCtx.shadowColor = "rgba(0, 0, 0, 0.2)";
+          textCtx.shadowBlur = 6 * scale;
+          textCtx.fillText(leftText, barX, Math.round(height * 0.35));
+
+          if (rightText) {
+            textCtx.textAlign = "right";
+            textCtx.fillText(rightText, barX + barWidth, Math.round(height * 0.35));
+          }
+          textCtx.shadowBlur = 0;
+        }
+        wideTextRef.current = textCanvas;
+        wideTextKeyRef.current = key;
+      }
+      if (wideTextRef.current) {
+        ctx.drawImage(wideTextRef.current, 0, 0);
+      }
+    };
+
+    const drawSquareTrack = () => {
+      const key = `${width}x${height}|${radius}`;
+      if (!squareTrackRef.current || squareTrackKeyRef.current !== key) {
+        const trackCanvas = document.createElement("canvas");
+        trackCanvas.width = width;
+        trackCanvas.height = height;
+        const trackCtx = trackCanvas.getContext("2d");
+        if (trackCtx) {
+          trackCtx.beginPath();
+          trackCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+          trackCtx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+          trackCtx.lineWidth = 12;
+          trackCtx.lineCap = "round";
+          trackCtx.stroke();
+        }
+        squareTrackRef.current = trackCanvas;
+        squareTrackKeyRef.current = key;
+      }
+      if (squareTrackRef.current) {
+        ctx.drawImage(squareTrackRef.current, 0, 0);
+      }
+    };
+
+    const getSquareProgressGradient = () => {
+      const key = `${width}x${height}|${status}|${sessionType}`;
+      if (!squareProgressGradientRef.current || squareProgressKeyRef.current !== key) {
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        if (status === "completed") {
+          gradient.addColorStop(0, "#22c55e");
+          gradient.addColorStop(1, "#86efac");
+        } else if (sessionType === "focus") {
+          gradient.addColorStop(0, "#ef4444");
+          gradient.addColorStop(1, "#f97316");
+        } else {
+          gradient.addColorStop(0, "#3b82f6");
+          gradient.addColorStop(1, "#06b6d4");
+        }
+        squareProgressGradientRef.current = gradient;
+        squareProgressKeyRef.current = key;
+      }
+      return squareProgressGradientRef.current!;
+    };
+
+    const getWideTrackPattern = (barHeight: number) => {
+      const key = `${barHeight}`;
+      if (!wideTrackPatternRef.current || wideTrackPatternKeyRef.current !== key) {
+        const patternCanvas = document.createElement("canvas");
+        patternCanvas.width = 160;
+        patternCanvas.height = barHeight;
+        const pctx = patternCanvas.getContext("2d");
+        if (pctx) {
+          const grad = pctx.createLinearGradient(0, 0, patternCanvas.width, 0);
+          grad.addColorStop(0, "rgba(255, 255, 255, 0.06)");
+          grad.addColorStop(0.5, "rgba(255, 255, 255, 0.14)");
+          grad.addColorStop(1, "rgba(255, 255, 255, 0.06)");
+          pctx.fillStyle = grad;
+          pctx.fillRect(0, 0, patternCanvas.width, barHeight);
+        }
+        wideTrackPatternRef.current = ctx.createPattern(patternCanvas, "repeat");
+        wideTrackPatternKeyRef.current = key;
+      }
+      return wideTrackPatternRef.current!;
+    };
+
+    const getWideFillPattern = (barHeight: number) => {
+      const key = `${barHeight}|${sessionType}`;
+      if (!wideFillPatternRef.current || wideFillPatternKeyRef.current !== key) {
+        const patternCanvas = document.createElement("canvas");
+        patternCanvas.width = 160;
+        patternCanvas.height = barHeight;
+        const pctx = patternCanvas.getContext("2d");
+        if (pctx) {
+          const grad = pctx.createLinearGradient(0, 0, patternCanvas.width, 0);
+          if (sessionType === "focus") {
+            grad.addColorStop(0, "rgba(239, 68, 68, 1)");
+            grad.addColorStop(0.5, "rgba(249, 115, 22, 1)");
+            grad.addColorStop(1, "rgba(239, 68, 68, 1)");
+          } else {
+            grad.addColorStop(0, "rgba(59, 130, 246, 1)");
+            grad.addColorStop(0.5, "rgba(6, 182, 212, 1)");
+            grad.addColorStop(1, "rgba(59, 130, 246, 1)");
+          }
+          pctx.fillStyle = grad;
+          pctx.fillRect(0, 0, patternCanvas.width, barHeight);
+        }
+        wideFillPatternRef.current = ctx.createPattern(patternCanvas, "repeat");
+        wideFillPatternKeyRef.current = key;
+      }
+      return wideFillPatternRef.current!;
+    };
+
     if (isWide) {
       // Wide bar-only layout
       const scale = Math.min(1.6, Math.max(1, width / 800));
@@ -192,58 +416,44 @@ export function useTimerPiP({
       const barX = (width - barWidth) / 2;
       const barY = Math.round(height * 0.55);
 
-      // Background
-      const bgGradient = ctx.createLinearGradient(0, 0, width, 0);
-      bgGradient.addColorStop(0, "#18181b");
-      bgGradient.addColorStop(1, "#09090b");
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
+      drawWideBackground();
 
-      // Left text: participants + percent
-      const leftText = participantCount > 0
-        ? `${participantCount}명 집중 중 · ${etaInfo.percentText}`
-        : `${etaInfo.percentText}`;
-      ctx.font = `${Math.round(12 * scale)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
-      ctx.fillStyle = "#a1a1aa";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
-      ctx.shadowBlur = 6 * scale;
-      ctx.fillText(leftText, barX, Math.round(height * 0.35));
+      drawWideText();
 
-      // Right text: ETA
-      if (etaInfo.etaText) {
-        ctx.textAlign = "right";
-        ctx.fillText(`종료 ${etaInfo.etaText}`, barX + barWidth, Math.round(height * 0.35));
-      }
-      ctx.shadowBlur = 0;
+      const fillWidth = (Math.max(0, Math.min(100, etaInfo.percentValue)) / 100) * barWidth;
 
-      // Track
+      // Track (animated gradient background)
+      const trackOffset = (now * 40) % 160;
+      const trackPattern = getWideTrackPattern(barHeight);
       ctx.beginPath();
-      ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.save();
+      ctx.translate(-trackOffset, 0);
+      ctx.fillStyle = trackPattern;
       drawRoundRect(barX, barY, barWidth, barHeight, Math.round(4 * scale));
       ctx.fill();
+      ctx.restore();
 
-      // Fill
-      const fillWidth = (Math.max(0, Math.min(100, etaInfo.percentValue)) / 100) * barWidth;
+      // Fill (animated gradient + breathe)
       if (fillWidth > 0) {
+        const breathe = (Math.sin(now * 2) + 1) / 2; // 0..1
+        const fillOffset = (now * 60) % 160;
+        const fillPattern = getWideFillPattern(barHeight);
         ctx.beginPath();
-        const time = Date.now() / 1000;
-        const breathe = (Math.sin(time * 2) + 1) / 2; // 0..1
-        ctx.fillStyle = sessionType === "focus"
-          ? `rgba(239, 68, 68, ${0.65 + 0.2 * breathe})`
-          : `rgba(59, 130, 246, ${0.65 + 0.2 * breathe})`;
+        ctx.save();
+        ctx.globalAlpha = 0.55 + 0.3 * breathe;
+        ctx.translate(-fillOffset, 0);
+        ctx.fillStyle = fillPattern;
         drawRoundRect(barX, barY, fillWidth, barHeight, Math.round(4 * scale));
         ctx.fill();
+        ctx.restore();
       }
 
       // Moving highlight sweep on the bar (subtle)
       if (status === "running" && fillWidth > 0) {
-        const time = Date.now() / 1000;
         const sweepWidth = Math.max(Math.round(24 * scale), Math.round(barWidth * 0.15));
         const speed = 90 * scale; // px/sec
         const travel = barWidth + sweepWidth;
-        const offset = (time * speed) % travel;
+        const offset = (now * speed) % travel;
         const sweepX = barX + offset - sweepWidth;
 
         ctx.beginPath();
@@ -252,6 +462,24 @@ export function useTimerPiP({
         drawRoundRect(sweepX, barY - Math.round(1 * scale), sweepWidth, barHeight + Math.round(2 * scale), Math.round(6 * scale));
         ctx.fill();
         ctx.globalCompositeOperation = "source-over";
+      }
+
+      // Alive particles inside the filled bar
+      if (status === "running" && fillWidth > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const particleCount = 8;
+        for (let i = 0; i < particleCount; i++) {
+          const phase = (now * 40 + i * (barWidth / particleCount)) % barWidth;
+          const px = barX + phase;
+          if (px > barX + fillWidth) continue;
+          const py = barY + barHeight / 2 + Math.sin(now * 2 + i) * (barHeight * 0.35);
+          ctx.beginPath();
+          ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+          ctx.arc(px, py, Math.max(1.2, 2 * scale), 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        ctx.restore();
       }
 
       // Neon baseline glow under bar
@@ -269,8 +497,7 @@ export function useTimerPiP({
 
       // Pulse at fill edge
       if (status === "running") {
-        const time = Date.now() / 1000;
-        const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2;
+        const alpha = (Math.sin(now * 2) + 1) / 2 * 0.5 + 0.2;
         const pulseX = barX + Math.max(6, fillWidth);
         const pulseY = barY + barHeight / 2;
         ctx.beginPath();
@@ -284,31 +511,11 @@ export function useTimerPiP({
       return;
     }
 
-    // 1. Modern Deep Gradient Background
-    // Create a radial gradient for a "spotlight" effect
-    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width);
-    bgGradient.addColorStop(0, "#27272a"); // zinc-800 center
-    bgGradient.addColorStop(0.7, "#18181b"); // zinc-900 mid
-    bgGradient.addColorStop(1, "#09090b");   // zinc-950 edge
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, width, height);
+    // 1. Modern Deep Gradient Background (cached)
+    drawSquareBackground();
 
-    // 2. Draw Status Indicator (User Name & Session) - Top
-    // Always show in Small/Medium
-    ctx.font = "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-    ctx.fillStyle = "#a1a1aa"; // zinc-400
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(userName, centerX, centerY - 80);
-
-    // Session Type Active Text
-    const sessionLabel = sessionType === "focus" ? "FOCUS" : "BREAK";
-    ctx.font = "800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-    ctx.fillStyle = sessionType === "focus" ? "#fca5a5" : "#93c5fd"; // Soft Red or Blue
-    ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.5)" : "rgba(59, 130, 246, 0.5)";
-    ctx.shadowBlur = 12;
-    ctx.fillText(sessionLabel, centerX, centerY - 50);
-    ctx.shadowBlur = 0; // Reset shadow
+    // 2. Draw Status Indicator (User Name & Session) - Top (cached)
+    drawSquareText();
 
     // 3. Draw Time (Modern Typography)
     const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
@@ -336,13 +543,8 @@ export function useTimerPiP({
     ctx.shadowBlur = 0; // Reset
 
     // 4. Progress Ring with Gradient & Glow
-    // Background Ring (Track)
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Very subtle white track
-    ctx.lineWidth = 12;
-    ctx.lineCap = "round";
-    ctx.stroke();
+    // Background Ring (Track) - cached
+    drawSquareTrack();
 
     // Foreground Ring (Progress)
     if (progress > 0) {
@@ -353,19 +555,7 @@ export function useTimerPiP({
         // Counter-clockwise for "countdown" feel? No, standard clockwise is better for "progress done"
         ctx.arc(centerX, centerY, radius, startAngle, endAngle);
 
-        // Gradient Stroke
-        const gradient = ctx.createLinearGradient(0, 0, width, height);
-        if (status === 'completed') {
-            gradient.addColorStop(0, "#22c55e");
-            gradient.addColorStop(1, "#86efac");
-        } else if (sessionType === 'focus') {
-            gradient.addColorStop(0, "#ef4444"); // Red-500
-            gradient.addColorStop(1, "#f97316"); // Orange-500
-        } else {
-            gradient.addColorStop(0, "#3b82f6"); // Blue-500
-            gradient.addColorStop(1, "#06b6d4"); // Cyan-500
-        }
-
+        const gradient = getSquareProgressGradient();
         ctx.strokeStyle = gradient;
         ctx.lineWidth = 12;
         ctx.lineCap = "round";
@@ -391,6 +581,45 @@ export function useTimerPiP({
         ctx.shadowBlur = 0;
     }
 
+    // Medium-only breathing ring accents (pulsing)
+    if (isMedium && status === "running") {
+      const pulse = (Math.sin(now * 2) + 1) / 2;
+
+      ctx.beginPath();
+      ctx.strokeStyle = sessionType === "focus"
+        ? `rgba(239, 68, 68, ${0.08 + 0.12 * pulse})`
+        : `rgba(59, 130, 246, ${0.08 + 0.12 * pulse})`;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.25)" : "rgba(59, 130, 246, 0.25)";
+      ctx.shadowBlur = 10;
+      ctx.arc(centerX, centerY, radius + 14, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // Medium-only extra motion accents
+    if (isMedium && status === "running") {
+      const time = Date.now() / 1000;
+      const arcStart = time * 0.8;
+      const arcEnd = arcStart + Math.PI * 0.35;
+
+      ctx.beginPath();
+      ctx.strokeStyle = sessionType === "focus" ? "rgba(239, 68, 68, 0.25)" : "rgba(59, 130, 246, 0.25)";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.arc(centerX, centerY, radius + 10, arcStart, arcEnd);
+      ctx.stroke();
+
+      const pulse = (Math.sin(time * 2) + 1) / 2;
+      ctx.beginPath();
+      ctx.strokeStyle = sessionType === "focus"
+        ? `rgba(239, 68, 68, ${0.06 + 0.08 * pulse})`
+        : `rgba(59, 130, 246, ${0.06 + 0.08 * pulse})`;
+      ctx.lineWidth = 1;
+      ctx.arc(centerX, centerY, radius + 18, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
     // 6. Participant Count (Small/Medium)
     let participantTextY = 0;
     if (participantCount > 0) {
@@ -407,8 +636,7 @@ export function useTimerPiP({
 
     // 8. Pulse / Breathing Effect (Bottom Indicator)
     if (status === "running") {
-      const time = Date.now() / 1000;
-      const alpha = (Math.sin(time * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
+      const alpha = (Math.sin(now * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
 
       let dotY = centerY + radius + 45;
       if (participantTextY > 0) {
@@ -447,6 +675,20 @@ export function useTimerPiP({
       if (intervalId) window.clearInterval(intervalId);
     };
   }, [isPipActive, status, drawTimer]);
+
+  // Poll PiP window size to ensure Small/Medium transitions work across browsers
+  useEffect(() => {
+    if (!isPipActive) return;
+    const id = window.setInterval(() => {
+      const w = pipWindowRef.current?.width || 0;
+      const h = pipWindowRef.current?.height || 0;
+      if (w > 0 && h > 0) {
+        setPipWindowSize({ width: w, height: h });
+      }
+    }, 200);
+
+    return () => window.clearInterval(id);
+  }, [isPipActive]);
 
   const togglePiP = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) {

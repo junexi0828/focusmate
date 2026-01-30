@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { BrainCircuit, Coffee, Clock } from "lucide-react";
@@ -41,7 +41,7 @@ export function FocusTimeline({ sessions }: FocusTimelineProps) {
   }, [todaySessions]);
 
   return (
-    <Card className="h-full flex flex-col border-border bg-card">
+    <Card className="flex flex-col border-border bg-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -53,11 +53,11 @@ export function FocusTimeline({ sessions }: FocusTimelineProps) {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 pl-2 pr-4 pb-4">
+      <CardContent className="pl-2 pr-4 pb-4">
         {todaySessions.length === 0 ? (
           <EmptyState />
         ) : (
-          <ScrollArea className="h-[400px] pr-4">
+          <ScrollArea className="h-[320px] pr-4">
             <div className="relative pl-6 space-y-8 py-2">
               {/* Vertical Line */}
               <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border/50" />

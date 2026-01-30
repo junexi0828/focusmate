@@ -151,6 +151,7 @@ function CommunityComponent() {
 
   const handleAuthorUsernameChange = (value: string) => {
     navigate({
+      from: Route.fullPath,
       search: (prev) => ({
         ...prev,
         author_username: value || undefined,
@@ -161,6 +162,7 @@ function CommunityComponent() {
 
   const handleDateFromChange = (value: string) => {
     navigate({
+      from: Route.fullPath,
       search: (prev) => ({
         ...prev,
         date_from: value || undefined,
@@ -171,6 +173,7 @@ function CommunityComponent() {
 
   const handleDateToChange = (value: string) => {
     navigate({
+      from: Route.fullPath,
       search: (prev) => ({
         ...prev,
         date_to: value || undefined,
@@ -181,6 +184,7 @@ function CommunityComponent() {
 
   const handleClearAdvancedFilters = () => {
     navigate({
+      from: Route.fullPath,
       search: (prev) => ({
         ...prev,
         author_username: undefined,
@@ -194,6 +198,7 @@ function CommunityComponent() {
 
   const handleSearchChange = (query: string) => {
     navigate({
+      from: Route.fullPath,
       search: (prev) => ({
         ...prev,
         search: query || undefined,
@@ -212,6 +217,7 @@ function CommunityComponent() {
     };
 
     navigate({
+      from: Route.fullPath,
       search: (prev) => ({
         ...prev,
         category: categoryMap[category],
@@ -222,6 +228,7 @@ function CommunityComponent() {
 
   const handleSortByChange = (sortBy: string) => {
     navigate({
+      from: Route.fullPath,
       search: (prev) => ({
         ...prev,
         sort_by: sortBy as "recent" | "popular" | "trending" | "most_commented",
