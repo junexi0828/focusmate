@@ -581,20 +581,18 @@ export function useTimerPiP({
         ctx.shadowBlur = 0;
     }
 
-    // Medium-only breathing ring accents (pulsing)
+    // Medium-only breathing ring accents (soft pulse)
     if (isMedium && status === "running") {
-      const pulse = (Math.sin(now * 2) + 1) / 2;
+      const smoothPulse = 0.5 - 0.5 * Math.cos(now * 1.6);
+      const ringAlpha = 0.06 + 0.08 * smoothPulse;
 
       ctx.beginPath();
       ctx.strokeStyle = sessionType === "focus"
-        ? `rgba(239, 68, 68, ${0.08 + 0.12 * pulse})`
-        : `rgba(59, 130, 246, ${0.08 + 0.12 * pulse})`;
+        ? `rgba(239, 68, 68, ${ringAlpha})`
+        : `rgba(59, 130, 246, ${ringAlpha})`;
       ctx.lineWidth = 2;
-      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.25)" : "rgba(59, 130, 246, 0.25)";
-      ctx.shadowBlur = 10;
       ctx.arc(centerX, centerY, radius + 14, 0, 2 * Math.PI);
       ctx.stroke();
-      ctx.shadowBlur = 0;
     }
 
     // Medium-only extra motion accents
@@ -635,20 +633,27 @@ export function useTimerPiP({
     }
 
     // 8. Pulse / Breathing Effect (Bottom Indicator)
-    if (status === "running") {
-      const alpha = (Math.sin(now * 2) + 1) / 2 * 0.5 + 0.2; // 0.2 to 0.7
+    const pulseActive = status === "running" || status === "completed";
+    if (pulseActive) {
+      const speed = status === "completed" ? 0.9 : 1.6;
+      const smoothPulse = 0.5 - 0.5 * Math.cos(now * speed);
+      const alpha = 0.2 + 0.25 * smoothPulse;
 
       let dotY = centerY + radius + 45;
       if (participantTextY > 0) {
         dotY = Math.max(dotY, participantTextY + 18);
       }
 
-      ctx.beginPath();
-      ctx.arc(centerX, dotY, 6, 0, 2 * Math.PI);
+      const pulseColor = status === "completed"
+        ? "#22c55e"
+        : (sessionType === "focus" ? "#ef4444" : "#3b82f6");
 
-      ctx.fillStyle = sessionType === 'focus' ? `rgba(239, 68, 68, ${alpha})` : `rgba(59, 130, 246, ${alpha})`;
-      ctx.shadowColor = sessionType === 'focus' ? "#ef4444" : "#3b82f6";
-      ctx.shadowBlur = 10 * alpha;
+      ctx.beginPath();
+      ctx.arc(centerX, dotY, 5, 0, 2 * Math.PI);
+
+      ctx.fillStyle = `rgba(${pulseColor === "#22c55e" ? "34, 197, 94" : pulseColor === "#ef4444" ? "239, 68, 68" : "59, 130, 246"}, ${alpha})`;
+      ctx.shadowColor = pulseColor;
+      ctx.shadowBlur = 6 + 6 * smoothPulse;
       ctx.fill();
       ctx.shadowBlur = 0;
     }

@@ -46,8 +46,10 @@ from app.infrastructure.database.models.ranking import (  # noqa: F401
     RankingSession,
     RankingMiniGame,
     RankingVerificationRequest,
+    RankingVerificationRequest,
     RankingLeaderboard,
 )
+from app.domain.todo.models import Todo
 
 # Alembic Config object
 config = context.config

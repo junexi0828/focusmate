@@ -23,6 +23,7 @@ from app.api.v1.endpoints import (
     settings,
     stats,
     timer,
+    todos,
     users,
     verification,
     websocket,
@@ -40,6 +41,7 @@ api_router.include_router(contact.router)
 api_router.include_router(rooms.router)
 api_router.include_router(timer.router)
 api_router.include_router(participants.router)
+api_router.include_router(todos.router)
 api_router.include_router(stats.router)
 api_router.include_router(achievements.router)
 api_router.include_router(community.router)
