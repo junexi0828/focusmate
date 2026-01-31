@@ -182,7 +182,7 @@ export function ProfilePage({
                     .filter((a) => a.is_unlocked)
                     .slice(0, 3)
                     .map((achievement, index) => {
-                      const achievementId = achievement.achievement_id as AchievementId;
+                      const achievementId = (achievement.achievement_icon || 'first-session') as AchievementId;
                       const iconSrc = achievementIcons[achievementId] || achievementIcons['first-session'];
 
                       return (
@@ -351,7 +351,7 @@ export function ProfilePage({
                 {achievements
                   .filter((a) => a.is_unlocked)
                   .map((achievement, index) => {
-                    const achievementId = achievement.achievement_id as AchievementId;
+                    const achievementId = (achievement.achievement_icon || 'first-session') as AchievementId;
                     const iconSrc = achievementIcons[achievementId] || achievementIcons['first-session'];
 
                     return (
@@ -415,7 +415,7 @@ export function ProfilePage({
                 {achievements
                   .filter((a) => !a.is_unlocked)
                   .map((achievement, index) => {
-                    const achievementId = achievement.achievement_id as AchievementId;
+                    const achievementId = (achievement.achievement_icon || 'first-session') as AchievementId;
                     const iconSrc = achievementIcons[achievementId] || achievementIcons['first-session'];
 
                     return (
@@ -444,11 +444,11 @@ export function ProfilePage({
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-muted-foreground">
-                              진행률: {achievement.current_progress} /{" "}
-                              {achievement.requirement_value}
+                              진행률: {achievement.current_progress ?? 0} /{" "}
+                              {achievement.requirement_value ?? 100}
                             </span>
                             <span className="font-medium">
-                              {achievement.progress_percentage.toFixed(0)}%
+                              {achievement.progress_percentage?.toFixed(0) ?? 0}%
                             </span>
                           </div>
                           <Progress

@@ -43,7 +43,31 @@ class AchievementService extends BaseApiClient {
   async getUserAchievementProgress(
     userId: string
   ): Promise<ApiResponse<AchievementProgress[]>> {
-    return this.request<AchievementProgress[]>(`/achievements/user/${userId}/progress`);
+    const response = await this.request<any[]>(`/achievements/user/${userId}/progress`);
+
+    if (response.status === "success" && response.data) {
+      // Transform the nested backend response to the flattened frontend interface
+      const transformedData: AchievementProgress[] = response.data.map((item: any) => ({
+        achievement_id: item.achievement.id,
+        achievement_name: item.achievement.name,
+        achievement_description: item.achievement.description,
+        achievement_icon: item.achievement.icon,
+        achievement_category: item.achievement.category,
+        requirement_type: item.achievement.requirement_type,
+        requirement_value: item.achievement.requirement_value,
+        current_progress: item.progress,
+        is_unlocked: item.is_unlocked,
+        unlocked_at: item.unlocked_at,
+        progress_percentage: item.progress_percentage
+      }));
+
+      return {
+        ...response,
+        data: transformedData
+      };
+    }
+
+    return response as unknown as ApiResponse<AchievementProgress[]>;
   }
 
   async getAllAchievements(): Promise<ApiResponse<Achievement[]>> {
