@@ -45,6 +45,7 @@ from app.infrastructure.database.models.user_stats import (
     ManualSession,
     UserGoal,
 )
+from app.infrastructure.database.models.refresh_token import RefreshToken
 from app.infrastructure.database.models.verification import UserVerification
 
 
@@ -88,4 +89,5 @@ __all__ = [
     "UserGoal",
     "UserSettings",
     "UserVerification",
+    "RefreshToken",
 ]

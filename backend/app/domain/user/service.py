@@ -42,8 +42,18 @@ class UserService:
             Token response with user data
 
         Raises:
-            ValidationException: If email already exists
+            ValidationException: If email already exists or password is weak
         """
+        # SECURITY: Validate password strength
+        from app.shared.utils.password_validator import validate_password_strength
+
+        password_validation = validate_password_strength(data.password)
+        if not password_validation.is_valid:
+            raise ValidationException(
+                "password",
+                " ".join(password_validation.errors)
+            )
+
         # Check if email already exists
         existing = await self.repository.get_by_email(data.email)
         if existing:
@@ -95,13 +105,41 @@ class UserService:
         if not user:
             raise UnauthorizedException("Invalid email or password")
 
+        # Check if account is locked
+        if user.locked_until and user.locked_until > datetime.now(UTC):
+            minutes_left = int(
+                (user.locked_until - datetime.now(UTC)).total_seconds() / 60
+            )
+            raise UnauthorizedException(
+                f"Account is locked. Please try again in {max(1, minutes_left)} minutes."
+            )
+
         # Verify password
         if not verify_password(data.password, user.hashed_password):
+            user.failed_login_attempts += 1
+            if user.failed_login_attempts >= 5:
+                user.locked_until = datetime.now(UTC) + timedelta(minutes=15)
+                await self.repository.update(user)
+                # Commit to persist lockout even if exception is raised
+                await self.repository.db.commit()
+                raise UnauthorizedException(
+                    "Too many failed attempts. Account locked for 15 minutes."
+                )
+
+            await self.repository.update(user)
+            # Commit to persist failed attempts even if exception is raised
+            await self.repository.db.commit()
             raise UnauthorizedException("Invalid email or password")
 
         # Check if user is active
         if not user.is_active:
             raise UnauthorizedException("Account is deactivated")
+
+        # Reset failed attempts on successful login
+        if user.failed_login_attempts > 0 or user.locked_until:
+            user.failed_login_attempts = 0
+            user.locked_until = None
+            await self.repository.update(user)
 
         # Generate JWT token
         access_token = create_access_token({"sub": user.id})
@@ -285,8 +323,18 @@ FocusMate 팀
             Success message
 
         Raises:
-            ValidationException: If token is invalid or expired
+            ValidationException: If token is invalid, expired, or password is weak
         """
+        # SECURITY: Validate password strength
+        from app.shared.utils.password_validator import validate_password_strength
+
+        password_validation = validate_password_strength(data.new_password)
+        if not password_validation.is_valid:
+            raise ValidationException(
+                "password",
+                " ".join(password_validation.errors)
+            )
+
         # Find user by reset token
         user = await self.repository.get_by_password_reset_token(data.token)
         if not user:

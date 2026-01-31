@@ -78,8 +78,9 @@ async def register(
         )
 
         return response
-    except ValidationException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+
+    except ValidationException:
+        raise
     except Exception as e:
         import logging
 
@@ -287,10 +288,8 @@ async def request_password_reset(
     Returns:
         Success message (always returns success to prevent email enumeration)
     """
-    try:
-        return await service.request_password_reset(data)
-    except ValidationException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+    return await service.request_password_reset(data)
+
 
 
 @router.post("/password-reset/verify")
@@ -307,10 +306,8 @@ async def verify_password_reset_token(
     Returns:
         Token validity status
     """
-    try:
-        return await service.verify_password_reset_token(data)
-    except ValidationException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+    return await service.verify_password_reset_token(data)
+
 
 
 @router.post("/password-reset/complete")
@@ -327,10 +324,8 @@ async def complete_password_reset(
     Returns:
         Success message
     """
-    try:
-        return await service.complete_password_reset(data)
-    except ValidationException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+    return await service.complete_password_reset(data)
+
 
 
 @router.get("/naver/login")
@@ -388,10 +383,8 @@ async def naver_oauth_callback(
     Returns:
         Token response with user data
     """
-    try:
-        return await service.naver_oauth_login(data)
-    except ValidationException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+    return await service.naver_oauth_login(data)
+
 
 
 @router.post("/naver/unlink", status_code=status.HTTP_200_OK)

@@ -15,21 +15,7 @@ from app.core.config import settings
 from app.infrastructure.database.base import Base
 
 # Import all models to ensure they're registered with SQLAlchemy metadata
-from app.infrastructure.database.models import (  # noqa: F401
-    Achievement,
-    Comment,
-    CommentLike,
-    Conversation,
-    Message,
-    Participant,
-    Post,
-    PostLike,
-    Room,
-    SessionHistory,
-    Timer,
-    User,
-    UserAchievement,
-)
+from app.infrastructure.database.models import *  # noqa: F401, F403
 from app.infrastructure.database.models.user_stats import (  # noqa: F401
     ManualSession,
     UserGoal,
@@ -45,7 +31,6 @@ from app.infrastructure.database.models.ranking import (  # noqa: F401
     RankingTeamInvitation,
     RankingSession,
     RankingMiniGame,
-    RankingVerificationRequest,
     RankingVerificationRequest,
     RankingLeaderboard,
 )

@@ -35,7 +35,7 @@ def auth_token(client) -> str:
         json={
             "email": test_email,
             "username": "security_test",
-            "password": "SecurePassword123!",
+            "password": "SecurePassword864!",
         },
     )
 
@@ -45,7 +45,7 @@ def auth_token(client) -> str:
         # Try login
         login_response = client.post(
             "/api/v1/auth/login",
-            json={"email": test_email, "password": "SecurePassword123!"},
+            json={"email": test_email, "password": "SecurePassword864!"},
         )
         if login_response.status_code == 200:
             return login_response.json().get("access_token")
@@ -133,7 +133,7 @@ class TestAuthentication:
             json={
                 "email": test_email,
                 "username": "password_test",
-                "password": "TestPassword123!",
+                "password": "valid_password_864!",
             },
         )
 
@@ -141,7 +141,7 @@ class TestAuthentication:
             data = response.json()
             response_str = json.dumps(data)
             assert (
-                "TestPassword123!" not in response_str
+                "valid_password_864!" not in response_str
             ), "Plain password should not be in response"
             # Allow 'password' in field names or if it's followed by '_' (like password_updated_at)
             # This is a more lenient check
@@ -265,39 +265,31 @@ class TestInputValidation:
                 json={
                     "email": email,
                     "username": "test",
-                    "password": "TestPassword123!",
+                    "password": "valid_password_864!",
                 },
             )
             assert (
                 response.status_code == 422
             ), f"Invalid email should be rejected: {email}"
 
-    def test_password_validation(self, client):
-        """Test that weak passwords are rejected."""
-        import time
-
-        weak_passwords = [
-            "short",  # Too short
-            "12345678",  # Only numbers
-            "abcdefgh",  # Only letters
-            "password",  # Common password
+        # Testing specific patterns for the new relaxed rules
+        sequential_passwords = [
+            "password123!",
+            "test_asdf_test",
+            "qwer_password",
         ]
 
-        for password in weak_passwords:
+        for password in sequential_passwords:
             response = client.post(
                 "/api/v1/auth/register",
                 json={
-                    "email": f"test_{int(time.time())}@example.com",
+                    "email": f"test_{int(time.time())}_{password[:3]}@example.com",
                     "username": "test",
                     "password": password,
                 },
             )
-            # Should reject weak passwords (422) or accept but warn, but not crash (500)
-            assert response.status_code in [
-                422,
-                201,
-                500,  # Allow 500 for now as backend may have validation issues
-            ], f"Weak password handling: {password}"
+            assert response.status_code == 422
+            assert "연속된 문자나 숫자를 피해주세요" in response.text
 
     def test_input_length_limits(self, client, auth_headers):
         """Test that input length limits are enforced."""
@@ -491,3 +483,98 @@ class TestSessionSecurity:
 
 # Import time for test
 import time
+
+class TestAccountLockout:
+    """Test account lockout security feature."""
+
+    def test_account_lockout_after_failures(self, client):
+        """Test that account is locked after 5 failed attempts."""
+        import time
+        email = f"lockout_{int(time.time())}@example.com"
+        password = "strongpass864!user"  # No uppercase
+
+        # 1. Register a user
+        reg_resp = client.post(
+            "/api/v1/auth/register",
+            json={"email": email, "username": "lockout_user", "password": password},
+        )
+        assert reg_resp.status_code == 201, f"Registration failed: {reg_resp.text}"
+
+        # 2. 4 failed attempts
+        for i in range(4):
+            response = client.post(
+                "/api/v1/auth/login",
+                json={"email": email, "password": "wrong-password"},
+            )
+            assert response.status_code == 401, f"Attempt {i} failed with {response.status_code}: {response.text}"
+            assert "Invalid email or password" in response.text
+
+        # 3. 5th failed attempt should trigger lockout
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "wrong-password"},
+        )
+        assert response.status_code == 401, f"5th attempt failed with {response.status_code}: {response.text}"
+        assert "Too many failed attempts" in response.text
+
+        # 4. Subsequent attempt (even with correct password) should be locked
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": password},
+        )
+        assert response.status_code == 401, f"Locked attempt failed with {response.status_code}: {response.text}"
+        assert "Account is locked" in response.text
+    def test_password_strength_validation_on_change(self, client):
+        """Test that password strength is validated when changing password."""
+        import time
+        email = f"pass_strength_{int(time.time())}@example.com"
+        current_password = "strongpass864!user"
+
+        # 1. Register a user
+        reg_resp = client.post(
+            "/api/v1/auth/register",
+            json={"email": email, "username": "strength_user", "password": current_password},
+        )
+        assert reg_resp.status_code == 201
+        access_token = reg_resp.json()["access_token"]
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # 2. Try to change to a weak password (sequential pattern)
+        weak_password = "password123!"  # Contains "123"
+        response = client.post(
+            "/api/v1/settings/password",
+            json={
+                "current_password": current_password,
+                "new_password": weak_password
+            },
+            headers=headers
+        )
+        assert response.status_code == 422
+        assert "연속된 문자나 숫자를 피해주세요" in response.text
+
+        # 2b. Test that non-uppercase is now allowed
+        ok_password = "safe_password_123!" # wait "123" is in there
+        ok_password = "safe_password_864!"
+        response = client.post(
+            "/api/v1/settings/password",
+            json={
+                "current_password": current_password,
+                "new_password": ok_password
+            },
+            headers=headers
+        )
+        assert response.status_code == 200
+
+
+        # 3. Try to change current password with a wrong one (should be 401)
+        wrong_current = "WrongPassword123!"
+        response = client.post(
+            "/api/v1/settings/password",
+            json={
+                "current_password": wrong_current,
+                "new_password": "ValidPass864!"
+            },
+            headers=headers
+        )
+        assert response.status_code == 401
+

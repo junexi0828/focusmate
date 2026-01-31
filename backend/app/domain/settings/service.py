@@ -15,6 +15,7 @@ from app.infrastructure.repositories.user_settings_repository import (
     UserSettingsRepository,
 )
 from app.shared.utils.uuid import generate_uuid
+from app.shared.utils.password_validator import validate_password_strength
 
 
 class UserSettingsService:
@@ -119,6 +120,13 @@ class UserSettingsService:
         # Verify current password
         if not verify_password(data.current_password, user.hashed_password):
             raise UnauthorizedException("Current password is incorrect")
+
+        # SECURITY: Validate password strength
+        validation = validate_password_strength(data.new_password)
+        if not validation.is_valid:
+            raise ValidationException(
+                "new_password", " ".join(validation.errors)
+            )
 
         # Update password
         user.hashed_password = hash_password(data.new_password)

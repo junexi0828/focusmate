@@ -115,6 +115,18 @@ class User(Base, TimestampMixin):
         comment="Password reset token expiration",
     )
 
+    # Security and Account Lockout
+    failed_login_attempts: Mapped[int] = mapped_column(
+        default=0,
+        nullable=False,
+        comment="Number of consecutive failed login attempts",
+    )
+    locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Account lockout expiration time",
+    )
+
     # Social login
     naver_id: Mapped[str | None] = mapped_column(
         String(100),
