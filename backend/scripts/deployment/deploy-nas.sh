@@ -128,30 +128,21 @@ echo "🎉 File Sync Successfully Completed!"
 #       alembic.upgrade("head")
 #       conn.execute(text("SELECT pg_advisory_unlock(123456789)"))
 # =============================================================================
-echo -e "🗄️  Checking and running database migrations..."
-# Increase statement timeout to 60 seconds to prevent timeout on slow operations
-# Use || to continue deployment even if migration fails (allows manual fix)
-ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml exec -T backend sh -c 'PGSTATEMENT_TIMEOUT=60000 alembic upgrade head'" || {
-    echo ""
+# 4. Stop Backend (Release DB Locks for Safe Migration)
+# We stop the backend to ensure no active connections are holding locks on tables
+echo -e "🛑 Stopping backend to release DB locks..."
+ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml stop backend"
+
+# 5. Run Database Migrations
+echo -e "🗄️  Running database migrations..."
+# Use 'run --rm' to execute migration in a temporary container (since main backend is stopped)
+ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml run --rm backend alembic upgrade head" || {
     echo "⚠️  =========================================="
-    echo "⚠️  Migration failed (timeout or error)"
+    echo "⚠️  Migration failed!"
     echo "⚠️  =========================================="
-    echo "ℹ️  Deployment will continue, but DB schema may be outdated."
-    echo "ℹ️  Please run migration manually:"
-    echo "ℹ️    ssh $NAS_USER@$NAS_HOST"
-    echo "ℹ️    cd $NAS_DIR"
-    echo "ℹ️    sudo docker-compose -f docker-compose.nas.yml exec backend alembic upgrade head"
-    echo ""
-    echo "⚠️  Common causes:"
-    echo "   - Database lock (active connections using the table)"
-    echo "   - Slow operation on large table"
-    echo "   - Network issues"
-    echo ""
-    echo "ℹ️  If timeout persists, increase timeout in Supabase:"
-    echo "   Dashboard → Settings → Database → Statement Timeout"
-    echo ""
+    echo "ℹ️  Attempting to restart backend anyway to restore service..."
 }
 
-# 5. Restart services on NAS
-echo -e "ℹ️  Fixing permissions and restarting Docker..."
+# 6. Start Backend
+echo -e "🚀 Starting backend..."
 ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo chmod -R 777 app .env requirements.txt pyproject.toml && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml up -d backend"
