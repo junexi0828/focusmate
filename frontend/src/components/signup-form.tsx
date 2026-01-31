@@ -58,6 +58,14 @@ export function SignupForm({ onSignup, onSwitchToLogin }: SignupFormProps) {
         newErrors.password = "연속된 문자나 숫자를 피해주세요 (예: 123, abc)";
       } else if (/(.)\1{2,}/.test(password)) {
         newErrors.password = "같은 문자가 3번 이상 반복되지 않아야 합니다";
+      } else {
+        const commonPasswords = [
+          "12345678", "password", "password1", "password123", "qwerty123", "admin123",
+          "letmein", "welcome1", "passw0rd", "1q2w3e4r", "abc12345", "abcd1234"
+        ];
+        if (commonPasswords.includes(password.toLowerCase())) {
+          newErrors.password = "너무 흔한 비밀번호입니다. 다른 비밀번호를 사용해주세요.";
+        }
       }
     }
 

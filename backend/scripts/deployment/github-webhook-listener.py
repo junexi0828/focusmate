@@ -255,12 +255,16 @@ class WebhookHandler(BaseHTTPRequestHandler):
         try:
             self.log_message("🔄 Restarting backend service...")
 
-            # shutdown-nas-docker.sh 실행
-            subprocess.run(["bash", "scripts/deployment/shutdown-nas-docker.sh"], cwd=PROJECT_DIR, check=False, env=env)
+            # Fast Restart (Backend only)
+            # NAS code mount (./:/app) means we only need to restart the container to pick up code changes
+            self.log_message("🔄 Performing fast restart (backend only)...")
 
-            # startup-nas-docker.sh 실행
-            subprocess.Popen(["bash", "scripts/deployment/startup-nas-docker.sh"], cwd=PROJECT_DIR,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+            subprocess.run(
+                ["sudo", "/usr/local/bin/docker-compose", "-f", "docker-compose.nas.yml", "restart", "backend"],
+                cwd=PROJECT_DIR,
+                check=True,
+                env=env
+            )
 
             self.log_message("✅ Restart command issued")
 

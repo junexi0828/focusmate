@@ -112,7 +112,10 @@ class AuthService {
     } catch (error: any) {
       // Handle FastAPI validation errors (array format)
       let errorMessage = "회원가입에 실패했습니다";
-      if (error?.response?.data?.detail) {
+      if (error?.response?.data?.error?.message) {
+        // Handle custom AppException format
+        errorMessage = error.response.data.error.message;
+      } else if (error?.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
           errorMessage = detail
