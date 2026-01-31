@@ -45,8 +45,20 @@ export function SignupForm({ onSignup, onSwitchToLogin }: SignupFormProps) {
 
     if (!password) {
       newErrors.password = "비밀번호를 입력해주세요";
-    } else if (password.length < 8) {
-      newErrors.password = "비밀번호는 최소 8자 이상이어야 합니다";
+    } else {
+      if (password.length < 8) {
+        newErrors.password = "비밀번호는 최소 8자 이상이어야 합니다";
+      } else if (!/[a-z]/.test(password)) {
+        newErrors.password = "소문자를 최소 1개 포함해야 합니다";
+      } else if (!/\d/.test(password)) {
+        newErrors.password = "숫자를 최소 1개 포함해야 합니다";
+      } else if (!/[!@#$%^&*(),.?":{}|<>_\-+=[\]\\/~`';]/.test(password)) {
+        newErrors.password = "특수문자를 최소 1개 포함해야 합니다";
+      } else if (/(123|abc|qwerty|asdf|qwer|012|789)/i.test(password)) {
+        newErrors.password = "연속된 문자나 숫자를 피해주세요 (예: 123, abc)";
+      } else if (/(.)\1{2,}/.test(password)) {
+        newErrors.password = "같은 문자가 3번 이상 반복되지 않아야 합니다";
+      }
     }
 
     if (!confirmPassword) {
