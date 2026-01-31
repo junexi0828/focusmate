@@ -57,14 +57,18 @@ def _using_pgbouncer(database_url: str) -> bool:
 
 
 def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
-    """Build connect args/engine args for psycopg3 driver.
+    """Build connect args/engine args for asyncpg or psycopg3 driver.
 
-    psycopg3 is natively compatible with PgBouncer Transaction Mode.
-    We only need to set prepare_threshold=None to disable prepared statements.
-    Note: prepare_threshold=0 means "prepare all queries immediately" (wrong!)
+    Both drivers are compatible with PgBouncer Transaction Mode when configured correctly:
+    - asyncpg: Set statement_cache_size=0 to disable prepared statements
+    - psycopg3: Set prepare_threshold=None to disable prepared statements
 
     Returns (connect_args, engine_args, use_null_pool, disable_prepared).
     """
+    # Detect which driver is being used
+    is_asyncpg = "asyncpg" in database_url
+    is_psycopg = "psycopg" in database_url
+
     # Never let detection override an explicit env flag
     env_flag = bool(settings.DATABASE_PGBOUNCER)
     auto_detected = _using_pgbouncer(database_url)
@@ -93,7 +97,8 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
     )
 
     logger.info(
-        "PgBouncer detection: env_flag=%s auto_detected=%s hostname_detected=%s using=%s remote_host_default=%s disable_prepared=%s",
+        "PgBouncer detection: driver=%s env_flag=%s auto_detected=%s hostname_detected=%s using=%s remote_host_default=%s disable_prepared=%s",
+        "asyncpg" if is_asyncpg else "psycopg3" if is_psycopg else "unknown",
         env_flag,
         auto_detected,
         hostname_detected,
@@ -103,14 +108,26 @@ def _get_connect_args(database_url: str) -> tuple[dict, dict, bool, bool]:
     )
 
     if disable_prepared:
-        # psycopg3 uses prepare_threshold to control prepared statements
-        # prepare_threshold=None disables prepared statements completely
-        # prepare_threshold=0 would prepare ALL queries (wrong for PgBouncer!)
-        # This is safe for PgBouncer Transaction Mode
-        connect_args = {
-            "prepare_threshold": None,  # Disable prepared statements for PgBouncer
-        }
-        logger.info("Disabling prepared statements for PgBouncer (psycopg3: prepare_threshold=None)")
+        connect_args = {}
+
+        if is_asyncpg:
+            # asyncpg: Use statement_cache_size=0 to disable prepared statements
+            # This is CRITICAL for PgBouncer Transaction Mode compatibility
+            connect_args = {
+                "statement_cache_size": 0,  # Disable prepared statements for asyncpg
+            }
+            logger.info("Disabling prepared statements for PgBouncer (asyncpg: statement_cache_size=0)")
+        elif is_psycopg:
+            # psycopg3: Use prepare_threshold=None to disable prepared statements
+            # prepare_threshold=None disables prepared statements completely
+            # prepare_threshold=0 would prepare ALL queries (wrong for PgBouncer!)
+            connect_args = {
+                "prepare_threshold": None,  # Disable prepared statements for psycopg3
+            }
+            logger.info("Disabling prepared statements for PgBouncer (psycopg3: prepare_threshold=None)")
+        else:
+            logger.warning("Unknown database driver, cannot disable prepared statements")
+
         return connect_args, {}, is_pgbouncer, True
 
     return {}, {}, False, False
@@ -134,24 +151,37 @@ def is_duplicate_prepared_statement_error(exc: BaseException) -> bool:
 def _force_disable_prepared_statements(
     database_url: str, engine_kwargs: dict
 ) -> tuple[str, dict]:
-    """Force-disable prepared statements for psycopg3 driver.
+    """Force-disable prepared statements for asyncpg or psycopg3 driver.
 
     This is used as a last resort when DuplicatePreparedStatementError occurs.
-    With psycopg3, this should rarely happen as it handles PgBouncer well.
+    Applies the correct parameter based on the driver being used.
     """
     if not database_url.startswith("postgresql"):
         return database_url, engine_kwargs
 
-    # Ensure connect_args has the correct psycopg3 parameter
+    # Detect which driver is being used
+    is_asyncpg = "asyncpg" in database_url
+    is_psycopg = "psycopg" in database_url
+
+    # Ensure connect_args has the correct parameter for the driver
     connect_args = dict(engine_kwargs.get("connect_args", {}))
-    connect_args["prepare_threshold"] = None  # psycopg3: disable prepared statements
+
+    if is_asyncpg:
+        connect_args["statement_cache_size"] = 0  # asyncpg: disable prepared statements
+        logger.warning(
+            "Force-disabling prepared statements (asyncpg: statement_cache_size=0). "
+            "This should not happen if initial detection worked correctly."
+        )
+    elif is_psycopg:
+        connect_args["prepare_threshold"] = None  # psycopg3: disable prepared statements
+        logger.warning(
+            "Force-disabling prepared statements (psycopg3: prepare_threshold=None). "
+            "This should not happen if initial detection worked correctly."
+        )
+    else:
+        logger.error("Unknown database driver, cannot force-disable prepared statements")
 
     engine_kwargs["connect_args"] = connect_args
-
-    logger.warning(
-        "Force-disabling prepared statements (psycopg3: prepare_threshold=None). "
-        "This should not happen if initial detection worked correctly."
-    )
 
     return database_url, engine_kwargs
 
@@ -194,7 +224,7 @@ if database_url.startswith("postgresql"):
         }
     )
 
-    # Get PgBouncer-specific settings for psycopg3
+    # Get PgBouncer-specific settings for asyncpg or psycopg3
     connect_args = dict(engine_kwargs.get("connect_args", {}))
     (
         pgbouncer_connect_args,
@@ -203,7 +233,7 @@ if database_url.startswith("postgresql"):
         disable_prepared,
     ) = _get_connect_args(database_url)
 
-    # Apply PgBouncer-safe connect_args (psycopg3: prepare_threshold=None)
+    # Apply PgBouncer-safe connect_args (asyncpg: statement_cache_size=0, psycopg3: prepare_threshold=None)
     connect_args.update(pgbouncer_connect_args)
 
     # Always set connect_args
@@ -212,8 +242,8 @@ if database_url.startswith("postgresql"):
     # Apply any additional engine args
     engine_kwargs.update(pgbouncer_engine_args)
 
-    # NOTE: With psycopg3, NullPool is optional for PgBouncer
-    # psycopg3 handles prepared statements smartly, so normal pooling works fine
+    # NOTE: NullPool is optional for PgBouncer with both asyncpg and psycopg3
+    # Both drivers can work with normal pooling when prepared statements are disabled
     # However, we keep NullPool option for maximum safety in transaction mode
     if use_null_pool:
         # Remove pool-related kwargs as they're incompatible with NullPool
@@ -226,9 +256,11 @@ if database_url.startswith("postgresql"):
 
         # Set NullPool
         engine_kwargs["poolclass"] = NullPool
+        driver_name = "asyncpg" if "asyncpg" in database_url else "psycopg3"
         logger.warning(
-            "Using NullPool for PgBouncer Transaction Mode (psycopg3). "
-            "Connection pooling is handled by PgBouncer."
+            "Using NullPool for PgBouncer Transaction Mode (%s). "
+            "Connection pooling is handled by PgBouncer.",
+            driver_name
         )
 
     # Log final config (sanitized URL)
@@ -239,15 +271,30 @@ if database_url.startswith("postgresql"):
         sanitized_url = "unparseable"
 
     connect_args_info = engine_kwargs.get("connect_args", {})
-    logger.info(
-        "DB engine init (psycopg3): url=%s prepare_threshold=%s pool_size=%s max_overflow=%s pool_timeout=%s disable_prepared=%s",
-        sanitized_url,
-        connect_args_info.get("prepare_threshold", "default"),
-        engine_kwargs.get("pool_size"),
-        engine_kwargs.get("max_overflow"),
-        engine_kwargs.get("pool_timeout"),
-        disable_prepared,
-    )
+    driver_name = "asyncpg" if "asyncpg" in database_url else "psycopg3" if "psycopg" in database_url else "unknown"
+
+    if "asyncpg" in database_url:
+        cache_setting = connect_args_info.get("statement_cache_size", "default")
+        logger.info(
+            "DB engine init (asyncpg): url=%s statement_cache_size=%s pool_size=%s max_overflow=%s pool_timeout=%s disable_prepared=%s",
+            sanitized_url,
+            cache_setting,
+            engine_kwargs.get("pool_size"),
+            engine_kwargs.get("max_overflow"),
+            engine_kwargs.get("pool_timeout"),
+            disable_prepared,
+        )
+    else:
+        prepare_setting = connect_args_info.get("prepare_threshold", "default")
+        logger.info(
+            "DB engine init (psycopg3): url=%s prepare_threshold=%s pool_size=%s max_overflow=%s pool_timeout=%s disable_prepared=%s",
+            sanitized_url,
+            prepare_setting,
+            engine_kwargs.get("pool_size"),
+            engine_kwargs.get("max_overflow"),
+            engine_kwargs.get("pool_timeout"),
+            disable_prepared,
+        )
 
 engine: AsyncEngine = create_async_engine(
     database_url,
@@ -266,16 +313,25 @@ def receive_connect(dbapi_conn, connection_record):
 
     This ensures prepared statements are disabled even for internal SQLAlchemy queries.
     Required for PgBouncer Transaction Mode compatibility.
+
+    Handles both asyncpg and psycopg3 drivers:
+    - asyncpg: Set _statement_cache_size = 0
+    - psycopg3: Set prepare_threshold = None
     """
-    # For psycopg3 with SQLAlchemy, need to access the underlying driver connection
-    # SQLAlchemy wraps it in AsyncAdapt_psycopg_connection
+    # For SQLAlchemy async adapters, need to access the underlying driver connection
+    # SQLAlchemy wraps it in AsyncAdapt_asyncpg_connection or AsyncAdapt_psycopg_connection
     underlying_conn = getattr(dbapi_conn, '_connection', None) or getattr(dbapi_conn, 'driver_connection', None) or dbapi_conn
 
-    if hasattr(underlying_conn, 'prepare_threshold'):
+    # Try asyncpg first (uses _statement_cache_size)
+    if hasattr(underlying_conn, '_statement_cache_size'):
+        underlying_conn._statement_cache_size = 0
+        logger.info("Pool connect event: Set _statement_cache_size=0 on asyncpg connection")
+    # Then try psycopg3 (uses prepare_threshold)
+    elif hasattr(underlying_conn, 'prepare_threshold'):
         underlying_conn.prepare_threshold = None
-        logger.info("Pool connect event: Set prepare_threshold=None on underlying connection")
+        logger.info("Pool connect event: Set prepare_threshold=None on psycopg3 connection")
     else:
-        logger.info(f"Pool connect event: Connection established (prepare_threshold not available on {type(underlying_conn).__name__})")
+        logger.info(f"Pool connect event: Connection established ({type(underlying_conn).__name__})")
 
 # Create session factory
 AsyncSessionLocal = async_sessionmaker(
