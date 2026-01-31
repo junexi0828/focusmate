@@ -128,21 +128,27 @@ echo "🎉 File Sync Successfully Completed!"
 #       alembic.upgrade("head")
 #       conn.execute(text("SELECT pg_advisory_unlock(123456789)"))
 # =============================================================================
-# 4. Stop Backend (Release DB Locks for Safe Migration)
-# We stop the backend to ensure no active connections are holding locks on tables
-echo -e "🛑 Stopping backend to release DB locks..."
-ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml stop backend"
+# 4. Smart Database Migration
+echo -e "🗄️  Checking database migrations..."
 
-# 5. Run Database Migrations
-echo -e "🗄️  Running database migrations..."
-# Use 'run --rm' to execute migration in a temporary container (since main backend is stopped)
-ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml run --rm backend alembic upgrade head" || {
-    echo "⚠️  =========================================="
-    echo "⚠️  Migration failed!"
-    echo "⚠️  =========================================="
-    echo "ℹ️  Attempting to restart backend anyway to restore service..."
-}
+# Strategy: Try "Online" Migration first (Fastest)
+# - If no migration is needed, this finishes instantly (0s downtime).
+# - If migration succeeds without locks, great.
+# - We set a short timeout (10s) to detect locks quickly.
+if ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml exec -T backend sh -c 'PGSTATEMENT_TIMEOUT=10000 alembic upgrade head'"; then
+    echo "✅ Migration successful (or none needed)."
 
-# 6. Start Backend
-echo -e "🚀 Starting backend..."
-ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo chmod -R 777 app .env requirements.txt pyproject.toml && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml up -d backend"
+    # 5. Restart Services (Fast Restart)
+    echo -e "🚀 Restarting backend to apply code changes..."
+    ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo chmod -R 777 app .env requirements.txt pyproject.toml && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml restart backend"
+
+else
+    echo "⚠️  Online migration failed or timed out (likely DB Lock)."
+    echo "🔄 Switching to Safe Mode (Stop -> Migrate -> Start)..."
+
+    # Fallback: Stop service to release locks, then migrate
+    ssh "juns@$NAS_HOST" "cd $NAS_DIR && \
+        sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml stop backend && \
+        sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml run --rm backend alembic upgrade head && \
+        sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml up -d backend"
+fi
