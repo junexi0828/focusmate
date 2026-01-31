@@ -366,8 +366,18 @@ FocusMate 팀
                     # Check if email already exists
                     existing_user = await self.repository.get_by_email(email)
                     if existing_user:
+                        # SECURITY: Check if another user already has this naver_id
+                        # This prevents naver_id conflicts during account linking
+                        if existing_user.naver_id and existing_user.naver_id != naver_id:
+                            raise ValidationException(
+                                "oauth",
+                                "이 계정은 이미 다른 네이버 계정과 연동되어 있습니다. "
+                                "기존 연동을 해제한 후 다시 시도해주세요."
+                            )
+
                         # Link Naver account to existing user
                         existing_user.naver_id = naver_id
+                        existing_user.is_verified = True  # Naver verified
                         user = await self.repository.update(existing_user)
                     else:
                         # Create new user
@@ -385,11 +395,25 @@ FocusMate 팀
                         )
                         user = await self.repository.create(user)
                 else:
-                    # Update user info if needed
+                    # Update user info if needed (with security checks)
+                    # SECURITY: Only update email if it's not already taken by another user
                     if not user.email or user.email != email:
+                        # Check if the new email is already taken by a different user
+                        email_conflict = await self.repository.get_by_email(email)
+                        if email_conflict and email_conflict.id != user.id:
+                            # CRITICAL: Another user already has this email - don't update!
+                            # This prevents account hijacking via email change on Naver
+                            raise ValidationException(
+                                "oauth",
+                                f"이메일 충돌: {email}은(는) 이미 다른 계정에서 사용 중입니다. "
+                                f"네이버 계정의 이메일을 변경하신 경우, 기존 이메일로 되돌려주세요."
+                            )
                         user.email = email
+
+                    # Update username if it's default or empty
                     if not user.username or user.username == "네이버 사용자":
                         user.username = nickname
+
                     user.naver_id = naver_id
                     user.is_verified = True
                     user = await self.repository.update(user)
