@@ -43,6 +43,10 @@ echo "$output" >> "$LOG_FILE"
 
 if [ $exit_code -eq 0 ]; then
     echo "[$(date)] SUCCESS: Docker services started." >> "$LOG_FILE"
+
+    # Start Webhook Listener
+    echo "[$(date)] Webhook: Starting listener..." >> "$LOG_FILE"
+    bash scripts/deployment/start-webhook-listener.sh >> "$LOG_FILE" 2>&1
 else
     echo "[$(date)] FAILED: Docker services failed to start (Exit code: $exit_code)" >> "$LOG_FILE"
 fi

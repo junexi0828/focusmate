@@ -34,6 +34,13 @@ echo "$output" >> "$LOG_FILE"
 
 if [ $exit_code -eq 0 ]; then
     echo "[$(date)] SUCCESS: Docker services stopped." >> "$LOG_FILE"
+
+    # Stop Webhook Listener
+    if [ -f "webhook-listener.pid" ]; then
+        WEBHOOK_PID=$(cat webhook-listener.pid)
+        echo "[$(date)] Webhook: Stopping listener (PID: $WEBHOOK_PID)..." >> "$LOG_FILE"
+        kill "$WEBHOOK_PID" && rm "webhook-listener.pid"
+    fi
 else
     echo "[$(date)] WARNING: Failed to stop cleanly (Exit code: $exit_code)" >> "$LOG_FILE"
 fi

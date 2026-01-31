@@ -237,11 +237,11 @@ class WebhookHandler(BaseHTTPRequestHandler):
         try:
             self.log_message("🔄 Restarting backend service...")
 
-            # stop-nas.sh 실행
-            subprocess.run(["bash", "stop-nas.sh"], cwd=PROJECT_DIR, check=False, env=env)
+            # shutdown-nas-docker.sh 실행
+            subprocess.run(["bash", "scripts/deployment/shutdown-nas-docker.sh"], cwd=PROJECT_DIR, check=False, env=env)
 
-            # start-nas.sh 실행
-            subprocess.Popen(["bash", "start-nas.sh"], cwd=PROJECT_DIR,
+            # startup-nas-docker.sh 실행
+            subprocess.Popen(["bash", "scripts/deployment/startup-nas-docker.sh"], cwd=PROJECT_DIR,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
 
             self.log_message("✅ Restart command issued")
