@@ -100,7 +100,8 @@ class WebhookHandler(BaseHTTPRequestHandler):
                 # main 또는 master 브랜치만 처리
                 if ref in ["refs/heads/main", "refs/heads/master"]:
                     self.log_message(f"🔄 Processing push to {ref}")
-                    self.handle_git_pull()
+                    after_hash = event_data.get("after", "")
+                    self.handle_git_pull(after_hash)
                 else:
                     self.log_message(f"⏭️  Skipping push to {ref}")
             else:
@@ -126,13 +127,30 @@ class WebhookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"GitHub Webhook Listener is running")
 
-    def handle_git_pull(self):
+    def handle_git_pull(self, after_hash=None):
         """NAS에서 git pull 실행."""
         if not PROJECT_DIR.exists():
             self.log_message(f"❌ Project directory not found: {PROJECT_DIR}")
             return
 
         self.log_message(f"📂 Project directory: {PROJECT_DIR}")
+
+        # Defense Logic: Check if rsync already deployed this hash
+        rsync_hash_file = PROJECT_DIR / ".last_rsync_hash"
+        if after_hash and rsync_hash_file.exists():
+            try:
+                with open(rsync_hash_file) as f:
+                    last_rsync_hash = f.read().strip()
+                if last_rsync_hash == after_hash:
+                    self.log_message(f"🛡️  Defense: Hash {after_hash[:7]} already deployed via rsync. Syncing git only...")
+                    # Sync git state without restarting
+                    env = os.environ.copy()
+                    subprocess.check_call(["git", "fetch", "--all"], cwd=PROJECT_DIR, env=env)
+                    subprocess.check_call(["git", "reset", "--hard", "origin/main"], cwd=PROJECT_DIR, env=env)
+                    self.log_message("✅ Git state synchronized. Skipping restart.")
+                    return
+            except Exception as e:
+                self.log_message(f"⚠️  Error checking rsync hash: {e}")
 
         try:
             # 환경변수 설정 (PYTHONPATH 추가)

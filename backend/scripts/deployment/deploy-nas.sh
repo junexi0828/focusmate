@@ -142,6 +142,11 @@ if ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f do
     echo -e "🚀 Restarting backend to apply code changes..."
     ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo chmod -R 777 app .env requirements.txt pyproject.toml && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml restart backend"
 
+    # 6. Record Deployment Hash (for Webhook sync)
+    LOCAL_HASH=$(git rev-parse HEAD)
+    ssh "juns@$NAS_HOST" "echo $LOCAL_HASH > $NAS_DIR/.last_rsync_hash"
+    echo "📌 Deployment hash recorded: ${LOCAL_HASH:0:7}"
+
 else
     echo "⚠️  Online migration failed or timed out (likely DB Lock)."
     echo "🔄 Switching to Safe Mode (Stop -> Migrate -> Start)..."
@@ -151,4 +156,10 @@ else
         sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml stop backend && \
         sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml run --rm backend alembic upgrade head && \
         sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml up -d backend"
+
+    # Record Hash for Fallback too
+    LOCAL_HASH=$(git rev-parse HEAD)
+    ssh "juns@$NAS_HOST" "echo $LOCAL_HASH > $NAS_DIR/.last_rsync_hash"
+    echo "📌 Deployment hash recorded (safe mode): ${LOCAL_HASH:0:7}"
 fi
+
