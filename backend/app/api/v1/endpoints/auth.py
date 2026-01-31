@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.exceptions import UnauthorizedException, ValidationException
 from app.core.security import validate_refresh_token
 from app.domain.user.schemas import (
+    AccountDelete,
     NaverOAuthCallback,
     PasswordResetComplete,
     PasswordResetRequest,
@@ -419,3 +420,50 @@ async def naver_oauth_unlink(
         logger.error(f"Naver unlink error: {e!s}", exc_info=True)
         # Always return success to Naver even if user not found
         return {"message": "Unlink processed"}
+
+
+@router.delete("/account", status_code=status.HTTP_200_OK)
+async def delete_account(
+    data: AccountDelete,
+    current_user: Annotated[dict, Depends(get_current_user_required)],
+    service: Annotated[UserService, Depends(get_user_service)],
+    response: Response,
+) -> dict:
+    """Delete user account.
+
+    Args:
+        data: Account deletion request with password
+        current_user: Current authenticated user
+        service: User service
+        response: Response object for clearing cookies
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If password is incorrect
+    """
+    try:
+        result = await service.delete_account(current_user["id"], data.password)
+
+        # Clear refresh token cookie
+        response.delete_cookie(
+            key="refresh_token",
+            path="/",
+            httponly=True,
+            secure=settings.is_production,
+            samesite="lax",
+        )
+
+        return result
+    except UnauthorizedException as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Account deletion error: {e!s}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Account deletion failed. Please try again later.",
+        )

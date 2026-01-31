@@ -45,8 +45,8 @@ export function SignupForm({ onSignup, onSwitchToLogin }: SignupFormProps) {
 
     if (!password) {
       newErrors.password = "비밀번호를 입력해주세요";
-    } else if (password.length < 6) {
-      newErrors.password = "비밀번호는 최소 6자 이상이어야 합니다";
+    } else if (password.length < 8) {
+      newErrors.password = "비밀번호는 최소 8자 이상이어야 합니다";
     }
 
     if (!confirmPassword) {

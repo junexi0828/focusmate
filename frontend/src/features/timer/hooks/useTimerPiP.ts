@@ -179,16 +179,16 @@ export function useTimerPiP({
     const pipWidth = actualWidth > 0 ? actualWidth : width;
     const pipHeight = actualHeight > 0 ? actualHeight : height;
 
-    // Level 1 (Small): Timer only - matches browser minimum (<300px width)
-    // Level 2 (Medium): Timer + Participant count (>=300px)
+    // Small: 모든 정보 표시 (타이머 + 참가자 수) - 작은 크기
+    // Medium: 모든 정보 + 강력한 애니메이션 효과 - 큰 크기 (>=450px)
     const isWide = pipMode === "wide";
-    const isSmall = !isWide && (pipWidth < 300 || pipHeight < 250);
+    const isSmall = !isWide && (pipWidth < 450 || pipHeight < 400);
     const isMedium = !isWide && !isSmall;
 
     // Debug: Log size and level (only when PiP is active)
     if (document.pictureInPictureElement) {
       console.log(
-        `[PiP] Size: ${pipWidth}x${pipHeight}, Level: ${isWide ? 'Wide' : isSmall ? 'Small' : 'Medium'}`
+        `[PiP Debug] Window: ${windowWidth}x${windowHeight}, Actual: ${pipWidth}x${pipHeight}, Mode: ${pipMode}, Level: ${isWide ? 'Wide' : isSmall ? 'Small' : 'Medium'}`
       );
     }
 
@@ -581,40 +581,66 @@ export function useTimerPiP({
         ctx.shadowBlur = 0;
     }
 
-    // Medium-only breathing ring accents (soft pulse)
+    // Medium: 강력한 애니메이션 효과
     if (isMedium && status === "running") {
+      // 1. 강력한 Breathing Ring (더 선명하고 큰 펄스)
       const smoothPulse = 0.5 - 0.5 * Math.cos(now * 1.6);
-      const ringAlpha = 0.06 + 0.08 * smoothPulse;
+      const ringAlpha = 0.12 + 0.18 * smoothPulse; // 증가된 알파값
 
       ctx.beginPath();
       ctx.strokeStyle = sessionType === "focus"
         ? `rgba(239, 68, 68, ${ringAlpha})`
         : `rgba(59, 130, 246, ${ringAlpha})`;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 4; // 2 → 4로 증가
+      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.4)" : "rgba(59, 130, 246, 0.4)";
+      ctx.shadowBlur = 15;
       ctx.arc(centerX, centerY, radius + 14, 0, 2 * Math.PI);
       ctx.stroke();
-    }
+      ctx.shadowBlur = 0;
 
-    // Medium-only extra motion accents
-    if (isMedium && status === "running") {
+      // 2. 회전하는 Arc (더 빠르고 선명하게)
       const time = Date.now() / 1000;
-      const arcStart = time * 0.8;
-      const arcEnd = arcStart + Math.PI * 0.35;
+      const arcStart = time * 1.2; // 0.8 → 1.2로 증가 (50% 빠름)
+      const arcEnd = arcStart + Math.PI * 0.5; // 0.35 → 0.5로 증가 (더 긴 호)
 
       ctx.beginPath();
-      ctx.strokeStyle = sessionType === "focus" ? "rgba(239, 68, 68, 0.25)" : "rgba(59, 130, 246, 0.25)";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = sessionType === "focus" ? "rgba(239, 68, 68, 0.4)" : "rgba(59, 130, 246, 0.4)"; // 0.25 → 0.4
+      ctx.lineWidth = 5; // 3 → 5로 증가
       ctx.lineCap = "round";
+      ctx.shadowColor = sessionType === "focus" ? "rgba(239, 68, 68, 0.6)" : "rgba(59, 130, 246, 0.6)";
+      ctx.shadowBlur = 10;
       ctx.arc(centerX, centerY, radius + 10, arcStart, arcEnd);
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
+      // 3. 외곽 펄스 링 (더 강력한 효과)
       const pulse = (Math.sin(time * 2) + 1) / 2;
       ctx.beginPath();
       ctx.strokeStyle = sessionType === "focus"
-        ? `rgba(239, 68, 68, ${0.06 + 0.08 * pulse})`
-        : `rgba(59, 130, 246, ${0.06 + 0.08 * pulse})`;
-      ctx.lineWidth = 1;
+        ? `rgba(239, 68, 68, ${0.15 + 0.2 * pulse})` // 0.06 + 0.08 → 0.15 + 0.2
+        : `rgba(59, 130, 246, ${0.15 + 0.2 * pulse})`;
+      ctx.lineWidth = 2;
       ctx.arc(centerX, centerY, radius + 18, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // 4. 추가 외곽 링 (새로운 효과)
+      ctx.beginPath();
+      ctx.strokeStyle = sessionType === "focus"
+        ? `rgba(239, 68, 68, ${0.08 + 0.12 * pulse})`
+        : `rgba(59, 130, 246, ${0.08 + 0.12 * pulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.arc(centerX, centerY, radius + 24, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // 5. 회전하는 반대 방향 Arc (새로운 효과)
+      const arcStart2 = -time * 0.9;
+      const arcEnd2 = arcStart2 + Math.PI * 0.4;
+
+      ctx.beginPath();
+      ctx.strokeStyle = sessionType === "focus" ? "rgba(239, 68, 68, 0.3)" : "rgba(59, 130, 246, 0.3)";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.arc(centerX, centerY, radius + 20, arcStart2, arcEnd2);
       ctx.stroke();
     }
 
@@ -688,12 +714,17 @@ export function useTimerPiP({
       const w = pipWindowRef.current?.width || 0;
       const h = pipWindowRef.current?.height || 0;
       if (w > 0 && h > 0) {
-        setPipWindowSize({ width: w, height: h });
+        const currentSize = pipWindowSize;
+        // Only update if size actually changed to avoid unnecessary re-renders
+        if (currentSize.width !== w || currentSize.height !== h) {
+          console.log('[PiP Poll] Size changed from', currentSize, 'to', { width: w, height: h });
+          setPipWindowSize({ width: w, height: h });
+        }
       }
-    }, 200);
+    }, 100); // Reduced from 200ms to 100ms for faster response
 
     return () => window.clearInterval(id);
-  }, [isPipActive]);
+  }, [isPipActive, pipWindowSize]);
 
   const togglePiP = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) {
@@ -745,15 +776,18 @@ export function useTimerPiP({
         toast.success("타이머가 PiP 모드로 전환되었습니다");
 
         // Track PiP window size changes
-        pipWindow.addEventListener('resize', () => {
-          if (isMounted.current) {
+        const handlePipResize = () => {
+          if (isMounted.current && pipWindow) {
             const newSize = { width: pipWindow.width, height: pipWindow.height };
+            console.log('[PiP Resize Event] Window resized to:', newSize);
             setPipWindowSize(newSize);
-            console.log('[PiP] Window resized:', newSize);
-            // Immediately redraw when size changes
-            drawTimer();
+            // Force immediate redraw with new size
+            requestAnimationFrame(() => {
+              drawTimer();
+            });
           }
-        });
+        };
+        pipWindow.addEventListener('resize', handlePipResize);
 
         // Handle PiP close
         videoRef.current.onleavepictureinpicture = () => {

@@ -4,7 +4,7 @@ from typing import Dict
 import logging
 from uuid import UUID
 
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 
 from app.infrastructure.websocket.base_manager import BaseConnectionManager
 
@@ -87,6 +87,15 @@ class ChatConnectionManager(BaseConnectionManager[UUID]):
         for connection in self.active_connections[room_id]:
             try:
                 await connection.send_json(message)
+            except (WebSocketDisconnect, RuntimeError) as e:
+                # Handle connection closed errors gracefully
+                if isinstance(e, WebSocketDisconnect) or 'Connection is closed' in str(e) or 'Unexpected ASGI message' in str(e):
+                    logger.debug(f"Connection closed for room {room_id}, removing: {e}")
+                    disconnected.add(connection)
+                else:
+                    # Log other RuntimeErrors as warning/error
+                    logger.error(f"Failed to send message in room {room_id}: {e}", exc_info=True)
+                    disconnected.add(connection)
             except Exception as e:
                 logger.error(f"Failed to send message in room {room_id}: {e}", exc_info=True)
                 disconnected.add(connection)
@@ -109,6 +118,11 @@ class ChatConnectionManager(BaseConnectionManager[UUID]):
                 try:
                     await websocket.send_json(message)
                     sent_count += 1
+                except (WebSocketDisconnect, RuntimeError) as e:
+                    if isinstance(e, WebSocketDisconnect) or 'Connection is closed' in str(e) or 'Unexpected ASGI message' in str(e):
+                        logger.debug(f"Connection closed for user {user_id}: {e}")
+                    else:
+                        logger.error(f"Failed to send message to user {user_id}: {e}", exc_info=True)
                 except Exception as e:
                     logger.error(f"Failed to send message to user {user_id}: {e}", exc_info=True)
 

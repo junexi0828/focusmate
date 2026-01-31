@@ -21,11 +21,14 @@ import {
 } from "../api/settings";
 import { UserSettings } from "../types/settings";
 import { toast } from "sonner";
-import { Loader2, Lock, Bell, Palette } from "lucide-react";
+import { Loader2, Lock, Bell, Palette, AlertTriangle } from "lucide-react";
 import { getErrorMessage } from "../utils/error";
 import { useTheme } from "../hooks/useTheme";
+import { authService } from "../features/auth/services/authService";
+import { useNavigate } from "@tanstack/react-router";
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,6 +46,13 @@ export default function Settings() {
     new_email: "",
     password: "",
   });
+
+  // Account deletion form
+  const [deleteForm, setDeleteForm] = useState({
+    password: "",
+    confirmation: "",
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -159,6 +169,37 @@ export default function Settings() {
       setEmailForm({ new_email: "", password: "" });
     } catch (error: any) {
       toast.error(getErrorMessage(error, "이메일 변경에 실패했습니다"));
+    }
+  };
+
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (deleteForm.confirmation !== "계정 삭제") {
+      toast.error("'계정 삭제'를 정확히 입력해주세요");
+      return;
+    }
+
+    if (!deleteForm.password) {
+      toast.error("비밀번호를 입력해주세요");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await authService.deleteAccount(deleteForm.password);
+      if (response.status === "success") {
+        toast.success("계정이 삭제되었습니다");
+        setTimeout(() => {
+          navigate({ to: "/login" });
+        }, 1000);
+      } else {
+        toast.error(response.error?.message || "계정 삭제에 실패했습니다");
+      }
+    } catch (error: any) {
+      toast.error(getErrorMessage(error, "계정 삭제에 실패했습니다"));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -311,6 +352,71 @@ export default function Settings() {
                       />
                     </div>
                     <Button type="submit">이메일 변경</Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Account Deletion - Danger Zone */}
+              <Card className="border-destructive">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    위험 구역
+                  </CardTitle>
+                  <CardDescription>
+                    계정을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleDeleteAccount} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="delete-confirmation">
+                        계속하려면 <strong className="text-destructive">'계정 삭제'</strong>를 입력하세요
+                      </Label>
+                      <Input
+                        id="delete-confirmation"
+                        type="text"
+                        placeholder="계정 삭제"
+                        value={deleteForm.confirmation}
+                        onChange={(e) =>
+                          setDeleteForm({
+                            ...deleteForm,
+                            confirmation: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="delete-password">비밀번호 확인</Label>
+                      <Input
+                        id="delete-password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={deleteForm.password}
+                        onChange={(e) =>
+                          setDeleteForm({
+                            ...deleteForm,
+                            password: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      variant="destructive"
+                      disabled={isDeleting || deleteForm.confirmation !== "계정 삭제"}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          삭제 중...
+                        </>
+                      ) : (
+                        "계정 영구 삭제"
+                      )}
+                    </Button>
                   </form>
                 </CardContent>
               </Card>

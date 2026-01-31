@@ -734,13 +734,13 @@ async def websocket_chat(
                 continue
             except RuntimeError as e:
                 # Connection was closed - exit loop
-                if 'Cannot call "receive"' in str(e):
-                    logging.getLogger(__name__).error(
-                        f"[WebSocket] Connection closed for {user_id}, exiting receive loop"
+                if 'Cannot call "receive"' in str(e) or 'Unexpected ASGI message' in str(e):
+                    logging.getLogger(__name__).info(
+                        f"[WebSocket] Connection closed for {user_id}, exiting receive loop: {e}"
                     )
                     break
                 logging.getLogger(__name__).error(
-                    f"[WebSocket] RuntimeError from {user_id}: {e!s}"
+                    f"[WebSocket] RuntimeError from {user_id}: {e!s}", exc_info=True
                 )
                 continue
             except ValueError as e:
@@ -758,7 +758,7 @@ async def websocket_chat(
                 continue
 
     except WebSocketDisconnect as e:
-        logging.getLogger(__name__).error(
+        logging.getLogger(__name__).info(
             f"[WebSocket] User {user_id} disconnected (code: {e.code})"
         )
         # Clean up all connections for this websocket

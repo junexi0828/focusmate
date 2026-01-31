@@ -437,6 +437,28 @@ class AuthService {
     this.removeToken();
     this.removeCurrentUser();
   }
+
+  async deleteAccount(password: string): Promise<ApiResponse<{ message: string }>> {
+    try {
+      const response = await api.delete("/auth/account", { data: { password } });
+      this.logout();
+      return { status: "success", data: response.data };
+    } catch (error: any) {
+      let errorMessage = "계정 삭제에 실패했습니다";
+      if (error?.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      }
+      return {
+        status: "error",
+        error: {
+          message: errorMessage,
+        },
+      };
+    }
+  }
 }
 
 export const authService = new AuthService();

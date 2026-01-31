@@ -425,3 +425,29 @@ FocusMate 팀
             await self.repository.update(user)
             return {"message": "Naver account unlinked successfully"}
         return {"message": "User not found or already unlinked"}
+
+    async def delete_account(self, user_id: str, password: str) -> dict:
+        """Delete user account.
+
+        Args:
+            user_id: User identifier
+            password: Password for confirmation
+
+        Returns:
+            Success message
+
+        Raises:
+            UnauthorizedException: If user not found or password incorrect
+        """
+        user = await self.repository.get_by_id(user_id)
+        if not user:
+            raise UnauthorizedException("User not found")
+
+        # Verify password
+        if not verify_password(password, user.hashed_password):
+            raise UnauthorizedException("Invalid password")
+
+        # Delete user
+        await self.repository.delete(user)
+
+        return {"message": "Account deleted successfully"}

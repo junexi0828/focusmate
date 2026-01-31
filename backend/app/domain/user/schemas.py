@@ -99,3 +99,11 @@ class NaverOAuthCallback(BaseModel):
 
     code: str
     state: str | None = None
+
+
+class AccountDelete(BaseModel):
+    """Account deletion request."""
+
+    model_config = ConfigDict(strict=True)
+
+    password: str

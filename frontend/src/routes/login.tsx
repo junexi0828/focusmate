@@ -43,8 +43,11 @@ function LoginComponent() {
     onSuccess: (response) => {
       if (response.status === 'success') {
         queryClient.invalidateQueries();
-        navigate({ to: '/' });
         toast.success('회원가입 성공! Focus Mate에 오신 것을 환영합니다.');
+        // 토스트 메시지를 볼 수 있도록 짧은 딜레이 후 리다이렉트
+        setTimeout(() => {
+          navigate({ to: '/' });
+        }, 500);
       } else {
         toast.error(response.error?.message || '회원가입에 실패했습니다');
       }
