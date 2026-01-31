@@ -1,21 +1,21 @@
 // Achievement Icons
 // All icons use Air Mint Sky (#7ED6E8) color scheme with Korean Air design principles
 
-import firstSession from './first-session.svg';
-import sevenDayStreak from './seven-day-streak.svg';
-import hundredHours from './hundred-hours.svg';
-import communityActivist from './community-activist.svg';
-import teamLeader from './team-leader.svg';
-import minigameMaster from './minigame-master.svg';
-import perfectWeek from './perfect-week.svg';
-import earlyBird from './early-bird.svg';
-import nightOwl from './night-owl.svg';
-import focusMaster from './focus-master.svg';
-import socialButterfly from './social-butterfly.svg';
-import mentor from './mentor.svg';
-import speedrunner from './speedrunner.svg';
-import marathoner from './marathoner.svg';
-import perfectionist from './perfectionist.svg';
+import firstSession from './first-session.png';
+import sevenDayStreak from './seven-day-streak.png';
+import hundredHours from './hundred-hours.png';
+import communityActivist from './community-activist.png';
+import teamLeader from './team-leader.png';
+import minigameMaster from './minigame-master.png';
+import perfectWeek from './perfect-week.png';
+import earlyBird from './early-bird.png';
+import nightOwl from './night-owl.png';
+import focusMaster from './focus-master.png';
+import socialButterfly from './social-butterfly.png';
+import mentor from './mentor.png';
+import speedrunner from './speedrunner.png';
+import marathoner from './marathoner.png';
+import perfectionist from './perfectionist.png';
 
 export const achievementIcons = {
   'first-session': firstSession,
