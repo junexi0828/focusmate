@@ -73,6 +73,85 @@ echo "✅ File sync complete."
 # ssh "$NAS_USER@$NAS_HOST" "cd $NAS_DIR && bash start-nas.sh"
 
 echo "🎉 File Sync Successfully Completed!"
-# 4. Restart services on NAS
+
+# =============================================================================
+# 4. Run Database Migrations (Automatic)
+# =============================================================================
+# ⚠️  SINGLE INSTANCE ONLY - This approach works for 1 server deployment
+#
+# Current Setup:
+#   - ✅ Safe: Only 1 NAS server runs this script
+#   - ✅ No concurrency issues with DB migrations
+#
+# 🚨 WARNING: Multi-Instance Environment (2+ servers)
+#   If you scale to multiple servers in the future, this will cause RACE CONDITIONS:
+#   - Multiple servers may run migrations simultaneously
+#   - Can lead to duplicate migrations, deadlocks, or data corruption
+#
+# Solutions for Multi-Instance Deployment:
+#   Option 1: Distributed Lock (Recommended)
+#     - Use Redis/database lock before running migrations
+#     - Example: https://github.com/mosparo/alembic-utils
+#     - Code: LOCK_KEY="migration_lock" and check before upgrade
+#
+#   Option 2: Designated Migration Server
+#     - Only run migrations on one designated server (e.g., server-1)
+#     - Other servers skip migration step
+#     - Add condition: if [ "$HOSTNAME" = "server-1" ]; then alembic upgrade head; fi
+#
+#   Option 3: Pre-Deployment Migration
+#     - Run migrations separately BEFORE deploying to any server
+#     - Use CI/CD pipeline to run migrations once
+#     - Then deploy code to all servers
+#
+#   Option 4: Alembic Locking Extension
+#     - Install: pip install alembic-postgresql-enum (includes lock support)
+#     - Configure alembic to use advisory locks
+#
+# For now (single NAS): This implementation is safe and recommended ✅
+#
+# Example Implementation for Multi-Instance (Redis Lock):
+#   Before migration:
+#     LOCK_ACQUIRED=$(redis-cli SET migration_lock $(hostname) NX EX 300)
+#     if [ "$LOCK_ACQUIRED" = "OK" ]; then
+#       alembic upgrade head
+#       redis-cli DEL migration_lock
+#     else
+#       echo "Another server is running migrations, skipping..."
+#     fi
+#
+# Example Implementation for Multi-Instance (PostgreSQL Advisory Lock):
+#   In Python migration script:
+#     from sqlalchemy import text
+#     with engine.connect() as conn:
+#       conn.execute(text("SELECT pg_advisory_lock(123456789)"))
+#       alembic.upgrade("head")
+#       conn.execute(text("SELECT pg_advisory_unlock(123456789)"))
+# =============================================================================
+echo -e "🗄️  Checking and running database migrations..."
+# Increase statement timeout to 60 seconds to prevent timeout on slow operations
+# Use || to continue deployment even if migration fails (allows manual fix)
+ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml exec -T backend sh -c 'PGSTATEMENT_TIMEOUT=60000 alembic upgrade head'" || {
+    echo ""
+    echo "⚠️  =========================================="
+    echo "⚠️  Migration failed (timeout or error)"
+    echo "⚠️  =========================================="
+    echo "ℹ️  Deployment will continue, but DB schema may be outdated."
+    echo "ℹ️  Please run migration manually:"
+    echo "ℹ️    ssh $NAS_USER@$NAS_HOST"
+    echo "ℹ️    cd $NAS_DIR"
+    echo "ℹ️    sudo docker-compose -f docker-compose.nas.yml exec backend alembic upgrade head"
+    echo ""
+    echo "⚠️  Common causes:"
+    echo "   - Database lock (active connections using the table)"
+    echo "   - Slow operation on large table"
+    echo "   - Network issues"
+    echo ""
+    echo "ℹ️  If timeout persists, increase timeout in Supabase:"
+    echo "   Dashboard → Settings → Database → Statement Timeout"
+    echo ""
+}
+
+# 5. Restart services on NAS
 echo -e "ℹ️  Fixing permissions and restarting Docker..."
 ssh "juns@$NAS_HOST" "cd $NAS_DIR && sudo chmod -R 777 app .env requirements.txt pyproject.toml && sudo /usr/local/bin/docker-compose -f docker-compose.nas.yml up -d backend"
