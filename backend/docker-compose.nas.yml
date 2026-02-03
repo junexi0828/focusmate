@@ -118,6 +118,34 @@ services:
     network_mode: "host" # 호스트 네트워크 사용 for resource monitoring
 
   # ==========================================================================
+  # GitHub Webhook Listener (자동 배포)
+  # ==========================================================================
+  webhook-listener:
+    image: focusmate-backend:latest
+    container_name: focusmate-webhook-listener
+    command: ["python", "/app/scripts/deployment/github-webhook-listener.py"]
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./:/app  # 코드 마운트
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker 제어 권한
+      - ./logs:/app/logs
+    environment:
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - PROJECT_DIR=/app
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - focusmate-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ==========================================================================
   # Watchtower (이미지 자동 업데이트)
   # ==========================================================================
   watchtower:

@@ -15,9 +15,10 @@ import os
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# 프로젝트 디렉토리 (NAS 경로)
-PROJECT_DIR = Path("/volume1/web/focusmate-backend")
-WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")  # .env에서 로드하거나 환경변수로 설정
+# 프로젝트 디렉토리 (Docker 환경에서는 /app, NAS 직접 실행 시에는 /volume1/web/focusmate-backend)
+PROJECT_DIR = Path(os.environ.get("PROJECT_DIR", "/volume1/web/focusmate-backend"))
+# Webhook secret (docker-compose에서는 WEBHOOK_SECRET, 직접 실행 시에는 GITHUB_WEBHOOK_SECRET)
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET") or os.environ.get("GITHUB_WEBHOOK_SECRET")
 PORT = 9000  # Webhook 리스너 포트
 MAX_PAYLOAD_BYTES = 1_000_000  # 1MB payload cap to avoid abuse
 
@@ -259,12 +260,27 @@ class WebhookHandler(BaseHTTPRequestHandler):
             # NAS code mount (./:/app) means we only need to restart the container to pick up code changes
             self.log_message("🔄 Performing fast restart (backend only)...")
 
-            subprocess.run(
-                ["sudo", "/usr/local/bin/docker-compose", "-f", "docker-compose.nas.yml", "restart", "backend"],
-                cwd=PROJECT_DIR,
-                check=True,
-                env=env
-            )
+            # Docker 환경 감지
+            in_docker = os.path.exists("/.dockerenv")
+
+            if in_docker:
+                # Docker 내부에서 실행 중 - docker-compose 명령 사용
+                self.log_message("🐳 Running in Docker - using docker-compose from host")
+                subprocess.run(
+                    ["docker-compose", "-f", "/app/docker-compose.nas.yml", "restart", "backend"],
+                    cwd="/app",
+                    check=True,
+                    env=env
+                )
+            else:
+                # NAS에서 직접 실행 중 - sudo 사용
+                self.log_message("🖥️  Running on NAS - using sudo docker-compose")
+                subprocess.run(
+                    ["sudo", "/usr/local/bin/docker-compose", "-f", "docker-compose.nas.yml", "restart", "backend"],
+                    cwd=PROJECT_DIR,
+                    check=True,
+                    env=env
+                )
 
             self.log_message("✅ Restart command issued")
 
