@@ -179,10 +179,10 @@ export function useTimerPiP({
     const pipWidth = actualWidth > 0 ? actualWidth : width;
     const pipHeight = actualHeight > 0 ? actualHeight : height;
 
-    // Small: 모든 정보 표시 (타이머 + 참가자 수) - 작은 크기
-    // Medium: 모든 정보 + 강력한 애니메이션 효과 - 큰 크기 (>=450px)
+    // Small: 모든 정보 표시 (타이머 + 참가자 수) - 작은 크기 (<350px)
+    // Medium: 모든 정보 + 강력한 애니메이션 효과 - 큰 크기 (>=350px)
     const isWide = pipMode === "wide";
-    const isSmall = !isWide && (pipWidth < 450 || pipHeight < 400);
+    const isSmall = !isWide && (pipWidth < 350 || pipHeight < 350);
     const isMedium = !isWide && !isSmall;
 
     // Debug: Log size and level (only when PiP is active)
@@ -690,14 +690,14 @@ export function useTimerPiP({
   useEffect(() => {
     let intervalId: number | null = null;
 
-    if (isPipActive && status === 'running') {
+    if (isPipActive) {
+      // Always animate when PiP is active to ensure smooth pulse/breathing effects
       // 20fps (50ms) - Balanced for battery life vs animation smoothness
-      // Reduced from 30fps to save resources while keeping breathing effect acceptable
       intervalId = window.setInterval(() => {
         drawTimer();
       }, 50);
     } else {
-      // If paused or not PiP, just draw once when dependencies change
+      // If not PiP, just draw once when dependencies change
       // (This effect re-runs when drawTimer changes, which happens when time changes)
       drawTimer();
     }
@@ -705,7 +705,7 @@ export function useTimerPiP({
     return () => {
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, [isPipActive, status, drawTimer]);
+  }, [isPipActive, drawTimer]);
 
   // Poll PiP window size to ensure Small/Medium transitions work across browsers
   useEffect(() => {
@@ -721,7 +721,7 @@ export function useTimerPiP({
           setPipWindowSize({ width: w, height: h });
         }
       }
-    }, 100); // Reduced from 200ms to 100ms for faster response
+    }, 50); // Reduced to 50ms for immediate response to size changes
 
     return () => window.clearInterval(id);
   }, [isPipActive, pipWindowSize]);
@@ -781,10 +781,6 @@ export function useTimerPiP({
             const newSize = { width: pipWindow.width, height: pipWindow.height };
             console.log('[PiP Resize Event] Window resized to:', newSize);
             setPipWindowSize(newSize);
-            // Force immediate redraw with new size
-            requestAnimationFrame(() => {
-              drawTimer();
-            });
           }
         };
         pipWindow.addEventListener('resize', handlePipResize);
@@ -792,6 +788,7 @@ export function useTimerPiP({
         // Handle PiP close
         videoRef.current.onleavepictureinpicture = () => {
           pipWindowRef.current = null;
+          pipWindow.removeEventListener('resize', handlePipResize);
           if (isMounted.current) {
             setIsPipActive(false);
             setPipWindowSize({ width: 400, height: 400 });
