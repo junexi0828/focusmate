@@ -7,6 +7,7 @@
 
 FocusMate는 혼자 하기 어려운 집중을 실시간 룸, 타이머, 상태 공유, 채팅, 통계로 바꾸는 생산성 웹앱입니다.
 공부하는 사람, 사이드 프로젝트를 하는 메이커, 분산된 팀이 "같이 집중하는 환경"을 가볍게 열고 바로 들어갈 수 있도록 설계했습니다.
+<img width="1446" height="847" alt="image" src="https://github.com/user-attachments/assets/a6cdf69c-00d1-4137-8c58-dcff6fcba5a6" />
 
 ## What Is FocusMate
 
