@@ -37,8 +37,8 @@ Focus Mate 프로젝트에 기여해주셔서 감사합니다.
 ### 1.2 저장소 클론
 
 ```bash
-git clone https://github.com/your-org/focus-mate.git
-cd focus-mate
+git clone https://github.com/junexi0828/focusmate.git
+cd focusmate
 ```
 
 ### 1.3 Docker 환경 설정
@@ -387,8 +387,8 @@ tsc --noEmit
 ## 7. 도움 받기
 
 - **문서**: [docs/](./docs/) 폴더 참조
-- **이슈**: [GitHub Issues](https://github.com/your-org/focus-mate/issues)
-- **토론**: [GitHub Discussions](https://github.com/your-org/focus-mate/discussions)
+- **이슈**: [GitHub Issues](https://github.com/junexi0828/focusmate/issues)
+- **토론**: [GitHub Discussions](https://github.com/junexi0828/focusmate/discussions)
 
 ---
 

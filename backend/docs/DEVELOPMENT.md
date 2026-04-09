@@ -12,8 +12,8 @@ This guide covers development workflow, best practices, and implementation detai
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/focus-mate.git
-cd focus-mate/backend
+git clone https://github.com/junexi0828/focusmate.git
+cd focusmate/backend
 
 # Create virtual environment
 python3 -m venv venv

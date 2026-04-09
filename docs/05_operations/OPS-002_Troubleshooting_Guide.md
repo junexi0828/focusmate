@@ -508,8 +508,8 @@ Traceback (most recent call last):
 
 ### 8.2 커뮤니티 지원
 
-- **GitHub Issues**: [이슈 생성](https://github.com/your-org/focus-mate/issues)
-- **GitHub Discussions**: [토론 참여](https://github.com/your-org/focus-mate/discussions)
+- **GitHub Issues**: [이슈 생성](https://github.com/junexi0828/focusmate/issues)
+- **GitHub Discussions**: [토론 참여](https://github.com/junexi0828/focusmate/discussions)
 
 ### 8.3 디버깅 팁
 

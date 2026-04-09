@@ -73,6 +73,8 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.claude/
+.cursor/
 
 # Logs
 logs/
@@ -102,6 +104,8 @@ Thumbs.db
 data/
 *.sqlite
 *.sqlite3
+*.rdb
+dump.rdb
 
 # Reports
 reports/

@@ -1,10 +1,10 @@
 # FocusMate: Next-Generation Intelligent Matching Platform
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/actions)
+[![CI/CD Pipeline](https://github.com/junexi0828/focusmate/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/junexi0828/focusmate/actions/workflows/ci-cd.yml)
 [![Code Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)](https://github.com/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Issues](https://img.shields.io/github/issues/your-repo/focus-mate)](https://github.com/your-repo/focus-mate/issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/your-repo/focus-mate)](https://github.com/your-repo/focus-mate/pulls)
+[![Issues](https://img.shields.io/github/issues/junexi0828/focusmate)](https://github.com/junexi0828/focusmate/issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/junexi0828/focusmate)](https://github.com/junexi0828/focusmate/pulls)
 
 FocusMate는 사용자들이 목표 달성을 위해 최적의 파트너를 찾을 수 있도록 돕는 지능형 매칭 및 협업 플랫폼입니다. 실시간 상호작용과 성과 기반 랭킹 시스템을 통해 사용자의 성장을 촉진하고 동기를 부여합니다.
 
@@ -78,8 +78,8 @@ FocusMate는 사용자들이 목표 달성을 위해 최적의 파트너를 찾�
 
 1.  **저장소 복제**
     ```bash
-    git clone https://github.com/your-repo/focus-mate.git
-    cd focus-mate
+    git clone https://github.com/junexi0828/focusmate.git
+    cd focusmate
     ```
 
 2.  **환경 변수 설정**

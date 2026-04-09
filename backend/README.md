@@ -35,8 +35,8 @@ The script will automatically:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/focus-mate.git
-cd focus-mate/backend
+git clone https://github.com/junexi0828/focusmate.git
+cd focusmate/backend
 
 # 2. Create virtual environment
 python3 -m venv venv
@@ -252,6 +252,6 @@ MIT License - see [LICENSE](../LICENSE)
 
 ## 📞 Support
 
-- GitHub Issues: [Report a bug](https://github.com/your-org/focus-mate/issues)
+- GitHub Issues: [Report a bug](https://github.com/junexi0828/focusmate/issues)
 - Documentation: [Full docs](../docs/)
 - Email: team@focusmate.com
